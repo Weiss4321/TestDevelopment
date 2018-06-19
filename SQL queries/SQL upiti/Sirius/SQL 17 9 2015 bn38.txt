@@ -1,0 +1,162 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+		select * from SMS_LOG order by user_lock desc;
+
+		select * from SMS_LOG where sms_log_id = 432370326;
+
+
+		--delete FROM sms_log where sms_log_id = 432370326
+
+	delete FROM sms_log where sms_log_id in	(432490326,432491326,432492326,432493326,432494326,432495326,432496326,432497326,432498326,432499326,
+			432500326,432501326,432502326,432503326,432504326);
+
+
+			 SELECT
+              *
+          
+            FROM
+                bank_relation_type
+            WHERE
+                ban_rel_type = '001'
+            AND 
+                bank_sign = 'RB'
+
+
+                select * from BANK_PRODUCT_TYPE where code = 'CMA'; -- ban_pro_typ_id 
+
+                select * from customer_account where ban_pro_typ_id = 6561936704;
+
+                select * from
+
+		------   dohvat kandidatata za datoteku
+				SELECT
+		   			cbs.cus_id
+                        , c.register_no
+                        , cbs.cus_ban_subserv_id
+                        , ca.cus_acc_id
+                        , ca.cus_acc_no
+                        , ca.ban_pro_typ_id
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c                    
+                        , customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+				AND cbs.cus_id = ca.cus_id
+				AND ca.ban_rel_typ_id in (109999)
+				AND ca.ban_pro_typ_id = 6561936704
+                    AND ca.bank_sign = 'RB'  ;
+
+                    -------------------------------
+
+				 SELECT
+            cbs.cus_id
+            , c.register_no
+            , cbs.cus_ban_subserv_id
+            , ca.cus_acc_id
+            , ca.cus_acc_no
+            , ca.ban_pro_typ_id
+        FROM
+            cusacc_ban_subserv cbs
+            , customer c
+            , customer_account ca
+        WHERE
+            cbs.ban_sub_typ_id = 23062019
+        AND 
+            '17.09.2015' BETWEEN cbs.date_from AND cbs.date_until
+        AND cbs.status in ('1', '2')
+        AND c.cus_id = cbs.cus_id
+        AND ca.cus_id = c.cus_id
+        AND ca.external_flag = '0'
+        AND ca.ban_rel_typ_id = 787172005
+        AND ca.cus_acc_status NOT IN ('I','C','E')
+        AND cbs.bank_sign = 'RB'
+
+        select * from cusacc_ban_subserv order by user_lock desc;
+
+        select * from CUST_BANKSERVICE;
+
+         select * from CUSACC_BAN_SUBSERV;
+
+         select * from bank_service_type;
+
+         select * from procedure_type WHERE  pro_typ_id IN (42999,36999 ) ;
+
+
+		 SELECT
+            acc_num_id
+            , account
+            , amo_type
+            , pro_typ_id
+            , cur_id
+            , balance
+            , credit_total
+            , debit_total
+            , balance_date
+            FROM
+            cusacc_balance_last
+            WHERE
+            cus_acc_id = 3137830823
+            AND pro_typ_id IN (42999, 36999)      
+
+            select * from CUST_BILL_EXCH order by user_lock desc;
+
+            select * from customer_account where cus_acc_no like '1135000004';  -- 3137830823
+
+            
+         
+
+                    ----------------------------------
+
+                    	SELECT
+		   		*
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c                    
+                        , customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+				AND cbs.cus_id = ca.cus_id
+				AND cbs.cus_acc_id = ca.cus_acc_id
+				--AND ca.ban_rel_typ_id in ('001')
+				AND ca.ban_pro_typ_id = 6561936704
+                    AND ca.bank_sign = 'RB'  ;
+
+		--------------------------------------------------------------------------
+
+			select * from  cusacc_ban_subserv cbs, customer_account ca 
+			where ban_sub_typ_id = 23053019 
+			and cbs.cus_id = ca.cus_id
+			and ca.ban_rel_typ_id in (IZ KOMBINACIJA)
+
+		
+
+                    select * from cusacc_ban_subserv order by user_lock desc;
+
+                    
+
+
+
+                     	SELECT
+		   			cbs.cus_id
+                        , c.register_no
+                        , cbs.cus_ban_subserv_id
+                        , ca.cus_acc_id
+                        , ca.cus_acc_no
+                        , ca.ban_pro_typ_id
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c                    
+                        , customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+				AND cbs.cus_id = ca.cus_id
+                    AND cbs.bank_sign = :bankSign   
+
+
+                    
+                   
+                   
+                   
+
+                

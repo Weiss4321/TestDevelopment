@@ -1,0 +1,537 @@
+package hr.vestigo.modules.collateral.batch.bo21;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+
+#sql iterator ColProcIterator with(holdability = true)(
+	java.math.BigDecimal col_pro_id,
+	java.sql.Date proc_date,
+	java.sql.Date value_date,
+	String proc_type,
+	String proc_way,
+	String proc_status,
+	java.math.BigDecimal col_number,
+	java.sql.Timestamp proc_ts,
+	java.math.BigDecimal org_uni_id,
+	java.math.BigDecimal use_id,
+	java.sql.Timestamp user_lock
+	);
+
+#sql iterator CusaccExpCollIterator with(holdability = true) (
+	java.math.BigDecimal cus_acc_exp_col_id	,
+	java.math.BigDecimal cus_id	,
+	java.math.BigDecimal cus_acc_id,
+	java.math.BigDecimal col_hea_id,
+	java.math.BigDecimal col_pro_id,
+	java.math.BigDecimal exp_coll_amount,
+	java.math.BigDecimal coll_amount,
+	java.math.BigDecimal exp_coll_cur_id,
+	java.math.BigDecimal exp_fc_amount,
+	java.math.BigDecimal coll_fc_amount,
+	java.sql.Date cover_date,
+	java.math.BigDecimal coll_hf_prior_id,
+	java.math.BigDecimal exp_percent,
+	java.math.BigDecimal fra_agr_id,
+	java.math.BigDecimal exp_cur_id,
+	java.math.BigDecimal exp_balance,
+	java.math.BigDecimal exp_balance_hrk,
+	java.math.BigDecimal mvp_dfl,
+	java.math.BigDecimal exposure_bal_lcy,
+	java.math.BigDecimal exp_off_bal_lcy);
+
+public class BO211{
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo21/BO211.sqlj,v 1.4 2014/04/03 13:06:48 hrakis Exp $";
+	
+	public boolean debug=true;
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+	private ConnCtx conn2=null;
+	private YOY00 yoy00= null;
+	
+	private BigDecimal col_pro_id=null;
+	private BigDecimal org_uni_id=null;
+	private BigDecimal use_id=null;
+	private BigDecimal eve_id=null;
+
+	
+	private String bankSign=null;
+	
+	public BO211(BatchContext bc,BigDecimal org_uni_id, BigDecimal use_id, String bankSign) throws Exception{
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+		this.conn2=new ConnCtx(bc.getNewConnection());
+		this.use_id=use_id;
+		this.org_uni_id=org_uni_id;
+		this.bankSign=bankSign;
+	}
+	
+	
+	
+    public void insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id) throws Exception{
+        bc.debug("sqlj insertIntoEvent");		
+         
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(bc);			
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	this.eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",this.eve_id);
+		  	event.put("eve_typ_id", eve_typ_id);
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za izracun pokrivenosti plasmana kolateralima."); //TODO vidjeti sto staviti
+		  	event.put("use_id", bc.getUserID());
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", bc.getBankSign());
+		   	event.put("org_uni_id", org_uni_id); 
+		  	bc.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	
+		  	/* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+		  	 * i koji se nalazi u commonu yxyA. Radi se update: 
+		  	 *    UPDATE batch_log
+		  	 *    SET eve_id = :newEveId
+			 *    WHERE bat_log_id = :batLogId 
+		  	*/
+		  	bc.updateEveID(this.eve_id);		
+	  
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}  
+    
+    public void deleteFromInDataDwhItem(BigDecimal col_pro_id) throws Exception{
+    	try{
+    		#sql [connCtx]{
+				delete from in_data_dwh_item
+    			where col_pro_id=:(col_pro_id)		
+	        };
+    	}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteFromInDataDwhItem        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteFromInDataDwhItem      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteFromInDataDwhItem        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}  
+    }
+    
+    public void deleteFromColProcGar(BigDecimal col_pro_id) throws Exception{
+    	try{
+    		#sql [connCtx]{
+				delete from col_proc_gar
+    			where col_pro_id=:(col_pro_id)		
+	        };
+    	}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteFromColProcGar        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteFromColProcGar      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteFromColProcGar        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}  
+    }
+    
+    public ColProcIterator selectColProc(Date value_date,String proc_type) throws Exception{
+		ColProcIterator iter=null;
+		try{
+			#sql [conn2]iter={
+				select
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+				from col_proc 
+					where 
+						value_date<=:(value_date)		
+						and proc_type=:(proc_type)
+				WITH UR
+		        };
+			return iter;
+		        
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj selectColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj selectColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj selectColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+	}
+    
+    
+    
+    public void deleteFromColProc(BigDecimal col_pro_id) throws Exception{
+    	try{
+			#sql [connCtx]{
+    			delete from col_proc
+    			where col_pro_id=:(col_pro_id)
+    		};
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteFromColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteFromColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteFromColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    public void deleteFromCollHeadD(Date load_date) throws Exception{
+    	try{
+			#sql [connCtx]{
+    			delete from coll_head_d
+    			where load_date=:(load_date)
+    		};
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteFromCollHeadD        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteFromCollHeadD      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteFromCollHeadD        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    public void deleteFromFrameAgreementD(Date load_date) throws Exception{
+    	try{
+			#sql [connCtx]{
+    			delete from frame_agreement_d
+    			where load_date=:(load_date)
+    		};
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteFromFrameAgreementD        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteFromFrameAgreementD      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteFromFrameAgreementD        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    public void deleteFromLoanBeneficiaryD(Date load_date) throws Exception{
+    	try{
+			#sql [connCtx]{
+    			delete from loan_beneficiary_d
+    			where load_date=:(load_date)
+    		};
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteFromLoanBeneficiaryD        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteFromLoanBeneficiaryD      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteFromLoanBeneficiaryD        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    public void deleteFromCollHfPriorD(Date load_date) throws Exception{
+    	try{
+			#sql [connCtx]{
+    			delete from coll_hf_prior_d
+    			where load_date=:(load_date)
+    		};
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteFromCollHfPriorD        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteFromCollHfPriorD      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteFromCollHfPriorD        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    public void insertColProcA(ColProcIterator input) throws Exception{
+    	try{
+			#sql [connCtx]{
+				insert into col_proc_a (
+    				col_pro_id,
+    				proc_date,
+    				value_date,
+    				proc_type,
+    				proc_way,
+    				proc_status,
+    				col_number,
+    				proc_ts,
+    				org_uni_id,
+    				use_id,
+    				user_lock
+    			) values(
+    				:(input.col_pro_id()),
+    				:(input.proc_date()),
+    				:(input.value_date()),
+    				:(input.proc_type()),
+    				:(input.proc_way()),
+    				:(input.proc_status()),
+    				:(input.col_number()),
+    				:(input.proc_ts()),
+    				:(input.org_uni_id()),
+    				:(input.use_id()),
+    				current timestamp
+    			)
+    		};
+			
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj insertColProcA        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj insertColProcA      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj insertColProcA        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    
+    public CusaccExpCollIterator selectCusaccExpColl(BigDecimal col_pro_id) throws Exception{
+    	CusaccExpCollIterator iter=null;
+    	try{
+			#sql [conn2]iter={
+				select
+    				cus_acc_exp_col_id,
+    				cus_id,
+    				cus_acc_id,
+    				col_hea_id,
+    				col_pro_id,
+    				exp_coll_amount,
+    				coll_amount,
+    				exp_coll_cur_id,
+    				exp_fc_amount,
+    				coll_fc_amount,
+    				cover_date,
+    				coll_hf_prior_id,
+    				exp_percent,
+    				fra_agr_id,
+    				exp_cur_id,
+    				exp_balance,
+    				exp_balance_hrk,
+    				mvp_dfl,
+    				exposure_bal_lcy,
+    				exp_off_bal_lcy
+    			from
+    				cusacc_exp_coll
+    			where
+    				col_pro_id=:(col_pro_id)
+    			WITH UR
+		        };
+			return iter;
+		        
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj selectCusaccExpColl        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj selectCusaccExpColl      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj selectCusaccExpColl        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    public void deleteFromCusaccExpColl(BigDecimal cus_acc_exp_col_id) throws Exception{
+    	try{
+			#sql [connCtx]{
+    			delete from cusacc_exp_coll
+    			where cus_acc_exp_col_id=:(cus_acc_exp_col_id)
+    		};
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj deleteCusaccExpColl        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj deleteCusaccExpColl      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj deleteCusaccExpColl        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+    public void insertCusaccExpCollA(CusaccExpCollIterator input) throws Exception{
+    	try{
+			#sql [connCtx]{
+				insert into cusacc_exp_coll_a(
+    				cus_acc_exp_col_id,
+    				cus_id,
+    				cus_acc_id,
+    				col_hea_id,
+    				col_pro_id,
+    				exp_coll_amount,
+    				coll_amount,
+    				exp_coll_cur_id,
+    				exp_fc_amount,
+    				coll_fc_amount,
+    				cover_date,
+    				coll_hf_prior_id,
+    				exp_percent,
+    				fra_agr_id,
+    				exp_cur_id,
+    				exp_balance,
+    				exp_balance_hrk,
+    				mvp_dfl,
+    				exposure_bal_lcy,
+    				exp_off_bal_lcy
+    			)values(
+    				:(input.cus_acc_exp_col_id()),
+    				:(input.cus_id()),
+    				:(input.cus_acc_id()),
+    				:(input.col_hea_id()),
+    				:(input.col_pro_id()),
+    				:(input.exp_coll_amount()),
+    				:(input.coll_amount()),
+    				:(input.exp_coll_cur_id()),
+    				:(input.exp_fc_amount()),
+    				:(input.coll_fc_amount()),
+    				:(input.cover_date()),
+    				:(input.coll_hf_prior_id()),
+    				:(input.exp_percent()),
+    				:(input.fra_agr_id()),
+    				:(input.exp_cur_id()),
+    				:(input.exp_balance()),
+    				:(input.exp_balance_hrk()),
+    				:(input.mvp_dfl()),
+    				:(input.exposure_bal_lcy()),
+    				:(input.exp_off_bal_lcy())
+    				)
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO211.sqlj insertCusaccExpCollA        Message  : " + e.getMessage());
+			bc.debug(".....BO211.sqlj insertCusaccExpCollA      Error code : " + e.getErrorCode());
+			bc.debug(".....BO211.sqlj insertCusaccExpCollA        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw e;
+		}
+    }
+    
+	public Timestamp insertColProc(Map map) throws Exception{
+        bc.debug("sqlj insertColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=new Timestamp(System.currentTimeMillis());
+    	bc.debug("\n col_pro_id: "+col_pro_id);
+    	bc.debug("\n proc_date: "+proc_date);
+    	bc.debug("\n value_date: "+value_date);
+    	bc.debug("\n proc_type: "+proc_type);
+    	bc.debug("\n proc_way: "+proc_way);
+    	bc.debug("\n proc_status: "+proc_status);
+    	bc.debug("\n col_number: "+col_number);
+    	bc.debug("\n org_uni_id: "+org_uni_id);
+    	bc.debug("\n use_id: "+use_id);
+    	bc.debug("\n user_lock: "+user_lock);
+    	
+        try{
+        	#sql [connCtx]{
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(proc_date),
+					:(value_date),
+					:(proc_type),
+					:(proc_way),
+					:(proc_status),
+					:(col_number),
+					current timestamp,
+					:(org_uni_id),
+					:(use_id),
+        			:(user_lock)
+					)
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO021.sqlj insertColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj insertColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj insertColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}  
+		return user_lock;
+	}
+	
+	public Timestamp updateColProc(Map map) throws Exception{
+        bc.debug("sqlj updateColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=(Timestamp) map.get("user_lock");
+    	
+    	
+        try{
+        	#sql [connCtx]{
+				UPDATE  col_proc SET
+					proc_date= :(proc_date),
+					value_date= :(value_date),
+					proc_type= :(proc_type),
+					proc_way= :(proc_way),
+					proc_status=:(proc_status),
+					col_number=:(col_number),
+					org_uni_id=:(org_uni_id),
+					use_id=:(use_id),
+					user_lock= current timestamp					
+				WHERE
+        			col_pro_id=:(col_pro_id)
+        			
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO021.sqlj updateColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj updateColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj updateColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		} 
+		return user_lock;
+	}
+    
+    /**
+    *
+    * Dohvat id obrade
+    * @return id obrade
+    */
+    public BigDecimal getColProId() throws Exception{
+		if(this.col_pro_id==null){
+			YOY00 yoy00=new YOY00(this.connCtx);
+			this.col_pro_id=yoy00.getNewId();
+		}
+		return this.col_pro_id;
+	}
+    
+    public void closeExtraConnection() throws Exception{
+		if(conn2!=null){
+			this.conn2.close();
+		}	
+	}
+    
+}

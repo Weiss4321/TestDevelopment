@@ -1,0 +1,262 @@
+package hr.vestigo.modules.collateral.jcics.co27;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+
+ 
+ 
+
+#sql iterator Iter ( 
+								  String coll_num,
+								  String coll_type_name, 
+								  Date cover_date, 
+							      BigDecimal real_est_estn_valu, 
+								  BigDecimal coll_mvp_ponder, 
+								  String code_num,
+								  BigDecimal exp_fc_amount,
+								  BigDecimal exp_percent,
+							 	  BigDecimal iznos,
+								  BigDecimal exp_balance_hrk,
+								  String code_num_exp
+								  
+							);	
+
+  
+
+public class CO274 extends SQLJScrollableRemoteTransaction{
+    
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co27/CO274.sqlj,v 1.21 2014/06/11 08:26:31 hrakis Exp $";
+	
+    public DeclCO27 decl = null;
+	
+
+	private Iter iter2 = null; 
+	
+	private BigDecimal col_hea_id = null;
+	private BigDecimal cus_acc_id = null;
+	private BigDecimal cus_id = null;
+	private BigDecimal exp_amount = null;
+	private Date value_date = null;
+	private BigDecimal col_pro_id = null;
+//	private BigDecimal exp_amount_hrk = null;
+	
+	private BigDecimal oneAmount = new BigDecimal("1.00");
+	 
+    public CO274(DeclCO27 decl){
+        this.decl = decl;
+    }
+
+    /**
+     * 
+     */
+
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        setLevel(decl.cusaccexpcolldetailsmapping.ActionListLevel);
+		setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+		
+		
+		
+// 1. col_hea_id, cus_acc_id, cus_id 
+		
+			//col_hea_id = decl.cusaccexpcollqbemapping.COL_HEA_ID;
+			cus_acc_id = decl.cusaccexpcolldetailsmapping.CUS_ACC_ID;
+			//cus_id = decl.cusaccexpcollqbemapping.CUS_ID;
+				
+			//tc.debug("col_hea_id" + col_hea_id);
+			tc.debug("cus_acc_id" + cus_acc_id);
+			//tc.debug("cus_id" + cus_id);
+			
+			value_date = decl.cusaccexpcolldetailsmapping.VALUE_DATE;
+			
+			tc.debug("value_date" + value_date);
+			
+			col_pro_id = decl.cusaccexpcolldetailsmapping.COL_PRO_ID;
+			
+			tc.debug("col_pro_id" + col_pro_id);
+			
+			tc.debug("6 .tu sam ");
+// dohvacam izlozenost po partiji u hrk	- nepotreban dohvat izlozenosti u kn	
+/*			#sql [ctx] {SELECT 
+							 c.register_no,
+							 a.cus_acc_no,
+							 a.exposure_balance*d.midd_rate
+						INTO  
+							:(decl.cusaccexpcolldetailsmapping.CusaccExpCollFOI_dynLblInternCustNum),
+							:(decl.cusaccexpcolldetailsmapping.CusaccExpCollFOI_dynLblInvestment),
+							:(exp_amount_hrk)
+						FROM 
+							cusacc_exposure a,
+							customer c,
+							exchange_rate d
+
+						WHERE 
+							a.cus_acc_id = :(cus_acc_id) and
+							a.cus_id = c.cus_id and
+							a.exposure_cur_id = d.cur_id and
+							a.exposure_date between d.date_from and d.date_until
+							};		*/
+
+				#sql [ctx] {SELECT 
+								 c.register_no,
+								 a.cus_acc_no
+						INTO  
+								:(decl.cusaccexpcolldetailsmapping.CusaccExpCollFOI_dynLblInternCustNum),
+								:(decl.cusaccexpcolldetailsmapping.CusaccExpCollFOI_dynLblInvestment)
+						FROM 
+								cusacc_exposure a,
+								customer c
+						WHERE 
+								a.cus_acc_id = :(cus_acc_id) and
+								a.cus_id = c.cus_id 
+						};					
+			
+			 
+//dohvacam ukupnu pokrivenost u hrk
+			
+			#sql [ctx] {SELECT 
+							sum(b.exp_coll_amount)
+
+						INTO  
+							:(exp_amount)
+						FROM 
+								cusacc_exp_coll b
+						WHERE 
+							b.cus_acc_id = :(cus_acc_id) AND
+							b.col_pro_id = :(col_pro_id) 
+						};					
+		
+   
+			#sql [ctx] iter2 = {
+						SELECT	
+								d.col_num as coll_num,
+								f.coll_type_name as coll_type_name,
+								b.cover_date as cover_date,
+								b.coll_amount * h.midd_rate as real_est_estn_valu,
+								b.mvp_dfl as coll_mvp_ponder,
+								e.code_num as code_num,
+								b.exp_coll_amount as exp_fc_amount,
+								b.exp_percent as exp_percent,		
+								0 as iznos,
+								b.exp_balance_hrk as exp_balance_hrk,
+								g.code_num as code_num_exp
+						FROM	
+								cusacc_exp_coll b,
+								currency e,
+								currency g,
+								coll_head d,
+								collateral_type f,
+								exchange_rate h
+						WHERE  	
+								b.cus_acc_id =:(cus_acc_id) and
+								b.col_pro_id =:(col_pro_id) and 
+                                b.cov_priority is not null and
+								b.exp_coll_cur_id = e.cur_id  and      													
+								b.exp_cur_id = g.cur_id and								
+								b.col_hea_id = d.col_hea_id and
+								d.col_type_id = f.coll_type_id and
+								b.exp_coll_cur_id = h.cur_id  and							
+  								b.cover_date between h.date_from and h.date_until				
+
+			};					
+			
+			
+/*			#sql [ctx] iter2 = {
+						SELECT	
+								d.col_num as coll_num,
+								f.coll_type_name as coll_type_name,
+								b.cover_date as cover_date,
+								d.real_est_nomi_valu * h.midd_rate as real_est_estn_valu,
+								f.coll_mvp_ponder as coll_mvp_ponder,
+								e.code_num as code_num,
+								b.exp_coll_amount as exp_fc_amount,
+								b.exp_percent as exp_percent,		
+								0 as iznos,
+								b.exp_balance_hrk as exp_balance_hrk,
+								g.code_num as code_num_exp
+						FROM	
+								cusacc_exp_coll b,
+								currency e,
+								currency g,
+								coll_head d,
+								collateral_type f,
+								exchange_rate h
+						WHERE  	
+								b.cus_acc_id =:(cus_acc_id) and
+								b.col_pro_id =:(col_pro_id) and		
+								b.exp_coll_cur_id = e.cur_id  and      													
+								b.exp_cur_id = g.cur_id and								
+								b.col_hea_id = d.col_hea_id and
+								d.col_type_id = f.coll_type_id and
+								b.exp_coll_cur_id = h.cur_id  and							
+  								b.cover_date between h.date_from and h.date_until				
+
+			};			*/
+			
+			 
+	
+    }
+   
+    public boolean next() throws Exception {
+        return iter2.next();
+    }
+ 
+    public void close() {
+        if(iter2!=null) {
+			try {
+				iter2.close();
+			} catch (Exception ignored) {}
+		}
+    } 
+    
+    public void populateRowData() throws Exception {
+        Vector row = new Vector();
+		Vector hiddenRow = new Vector();
+		BigDecimal balance = new BigDecimal("0.00");		
+		//atributi koji se prikazuju u listi
+		
+		
+		row.add(iter2.coll_num());
+		row.add(iter2.coll_type_name());
+		row.add(iter2.cover_date());
+		
+		balance = iter2.real_est_estn_valu().divide(oneAmount, 2, BigDecimal.ROUND_HALF_UP);
+		row.add(balance);	
+		 
+//		row.add(iter2.real_est_estn_valu());
+		
+		row.add(iter2.coll_mvp_ponder());
+		row.add(iter2.code_num());
+		row.add(iter2.exp_fc_amount());
+		row.add(iter2.exp_percent());
+
+		row.add(exp_amount);
+
+ 
+		
+/*		balance = exp_amount_hrk.divide(oneAmount, 2, BigDecimal.ROUND_HALF_UP);		
+		row.add(balance);*/		
+		row.add(iter2.exp_balance_hrk());
+	
+		row.add(iter2.code_num_exp());
+
+		
+		decl.cusaccexpcolldetailsmapping.tblCusaccExpCollFOI.addRow(row,hiddenRow);
+		
+    }
+    
+} 
+
+
+
+

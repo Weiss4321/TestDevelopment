@@ -1,0 +1,452 @@
+package hr.vestigo.modules.collateral.batch.bo58;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.sql.Date;
+
+ 
+public class BO581
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo58/BO581.sqlj,v 1.4 2011/10/27 07:34:53 hramkr Exp $";
+
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+
+    #sql iterator KolateralIterator with (holdability = true)( 
+        BigDecimal col_hea_id,
+        BigDecimal market_value,
+        BigDecimal cur_id,
+        String nd_eligibility,
+        BigDecimal col_cat_id,
+        BigDecimal col_typ_id,
+        String inspol_ind
+    );
+     
+    public BO581(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            BigDecimal eve_id = null;
+            YXYB0 eve1 = new YXYB0(batchContext);
+            YXYD0 genId = new YXYD0(connCtx);
+
+            batchContext.beginTransaction();
+            eve_id = genId.getNewId();
+
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4503819704"));
+            event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+            event.put("cmnt", "Izraèun WCA vrijednosti kolaterala");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+            batchContext.debug("eve_id" + event.get("eve_id"));
+
+            eve1.insertEvent(event);
+            batchContext.commitTransaction();
+            batchContext.updateEveID(eve_id);
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+    /**
+    * Metoda koja dohvaæa podatke o kolateralima
+    * @return Iterator. Ako je došlo do greške vraæa null.
+    */
+    public KolateralIterator selectCollateral()  
+    {
+        KolateralIterator iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT
+                    col_hea_id            AS col_hea_id,
+                    real_est_nomi_valu    AS market_value,
+                    real_est_nm_cur_id    AS cur_id,
+                    nd_eligibility        AS nd_eligibility,
+                    col_cat_id            AS col_cat_id,
+                    col_type_id           AS col_typ_id,
+                    inspol_ind            AS inspol_ind
+                 FROM coll_head
+                WHERE
+                    collateral_status = '3'
+                WITH UR
+            };
+        }
+        catch(SQLException e)
+        {
+            batchContext.error("Greska pri dohvatu podataka o kolateralima!", e);
+        }
+        return iter;
+    }
+
+    /**
+    * Metoda koja ispituje da li zadani kolateral za zadani datum veæ postoji u tablici WCA_HISTORY.
+    * @param col_hea_id ID kolaterala
+    * @param process_date datum izraèuna
+    * @returns broj zapisa u tablici WCA_HISTORY koji sadrže zadani kolateral za zadani datum. Vraæa -1 ako je došlo do greske.
+    */
+    public BigDecimal selectCollateralCountInWcaHistory(BigDecimal col_hea_id, Date process_date)
+    {
+        BigDecimal wca_his_id = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT wca_his_id
+                INTO :wca_his_id
+                FROM wca_history
+                WHERE 
+                    col_hea_id = :col_hea_id
+                AND
+                    process_date = :process_date
+                WITH UR
+            };
+ 
+        } catch (SQLException e) {
+            if (batchContext.getSQLExHandler().isEmptyRowset(e)) {
+                wca_his_id = null;
+            }    
+        }       
+        return wca_his_id;
+    }
+
+    /**
+    * Metoda koja ubacuje novi zapis u tablicu WCA_HISTORY.
+    * @param Iterator s podacima o kolateralu.
+    * @return true ako je metoda uspješno završila, false ako je došlo do greške.
+    */
+    public boolean insertIntoWcaHistory(KolateralIterator iter, Date process_date, HashMap hm, BigDecimal other_mrtg, BigDecimal wca_amount)
+    {
+        batchContext.startStopWatch("insertIntoWcaHistory");
+        
+        String ponder_type = (String) hm.get("ponder_type");
+        BigDecimal ponder_value = (BigDecimal) hm.get("ponder_value");
+        BigDecimal market_value = new BigDecimal("0.00");
+        
+        if (ponder_value == null)
+            ponder_value = new BigDecimal("0.00");
+        
+        try
+        {
+            if (iter.market_value() == null) {
+            }
+            else
+                market_value = iter.market_value();
+            
+            BigDecimal id = new YOY00(connCtx).getNewId();
+ 
+            batchContext.beginTransaction();
+            #sql [connCtx] {
+                INSERT INTO wca_history (
+                    wca_his_id,
+                    col_hea_id,
+                    process_date,
+                    cur_id,
+                    mcv_amount,
+                    ponder_type,
+                    ponder_value,
+                    other_mrtg,
+                    wca_amount,
+                    nd_eligibility,
+                    use_id,
+                    user_lock)
+                VALUES (
+                    :id,
+                    :(iter.col_hea_id()),
+                    :process_date,
+                    :(iter.cur_id()),
+                    :market_value,
+                    :ponder_type,
+                    :ponder_value,
+                    :other_mrtg,
+                    :wca_amount,
+                    :(iter.nd_eligibility()),
+                    1,
+                    CURRENT TIMESTAMP)
+             };
+            batchContext.commitTransaction();
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa!", ex);
+            return false;
+        }
+        batchContext.stopStopWatch("insertIntoWcaHistory");
+        return true; 
+    }
+     
+    /**
+     * Metoda koja vrši ažuriranje postojeæeg zapisa u tablici CASHDEP_DWH.
+     * @param Iterator s podacima o depozitu.
+     * @return true ako je metoda uspješno završila, false ako je došlo do greške.
+     */
+     public boolean updateIntoWcaHistory(KolateralIterator iter, Date process_date, HashMap hm, BigDecimal other_mrtg, BigDecimal wca_his_id, BigDecimal wca_amount)
+     {
+         String ponder_type = (String) hm.get("ponder_type");
+         BigDecimal ponder_value = (BigDecimal) hm.get("ponder_value");
+         try
+         {
+             batchContext.beginTransaction();
+             #sql [connCtx] {
+                 UPDATE wca_history
+                 SET
+                     col_hea_id = :(iter.col_hea_id()),
+                     cur_id = :(iter.cur_id()),
+                     mcv_amount = :(iter.market_value()),
+                     ponder_type = :ponder_type,
+                     ponder_value = :ponder_value,
+                     other_mrtg = :other_mrtg,
+                     wca_amount = :wca_amount,
+                     nd_eligibility = :(iter.nd_eligibility()),
+                     use_id = 1,
+                     user_lock = current timestamp
+                 WHERE
+                     wca_his_id = :wca_his_id
+             };
+             batchContext.commitTransaction();
+         }
+         catch(SQLException e)
+         {
+             batchContext.error("Greska pri azuriranju zapisa!", e);
+             return false;
+         }
+         return true; 
+     }
+       
+        
+        /**
+         * Method gets ponder_type and ponder_value for collateral
+         * @param col_hea_id (ID for collateral)
+         * @return hm
+         */      
+        public HashMap selectCollateralPonder(KolateralIterator iter, BigDecimal col_sub_id) {
+            HashMap hm = new HashMap();
+            BigDecimal ponder_value = null;
+            String ponder_type = "MVP";
+            String add_request = "N";            
+            String inspol_ind = "N";
+ 
+            try {
+                inspol_ind = iter.inspol_ind();
+                if (inspol_ind != null && inspol_ind.equalsIgnoreCase("D") )
+                    add_request = "D";
+                else 
+                    add_request = "N";     
+                System.out.println("**** selectCollateralPonder za col_hea_id = " + iter.col_hea_id() + "-" + iter.col_cat_id() + "-" + iter.col_typ_id() + "-" + col_sub_id);
+            } catch (SQLException ex) {
+            }
+
+            System.out.println("**** selectCollateralPonder za add_request = " + add_request);
+            
+            try{            
+   
+// dohvat CO pondera, ako je definiran za kolateral 
+
+                #sql[connCtx] {
+                    SELECT ponder_value
+                    INTO :ponder_value
+                    FROM coll_ponder
+                    WHERE 
+                        col_hea_id = :(iter.col_hea_id())
+                    AND 
+                        ponder_type = 'MVP'
+                    AND 
+                        status = 'A'
+                };
+            } catch (SQLException e) {
+                if (batchContext.getSQLExHandler().isEmptyRowset(e)) {
+                    ponder_value = null;
+                }    
+            }
+            System.out.println("**** dohvat CO pondera = " + ponder_value);            
+// dohvat default pondera, ako nije definiran CO ponder bez dodatnog uvjeta
+            
+/*            if (ponder_value == null){            
+                try{
+                    #sql[connCtx] {
+                    SELECT dfl_value
+                    INTO :ponder_value
+                    FROM dfl_col_ponder
+                    WHERE 
+                      col_cat_id = :(iter.col_cat_id())
+                  AND
+                      col_typ_id = :(iter.col_typ_id())
+                  AND
+                      (col_sub_id = :(col_sub_id) or col_sub_id is null)
+                  AND
+                      status = 'A'
+                  AND
+                      date_from <= current date
+                  AND
+                      date_until >= current date
+                  AND
+                      add_request = 'N' 
+                };
+                } catch (SQLException e) {
+                    if (batchContext.getSQLExHandler().isEmptyRowset(e)) {
+                        ponder_value = null;
+                    }    
+                }   
+                System.out.println("**** dohvat DFL pondera bez uvjeta = " + ponder_value);   
+            }   */
+            
+            
+            if (ponder_value == null){            
+                try{
+                    #sql[connCtx] {
+                    SELECT dfl_value
+                    INTO :ponder_value
+                    FROM dfl_col_ponder
+                    WHERE 
+                      col_cat_id = :(iter.col_cat_id())
+                  AND
+                      col_typ_id = :(iter.col_typ_id())
+                  AND
+                      (col_sub_id = :(col_sub_id) or col_sub_id is null)
+                  AND
+                      status = 'A'
+                  AND
+                      date_from <= current date
+                  AND
+                      date_until >= current date
+                  AND
+                      add_request = :add_request 
+                };
+                } catch (SQLException e) {
+                    if (batchContext.getSQLExHandler().isEmptyRowset(e)) {
+                        ponder_value = null;
+                    }    
+                }   
+                System.out.println("**** dohvat DFL pondera uz uvjet = " + ponder_value);   
+            }
+  
+//    dohvat default pondera, ako nije definiran CO ponder bez dodatnog uvjeta
+            
+            if (ponder_value == null){            
+                try{
+                    #sql[connCtx] {
+                                SELECT dfl_value
+                                INTO :ponder_value
+                                FROM dfl_col_ponder
+                                WHERE 
+                                  col_cat_id = :(iter.col_cat_id())
+                              AND
+                                  col_typ_id = :(iter.col_typ_id())
+                              AND
+                                  (col_sub_id = :(col_sub_id) or col_sub_id is null)
+                              AND
+                                  status = 'A'
+                              AND
+                                  date_from <= current date
+                              AND
+                                  date_until >= current date
+                              AND
+                                  add_request = 'N' 
+                            };
+                } catch (SQLException e) {
+                    if (batchContext.getSQLExHandler().isEmptyRowset(e)) {
+                        ponder_value = null;
+                    }    
+                }   
+                System.out.println("**** dohvat DFL pondera bez uvjeta = " + ponder_value);   
+            }              
+            
+            
+            hm.put("ponder_type", ponder_type);
+            hm.put("ponder_value", ponder_value);
+
+            return hm;
+        }       
+         
+        /**
+         * Metoda koja ispituje da li zadani kolateral za zadani datum veæ postoji u tablici WCA_HISTORY.
+         * @param col_hea_id ID kolaterala
+         * @param process_date datum izraèuna
+         * @returns broj zapisa u tablici WCA_HISTORY koji sadrže zadani kolateral za zadani datum. Vraæa -1 ako je došlo do greske.
+         */
+         public BigDecimal selectCollateralSubType(BigDecimal col_hea_id, BigDecimal col_cat_id, BigDecimal estateColCatId, BigDecimal vehicleColCatId, BigDecimal vesselColCatId, BigDecimal movableColCatId)
+         {
+             BigDecimal col_sub_id = null;
+             try
+             {
+                 if (col_cat_id.compareTo(estateColCatId) == 0) {
+                 
+                     #sql [connCtx] {
+                         SELECT real_est_type
+                         INTO :col_sub_id
+                         FROM coll_restate
+                         WHERE 
+                             col_hea_id = :col_hea_id
+                         WITH UR
+                     }; 
+                 } else if (col_cat_id.compareTo(vehicleColCatId) == 0) {
+                     #sql [connCtx] {
+                         SELECT veh_group_id
+                         INTO :col_sub_id
+                         FROM coll_vehicle
+                         WHERE 
+                             col_hea_id = :col_hea_id
+                          WITH UR
+                     };                     
+                 } else if (col_cat_id.compareTo(vesselColCatId) == 0) {
+                     #sql [connCtx] {
+                         SELECT ves_typ_id
+                         INTO :col_sub_id
+                         FROM coll_vessel
+                         WHERE 
+                             col_hea_id = :col_hea_id
+                          WITH UR
+                     };                     
+                 } else if (col_cat_id.compareTo(movableColCatId) == 0) {
+                     #sql [connCtx] {
+                         SELECT mov_typ_id
+                         INTO :col_sub_id
+                         FROM coll_movable
+                         WHERE 
+                             col_hea_id = :col_hea_id
+                         WITH UR
+                     };                     
+                 }
+                     
+             } catch (SQLException e) {
+                 if (batchContext.getSQLExHandler().isEmptyRowset(e)) {
+                     col_sub_id = null;
+                 }    
+             }       
+             return col_sub_id;
+            
+         }    
+         
+}

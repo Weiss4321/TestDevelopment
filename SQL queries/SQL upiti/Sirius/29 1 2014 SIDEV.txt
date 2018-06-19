@@ -1,0 +1,20 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from bank_product_type;
+
+select * from batch_log where bat_def_id = 4667183704 order by recording_time asc; -- 4667183704
+
+select * from direct_notices order by user_lock desc; -- tablica se ažurira sa zapisima
+
+
+-- 4821917704
+select * from batch_log where bat_def_id = 4821917704 order by recording_time asc;
+
+
+
+select * from batch_def where bat_def_name like '%bk80%';
+
+select * FROM customer;
+
+select * FROM customer where register_no = '016-50-000863';
+

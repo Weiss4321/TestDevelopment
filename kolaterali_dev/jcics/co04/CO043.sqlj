@@ -1,0 +1,131 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+              
+
+
+ 
+#sql iterator IterColSup (
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String sup_type ,      
+							String sup_name ,
+							String sup_unit ,
+							BigDecimal sup_num_of_unit ,
+							String sup_cond ,
+							java.sql.Date sup_cond_date ,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id         
+                   );	
+
+public class CO043 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO043.sqlj,v 1.4 2006/05/08 13:27:58 hramkr Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterColSup iterColSup = null;
+	
+	public CO043 (DeclCO04 decl) { 
+		this.decl = decl;
+	}
+	
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.collsupplylistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		if(decl.collsupplylistmapping.CUS_ID == null ){
+			#sql [ctx] iterColSup = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.supt_type_code as sup_type, mova.supt_type_desc as sup_name, cols.sup_unit_mes as sup_unit, 
+									cols.sup_num_of_unit as sup_num_of_unit, cols.sup_condition as sup_cond, cols.sup_cond_date as sup_cond_date,
+									ch.real_est_status as status, cols.col_sup_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                  
+							FROM
+									coll_head ch, coll_supply cols , supply_type mova 
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		cols.sup_typ_id = mova.sup_typ_id
+						ORDER BY	2
+							
+			};
+		
+		} 
+		 
+ 
+		
+		if(decl.collsupplylistmapping.CUS_ID != null ){
+			#sql [ctx] iterColSup = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.supt_type_code as sup_type, mova.supt_type_desc as sup_name, cols.sup_unit_mes as sup_unit, 
+									cols.sup_num_of_unit as sup_num_of_unit, cols.sup_condition as sup_cond, cols.sup_cond_date as sup_cond_date ,
+									ch.real_est_status as status, cols.col_sup_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                       
+							FROM	
+									coll_head ch, coll_supply cols , supply_type mova  
+							WHERE	ch.cus_id = :(decl.collsupplylistmapping.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id
+							AND 	cols.sup_typ_id = mova.sup_typ_id
+						ORDER BY	2
+							
+			};
+		
+		}   
+	
+		 
+	}
+	
+	public boolean next() throws Exception {
+		return iterColSup.next(); 
+	}
+    
+	public void close() {
+		if(iterColSup!=null) {
+			try {
+				iterColSup.close();
+			} catch (Exception ignored) {}
+		}
+	} 
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterColSup.col_num());	
+		row.add(iterColSup.sup_type());	
+		row.add(iterColSup.sup_name());
+		row.add(iterColSup.sup_unit()); 
+		row.add(iterColSup.sup_num_of_unit());
+		row.add(iterColSup.sup_cond());	
+		row.add(iterColSup.sup_cond_date());			
+		row.add(iterColSup.status()); 
+
+		row1.add(iterColSup.col_hea_id());
+		row1.add(iterColSup.col_res_id());
+		row1.add(iterColSup.real_est_nm_cur_id());
+		
+		decl.collsupplylistmapping.tblCollSupply.addRow(row,row1);
+		
+//		decl.collsupplylistmapping.tblCollSupply.addRow(row,iterColSup.col_hea_id());   	
+		
+	}
+	
+}

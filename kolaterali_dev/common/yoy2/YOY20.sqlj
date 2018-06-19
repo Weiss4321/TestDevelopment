@@ -1,0 +1,921 @@
+package hr.vestigo.modules.collateral.common.yoy2;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.RemoteContext;
+import java.math.BigDecimal;
+import java.sql.*;
+
+import hr.vestigo.modules.collateral.jcics.co06.*; // transakcija za select
+
+import hr.vestigo.modules.f_payment.common.ygy1.*;
+import hr.vestigo.modules.f_payment.common.ygy2.*;
+import hr.vestigo.modules.f_payment.common.ygy4.*;
+  
+public class YOY20 {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy2/YOY20.sqlj,v 1.5 2006/02/09 09:15:06 hramkr Exp $";
+	private TransactionContext tc = null;
+	
+//	 output	
+	private BigDecimal COL_HEA_ID = null;
+	private Timestamp Coll_txtUserLock = null;
+	private String Coll_txtCode = null;
+	private String STATUS = null;
+	private String SPEC_STATUS = null;
+    private Timestamp Coll_txtOpeningTs = null;
+	
+// input	 
+	private Date Coll_txtAcouBDate = null;
+	private BigDecimal Coll_txtAcouBValue = null;
+	private Date Coll_txtAcouDate = null;
+	private String Coll_txtAcouPerAco = null;
+	private String Coll_txtAcouPerCal = null;
+	private BigDecimal Coll_txtAcouValue = null;
+	private String Coll_txtAddData = null;
+	private String Coll_txtAmortAge = null;
+	private BigDecimal Coll_txtAmortValCal = null;
+	private Date Coll_txtAvailDate = null;
+	private String Coll_txtAvailPerCal = null;
+	private BigDecimal Coll_txtAvailValue = null;
+	private Date Coll_txtBptcDate = null;
+	private BigDecimal Coll_txtBptcValu = null;
+	private BigDecimal Coll_txtCollHnbPonder = null;
+	private BigDecimal Coll_txtCollMvpPonder = null;
+	private BigDecimal Coll_txtCollRzbPonder = null;
+	private String Coll_txtCollTypeCode = null;
+	private String Coll_txtComDoc = null;
+	private Date Coll_txtDateFrom = null;
+	private Date Coll_txtDateRecDoc = null;
+	private Date Coll_txtDateToDoc = null;
+	private Date Coll_txtDateToLop = null;   
+	private Date Coll_txtDateRecLop = null; 
+	private String Coll_txtRecLop = null; 
+	private Date Coll_txtDateUnti = null;
+	private Date Coll_txtDatnFrom = null;
+	private Date Coll_txtDatnUnti = null;
+	private Date Coll_txtEstnDate = null;
+	private BigDecimal Coll_txtEstnValu = null;
+	private BigDecimal Coll_txtHfsValue = null;
+	private Date Coll_txtHfsValueDate = null;
+	private Date Coll_txtHfsDateLastOne = null;
+	private BigDecimal Coll_txtHfsValueLastOne = null;
+	private Date Coll_txtLiquDate = null;
+	private BigDecimal Coll_txtLiquValu = null;
+	private String Coll_txtMissingDoc = null;
+	private Date Coll_txtNepoDate = null;
+	private String Coll_txtNepoPerCal = null;
+	private BigDecimal Coll_txtNepoValue = null;
+	private Date Coll_txtNomiDate = null;
+	private String Coll_txtNomiDesc = null;
+	private BigDecimal Coll_txtNomiValu = null;
+	private String Coll_txtRevaAutMan = null;
+	private Date Coll_txtRevaBDate = null;
+	private String Coll_txtRevaBDateAM = null;
+	private BigDecimal Coll_txtRevaBValue = null;
+	private BigDecimal Coll_txtRevaCoefMan = null;
+	private Date Coll_txtRevaDate = null;
+	private String Coll_txtRevaDateAM = null; 
+	private Date Coll_txtRevaDateMan = null;
+	private BigDecimal Coll_txtRevaValue = null;
+	private Date Coll_txtSumLimitDat = null;
+	private BigDecimal Coll_txtSumLimitVal = null;
+	private Date Coll_txtSumPartDat = null;
+	private BigDecimal Coll_txtSumPartVal = null;
+	private BigDecimal Coll_txtThirdRight = null;
+	private Date Coll_txtThirdRightDate = null;
+	private BigDecimal Coll_txtThirdRightInNom = null;
+	private BigDecimal COL_TYPE_ID = null;
+	private BigDecimal REAL_EST_EUSE_ID = null;
+	private BigDecimal REAL_EST_NM_CUR_ID = null;
+	private BigDecimal CUS_ID = null;
+	private BigDecimal COLL_CUS_ID = null;
+	private BigDecimal AMORT_PER_CAL_ID = null;
+	private BigDecimal THIRD_RIGHT_CUR_ID = null;
+	private BigDecimal COL_PLACE = null;
+	private BigDecimal COL_COUNTY = null;
+	private BigDecimal COL_DISTRICT = null;
+	private BigDecimal COL_RESI_QUAR = null;
+	private BigDecimal USE_OPEN_ID = null;
+	private BigDecimal USE_ID = null;
+	private String INSPOL_IND = null;
+	private String Coll_txtDesc = null;	
+
+	private String Coll_txtEUseIdLogin = null;
+	private String Coll_txtEUseIdName = null;
+
+//	 sve iza ovog dodati u mapping za select !	
+	private String Coll_txtEstnCurr = null;
+	private String Coll_txtCarrierRegisterNo = null;
+	private String Coll_txtCarrierName = null;
+	private String Coll_txtOwnerRegisterNo = null;
+	private String Coll_txtOwnerName = null;
+	private String Coll_txtThirdRightCurCodeChar = null;	
+	private String Coll_txtUseOpenIdLogin = null;	
+	private String Coll_txtUseOpenIdName = null;
+	private String Coll_txtUseIdLogin = null;
+	private String Coll_txtUseIdName = null; 	
+	private String Coll_txtAmortPerCal = null;	
+	private String Coll_txtCollTypeName = null;
+	
+	public YOY20(TransactionContext tc) {
+		this.tc = tc;
+	}
+	
+	public void selectHead(DeclCO06 dcl) throws Exception{
+		
+		ConnCtx ctx = tc.getContext();
+		
+		String mapping = tc.getMapping();
+                
+		if (mapping.equalsIgnoreCase("CollSecPaperSelectMapping")){
+			COL_HEA_ID = dcl.COL_HEA_ID;
+        } else if (mapping.equalsIgnoreCase("CollMovableSelectMapping")) {
+			COL_HEA_ID = dcl.collmovableselectmapping.COL_HEA_ID;
+        } else if (mapping.equalsIgnoreCase("CollArtSelectMapping")) {
+			COL_HEA_ID = dcl.collartselectmapping.COL_HEA_ID;
+        } else if (mapping.equalsIgnoreCase("CollPrecSelectMapping")) {
+			COL_HEA_ID = dcl.collprecselectmapping.COL_HEA_ID;
+        }  else if (mapping.equalsIgnoreCase("VesselSelectMapping")) {
+			COL_HEA_ID = dcl.vesselselectmapping.COL_HEA_ID;
+        }
+               
+               
+                                     
+            #sql[ctx] {
+
+                SELECT
+						 col_hea_id,
+						 col_type_id,
+						 col_num,
+						 col_desc, 
+						 real_est_euse_id, 
+						 real_est_estn_valu, 
+						 real_est_estn_date,
+						 real_est_datn_from,
+						 real_est_datn_unti, 
+						 real_est_nomi_desc,
+						 real_est_nomi_valu,
+						 real_est_nomi_date,
+						 real_est_liqu_valu,
+						 real_est_liqu_date,
+						 real_est_bptc_valu,
+						 real_est_bptc_date,
+						 real_est_nm_cur_id,
+						 cus_id, 
+						 coll_cus_id,
+						 date_to_lop,
+						 date_rec_lop,
+						 rec_lop,
+						 com_doc,
+						 missing_doc,
+						 date_to_doc,
+						 date_rec_doc,
+						 reva_aut_man,
+						 reva_date_man,
+						 reva_coef_man, 	
+						 reva_value,
+						 reva_date,
+						 reva_date_am,
+						 reva_bvalue,
+						 reva_bdate,
+						 reva_bdate_am,
+						 amort_age,
+						 amort_per_cal_id,
+						 amort_val_cal,
+						 nepo_value,
+						 nepo_date, 	
+						 nepo_per_cal,
+						 third_right,
+						 third_right_cur_id,
+						 third_right_nom,
+						 third_right_date, 	
+						 hfs_value,
+						 hfs_value_date,
+						 hfs_value_last_one,
+						 hfs_date_last_one,
+						 acou_value,
+						 acou_per_cal,
+						 acou_per_aco,
+						 acou_date,
+						 acou_bvalue,
+						 acou_bdate,
+						 sum_limit_val,
+						 sum_limit_dat,
+						 sum_part_val,
+						 sum_part_dat,
+						 avail_value,
+						 avail_per_cal,
+						 avail_date,
+						 inspol_ind,
+						 col_place,
+						 col_county,
+						 col_district,
+						 col_resi_quar,
+						 coll_mvp_ponder,
+						 coll_hnb_ponder,	
+						 coll_rzb_ponder,	 	
+						 real_est_date_from,
+						 real_est_date_unti,
+						 real_est_add_data,
+						 real_est_status,
+						 real_est_spec_stat,
+						 use_open_id,   
+						 use_id,        
+						 opening_ts,    
+						 user_lock     
+
+                INTO 
+						:COL_HEA_ID,    													                                                
+						:COL_TYPE_ID,  
+						:Coll_txtCode, 
+						:Coll_txtDesc,  
+						:REAL_EST_EUSE_ID,                     		
+						:Coll_txtEstnValu,                   
+						:Coll_txtEstnDate,                   
+						:Coll_txtDatnFrom,                   
+						:Coll_txtDatnUnti,                   
+						:Coll_txtNomiDesc, 
+						:Coll_txtNomiValu,                   		
+						:Coll_txtNomiDate, 
+						:Coll_txtLiquValu,                   		
+						:Coll_txtLiquDate,                   		
+						:Coll_txtBptcValu,                   		
+						:Coll_txtBptcDate, 
+						:REAL_EST_NM_CUR_ID, 
+						:CUS_ID,   
+						:COLL_CUS_ID,   
+						:Coll_txtDateToLop,   
+						:Coll_txtDateRecLop, 
+						:Coll_txtRecLop, 
+						:Coll_txtComDoc,                              		                                      
+						:Coll_txtMissingDoc,                          		                                      
+						:Coll_txtDateToDoc,                           		                                      
+						:Coll_txtDateRecDoc, 
+						:Coll_txtRevaAutMan,                         		                                    
+						:Coll_txtRevaDateMan,                        		                                    
+						:Coll_txtRevaCoefMan,                        		                                   
+						:Coll_txtRevaValue,                           		                                         
+						:Coll_txtRevaDate,                            		                                           
+						:Coll_txtRevaDateAM,                         		                                         
+						:Coll_txtRevaBValue,                          		                                          
+						:Coll_txtRevaBDate,                           		
+						:Coll_txtRevaBDateAM,                        	     
+						:Coll_txtAmortAge,                            	    
+						:AMORT_PER_CAL_ID,                        	                            
+						:Coll_txtAmortValCal,  
+						:Coll_txtNepoValue,                           	                            
+						:Coll_txtNepoDate,                            	                            
+						:Coll_txtNepoPerCal, 
+						:Coll_txtThirdRight,                          	                            
+						:THIRD_RIGHT_CUR_ID,                   	                            
+						:Coll_txtThirdRightInNom,                      		                                         
+						:Coll_txtThirdRightDate,                    	                                                        		                                         
+						:Coll_txtHfsValue,                           	                                                        		                                         
+						:Coll_txtHfsValueDate,                         		                                         
+						:Coll_txtHfsValueLastOne,                      		                                         
+						:Coll_txtHfsDateLastOne,     
+						:Coll_txtAcouValue,                            		                                         
+						:Coll_txtAcouPerCal,                        	                                     
+						:Coll_txtAcouPerAco,                        
+						:Coll_txtAcouDate,                          
+						:Coll_txtAcouBValue,                        
+						:Coll_txtAcouBDate,  
+						:Coll_txtSumLimitVal,                                                     
+						:Coll_txtSumLimitDat,                                                       
+						:Coll_txtSumPartVal,                                                         
+						:Coll_txtSumPartDat, 
+						:Coll_txtAvailValue,                                                       
+						:Coll_txtAvailPerCal,                                                       
+						:Coll_txtAvailDate,  
+						:INSPOL_IND,  
+						:COL_PLACE, 
+						:COL_COUNTY, 
+						:COL_DISTRICT, 
+						:COL_RESI_QUAR, 
+						:Coll_txtCollMvpPonder, 
+						:Coll_txtCollHnbPonder, 
+						:Coll_txtCollRzbPonder, 
+						:Coll_txtDateFrom,                   	                         
+						:Coll_txtDateUnti,                   	 
+						:Coll_txtAddData,  
+						:STATUS,                      		                          
+						:SPEC_STATUS,  
+						:USE_OPEN_ID,
+						:USE_ID,
+						:Coll_txtOpeningTs,
+						:Coll_txtUserLock
+
+            FROM COLL_HEAD
+			WHERE col_hea_id = :(COL_HEA_ID)
+		};
+
+
+// dohvat iz tabele COLLATERAL_TYPE
+		try{    
+			if (COL_TYPE_ID != null){
+	             
+				#sql [ctx] {SELECT coll_type_code, coll_type_name
+	             			INTO :Coll_txtCollTypeCode, :Coll_txtCollTypeName
+	             			FROM COLLATERAL_TYPE 
+	     	       			WHERE coll_type_id = :(COL_TYPE_ID)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 		
+	    
+// dohvat iz tabele CUSTOMER
+		try{    
+			if (REAL_EST_EUSE_ID != null){
+	             
+				#sql [ctx] {SELECT register_no, name
+	             			INTO :Coll_txtEUseIdLogin, :Coll_txtEUseIdName
+	             			FROM CUSTOMER 
+	     	       			WHERE cus_id = :(REAL_EST_EUSE_ID)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 		
+
+		try{    
+			if (CUS_ID != null){
+		             
+				#sql [ctx] {SELECT register_no, name
+	             			INTO :Coll_txtCarrierRegisterNo, :Coll_txtCarrierName
+	             			FROM CUSTOMER 
+	     	       			WHERE cus_id = :(CUS_ID)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 				 
+		 
+		try{    
+			if (COLL_CUS_ID != null){
+		             
+				#sql [ctx] {SELECT register_no, name
+	             			INTO :Coll_txtOwnerRegisterNo, :Coll_txtOwnerName
+	             			FROM CUSTOMER 
+	     	       			WHERE cus_id = :(COLL_CUS_ID)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 				 		 
+		 
+		 
+		 
+// dohvat iz tabele CURRENCY	       
+	
+		try{ 
+			if (REAL_EST_NM_CUR_ID != null){ 
+				YGY20 common2 = new YGY20(tc);      
+		        common2.execute(REAL_EST_NM_CUR_ID);
+		        Coll_txtEstnCurr = common2.getCurCodeChar();
+
+      		}
+        }catch(SQLException e){
+        	if (e.getErrorCode()!=100) throw e;
+	    }	      				
+
+      
+		try{ 
+			if (THIRD_RIGHT_CUR_ID != null){ 
+				YGY20 common2 = new YGY20(tc);      
+		        common2.execute(THIRD_RIGHT_CUR_ID);
+		        Coll_txtThirdRightCurCodeChar = common2.getCurCodeChar();
+
+      		}
+        }catch(SQLException e){
+        	if (e.getErrorCode()!=100) throw e;
+	    }	      				        
+         
+// dohvat iz SYSTEM_CODE_VALUE
+     
+        try{ 
+			if (AMORT_PER_CAL_ID != null) {         	   	 
+				#sql [ctx] {
+                    SELECT sys_code_value
+                        INTO :(Coll_txtAmortPerCal)
+                        FROM system_code_value
+                        WHERE sys_cod_val_id = :(AMORT_PER_CAL_ID)  };  
+			}	
+       	}catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }		        
+ 
+// dohvat iz tabele APP_USER
+ 
+        try{
+			if (USE_OPEN_ID != null){              	         		
+	        	YGY40 common4 = new YGY40(tc);
+				common4.execute(USE_OPEN_ID);
+				Coll_txtUseOpenIdName = common4.getUserName();		
+				Coll_txtUseOpenIdLogin = common4.getLogin();
+			}      		      		 
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }				      	       	
+       	
+        try{
+			if (USE_ID != null){              	         		
+	        	YGY40 common4 = new YGY40(tc);
+				common4.execute(USE_ID);
+				Coll_txtUseIdName = common4.getUserName();		
+				Coll_txtUseIdLogin = common4.getLogin();
+			}      		      		 
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }				
+						
+		if(mapping.equals("CollSecPaperSelectMapping")) {//BASIC
+
+				dcl.COL_HEA_ID = this.COL_HEA_ID;    													                                                
+				dcl.COL_TYPE_ID = this.COL_TYPE_ID;  
+				dcl.Coll_txtCode = this.Coll_txtCode; 
+				dcl.Coll_txtDesc = this.Coll_txtDesc;  
+				dcl.REAL_EST_EUSE_ID = this.REAL_EST_EUSE_ID;
+				dcl.Coll_txtEstnValu = this.Coll_txtEstnValu;                   
+				dcl.Coll_txtEstnDate = this.Coll_txtEstnDate;                   
+				dcl.Coll_txtDatnFrom = this.Coll_txtDatnFrom;                   
+				dcl.Coll_txtDatnUnti = this.Coll_txtDatnUnti;                   
+				dcl.Coll_txtNomiDesc = this.Coll_txtNomiDesc; 
+				dcl.Coll_txtNomiValu = this.Coll_txtNomiValu;                   		
+				dcl.Coll_txtNomiDate = this.Coll_txtNomiDate; 
+				dcl.Coll_txtLiquValu = this.Coll_txtLiquValu;                  		
+				dcl.Coll_txtLiquDate = this.Coll_txtLiquDate;                   		
+				dcl.Coll_txtBptcValu = this.Coll_txtBptcValu;                   		
+				dcl.Coll_txtBptcDate = this.Coll_txtBptcDate; 
+				dcl.REAL_EST_NM_CUR_ID = this.REAL_EST_NM_CUR_ID; 
+				dcl.CUS_ID = this.CUS_ID;   
+				dcl.COLL_CUS_ID = this.COLL_CUS_ID;   
+				dcl.Coll_txtDateToLop = this.Coll_txtDateToLop;   
+				dcl.Coll_txtDateRecLop = this.Coll_txtDateRecLop; 
+				dcl.Coll_txtRecLop = this.Coll_txtRecLop; 
+				dcl.Coll_txtComDoc = this.Coll_txtComDoc;                              		                                      
+				dcl.Coll_txtMissingDoc = this.Coll_txtMissingDoc;                          		                                      
+				dcl.Coll_txtDateToDoc = this.Coll_txtDateToDoc;                          		                                      
+				dcl.Coll_txtDateRecDoc = this.Coll_txtDateRecDoc; 
+				dcl.Coll_txtRevaAutMan = this.Coll_txtRevaAutMan;                         		                                    
+				dcl.Coll_txtRevaDateMan = this.Coll_txtRevaDateMan;                        		                                    
+				dcl.Coll_txtRevaCoefMan = this.Coll_txtRevaCoefMan;                        		                                   
+				dcl.Coll_txtRevaValue = this.Coll_txtRevaValue;                           		                                         
+				dcl.Coll_txtRevaDate = this.Coll_txtRevaDate;                            		                                           
+				dcl.Coll_txtRevaDateAM = this.Coll_txtRevaDateAM;                         		                                         
+				dcl.Coll_txtRevaBValue = this.Coll_txtRevaBValue;                          		                                          
+				dcl.Coll_txtRevaBDate = this.Coll_txtRevaBDate;                           		
+				dcl.Coll_txtRevaBDateAM = this.Coll_txtRevaBDateAM;                       	     
+				dcl.Coll_txtAmortAge = this.Coll_txtAmortAge;                            	    
+				dcl.AMORT_PER_CAL_ID = this.AMORT_PER_CAL_ID;                        	                            
+				dcl.Coll_txtAmortValCal = this.Coll_txtAmortValCal;
+				dcl.Coll_txtNepoValue = this.Coll_txtNepoValue;                           	                            
+				dcl.Coll_txtNepoDate = this.Coll_txtNepoDate;                            	                            
+				dcl.Coll_txtNepoPerCal = this.Coll_txtNepoPerCal; 
+				dcl.Coll_txtThirdRight = this.Coll_txtThirdRight;                          	                            
+				dcl.THIRD_RIGHT_CUR_ID = this.THIRD_RIGHT_CUR_ID;                   	                            
+				dcl.Coll_txtThirdRightInNom = this.Coll_txtThirdRightInNom;                      		                                         
+				dcl.Coll_txtThirdRightDate = this.Coll_txtThirdRightDate;                    	                                                        		                                         
+				dcl.Coll_txtHfsValue = this.Coll_txtHfsValue;                           	                                                        		                                         
+				dcl.Coll_txtHfsValueDate = this.Coll_txtHfsValueDate;                         		                                         
+				dcl.Coll_txtHfsValueLastOne = this.Coll_txtHfsValueLastOne;                      		                                         
+				dcl.Coll_txtHfsDateLastOne = this.Coll_txtHfsDateLastOne;     
+				dcl.Coll_txtAcouValue = this.Coll_txtAcouValue;                            		                                         
+				dcl.Coll_txtAcouPerCal = this.Coll_txtAcouPerCal;                        	                                     
+				dcl.Coll_txtAcouPerAco = this.Coll_txtAcouPerAco;                        
+				dcl.Coll_txtAcouDate = this.Coll_txtAcouDate;                          
+				dcl.Coll_txtAcouBValue = this.Coll_txtAcouBValue;                        
+				dcl.Coll_txtAcouBDate = this.Coll_txtAcouBDate;  
+				dcl.Coll_txtSumLimitVal = this.Coll_txtSumLimitVal;                                                     
+				dcl.Coll_txtSumLimitDat = this.Coll_txtSumLimitDat;                                                       
+				dcl.Coll_txtSumPartVal = this.Coll_txtSumPartVal;                                                         
+				dcl.Coll_txtSumPartDat = this.Coll_txtSumPartDat;
+				dcl.Coll_txtAvailValue = this.Coll_txtAvailValue;                                                       
+				dcl.Coll_txtAvailPerCal = this.Coll_txtAvailPerCal;                                                       
+				dcl.Coll_txtAvailDate = this.Coll_txtAvailDate;  
+				dcl.INSPOL_IND = this.INSPOL_IND;  
+				dcl.COL_PLACE = this.COL_PLACE; 
+				dcl.COL_COUNTY = this.COL_COUNTY; 
+				dcl.COL_DISTRICT = this.COL_DISTRICT; 
+				dcl.COL_RESI_QUAR = this.COL_RESI_QUAR; 
+				dcl.Coll_txtCollMvpPonder = this.Coll_txtCollMvpPonder;
+				dcl.Coll_txtCollHnbPonder = this.Coll_txtCollHnbPonder; 
+				dcl.Coll_txtCollRzbPonder = this.Coll_txtCollRzbPonder;
+				dcl.Coll_txtDateFrom = this.Coll_txtDateFrom;                   	                         
+				dcl.Coll_txtDateUnti = this.Coll_txtDateUnti;                   	 
+				dcl.Coll_txtAddData = this.Coll_txtAddData;  
+				dcl.STATUS = this.STATUS;                      		                          
+				dcl.SPEC_STATUS = this.SPEC_STATUS;  
+				dcl.USE_OPEN_ID = this.USE_OPEN_ID;
+				dcl.USE_ID = this.USE_ID;
+				dcl.Coll_txtOpeningTs = this.Coll_txtOpeningTs;
+				dcl.Coll_txtUserLock = this.Coll_txtUserLock;
+         				
+				dcl.Coll_txtEUseIdLogin = this.Coll_txtEUseIdLogin;
+				dcl.Coll_txtEUseIdName = this.Coll_txtEUseIdName;
+
+				dcl.Coll_txtEstnCurr = this.Coll_txtEstnCurr;
+				dcl.Coll_txtCarrierRegisterNo = this.Coll_txtCarrierRegisterNo;
+				dcl.Coll_txtCarrierName = this.Coll_txtCarrierName;
+				dcl.Coll_txtOwnerRegisterNo = this.Coll_txtOwnerRegisterNo;
+				dcl.Coll_txtOwnerName = this.Coll_txtOwnerName;
+				dcl.Coll_txtThirdRightCurCodeChar = this.Coll_txtThirdRightCurCodeChar;	
+				dcl.Coll_txtUseOpenIdLogin = this.Coll_txtUseOpenIdLogin;
+				dcl.Coll_txtUseOpenIdName = this.Coll_txtUseOpenIdName;
+				dcl.Coll_txtUseIdLogin = this.Coll_txtUseIdLogin;
+				dcl.Coll_txtUseIdName = this.Coll_txtUseIdName; 					
+				dcl.Coll_txtAmortPerCal = this.Coll_txtAmortPerCal;				
+
+				dcl.Coll_txtCollTypeCode = this.Coll_txtCollTypeCode;
+				dcl.Coll_txtCollTypeName  = this.Coll_txtCollTypeName;  				
+		} else if (mapping.equals("CollMovableSelectMapping")) {
+			dcl.collmovableselectmapping.COL_HEA_ID = this.COL_HEA_ID;    													                                                
+			dcl.collmovableselectmapping.COL_TYPE_ID = this.COL_TYPE_ID;  
+			dcl.collmovableselectmapping.Coll_txtCode = this.Coll_txtCode; 
+			dcl.collmovableselectmapping.Coll_txtDesc = this.Coll_txtDesc;  
+			dcl.collmovableselectmapping.REAL_EST_EUSE_ID = this.REAL_EST_EUSE_ID;
+			dcl.collmovableselectmapping.Coll_txtEstnValu = this.Coll_txtEstnValu;                   
+			dcl.collmovableselectmapping.Coll_txtEstnDate = this.Coll_txtEstnDate;                   
+			dcl.collmovableselectmapping.Coll_txtDatnFrom = this.Coll_txtDatnFrom;                   
+			dcl.collmovableselectmapping.Coll_txtDatnUnti = this.Coll_txtDatnUnti;                   
+			dcl.collmovableselectmapping.Coll_txtNomiDesc = this.Coll_txtNomiDesc; 
+			dcl.collmovableselectmapping.Coll_txtNomiValu = this.Coll_txtNomiValu;                   		
+			dcl.collmovableselectmapping.Coll_txtNomiDate = this.Coll_txtNomiDate; 
+			dcl.collmovableselectmapping.Coll_txtLiquValu = this.Coll_txtLiquValu;                  		
+			dcl.collmovableselectmapping.Coll_txtLiquDate = this.Coll_txtLiquDate;                   		
+			dcl.collmovableselectmapping.Coll_txtBptcValu = this.Coll_txtBptcValu;                   		
+			dcl.collmovableselectmapping.Coll_txtBptcDate = this.Coll_txtBptcDate; 
+			dcl.collmovableselectmapping.REAL_EST_NM_CUR_ID = this.REAL_EST_NM_CUR_ID; 
+			dcl.collmovableselectmapping.CUS_ID = this.CUS_ID;   
+			dcl.collmovableselectmapping.COLL_CUS_ID = this.COLL_CUS_ID;   
+			dcl.collmovableselectmapping.Coll_txtDateToLop = this.Coll_txtDateToLop;   
+			dcl.collmovableselectmapping.Coll_txtDateRecLop = this.Coll_txtDateRecLop; 
+			dcl.collmovableselectmapping.Coll_txtRecLop = this.Coll_txtRecLop; 
+			dcl.collmovableselectmapping.Coll_txtComDoc = this.Coll_txtComDoc;                              		                                      
+			dcl.collmovableselectmapping.Coll_txtMissingDoc = this.Coll_txtMissingDoc;                          		                                      
+			dcl.collmovableselectmapping.Coll_txtDateToDoc = this.Coll_txtDateToDoc;                          		                                      
+			dcl.collmovableselectmapping.Coll_txtDateRecDoc = this.Coll_txtDateRecDoc; 
+			dcl.collmovableselectmapping.Coll_txtRevaAutMan = this.Coll_txtRevaAutMan;                         		                                    
+			dcl.collmovableselectmapping.Coll_txtRevaDateMan = this.Coll_txtRevaDateMan;                        		                                    
+			dcl.collmovableselectmapping.Coll_txtRevaCoefMan = this.Coll_txtRevaCoefMan;                        		                                   
+			dcl.collmovableselectmapping.Coll_txtRevaValue = this.Coll_txtRevaValue;                           		                                         
+			dcl.collmovableselectmapping.Coll_txtRevaDate = this.Coll_txtRevaDate;                            		                                           
+			dcl.collmovableselectmapping.Coll_txtRevaDateAM = this.Coll_txtRevaDateAM;                         		                                         
+			dcl.collmovableselectmapping.Coll_txtRevaBValue = this.Coll_txtRevaBValue;                          		                                          
+			dcl.collmovableselectmapping.Coll_txtRevaBDate = this.Coll_txtRevaBDate;                           		
+			dcl.collmovableselectmapping.Coll_txtRevaBDateAM = this.Coll_txtRevaBDateAM;                       	     
+			dcl.collmovableselectmapping.Coll_txtAmortAge = this.Coll_txtAmortAge;                            	    
+			dcl.collmovableselectmapping.AMORT_PER_CAL_ID = this.AMORT_PER_CAL_ID;                        	                            
+			dcl.collmovableselectmapping.Coll_txtAmortValCal = this.Coll_txtAmortValCal;
+			dcl.collmovableselectmapping.Coll_txtNepoValue = this.Coll_txtNepoValue;                           	                            
+			dcl.collmovableselectmapping.Coll_txtNepoDate = this.Coll_txtNepoDate;                            	                            
+			dcl.collmovableselectmapping.Coll_txtNepoPerCal = this.Coll_txtNepoPerCal; 
+			dcl.collmovableselectmapping.Coll_txtThirdRight = this.Coll_txtThirdRight;                          	                            
+			dcl.collmovableselectmapping.THIRD_RIGHT_CUR_ID = this.THIRD_RIGHT_CUR_ID;                   	                            
+			dcl.collmovableselectmapping.Coll_txtThirdRightInNom = this.Coll_txtThirdRightInNom;                      		                                         
+			dcl.collmovableselectmapping.Coll_txtThirdRightDate = this.Coll_txtThirdRightDate;                    	                                                        		                                         
+			dcl.collmovableselectmapping.Coll_txtHfsValue = this.Coll_txtHfsValue;                           	                                                        		                                         
+			dcl.collmovableselectmapping.Coll_txtHfsValueDate = this.Coll_txtHfsValueDate;                         		                                         
+			dcl.collmovableselectmapping.Coll_txtHfsValueLastOne = this.Coll_txtHfsValueLastOne;                      		                                         
+			dcl.collmovableselectmapping.Coll_txtHfsDateLastOne = this.Coll_txtHfsDateLastOne;     
+			dcl.collmovableselectmapping.Coll_txtAcouValue = this.Coll_txtAcouValue;                            		                                         
+			dcl.collmovableselectmapping.Coll_txtAcouPerCal = this.Coll_txtAcouPerCal;                        	                                     
+			dcl.collmovableselectmapping.Coll_txtAcouPerAco = this.Coll_txtAcouPerAco;                        
+			dcl.collmovableselectmapping.Coll_txtAcouDate = this.Coll_txtAcouDate;                          
+			dcl.collmovableselectmapping.Coll_txtAcouBValue = this.Coll_txtAcouBValue;                        
+			dcl.collmovableselectmapping.Coll_txtAcouBDate = this.Coll_txtAcouBDate;  
+			dcl.collmovableselectmapping.Coll_txtSumLimitVal = this.Coll_txtSumLimitVal;                                                     
+			dcl.collmovableselectmapping.Coll_txtSumLimitDat = this.Coll_txtSumLimitDat;                                                       
+			dcl.collmovableselectmapping.Coll_txtSumPartVal = this.Coll_txtSumPartVal;                                                         
+			dcl.collmovableselectmapping.Coll_txtSumPartDat = this.Coll_txtSumPartDat;
+			dcl.collmovableselectmapping.Coll_txtAvailValue = this.Coll_txtAvailValue;                                                       
+			dcl.collmovableselectmapping.Coll_txtAvailPerCal = this.Coll_txtAvailPerCal;                                                       
+			dcl.collmovableselectmapping.Coll_txtAvailDate = this.Coll_txtAvailDate;  
+			dcl.collmovableselectmapping.INSPOL_IND = this.INSPOL_IND;  
+			dcl.collmovableselectmapping.COL_PLACE = this.COL_PLACE; 
+			dcl.collmovableselectmapping.COL_COUNTY = this.COL_COUNTY; 
+			dcl.collmovableselectmapping.COL_DISTRICT = this.COL_DISTRICT; 
+			dcl.collmovableselectmapping.COL_RESI_QUAR = this.COL_RESI_QUAR; 
+			dcl.collmovableselectmapping.Coll_txtCollMvpPonder = this.Coll_txtCollMvpPonder;
+			dcl.collmovableselectmapping.Coll_txtCollHnbPonder = this.Coll_txtCollHnbPonder; 
+			dcl.collmovableselectmapping.Coll_txtCollRzbPonder = this.Coll_txtCollRzbPonder;
+			dcl.collmovableselectmapping.Coll_txtDateFrom = this.Coll_txtDateFrom;                   	                         
+			dcl.collmovableselectmapping.Coll_txtDateUnti = this.Coll_txtDateUnti;                   	 
+			dcl.collmovableselectmapping.Coll_txtAddData = this.Coll_txtAddData;  
+			dcl.collmovableselectmapping.STATUS = this.STATUS;                      		                          
+			dcl.collmovableselectmapping.SPEC_STATUS = this.SPEC_STATUS;  
+			dcl.collmovableselectmapping.USE_OPEN_ID = this.USE_OPEN_ID;
+			dcl.collmovableselectmapping.USE_ID = this.USE_ID;
+			dcl.collmovableselectmapping.Coll_txtOpeningTs = this.Coll_txtOpeningTs;
+			dcl.collmovableselectmapping.Coll_txtUserLock = this.Coll_txtUserLock;
+     				
+			dcl.collmovableselectmapping.Coll_txtEUseIdLogin = this.Coll_txtEUseIdLogin;
+			dcl.collmovableselectmapping.Coll_txtEUseIdName = this.Coll_txtEUseIdName;
+
+			dcl.collmovableselectmapping.Coll_txtEstnCurr = this.Coll_txtEstnCurr;
+			dcl.collmovableselectmapping.Coll_txtCarrierRegisterNo = this.Coll_txtCarrierRegisterNo;
+			dcl.collmovableselectmapping.Coll_txtCarrierName = this.Coll_txtCarrierName;
+			dcl.collmovableselectmapping.Coll_txtOwnerRegisterNo = this.Coll_txtOwnerRegisterNo;
+			dcl.collmovableselectmapping.Coll_txtOwnerName = this.Coll_txtOwnerName;
+			dcl.collmovableselectmapping.Coll_txtThirdRightCurCodeChar = this.Coll_txtThirdRightCurCodeChar;	
+			dcl.collmovableselectmapping.Coll_txtUseOpenIdLogin = this.Coll_txtUseOpenIdLogin;
+			dcl.collmovableselectmapping.Coll_txtUseOpenIdName = this.Coll_txtUseOpenIdName;
+			dcl.collmovableselectmapping.Coll_txtUseIdLogin = this.Coll_txtUseIdLogin;
+			dcl.collmovableselectmapping.Coll_txtUseIdName = this.Coll_txtUseIdName; 					
+			dcl.collmovableselectmapping.Coll_txtAmortPerCal = this.Coll_txtAmortPerCal;				
+
+			dcl.collmovableselectmapping.Coll_txtCollTypeCode = this.Coll_txtCollTypeCode;
+			dcl.collmovableselectmapping.Coll_txtCollTypeName  = this.Coll_txtCollTypeName;  						
+		} else if (mapping.equals("CollArtSelectMapping")) {
+			dcl.collartselectmapping.COL_HEA_ID = this.COL_HEA_ID;    	 												                                                
+			dcl.collartselectmapping.COL_TYPE_ID = this.COL_TYPE_ID;  
+			dcl.collartselectmapping.Coll_txtCode = this.Coll_txtCode; 
+			dcl.collartselectmapping.Coll_txtDesc = this.Coll_txtDesc;  
+			dcl.collartselectmapping.REAL_EST_EUSE_ID = this.REAL_EST_EUSE_ID;
+			dcl.collartselectmapping.Coll_txtEstnValu = this.Coll_txtEstnValu;                   
+			dcl.collartselectmapping.Coll_txtEstnDate = this.Coll_txtEstnDate;                   
+			dcl.collartselectmapping.Coll_txtDatnFrom = this.Coll_txtDatnFrom;                   
+			dcl.collartselectmapping.Coll_txtDatnUnti = this.Coll_txtDatnUnti;                   
+			dcl.collartselectmapping.Coll_txtNomiDesc = this.Coll_txtNomiDesc; 
+			dcl.collartselectmapping.Coll_txtNomiValu = this.Coll_txtNomiValu;                   		
+			dcl.collartselectmapping.Coll_txtNomiDate = this.Coll_txtNomiDate; 
+			dcl.collartselectmapping.Coll_txtLiquValu = this.Coll_txtLiquValu;                  		
+			dcl.collartselectmapping.Coll_txtLiquDate = this.Coll_txtLiquDate;                   		
+			dcl.collartselectmapping.Coll_txtBptcValu = this.Coll_txtBptcValu;                   		
+			dcl.collartselectmapping.Coll_txtBptcDate = this.Coll_txtBptcDate; 
+			dcl.collartselectmapping.REAL_EST_NM_CUR_ID = this.REAL_EST_NM_CUR_ID; 
+			dcl.collartselectmapping.CUS_ID = this.CUS_ID;   
+			dcl.collartselectmapping.COLL_CUS_ID = this.COLL_CUS_ID;   
+			dcl.collartselectmapping.Coll_txtDateToLop = this.Coll_txtDateToLop;   
+			dcl.collartselectmapping.Coll_txtDateRecLop = this.Coll_txtDateRecLop; 
+			dcl.collartselectmapping.Coll_txtRecLop = this.Coll_txtRecLop; 
+			dcl.collartselectmapping.Coll_txtComDoc = this.Coll_txtComDoc;                              		                                      
+			dcl.collartselectmapping.Coll_txtMissingDoc = this.Coll_txtMissingDoc;                          		                                      
+			dcl.collartselectmapping.Coll_txtDateToDoc = this.Coll_txtDateToDoc;                          		                                      
+			dcl.collartselectmapping.Coll_txtDateRecDoc = this.Coll_txtDateRecDoc; 
+			dcl.collartselectmapping.Coll_txtRevaAutMan = this.Coll_txtRevaAutMan;                         		                                    
+			dcl.collartselectmapping.Coll_txtRevaDateMan = this.Coll_txtRevaDateMan;                        		                                    
+			dcl.collartselectmapping.Coll_txtRevaCoefMan = this.Coll_txtRevaCoefMan;                        		                                   
+			dcl.collartselectmapping.Coll_txtRevaValue = this.Coll_txtRevaValue;                           		                                         
+			dcl.collartselectmapping.Coll_txtRevaDate = this.Coll_txtRevaDate;                            		                                           
+			dcl.collartselectmapping.Coll_txtRevaDateAM = this.Coll_txtRevaDateAM;                         		                                         
+			dcl.collartselectmapping.Coll_txtRevaBValue = this.Coll_txtRevaBValue;                          		                                          
+			dcl.collartselectmapping.Coll_txtRevaBDate = this.Coll_txtRevaBDate;                           		
+			dcl.collartselectmapping.Coll_txtRevaBDateAM = this.Coll_txtRevaBDateAM;                       	     
+			dcl.collartselectmapping.Coll_txtAmortAge = this.Coll_txtAmortAge;                            	    
+			dcl.collartselectmapping.AMORT_PER_CAL_ID = this.AMORT_PER_CAL_ID;                        	                            
+			dcl.collartselectmapping.Coll_txtAmortValCal = this.Coll_txtAmortValCal;
+			dcl.collartselectmapping.Coll_txtNepoValue = this.Coll_txtNepoValue;                           	                            
+			dcl.collartselectmapping.Coll_txtNepoDate = this.Coll_txtNepoDate;                            	                            
+			dcl.collartselectmapping.Coll_txtNepoPerCal = this.Coll_txtNepoPerCal; 
+			dcl.collartselectmapping.Coll_txtThirdRight = this.Coll_txtThirdRight;                          	                            
+			dcl.collartselectmapping.THIRD_RIGHT_CUR_ID = this.THIRD_RIGHT_CUR_ID;                   	                            
+			dcl.collartselectmapping.Coll_txtThirdRightInNom = this.Coll_txtThirdRightInNom;                      		                                         
+			dcl.collartselectmapping.Coll_txtThirdRightDate = this.Coll_txtThirdRightDate;                    	                                                        		                                         
+			dcl.collartselectmapping.Coll_txtHfsValue = this.Coll_txtHfsValue;                           	                                                        		                                         
+			dcl.collartselectmapping.Coll_txtHfsValueDate = this.Coll_txtHfsValueDate;                         		                                         
+			dcl.collartselectmapping.Coll_txtHfsValueLastOne = this.Coll_txtHfsValueLastOne;                      		                                         
+			dcl.collartselectmapping.Coll_txtHfsDateLastOne = this.Coll_txtHfsDateLastOne;     
+			dcl.collartselectmapping.Coll_txtAcouValue = this.Coll_txtAcouValue;                            		                                         
+			dcl.collartselectmapping.Coll_txtAcouPerCal = this.Coll_txtAcouPerCal;                        	                                     
+			dcl.collartselectmapping.Coll_txtAcouPerAco = this.Coll_txtAcouPerAco;                        
+			dcl.collartselectmapping.Coll_txtAcouDate = this.Coll_txtAcouDate;                          
+			dcl.collartselectmapping.Coll_txtAcouBValue = this.Coll_txtAcouBValue;                        
+			dcl.collartselectmapping.Coll_txtAcouBDate = this.Coll_txtAcouBDate;  
+			dcl.collartselectmapping.Coll_txtSumLimitVal = this.Coll_txtSumLimitVal;                                                     
+			dcl.collartselectmapping.Coll_txtSumLimitDat = this.Coll_txtSumLimitDat;                                                       
+			dcl.collartselectmapping.Coll_txtSumPartVal = this.Coll_txtSumPartVal;                                                         
+			dcl.collartselectmapping.Coll_txtSumPartDat = this.Coll_txtSumPartDat;
+			dcl.collartselectmapping.Coll_txtAvailValue = this.Coll_txtAvailValue;                                                       
+			dcl.collartselectmapping.Coll_txtAvailPerCal = this.Coll_txtAvailPerCal;                                                       
+			dcl.collartselectmapping.Coll_txtAvailDate = this.Coll_txtAvailDate;  
+			dcl.collartselectmapping.INSPOL_IND = this.INSPOL_IND;  
+			dcl.collartselectmapping.COL_PLACE = this.COL_PLACE; 
+			dcl.collartselectmapping.COL_COUNTY = this.COL_COUNTY; 
+			dcl.collartselectmapping.COL_DISTRICT = this.COL_DISTRICT; 
+			dcl.collartselectmapping.COL_RESI_QUAR = this.COL_RESI_QUAR; 
+			dcl.collartselectmapping.Coll_txtCollMvpPonder = this.Coll_txtCollMvpPonder;
+			dcl.collartselectmapping.Coll_txtCollHnbPonder = this.Coll_txtCollHnbPonder; 
+			dcl.collartselectmapping.Coll_txtCollRzbPonder = this.Coll_txtCollRzbPonder;
+			dcl.collartselectmapping.Coll_txtDateFrom = this.Coll_txtDateFrom;                   	                         
+			dcl.collartselectmapping.Coll_txtDateUnti = this.Coll_txtDateUnti;                   	 
+			dcl.collartselectmapping.Coll_txtAddData = this.Coll_txtAddData;  
+			dcl.collartselectmapping.STATUS = this.STATUS;                      		                          
+			dcl.collartselectmapping.SPEC_STATUS = this.SPEC_STATUS;  
+			dcl.collartselectmapping.USE_OPEN_ID = this.USE_OPEN_ID;
+			dcl.collartselectmapping.USE_ID = this.USE_ID;
+			dcl.collartselectmapping.Coll_txtOpeningTs = this.Coll_txtOpeningTs;
+			dcl.collartselectmapping.Coll_txtUserLock = this.Coll_txtUserLock;
+     				
+			dcl.collartselectmapping.Coll_txtEUseIdLogin = this.Coll_txtEUseIdLogin;
+			dcl.collartselectmapping.Coll_txtEUseIdName = this.Coll_txtEUseIdName;
+
+			dcl.collartselectmapping.Coll_txtEstnCurr = this.Coll_txtEstnCurr;
+			dcl.collartselectmapping.Coll_txtCarrierRegisterNo = this.Coll_txtCarrierRegisterNo;
+			dcl.collartselectmapping.Coll_txtCarrierName = this.Coll_txtCarrierName;
+			dcl.collartselectmapping.Coll_txtOwnerRegisterNo = this.Coll_txtOwnerRegisterNo;
+			dcl.collartselectmapping.Coll_txtOwnerName = this.Coll_txtOwnerName;
+			dcl.collartselectmapping.Coll_txtThirdRightCurCodeChar = this.Coll_txtThirdRightCurCodeChar;	
+			dcl.collartselectmapping.Coll_txtUseOpenIdLogin = this.Coll_txtUseOpenIdLogin;
+			dcl.collartselectmapping.Coll_txtUseOpenIdName = this.Coll_txtUseOpenIdName;
+			dcl.collartselectmapping.Coll_txtUseIdLogin = this.Coll_txtUseIdLogin;
+			dcl.collartselectmapping.Coll_txtUseIdName = this.Coll_txtUseIdName; 					
+			dcl.collartselectmapping.Coll_txtAmortPerCal = this.Coll_txtAmortPerCal;				
+
+			dcl.collartselectmapping.Coll_txtCollTypeCode = this.Coll_txtCollTypeCode;
+			dcl.collartselectmapping.Coll_txtCollTypeName  = this.Coll_txtCollTypeName;  						
+		} else if (mapping.equals("CollPrecSelectMapping")) {
+			dcl.collprecselectmapping.COL_HEA_ID = this.COL_HEA_ID;    													                                                
+			dcl.collprecselectmapping.COL_TYPE_ID = this.COL_TYPE_ID;  
+			dcl.collprecselectmapping.Coll_txtCode = this.Coll_txtCode; 
+			dcl.collprecselectmapping.Coll_txtDesc = this.Coll_txtDesc;  
+			dcl.collprecselectmapping.REAL_EST_EUSE_ID = this.REAL_EST_EUSE_ID;
+			dcl.collprecselectmapping.Coll_txtEstnValu = this.Coll_txtEstnValu;                   
+			dcl.collprecselectmapping.Coll_txtEstnDate = this.Coll_txtEstnDate;                   
+			dcl.collprecselectmapping.Coll_txtDatnFrom = this.Coll_txtDatnFrom;                   
+			dcl.collprecselectmapping.Coll_txtDatnUnti = this.Coll_txtDatnUnti;                   
+			dcl.collprecselectmapping.Coll_txtNomiDesc = this.Coll_txtNomiDesc; 
+			dcl.collprecselectmapping.Coll_txtNomiValu = this.Coll_txtNomiValu;                   		
+			dcl.collprecselectmapping.Coll_txtNomiDate = this.Coll_txtNomiDate; 
+			dcl.collprecselectmapping.Coll_txtLiquValu = this.Coll_txtLiquValu;                  		
+			dcl.collprecselectmapping.Coll_txtLiquDate = this.Coll_txtLiquDate;                   		
+			dcl.collprecselectmapping.Coll_txtBptcValu = this.Coll_txtBptcValu;                   		
+			dcl.collprecselectmapping.Coll_txtBptcDate = this.Coll_txtBptcDate; 
+			dcl.collprecselectmapping.REAL_EST_NM_CUR_ID = this.REAL_EST_NM_CUR_ID; 
+			dcl.collprecselectmapping.CUS_ID = this.CUS_ID;   
+			dcl.collprecselectmapping.COLL_CUS_ID = this.COLL_CUS_ID;   
+			dcl.collprecselectmapping.Coll_txtDateToLop = this.Coll_txtDateToLop;   
+			dcl.collprecselectmapping.Coll_txtDateRecLop = this.Coll_txtDateRecLop; 
+			dcl.collprecselectmapping.Coll_txtRecLop = this.Coll_txtRecLop; 
+			dcl.collprecselectmapping.Coll_txtComDoc = this.Coll_txtComDoc;                              		                                      
+			dcl.collprecselectmapping.Coll_txtMissingDoc = this.Coll_txtMissingDoc;                          		                                      
+			dcl.collprecselectmapping.Coll_txtDateToDoc = this.Coll_txtDateToDoc;                          		                                      
+			dcl.collprecselectmapping.Coll_txtDateRecDoc = this.Coll_txtDateRecDoc; 
+			dcl.collprecselectmapping.Coll_txtRevaAutMan = this.Coll_txtRevaAutMan;                         		                                    
+			dcl.collprecselectmapping.Coll_txtRevaDateMan = this.Coll_txtRevaDateMan;                        		                                    
+			dcl.collprecselectmapping.Coll_txtRevaCoefMan = this.Coll_txtRevaCoefMan;                        		                                   
+			dcl.collprecselectmapping.Coll_txtRevaValue = this.Coll_txtRevaValue;                           		                                         
+			dcl.collprecselectmapping.Coll_txtRevaDate = this.Coll_txtRevaDate;                            		                                           
+			dcl.collprecselectmapping.Coll_txtRevaDateAM = this.Coll_txtRevaDateAM;                         		                                         
+			dcl.collprecselectmapping.Coll_txtRevaBValue = this.Coll_txtRevaBValue;                          		                                          
+			dcl.collprecselectmapping.Coll_txtRevaBDate = this.Coll_txtRevaBDate;                           		
+			dcl.collprecselectmapping.Coll_txtRevaBDateAM = this.Coll_txtRevaBDateAM;                       	     
+			dcl.collprecselectmapping.Coll_txtAmortAge = this.Coll_txtAmortAge;                            	    
+			dcl.collprecselectmapping.AMORT_PER_CAL_ID = this.AMORT_PER_CAL_ID;                        	                            
+			dcl.collprecselectmapping.Coll_txtAmortValCal = this.Coll_txtAmortValCal;
+			dcl.collprecselectmapping.Coll_txtNepoValue = this.Coll_txtNepoValue;                           	                            
+			dcl.collprecselectmapping.Coll_txtNepoDate = this.Coll_txtNepoDate;                            	                            
+			dcl.collprecselectmapping.Coll_txtNepoPerCal = this.Coll_txtNepoPerCal; 
+			dcl.collprecselectmapping.Coll_txtThirdRight = this.Coll_txtThirdRight;                          	                            
+			dcl.collprecselectmapping.THIRD_RIGHT_CUR_ID = this.THIRD_RIGHT_CUR_ID;                   	                            
+			dcl.collprecselectmapping.Coll_txtThirdRightInNom = this.Coll_txtThirdRightInNom;                      		                                         
+			dcl.collprecselectmapping.Coll_txtThirdRightDate = this.Coll_txtThirdRightDate;                    	                                                        		                                         
+			dcl.collprecselectmapping.Coll_txtHfsValue = this.Coll_txtHfsValue;                           	                                                        		                                         
+			dcl.collprecselectmapping.Coll_txtHfsValueDate = this.Coll_txtHfsValueDate;                         		                                         
+			dcl.collprecselectmapping.Coll_txtHfsValueLastOne = this.Coll_txtHfsValueLastOne;                      		                                         
+			dcl.collprecselectmapping.Coll_txtHfsDateLastOne = this.Coll_txtHfsDateLastOne;     
+			dcl.collprecselectmapping.Coll_txtAcouValue = this.Coll_txtAcouValue;                            		                                         
+			dcl.collprecselectmapping.Coll_txtAcouPerCal = this.Coll_txtAcouPerCal;                        	                                     
+			dcl.collprecselectmapping.Coll_txtAcouPerAco = this.Coll_txtAcouPerAco;                        
+			dcl.collprecselectmapping.Coll_txtAcouDate = this.Coll_txtAcouDate;                          
+			dcl.collprecselectmapping.Coll_txtAcouBValue = this.Coll_txtAcouBValue;                        
+			dcl.collprecselectmapping.Coll_txtAcouBDate = this.Coll_txtAcouBDate;  
+			dcl.collprecselectmapping.Coll_txtSumLimitVal = this.Coll_txtSumLimitVal;                                                     
+			dcl.collprecselectmapping.Coll_txtSumLimitDat = this.Coll_txtSumLimitDat;                                                       
+			dcl.collprecselectmapping.Coll_txtSumPartVal = this.Coll_txtSumPartVal;                                                         
+			dcl.collprecselectmapping.Coll_txtSumPartDat = this.Coll_txtSumPartDat;
+			dcl.collprecselectmapping.Coll_txtAvailValue = this.Coll_txtAvailValue;                                                       
+			dcl.collprecselectmapping.Coll_txtAvailPerCal = this.Coll_txtAvailPerCal;                                                       
+			dcl.collprecselectmapping.Coll_txtAvailDate = this.Coll_txtAvailDate;  
+			dcl.collprecselectmapping.INSPOL_IND = this.INSPOL_IND;  
+			dcl.collprecselectmapping.COL_PLACE = this.COL_PLACE; 
+			dcl.collprecselectmapping.COL_COUNTY = this.COL_COUNTY; 
+			dcl.collprecselectmapping.COL_DISTRICT = this.COL_DISTRICT; 
+			dcl.collprecselectmapping.COL_RESI_QUAR = this.COL_RESI_QUAR; 
+			dcl.collprecselectmapping.Coll_txtCollMvpPonder = this.Coll_txtCollMvpPonder;
+			dcl.collprecselectmapping.Coll_txtCollHnbPonder = this.Coll_txtCollHnbPonder; 
+			dcl.collprecselectmapping.Coll_txtCollRzbPonder = this.Coll_txtCollRzbPonder;
+			dcl.collprecselectmapping.Coll_txtDateFrom = this.Coll_txtDateFrom;                   	                         
+			dcl.collprecselectmapping.Coll_txtDateUnti = this.Coll_txtDateUnti;                   	 
+			dcl.collprecselectmapping.Coll_txtAddData = this.Coll_txtAddData;  
+			dcl.collprecselectmapping.STATUS = this.STATUS;                      		                          
+			dcl.collprecselectmapping.SPEC_STATUS = this.SPEC_STATUS;  
+			dcl.collprecselectmapping.USE_OPEN_ID = this.USE_OPEN_ID;
+			dcl.collprecselectmapping.USE_ID = this.USE_ID;
+			dcl.collprecselectmapping.Coll_txtOpeningTs = this.Coll_txtOpeningTs;
+			dcl.collprecselectmapping.Coll_txtUserLock = this.Coll_txtUserLock;
+     				
+			dcl.collprecselectmapping.Coll_txtEUseIdLogin = this.Coll_txtEUseIdLogin;
+			dcl.collprecselectmapping.Coll_txtEUseIdName = this.Coll_txtEUseIdName;
+
+			dcl.collprecselectmapping.Coll_txtEstnCurr = this.Coll_txtEstnCurr;
+			dcl.collprecselectmapping.Coll_txtCarrierRegisterNo = this.Coll_txtCarrierRegisterNo;
+			dcl.collprecselectmapping.Coll_txtCarrierName = this.Coll_txtCarrierName;
+			dcl.collprecselectmapping.Coll_txtOwnerRegisterNo = this.Coll_txtOwnerRegisterNo;
+			dcl.collprecselectmapping.Coll_txtOwnerName = this.Coll_txtOwnerName;
+			dcl.collprecselectmapping.Coll_txtThirdRightCurCodeChar = this.Coll_txtThirdRightCurCodeChar;	
+			dcl.collprecselectmapping.Coll_txtUseOpenIdLogin = this.Coll_txtUseOpenIdLogin;
+			dcl.collprecselectmapping.Coll_txtUseOpenIdName = this.Coll_txtUseOpenIdName;
+			dcl.collprecselectmapping.Coll_txtUseIdLogin = this.Coll_txtUseIdLogin;
+			dcl.collprecselectmapping.Coll_txtUseIdName = this.Coll_txtUseIdName; 					
+			dcl.collprecselectmapping.Coll_txtAmortPerCal = this.Coll_txtAmortPerCal;				
+
+			dcl.collprecselectmapping.Coll_txtCollTypeCode = this.Coll_txtCollTypeCode;
+			dcl.collprecselectmapping.Coll_txtCollTypeName  = this.Coll_txtCollTypeName;  		
+			
+		} else if (mapping.equals("VesselSelectMapping")) {
+			dcl.vesselselectmapping.COL_HEA_ID = this.COL_HEA_ID;    													                                                
+			dcl.vesselselectmapping.COL_TYPE_ID = this.COL_TYPE_ID;  
+			dcl.vesselselectmapping.Coll_txtCode = this.Coll_txtCode; 
+			dcl.vesselselectmapping.Coll_txtDesc = this.Coll_txtDesc;  
+			dcl.vesselselectmapping.REAL_EST_EUSE_ID = this.REAL_EST_EUSE_ID;
+			dcl.vesselselectmapping.Coll_txtEstnValu = this.Coll_txtEstnValu;                   
+			dcl.vesselselectmapping.Coll_txtEstnDate = this.Coll_txtEstnDate;                   
+			dcl.vesselselectmapping.Coll_txtDatnFrom = this.Coll_txtDatnFrom;                   
+			dcl.vesselselectmapping.Coll_txtDatnUnti = this.Coll_txtDatnUnti;                   
+			dcl.vesselselectmapping.Coll_txtNomiDesc = this.Coll_txtNomiDesc; 
+			dcl.vesselselectmapping.Coll_txtNomiValu = this.Coll_txtNomiValu;                   		
+			dcl.vesselselectmapping.Coll_txtNomiDate = this.Coll_txtNomiDate; 
+			dcl.vesselselectmapping.Coll_txtLiquValu = this.Coll_txtLiquValu;                  		
+			dcl.vesselselectmapping.Coll_txtLiquDate = this.Coll_txtLiquDate;                   		
+			dcl.vesselselectmapping.Coll_txtBptcValu = this.Coll_txtBptcValu;                   		
+			dcl.vesselselectmapping.Coll_txtBptcDate = this.Coll_txtBptcDate; 
+			dcl.vesselselectmapping.REAL_EST_NM_CUR_ID = this.REAL_EST_NM_CUR_ID; 
+			dcl.vesselselectmapping.CUS_ID = this.CUS_ID;   
+			dcl.vesselselectmapping.COLL_CUS_ID = this.COLL_CUS_ID;   
+			dcl.vesselselectmapping.Coll_txtDateToLop = this.Coll_txtDateToLop;   
+			dcl.vesselselectmapping.Coll_txtDateRecLop = this.Coll_txtDateRecLop; 
+			dcl.vesselselectmapping.Coll_txtRecLop = this.Coll_txtRecLop; 
+			dcl.vesselselectmapping.Coll_txtComDoc = this.Coll_txtComDoc;                              		                                      
+			dcl.vesselselectmapping.Coll_txtMissingDoc = this.Coll_txtMissingDoc;                          		                                      
+			dcl.vesselselectmapping.Coll_txtDateToDoc = this.Coll_txtDateToDoc;                          		                                      
+			dcl.vesselselectmapping.Coll_txtDateRecDoc = this.Coll_txtDateRecDoc; 
+			dcl.vesselselectmapping.Coll_txtRevaAutMan = this.Coll_txtRevaAutMan;                         		                                    
+			dcl.vesselselectmapping.Coll_txtRevaDateMan = this.Coll_txtRevaDateMan;                        		                                    
+			dcl.vesselselectmapping.Coll_txtRevaCoefMan = this.Coll_txtRevaCoefMan;                        		                                   
+			dcl.vesselselectmapping.Coll_txtRevaValue = this.Coll_txtRevaValue;                           		                                         
+			dcl.vesselselectmapping.Coll_txtRevaDate = this.Coll_txtRevaDate;                            		                                           
+			dcl.vesselselectmapping.Coll_txtRevaDateAM = this.Coll_txtRevaDateAM;                         		                                         
+			dcl.vesselselectmapping.Coll_txtRevaBValue = this.Coll_txtRevaBValue;                          		                                          
+			dcl.vesselselectmapping.Coll_txtRevaBDate = this.Coll_txtRevaBDate;                           		
+			dcl.vesselselectmapping.Coll_txtRevaBDateAM = this.Coll_txtRevaBDateAM;                       	     
+			dcl.vesselselectmapping.Coll_txtAmortAge = this.Coll_txtAmortAge;                            	    
+			dcl.vesselselectmapping.AMORT_PER_CAL_ID = this.AMORT_PER_CAL_ID;                        	                            
+			dcl.vesselselectmapping.Coll_txtAmortValCal = this.Coll_txtAmortValCal;
+			dcl.vesselselectmapping.Coll_txtNepoValue = this.Coll_txtNepoValue;                           	                            
+			dcl.vesselselectmapping.Coll_txtNepoDate = this.Coll_txtNepoDate;                            	                            
+			dcl.vesselselectmapping.Coll_txtNepoPerCal = this.Coll_txtNepoPerCal; 
+			dcl.vesselselectmapping.Coll_txtThirdRight = this.Coll_txtThirdRight;                          	                            
+			dcl.vesselselectmapping.THIRD_RIGHT_CUR_ID = this.THIRD_RIGHT_CUR_ID;                   	                            
+			dcl.vesselselectmapping.Coll_txtThirdRightInNom = this.Coll_txtThirdRightInNom;                      		                                         
+			dcl.vesselselectmapping.Coll_txtThirdRightDate = this.Coll_txtThirdRightDate;                    	                                                        		                                         
+			dcl.vesselselectmapping.Coll_txtHfsValue = this.Coll_txtHfsValue;                           	                                                        		                                         
+			dcl.vesselselectmapping.Coll_txtHfsValueDate = this.Coll_txtHfsValueDate;                         		                                         
+			dcl.vesselselectmapping.Coll_txtHfsValueLastOne = this.Coll_txtHfsValueLastOne;                      		                                         
+			dcl.vesselselectmapping.Coll_txtHfsDateLastOne = this.Coll_txtHfsDateLastOne;     
+			dcl.vesselselectmapping.Coll_txtAcouValue = this.Coll_txtAcouValue;                            		                                         
+			dcl.vesselselectmapping.Coll_txtAcouPerCal = this.Coll_txtAcouPerCal;                        	                                     
+			dcl.vesselselectmapping.Coll_txtAcouPerAco = this.Coll_txtAcouPerAco;                        
+			dcl.vesselselectmapping.Coll_txtAcouDate = this.Coll_txtAcouDate;                          
+			dcl.vesselselectmapping.Coll_txtAcouBValue = this.Coll_txtAcouBValue;                        
+			dcl.vesselselectmapping.Coll_txtAcouBDate = this.Coll_txtAcouBDate;  
+			dcl.vesselselectmapping.Coll_txtSumLimitVal = this.Coll_txtSumLimitVal;                                                     
+			dcl.vesselselectmapping.Coll_txtSumLimitDat = this.Coll_txtSumLimitDat;                                                       
+			dcl.vesselselectmapping.Coll_txtSumPartVal = this.Coll_txtSumPartVal;                                                         
+			dcl.vesselselectmapping.Coll_txtSumPartDat = this.Coll_txtSumPartDat;
+			dcl.vesselselectmapping.Coll_txtAvailValue = this.Coll_txtAvailValue;                                                       
+			dcl.vesselselectmapping.Coll_txtAvailPerCal = this.Coll_txtAvailPerCal;                                                       
+			dcl.vesselselectmapping.Coll_txtAvailDate = this.Coll_txtAvailDate;  
+			dcl.vesselselectmapping.INSPOL_IND = this.INSPOL_IND;  
+			dcl.vesselselectmapping.COL_PLACE = this.COL_PLACE; 
+			dcl.vesselselectmapping.COL_COUNTY = this.COL_COUNTY; 
+			dcl.vesselselectmapping.COL_DISTRICT = this.COL_DISTRICT; 
+			dcl.vesselselectmapping.COL_RESI_QUAR = this.COL_RESI_QUAR; 
+			dcl.vesselselectmapping.Coll_txtCollMvpPonder = this.Coll_txtCollMvpPonder;
+			dcl.vesselselectmapping.Coll_txtCollHnbPonder = this.Coll_txtCollHnbPonder; 
+			dcl.vesselselectmapping.Coll_txtCollRzbPonder = this.Coll_txtCollRzbPonder;
+			dcl.vesselselectmapping.Coll_txtDateFrom = this.Coll_txtDateFrom;                   	                         
+			dcl.vesselselectmapping.Coll_txtDateUnti = this.Coll_txtDateUnti;                   	 
+			dcl.vesselselectmapping.Coll_txtAddData = this.Coll_txtAddData;  
+			dcl.vesselselectmapping.STATUS = this.STATUS;                      		                          
+			dcl.vesselselectmapping.SPEC_STATUS = this.SPEC_STATUS;  
+			dcl.vesselselectmapping.USE_OPEN_ID = this.USE_OPEN_ID;
+			dcl.vesselselectmapping.USE_ID = this.USE_ID;
+			dcl.vesselselectmapping.Coll_txtOpeningTs = this.Coll_txtOpeningTs;
+			dcl.vesselselectmapping.Coll_txtUserLock = this.Coll_txtUserLock;
+     				
+			dcl.vesselselectmapping.Coll_txtEUseIdLogin = this.Coll_txtEUseIdLogin;
+			dcl.vesselselectmapping.Coll_txtEUseIdName = this.Coll_txtEUseIdName;
+
+			dcl.vesselselectmapping.Coll_txtEstnCurr = this.Coll_txtEstnCurr;
+			dcl.vesselselectmapping.Coll_txtCarrierRegisterNo = this.Coll_txtCarrierRegisterNo;
+			dcl.vesselselectmapping.Coll_txtCarrierName = this.Coll_txtCarrierName;
+			dcl.vesselselectmapping.Coll_txtOwnerRegisterNo = this.Coll_txtOwnerRegisterNo;
+			dcl.vesselselectmapping.Coll_txtOwnerName = this.Coll_txtOwnerName;
+			dcl.vesselselectmapping.Coll_txtThirdRightCurCodeChar = this.Coll_txtThirdRightCurCodeChar;	
+			dcl.vesselselectmapping.Coll_txtUseOpenIdLogin = this.Coll_txtUseOpenIdLogin;
+			dcl.vesselselectmapping.Coll_txtUseOpenIdName = this.Coll_txtUseOpenIdName;
+			dcl.vesselselectmapping.Coll_txtUseIdLogin = this.Coll_txtUseIdLogin;
+			dcl.vesselselectmapping.Coll_txtUseIdName = this.Coll_txtUseIdName; 					
+			dcl.vesselselectmapping.Coll_txtAmortPerCal = this.Coll_txtAmortPerCal;				
+
+			dcl.vesselselectmapping.Coll_txtCollTypeCode = this.Coll_txtCollTypeCode;
+			dcl.vesselselectmapping.Coll_txtCollTypeName  = this.Coll_txtCollTypeName;  						
+		}
+	}
+}

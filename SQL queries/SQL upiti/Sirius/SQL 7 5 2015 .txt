@@ -1,0 +1,220 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+			select * from batch_log where bat_def_id = 332214327 order by recording_time desc;
+
+			update batch_log set exec_status = 'D' where bat_log_id = 333848327;
+
+
+			select * from procedure_type where pro_typ_code like '524';
+
+
+			SELECT
+					pet.p_eve_typ_id AS p_eve_typ_id,
+					et.name AS etname,
+					pd.name AS pdname,
+					pet.parameter_value AS parameter_value,
+					pet.status AS status
+				FROM
+					params_dictionary pd,
+					event_type et
+				FULL OUTER JOIN
+					param_eve_typ pet
+				ON
+					et.eve_typ_id = pet.eve_typ_id
+				WHERE
+					pet.par_dic_id=pd.par_dic_id
+                AND
+                    pet.bank_sign= 'RB'
+				ORDER BY
+					pet.eve_typ_id desc;
+
+
+				SELECT
+					pet.p_eve_typ_id AS p_eve_typ_id,
+					et.name AS etname,
+					pd.name AS pdname,
+					pet.parameter_value AS parameter_value,
+					pet.status AS status,
+					et.user_lock,
+					pd.user_lock
+				FROM
+					params_dictionary pd,
+					event_type et
+				FULL OUTER JOIN
+					param_eve_typ pet
+				ON
+					et.eve_typ_id = pet.eve_typ_id
+				WHERE
+					pet.par_dic_id=pd.par_dic_id
+					and et.name like '%Obrada za formiranje%'
+                AND
+                    pet.bank_sign= 'RB'
+				ORDER BY
+					pet.eve_typ_id desc;
+
+
+				SELECT
+					*
+				FROM
+					params_dictionary pd,
+					event_type et
+				FULL OUTER JOIN
+					param_eve_typ pet
+				ON
+					et.eve_typ_id = pet.eve_typ_id
+				WHERE
+					pet.par_dic_id=pd.par_dic_id
+					and pet.eve_typ_id in (332238327,332239327,332240327,332241327,332242327,332243327,332244327,332245327,332246327,332247327,332248327,332249327,332250327,332251327,332252327,332258327),
+					
+                    pet.bank_sign= 'RB'
+				ORDER BY
+					pet.eve_typ_id desc;
+
+					------------------------------------   Azurirati ---- 
+					
+
+				select * from param_eve_typ where p_eve_typ_id in (332238327,332239327,332240327,332241327,332242327,332243327,332244327,332245327,332246327,332247327,
+															332248327,332249327,332250327,332251327,332252327,332258327);
+
+				select * from param_eve_typ where eve_typ_id in (332237327); -- bfZE									
+
+																	
+				select * from event_type order by user_lock desc;	-- 332237327
+
+				select * FROM organization_unit where org_uni_id = 53253;
+				
+
+
+	-----------------------------------------------------------------------------------------------------------------------------------
+
+		SET CURRENT_SCHEMA = 'SITP'
+
+		  SELECT
+                    ca.cus_acc_id,
+                    ca.cus_acc_no,
+                    ca.old_cus_acc_no,
+                    ca.iban_acc_no,
+                    ca.cus_acc_name,
+                    ca.org_uni_id,
+                    ca.currency_type,
+                    ca.acc_cur_id,
+                    ca.opening_date,
+                    ca.closing_date,
+                    ca.cus_acc_status,
+                    ca.chg_stat_reason,
+                    ca.chg_stat_date,
+                    ca.warn_note_status,
+                    ca.law_block_status,
+                    ca.collection_status,
+                    ca.court_proc_status,
+                    ca.distraint_flag,
+                    ca.ban_rel_typ_id,
+                    ca.ban_pro_typ_id,
+                    ca.pur_sub_id,
+                    ca.pro_cat_id,
+                    ci1.cus_id,
+                    ci1.code cus_code,
+                    ci1.register_no,
+                    ci1.name,
+                    ci1.surname,
+                    cl.nnb_no_days,
+                    cl.nnb_date,
+                    cl.absorbing_status,
+                    cl.abs_status_date,
+                    cl.process_date cl_process_date
+                FROM
+                    citizen ci1,
+                    customer_account ca
+                        LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = :(process_date)
+                WHERE 
+                    ca.cus_id = ci1.cus_id
+                    AND ci1.pay_list_flag = '1'
+                    AND ca.ban_pro_typ_id = 790661005
+                    AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                    AND ca.opening_date <= :(process_date)
+                    AND ( ( ca.cus_acc_status <> 'I' AND ( (ca.closing_date IS NULL) OR (ca.closing_date >= :(process_date)) ) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= :(minClosingDate)) ) )
+                    AND ca.org_uni_id = :(org_uni_id)
+                    AND ca.bank_sign = :(bank_sign)
+                ORDER BY
+                    ca.cus_acc_id,
+                    cl.nnb_no_days desc;
+
+
+                select * from bank_product_type;    
+
+
+
+		SELECT
+			     ca.cus_acc_id,
+                    ca.cus_acc_no,
+                    ca.old_cus_acc_no,
+                    ca.iban_acc_no,
+                    ca.cus_acc_name,
+                    ca.org_uni_id,
+                    ca.currency_type,
+                    ca.acc_cur_id,
+                    ca.opening_date,
+                    ca.closing_date,
+                    ca.cus_acc_status,
+                    ca.chg_stat_reason,
+                    ca.chg_stat_date,
+                    ca.warn_note_status,
+                    ca.law_block_status,
+                    ca.collection_status,
+                    ca.court_proc_status,
+                    ca.distraint_flag,
+                    ca.ban_rel_typ_id,
+                    ca.ban_pro_typ_id,
+                    ca.pur_sub_id,
+                    ca.pro_cat_id,
+                    ci1.cus_id,
+                    ci1.code cus_code,
+                    ci1.register_no,
+                    ci1.name,
+                    ci1.surname,
+                    cl.nnb_no_days,
+                    cl.nnb_date,
+                    cl.absorbing_status,
+                    cl.abs_status_date,
+                    cl.process_date cl_process_date
+                FROM
+                    citizen ci1,
+                    customer_account ca
+                        inner JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '2015-05-06'
+                WHERE 
+                    ca.cus_id = ci1.cus_id
+                    AND (ci1.pay_list_flag = '1' OR cl.nnb_no_days >= '2' )
+                    AND ca.ban_pro_typ_id = 790661005
+                    AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                    AND ca.opening_date <= '2015-05-06'
+                    AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '2015-05-06')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '2014-11-07') ) )
+                  --  AND ca.org_uni_id = :(org_uni_id)
+                    AND ca.bank_sign = 'RB'
+                ORDER BY
+                    ca.cus_acc_id,
+                    cl.nnb_no_days desc with ur;
+
+
+                   select ca.cus_id, ci.pay_list_flag, ca.cus_acc_no from citizen ci, customer_account ca where  ca.cus_acc_no in ( '3251012392', '3251011937') and ca.cus_id = ci.cus_id 
+
+				select * from counter_list where cus_acc_no in ( '3251012392', '3251011937');
+
+				select * from counter_list where cus_acc_no like '3251012392';
+
+				select nnb_no_days, process_date from counter_list where cus_acc_no like '3251011937';
+
+				select * from counter_list where cus_acc_no like '3251011937';
+
+				select * from customer_account  where cus_acc_no like '3251012392';
+
+				select * from customer_account  where cus_acc_no like '3251011937';
+
+
+                SELECT * FROM nnb_list where cus_acc_no=  '3251012392';
+
+                
+
+
+	

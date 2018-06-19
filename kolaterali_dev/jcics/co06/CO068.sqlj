@@ -1,0 +1,468 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+ 
+ 
+public class CO068 extends RemoteTransaction {
+ 	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO068.sqlj,v 1.32 2017/12/21 14:04:04 hrazst Exp $";
+	private DeclCO06 decl = null;
+	private YOY63 SQLhelper = null;
+	
+	public CO068(DeclCO06 decl) { 
+		this.decl = decl;
+	}   
+	 
+	CollHeadSelectData chs = new CollHeadSelectData();
+	
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......COL_HEA_ID " + decl.collguarantselectmapping.COL_HEA_ID);
+        YOYE0 yoye0 = new YOYE0(tc);
+        YOYE0Data kolData = new YOYE0Data();
+        SQLhelper = new YOY63(tc);
+        
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+//		 select iz COLL_HEAD		
+		YOY42 headSel = new YOY42(tc, chs);
+
+		chs.COL_HEA_ID = decl.collguarantselectmapping.COL_HEA_ID;
+	 	
+		headSel.selectFromCollHead();
+		
+		tc.debug ( "......PUNIM DECL  ");		
+// punjenje decla iz objekta chs		
+		fillDeclFromCHSObj();				
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);
+		tc.debug ( "......COL_HEA_ID " + decl.collguarantselectmapping.Coll_txtCode);		
+		
+	   
+		try{
+
+			#sql [ctx] {SELECT 
+							a.col_gua_id , 
+							a.col_hea_id , 
+							a.guar_issuer_id ,
+							c.register_no ,
+							c.name ,
+							c.residency_cou_id ,
+							a.guar_no ,
+							a.cur_ind ,
+							a.int_fee_ind ,
+							a.amort_ind , 
+							a.respiro ,
+							a.respiro_date ,
+							a.guar_datn_from ,
+							a.guar_datn_unti ,
+							a.guar_exp_per ,
+							a.guar_add_data ,
+							a.guar_amount ,
+							a.guar_cur_id ,
+							a.first_call ,
+		                    a.ext_rating_dsc,
+		                    c.tax_number,
+		                    a.INIT_GUAR_AMOUNT, 
+		                    a.GUAR_PERCENT,
+		                    a.pos_analyst_opinion,
+                            a.guarantor_perc,
+                            a.guar_amo_exp_flg
+		                    
+				INTO
+							:(decl.collguarantselectmapping.COL_SEC_ID),    													                                                
+							:(decl.collguarantselectmapping.COL_HEA_ID),
+ 							:(decl.collguarantselectmapping.guar_issuer_id),       
+							:(decl.collguarantselectmapping.Coll_txtGuarIssRegNo),
+							:(decl.collguarantselectmapping.Coll_txtGuarIssuer),
+							:(decl.collguarantselectmapping.guar_cou_id), 	
+							:(decl.collguarantselectmapping.Kol_txtGuarNo), 
+							:(decl.collguarantselectmapping.Kol_txtCurInd), 
+							:(decl.collguarantselectmapping.Kol_txtIntFeeInd), 
+							:(decl.collguarantselectmapping.Kol_txtAmortInd), 
+							:(decl.collguarantselectmapping.Kol_txtRespiro), 
+							:(decl.collguarantselectmapping.Kol_txtRespiroDate), 
+							:(decl.collguarantselectmapping.Coll_txtGuarDatnFrom),
+							:(decl.collguarantselectmapping.Coll_txtGuarDatnUnti),
+							:(decl.collguarantselectmapping.Coll_txtGuarExpPeriod),                   
+							:(decl.collguarantselectmapping.Coll_txtGuarAddData),
+							:(decl.collguarantselectmapping.Kol_txtGuarAmount),
+							:(decl.collguarantselectmapping.guar_cur_id),
+							:(decl.collguarantselectmapping.Kol_txtFirstCall),
+		                    :(decl.collguarantselectmapping.Coll_txtExtRatingDsc),
+		                    :(decl.collguarantselectmapping.Kol_txtOIB),
+		                    :(decl.collguarantselectmapping.txt_inicijalni_iznos_garancije),
+		                    :(decl.collguarantselectmapping.txt_postotak_garantranja),
+		                    :(decl.collguarantselectmapping.Coll_txtPosAnalystOpinion),
+		                    :(decl.collguarantselectmapping.Coll_txtPercentageByGuarantor),
+                            :(decl.collguarantselectmapping.Coll_txtAmountHeightPlacement)
+				FROM coll_guarantee a , customer c
+				WHERE COL_HEA_ID = :(decl.collguarantselectmapping.COL_HEA_ID) 
+		        AND
+		                a.guar_issuer_id = c.cus_id };
+	 
+		}catch(SQLException se){ 
+			System.out.println(se.toString());
+			tc.debug ( "......CO068.sqlj select from coll_guarantee SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO068.sqlj select from coll_guarantee SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO068.sqlj select from coll_guarantee SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO068: Error selecting coll_guarantee ","err411a", null);
+		}		    
+
+		//dohvat iz tbl. COUNTRY	 
+			    
+	    try{   	   
+	    	if (decl.collguarantselectmapping.guar_cou_id != null){         
+	    		#sql [ctx] {
+		                    SELECT shortcut_num, name
+		                        INTO :(decl.collguarantselectmapping.Coll_txtGuarIssCouNum),
+			    					 :(decl.collguarantselectmapping.Coll_txtGuarIssCountry)
+		                        FROM country
+		                        WHERE cou_id = :(decl.collguarantselectmapping.guar_cou_id) };	    		
+			}      	
+      	}catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }			    
+
+// dohvatiti cocunat
+        try{       
+            if (decl.collguarantselectmapping.guar_issuer_id != null){         
+                #sql [ctx] {
+                            SELECT cocunat
+                                INTO :(decl.collguarantselectmapping.Kol_txtCocunut)
+                                FROM cust_tiger_data
+                                WHERE cus_id = :(decl.collguarantselectmapping.guar_issuer_id)
+                                AND
+                                    date_from <= current date
+                                AND
+                                    date_until >= current date
+                            };              
+            }       
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }                     	
+
+
+
+        // dohvatiti rating (CUSTOMER OCJENA) - FBPr200017431
+        // rtc12029 umjesto rat_typ_id =1354776003 dohvatiti odgovarajuæi rating izdavatelja
+        try     
+        {       
+            if (decl.collguarantselectmapping.guar_issuer_id != null)
+            {         
+                #sql [ctx] {
+                    SELECT score
+                    INTO :(decl.collguarantselectmapping.Kol_txtRating)
+                    FROM customer_rating
+                    WHERE cus_id = :(decl.collguarantselectmapping.guar_issuer_id) 
+                      AND rat_typ_id in (1354776003, 671996251, 4278640351, 4278639351, 1354780003, 4278590351)
+                      AND date_from <= CURRENT DATE
+                      AND date_until >= CURRENT DATE
+                    FETCH FIRST ROWS ONLY
+                };              
+            }       
+        }
+        catch(SQLException e)
+        {
+            if (!tc.getSQLExHandler().isEmptyRowset(e)) throw e;
+        }
+        
+
+        // dohvatiti vanjski rating (Moody's Long-Term)    	
+        try
+        {       
+            if (decl.collguarantselectmapping.guar_issuer_id != null)
+            {         
+                #sql [ctx] {
+                    SELECT score
+                    INTO :(decl.collguarantselectmapping.Coll_txtExtRating)
+                    FROM customer_rating
+                    WHERE cus_id = :(decl.collguarantselectmapping.guar_issuer_id) 
+                    AND rat_typ_id = 660757251
+                    AND date_from <= CURRENT DATE
+                    AND date_until >= CURRENT DATE
+                };
+            }       
+        }
+        catch(SQLException e)
+        {
+            if (!tc.getSQLExHandler().isEmptyRowset(e)) throw e;
+        }
+
+
+
+//				  dohvat iz tabele CURRENCY	       
+				 
+      	try{ 
+			if (decl.collguarantselectmapping.guar_cur_id != null){ 
+				#sql [ctx] {
+			                   SELECT code_char
+			                       INTO :(decl.collguarantselectmapping.Kol_txtGuarCur)
+			                       FROM currency
+			                       WHERE cur_id = :(decl.collguarantselectmapping.guar_cur_id)};
+	     	}
+	   }catch(SQLException e){
+           if (tc.getSQLExHandler().isEmptyRowset(e)) {
+           } else {
+               throw e;
+           }
+	   }	
+			   
+	   CalculationData cData = SQLhelper.getAllCalculationData(decl.collguarantselectmapping.COL_HEA_ID);               
+       
+       decl.collguarantselectmapping.Kol_txtPonderMVP = cData.MVP_ponder;
+       decl.collguarantselectmapping.Coll_txtWcaAmountDate = cData.wcov_date;
+       decl.collguarantselectmapping.Coll_txtWcaAmount = cData.wcov_amount;
+       decl.collguarantselectmapping.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+       decl.collguarantselectmapping.Coll_txtUsedWCAAmount = cData.wca_amount;
+       
+       decl.collguarantselectmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+       decl.collguarantselectmapping.Coll_txtRealPonderAmount=cData.real_ponder; 
+       // izracunati ponderiranu i raspolozivu vrijednost
+                
+        kolData.colHeaId = decl.collguarantselectmapping.COL_HEA_ID;
+        kolData.colCurId = decl.collguarantselectmapping.REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.collguarantselectmapping.Coll_txtNomiValu;
+ 
+        kolData.colCatId = decl.collguarantselectmapping.COL_CAT_ID;
+        kolData.colTypId = decl.collguarantselectmapping.COL_TYPE_ID;
+        kolData.colSubTypId = null;
+        kolData.addRequest = "N";                     
+
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+        
+        decl.collguarantselectmapping.Coll_txtAcouValue = kolData.ponderAmount;
+        decl.collguarantselectmapping.Coll_txtAcouDate = todaySQLDate;
+
+        decl.collguarantselectmapping.Coll_txtSumPartVal = kolData.exposureAmount;
+        decl.collguarantselectmapping.Coll_txtSumPartDat = kolData.exposureDate;   
+        decl.collguarantselectmapping.Coll_txtCollMvpPonderMin = kolData.minPonder;
+        decl.collguarantselectmapping.Coll_txtCollMvpPonder = kolData.dflPonder;
+        decl.collguarantselectmapping.Coll_txtCollMvpPonderMax = kolData.maxPonder;
+
+        decl.collguarantselectmapping.Coll_txtAvailValue = kolData.restAmount;
+        decl.collguarantselectmapping.Coll_txtAvailDate = kolData.coverDate;
+        
+        decl.collguarantselectmapping.Coll_txtAvailPonValue = kolData.restPonAmount;
+        decl.collguarantselectmapping.Coll_txtNDAvailDate = kolData.NDCoverDate;
+        
+        //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja
+
+        try{ 
+            #sql [ctx] {
+                    SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+                    INTO
+                    :(decl.collguarantselectmapping.Coll_txtCoConfirm),
+                    :(decl.collguarantselectmapping.Coll_txtCoConfirmUserId),
+                    :(decl.collguarantselectmapping.Coll_txtCoConfirmUserName),
+                    :(decl.collguarantselectmapping.Coll_txtCoConfirmTime)
+                    FROM co_chg_history as a, app_user as app
+                    WHERE 
+                           a.col_hea_id = :(decl.collguarantselectmapping.COL_HEA_ID)
+                    and    a.co_use_id=app.use_id
+                    and
+                            a.co_ind='D'
+                    and
+                            a.co_chg_ts is null
+                    and co_chg_use_id is null
+                    FETCH FIRST ROWS ONLY
+                   };  
+                
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        } 
+        
+	}  
+	
+	private void fillDeclFromCHSObj () {
+		
+		decl.collguarantselectmapping.COL_HEA_ID = chs.COL_HEA_ID;    													                                                
+		decl.collguarantselectmapping.COL_TYPE_ID = chs.COL_TYPE_ID;  
+		decl.collguarantselectmapping.Coll_txtCode = chs.Coll_txtCode; 
+		decl.collguarantselectmapping.Coll_txtDesc = chs.Coll_txtDesc;  
+		decl.collguarantselectmapping.REAL_EST_EUSE_ID = chs.REAL_EST_EUSE_ID;
+		decl.collguarantselectmapping.Coll_txtEstnValu = chs.Coll_txtEstnValu;                   
+		decl.collguarantselectmapping.Coll_txtEstnDate = chs.Coll_txtEstnDate;                   
+		decl.collguarantselectmapping.Coll_txtDatnFrom = chs.Coll_txtDatnFrom;                   
+		decl.collguarantselectmapping.Coll_txtDatnUnti = chs.Coll_txtDatnUnti;                   
+		decl.collguarantselectmapping.Coll_txtNomiDesc = chs.Coll_txtNomiDesc; 
+		decl.collguarantselectmapping.Coll_txtNomiValu = chs.Coll_txtNomiValu;                   		
+		decl.collguarantselectmapping.Coll_txtNomiDate = chs.Coll_txtNomiDate; 
+		decl.collguarantselectmapping.Coll_txtLiquValu = chs.Coll_txtLiquValu;                  		
+		decl.collguarantselectmapping.Coll_txtLiquDate = chs.Coll_txtLiquDate;                   		
+		decl.collguarantselectmapping.Coll_txtBptcValu = chs.Coll_txtBptcValu;                   		
+		decl.collguarantselectmapping.Coll_txtBptcDate = chs.Coll_txtBptcDate; 
+		decl.collguarantselectmapping.REAL_EST_NM_CUR_ID = chs.REAL_EST_NM_CUR_ID; 
+		decl.collguarantselectmapping.CUS_ID = chs.CUS_ID;   
+		decl.collguarantselectmapping.COLL_CUS_ID = chs.COLL_CUS_ID;   
+		decl.collguarantselectmapping.Coll_txtDateToLop = chs.Coll_txtDateToLop;   
+		decl.collguarantselectmapping.Coll_txtDateRecLop = chs.Coll_txtDateRecLop; 
+		decl.collguarantselectmapping.Coll_txtRecLop = chs.Coll_txtRecLop; 
+		decl.collguarantselectmapping.Coll_txtComDoc = chs.Coll_txtComDoc;                              		                                      
+		decl.collguarantselectmapping.Coll_txtMissingDoc = chs.Coll_txtMissingDoc;                          		                                      
+		decl.collguarantselectmapping.Coll_txtDateToDoc = chs.Coll_txtDateToDoc;                          		                                      
+		decl.collguarantselectmapping.Coll_txtDateRecDoc = chs.Coll_txtDateRecDoc;           		                                    
+		decl.collguarantselectmapping.Coll_txtRevaCoefMan = chs.Coll_txtRevaCoefMan;         
+		decl.collguarantselectmapping.Coll_txtRevaDate = chs.Coll_txtRevaDate;                            		                                           
+		decl.collguarantselectmapping.Coll_txtRevaDateAM = chs.Coll_txtRevaDateAM;                         		                                         
+		decl.collguarantselectmapping.Coll_txtRevaBValue = chs.Coll_txtRevaBValue;                          		                                          
+		decl.collguarantselectmapping.Coll_txtRevaBDate = chs.Coll_txtRevaBDate;                           		
+		decl.collguarantselectmapping.Coll_txtRevaBDateAM = chs.Coll_txtRevaBDateAM;                       	     
+		decl.collguarantselectmapping.Coll_txtAmortAge = chs.Coll_txtAmortAge;                            	    
+		decl.collguarantselectmapping.AMORT_PER_CAL_ID = chs.AMORT_PER_CAL_ID;                        	                            
+		decl.collguarantselectmapping.Coll_txtAmortValCal = chs.Coll_txtAmortValCal;
+		decl.collguarantselectmapping.Coll_txtNepoValue = chs.Coll_txtNepoValue;                           	                            
+		decl.collguarantselectmapping.Coll_txtNepoDate = chs.Coll_txtNepoDate;                            	                            
+		decl.collguarantselectmapping.Coll_txtNepoPerCal = chs.Coll_txtNepoPerCal; 
+		decl.collguarantselectmapping.Coll_txtThirdRight = chs.Coll_txtThirdRight;                          	                            
+		decl.collguarantselectmapping.THIRD_RIGHT_CUR_ID = chs.THIRD_RIGHT_CUR_ID;                   	                            
+		decl.collguarantselectmapping.Coll_txtThirdRightInNom = chs.Coll_txtThirdRightInNom;                      		                                         
+		decl.collguarantselectmapping.Coll_txtThirdRightDate = chs.Coll_txtThirdRightDate;                    	                                                        		                                         
+		decl.collguarantselectmapping.Coll_txtHfsValue = chs.Coll_txtHfsValue;                           	                                                        		                                         
+		decl.collguarantselectmapping.Coll_txtHfsValueDate = chs.Coll_txtHfsValueDate;                         		                                         
+		decl.collguarantselectmapping.Coll_txtHfsValueLastOne = chs.Coll_txtHfsValueLastOne;                      		                                         
+		decl.collguarantselectmapping.Coll_txtHfsDateLastOne = chs.Coll_txtHfsDateLastOne;     
+		decl.collguarantselectmapping.Coll_txtAcouValue = chs.Coll_txtAcouValue;                       
+		decl.collguarantselectmapping.Coll_txtAcouDate = chs.Coll_txtAcouDate;                          
+		decl.collguarantselectmapping.Coll_txtAcouBValue = chs.Coll_txtAcouBValue;                        
+		decl.collguarantselectmapping.Coll_txtAcouBDate = chs.Coll_txtAcouBDate;  
+		decl.collguarantselectmapping.Coll_txtSumLimitVal = chs.Coll_txtSumLimitVal;                                                     
+		decl.collguarantselectmapping.Coll_txtSumLimitDat = chs.Coll_txtSumLimitDat;                                                       
+		decl.collguarantselectmapping.Coll_txtSumPartVal = chs.Coll_txtSumPartVal;                                                         
+		decl.collguarantselectmapping.Coll_txtSumPartDat = chs.Coll_txtSumPartDat;
+		decl.collguarantselectmapping.Coll_txtAvailValue = chs.Coll_txtAvailValue;                                                       
+		decl.collguarantselectmapping.Coll_txtAvailPerCal = chs.Coll_txtAvailPerCal;                                                       
+		decl.collguarantselectmapping.Coll_txtAvailDate = chs.Coll_txtAvailDate;  
+		decl.collguarantselectmapping.INSPOL_IND = chs.INSPOL_IND;  
+		decl.collguarantselectmapping.COL_PLACE = chs.COL_PLACE; 
+		decl.collguarantselectmapping.COL_COUNTY = chs.COL_COUNTY; 
+		decl.collguarantselectmapping.COL_DISTRICT = chs.COL_DISTRICT; 
+		decl.collguarantselectmapping.COL_RESI_QUAR = chs.COL_RESI_QUAR; 
+		decl.collguarantselectmapping.Coll_txtCollMvpPonder = chs.Coll_txtCollMvpPonder;
+		decl.collguarantselectmapping.Coll_txtCollHnbPonder = chs.Coll_txtCollHnbPonder; 
+		decl.collguarantselectmapping.Coll_txtCollRzbPonder = chs.Coll_txtCollRzbPonder;
+		decl.collguarantselectmapping.Coll_txtDateFrom = chs.Coll_txtDateFrom;                   	                         
+		decl.collguarantselectmapping.Coll_txtDateUnti = chs.Coll_txtDateUnti;                   	 
+		decl.collguarantselectmapping.Coll_txtAddData = chs.Coll_txtAddData;  
+		decl.collguarantselectmapping.STATUS = chs.STATUS;                      		                          
+		decl.collguarantselectmapping.SPEC_STATUS = chs.SPEC_STATUS;  
+		decl.collguarantselectmapping.USE_OPEN_ID = chs.USE_OPEN_ID;
+		decl.collguarantselectmapping.USE_ID = chs.USE_ID;
+		decl.collguarantselectmapping.Coll_txtOpeningTs = chs.Coll_txtOpeningTs;
+		decl.collguarantselectmapping.Coll_txtUserLock = chs.Coll_txtUserLock; 				
+		decl.collguarantselectmapping.Coll_txtEUseIdLogin = chs.Coll_txtEUseIdLogin;
+		decl.collguarantselectmapping.Coll_txtEUseIdName = chs.Coll_txtEUseIdName;
+		decl.collguarantselectmapping.Coll_txtEstnCurr = chs.Coll_txtEstnCurr;
+		decl.collguarantselectmapping.Coll_txtCarrierRegisterNo = chs.Coll_txtCarrierRegisterNo;
+		decl.collguarantselectmapping.Coll_txtCarrierName = chs.Coll_txtCarrierName;
+		decl.collguarantselectmapping.Coll_txtOwnerRegisterNo = chs.Coll_txtOwnerRegisterNo;
+		decl.collguarantselectmapping.Coll_txtOwnerName = chs.Coll_txtOwnerName;
+		decl.collguarantselectmapping.Coll_txtThirdRightCurCodeChar = chs.Coll_txtThirdRightCurCodeChar;	
+		decl.collguarantselectmapping.Coll_txtUseOpenIdLogin = chs.Coll_txtUseOpenIdLogin;
+		decl.collguarantselectmapping.Coll_txtUseOpenIdName = chs.Coll_txtUseOpenIdName;
+		decl.collguarantselectmapping.Coll_txtUseIdLogin = chs.Coll_txtUseIdLogin;
+		decl.collguarantselectmapping.Coll_txtUseIdName = chs.Coll_txtUseIdName; 					
+		decl.collguarantselectmapping.Coll_txtAmortPerCal = chs.Coll_txtAmortPerCal;
+		decl.collguarantselectmapping.Coll_txtCollTypeCode = chs.Coll_txtCollTypeCode;
+		decl.collguarantselectmapping.Coll_txtCollTypeName  = chs.Coll_txtCollTypeName;
+		decl.collguarantselectmapping.USER_LOCK = chs.USER_LOCK;
+		decl.collguarantselectmapping.Coll_txtNmValCurr = chs.Coll_txtNmValCurr;
+		decl.collguarantselectmapping.Coll_txtEligibility = chs.Coll_txtEligibility;
+		decl.collguarantselectmapping.Coll_txtEligDesc = chs.Coll_txtEligDesc;
+		decl.collguarantselectmapping.Coll_txtAcumBuyValue = chs.Coll_txtAcumBuyValue;
+		decl.collguarantselectmapping.ORIGIN_ORG_UNI_ID = chs.ORIGIN_ORG_UNI_ID;
+		decl.collguarantselectmapping.ORG_UNI_ID = chs.ORG_UNI_ID;
+		decl.collguarantselectmapping.USE_ID_VER = chs.USE_ID_VER;
+		decl.collguarantselectmapping.USE_ID_AUT = chs.USE_ID_AUT;
+		decl.collguarantselectmapping.VERIFICATION_TS = chs.VERIFICATION_TS;
+		decl.collguarantselectmapping.AUTORIZATION_TS = chs.AUTORIZATION_TS;
+		decl.collguarantselectmapping.MORTGAGE_STATUS = chs.MORTGAGE_STATUS;
+		decl.collguarantselectmapping.COLLATERAL_STATUS = chs.COLLATERAL_STATUS;
+		decl.collguarantselectmapping.WORKFLOW_INDIC = chs.WORKFLOW_INDIC;
+		decl.collguarantselectmapping.COVER_INDIC = chs.COVER_INDIC;
+		decl.collguarantselectmapping.VER_SEND_TS = chs.VER_SEND_TS;
+		decl.collguarantselectmapping.BASIC_DATA_STATUS = chs.BASIC_DATA_STATUS;
+		decl.collguarantselectmapping.COLL_DATA_STATUS = chs.COLL_DATA_STATUS;
+		decl.collguarantselectmapping.COL_CAT_ID = chs.COL_CAT_ID;	
+		decl.collguarantselectmapping.USE_ID_VER_SND = chs.USE_ID_VER_SND;
+		decl.collguarantselectmapping.C_FINANCIAL_FLAG = chs.FINANCIAL_FLAG;
+		decl.collguarantselectmapping.C_txtUseIdSndVerLogin = chs.C_txtUseIdSndVerLogin;
+		decl.collguarantselectmapping.C_txtUseIdSndVerName = chs.C_txtUseIdSndVerName;
+		decl.collguarantselectmapping.C_txtUseIdVerLogin = chs.C_txtUseIdVerLogin;
+		decl.collguarantselectmapping.C_txtUseIdVerName = chs.C_txtUseIdVerName;
+		decl.collguarantselectmapping.C_txtUseIdAutLogin = chs.C_txtUseIdAutLogin;
+		decl.collguarantselectmapping.C_txtUseIdAutName = chs.C_txtUseIdAutName;
+		decl.collguarantselectmapping.Coll_txtBasicDataSt = chs.Coll_txtBasicDataSt;
+		decl.collguarantselectmapping.Coll_txtCollDataSt = chs.Coll_txtCollDataSt;
+		decl.collguarantselectmapping.Coll_txtCoverIndic = chs.Coll_txtCoverIndic;
+		decl.collguarantselectmapping.Coll_txtFinFlag = chs.Coll_txtFinFlag;
+		decl.collguarantselectmapping.Coll_txtMortgageSt = chs.Coll_txtMortgageSt;
+		decl.collguarantselectmapping.ColRba_txtEligibility = chs.ColRba_txtEligibility;
+		decl.collguarantselectmapping.ColRba_txtEligDesc = chs.ColRba_txtEligDesc;
+		decl.collguarantselectmapping.KolLow_txtEligibility = chs.KolLow_txtEligibility;
+		decl.collguarantselectmapping.KolLow_txtEligDesc = chs.KolLow_txtEligDesc;	
+		decl.collguarantselectmapping.Kol_txtRbaEligDsc = chs.Kol_txtRbaEligDsc; 
+		decl.collguarantselectmapping.Coll_txtB1Eligibility = chs.Coll_txtB1Eligibility;
+		decl.collguarantselectmapping.Coll_txtB1EligDesc = chs.Coll_txtB1EligDesc;
+		decl.collguarantselectmapping.Coll_txtB2IRBEligibility = chs.Coll_txtB2IRBEligibility;
+		decl.collguarantselectmapping.Coll_txtB2IRBEligDesc = chs.Coll_txtB2IRBEligDesc;
+		decl.collguarantselectmapping.Kol_txtPonderMVP = chs.Kol_txtPonderMVP;
+		decl.collguarantselectmapping.Kol_txtCRMHnb=chs.Kol_txtCRMHnb;
+	    decl.collguarantselectmapping.Coll_txtNDEligibility=chs.Coll_txtNDEligibility;
+	    decl.collguarantselectmapping.Coll_txtNDEligDesc=chs.Coll_txtNDEligDesc;
+		
+        decl.collguarantselectmapping.Coll_txtTypeTVCode= chs.real_est_nom_type; 
+        decl.collguarantselectmapping.Coll_txtTypeTV= chs.real_est_nom_type_desc; 
+        decl.collguarantselectmapping.USE_ID_CO= chs.use_id_co;
+        decl.collguarantselectmapping.Coll_txtCollOfficer= chs.use_id_co_name;
+        decl.collguarantselectmapping.Coll_txtContractTypeCode= chs.contract_type; 
+        decl.collguarantselectmapping.Coll_txtContractTypeDesc= chs.contract_type_desc;
+        decl.collguarantselectmapping.Coll_txtProccessing= "";
+        decl.collguarantselectmapping.Coll_txtProccessingTimestamp= null;
+        
+        decl.collguarantselectmapping.Coll_txtRealPonderAmount= null; 
+        decl.collguarantselectmapping.Coll_txtWcaOrigCurrencyCode= null;  
+        decl.collguarantselectmapping.Coll_txtUsedWCAAmount= null; 
+
+        decl.collguarantselectmapping.Coll_txtCollateralGCTCCode= chs.gctc_code; 
+        decl.collguarantselectmapping.Coll_txtCollateralGCTCDesc= chs.gctc_desc; 
+        decl.collguarantselectmapping.Coll_txtEndorsementTypeGCTCCode= chs.endorsement_type_code;
+        decl.collguarantselectmapping.Coll_txtEndorsementTypeGCTCDesc= chs.endorsement_type_desc;
+        decl.collguarantselectmapping.Coll_txtObjectTypeGCTCCode= chs.object_type_code; 
+        decl.collguarantselectmapping.Coll_txtObjectTypeGCTCDesc= chs.object_type_desc; 
+        decl.collguarantselectmapping.Coll_txtPropertyTypeGCTCCode= chs.property_type_code; 
+        decl.collguarantselectmapping.Coll_txtPropertyTypeGCTCDesc= chs.property_type_desc; 
+        decl.collguarantselectmapping.Coll_txtB2ValueLLAmount= null;
+        decl.collguarantselectmapping.Coll_txtB2ValueLLCurCode= null; 
+        decl.collguarantselectmapping.Coll_txtB2ValueGLAmount= null;
+        decl.collguarantselectmapping.Coll_txtB2ValueGLCurCode= null; 
+        decl.collguarantselectmapping.Coll_txtB2LoanGuarantee= null;
+        decl.collguarantselectmapping.Coll_txtB2LoanGuaranteeCurCode= null; 
+        decl.collguarantselectmapping.Coll_txtB2AllocatedGuarantee= null;
+        decl.collguarantselectmapping.Coll_txtB2AllocatedGuaranteeCurCode= null; 
+        
+        decl.collguarantselectmapping.Coll_txtProccessing="";
+        decl.collguarantselectmapping.Coll_txtProccessingTimestamp=chs.chg_nom_val_proc_ts; 
+	}		
+		  
+	  
+} 
+  

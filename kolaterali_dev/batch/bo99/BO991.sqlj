@@ -1,0 +1,977 @@
+package hr.vestigo.modules.collateral.batch.bo99;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za Kolaterale komitenata u Defaultu.
+* @author hrakis
+*/
+public class BO991
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo99/BO991.sqlj,v 1.7 2017/06/01 10:52:53 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private final BigDecimal real_estate_col_cat_id = new BigDecimal("618223");
+    private final BigDecimal movable_col_cat_id = new BigDecimal("621223");
+    private final BigDecimal guarantee_estate_col_cat_id = new BigDecimal("615223");
+    private final BigDecimal zero = new BigDecimal("0.00");
+    private final BigDecimal hundred = new BigDecimal("100.00");
+    private final BigDecimal hrk_cur_id = new BigDecimal("63999");
+    private final BigDecimal eur_cur_id = new BigDecimal("64999");
+    private final Date cutoff_date = Date.valueOf("2012-10-01");
+    
+    private String domestic_country = null;
+    
+
+    #sql iterator CustomerCollateralIterator (
+        BigDecimal cus_id, 
+        BigDecimal col_hea_id, 
+        BigDecimal hf_col_hea_id, 
+        Date default_date
+    );
+    
+    #sql iterator RecoveryCollateralIterator (
+        BigDecimal cus_id,
+        BigDecimal col_hea_id
+    );
+    
+    #sql iterator DatesIterator (
+        Date date
+    );
+
+    
+    public BO991(BatchContext batchContext) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+    
+    /**
+     * Metoda dohvaæa kolaterale komitenata u Defaultu.
+     * @return iterator s podacima
+     */
+    public CustomerCollateralIterator selectCustomerCollaterals() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO991.selectCustomerCollaterals");
+            
+            CustomerCollateralIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT 
+                    a.cus_id            AS cus_id, 
+                    b.col_hea_id        AS col_hea_id, 
+                    c.hf_coll_head_id   AS hf_col_hea_id, 
+                    MIN(a.default_date) AS default_date
+                FROM cusacc_exposure a
+                INNER JOIN loan_beneficiary_d b ON (a.cus_acc_id = b.la_acc_id OR a.cus_acc_no = b.acc_no OR a.request_no = b.request_no)
+                LEFT OUTER JOIN coll_hf_prior c ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                WHERE a.default_status = 'Y'
+                AND (a.cus_acc_status='A' OR
+                    (a.cus_acc_status='C' AND (
+                    (a.module_code='TRC' AND a.cus_acc_orig_st='E') OR 
+                    (a.module_code='PKR' AND a.cus_acc_orig_st='T') OR 
+                    (a.module_code='PPZ' AND a.cus_acc_orig_st IN ('SS','NM')) OR 
+                    (a.module_code='SDR' AND a.cus_acc_orig_st IN ('SS','NM')) OR
+                    (a.module_code='KRD' AND a.cus_acc_orig_st='SS') OR 
+                    (a.module_code='GAR' AND a.cus_acc_orig_st='SS') OR 
+                    (a.module_code='KKR' AND a.cus_acc_orig_st IN ('94','95')) OR 
+                    (a.module_code='LOC' AND a.cus_acc_orig_st='SS') )
+                    )
+                )
+                AND (
+                    (a.default_date >= '2011-12-11' AND a.default_date BETWEEN b.load_date_from AND b.load_date_until) 
+                    OR 
+                    (a.default_date < '2011-12-11' AND '2011-12-11' BETWEEN b.load_date_from AND b.load_date_until)
+                )
+                AND b.status = 'A'
+                GROUP BY a.cus_id, b.col_hea_id, c.hf_coll_head_id  
+                WITH UR 
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata kolaterala komitenata u Defaultu!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCustomerCollaterals");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa kolaterale koji imaju popunjene recovery ili realization podatke.
+     * Uzimaju se samo kolaterali na aktivnoj, neaktivnoj ili na listi kolaterala u vlasništvu banke.
+     * @return iterator s podacima
+     */
+    public RecoveryCollateralIterator selectRecoveryCollaterals() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO991.selectRecoveryCollaterals");
+            
+            RecoveryCollateralIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT
+                    b.cus_id        AS cus_id,
+                    e.col_hea_id    AS col_hea_id
+                FROM coll_head e
+                    INNER JOIN coll_hf_prior d ON d.hf_coll_head_id = e.col_hea_id
+                    INNER JOIN loan_beneficiary c ON c.coll_hf_prior_id = d.coll_hf_prior_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE (e.recovery_amount IS NOT NULL OR e.realization_amount IS NOT NULL)
+                  AND e.collateral_status IN ('3','N','7')
+
+                UNION
+
+                SELECT
+                    b.cus_id        AS cus_id,                
+                    e.col_hea_id    AS col_hea_id
+                FROM coll_head e
+                    INNER JOIN loan_beneficiary c ON c.col_hea_id = e.col_hea_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE (e.recovery_amount IS NOT NULL OR e.realization_amount IS NOT NULL)
+                  AND e.collateral_status IN ('3','N','7')
+
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata kolaterala koji imaju popunjene recovery ili realization podatke!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectRecoveryCollaterals");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa sve potrebne podatke za zadanog komitenta.
+     * @param customer objekt s podacima o komitentu
+     */
+    public void selectCustomerData(CustomerData customer) throws Exception
+    {
+        selectCustomerGeneralData(customer);
+        selectCustomerCocunat(customer);
+    }
+
+
+    /**
+     * Metoda dohvaæa opæe podatke za zadanog komitenta.
+     * @param customer objekt s podacima o komitentu
+     */
+    private void selectCustomerGeneralData(CustomerData customer) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO991.selectCustomerGeneralData");
+            
+            #sql [connCtx] { 
+                SELECT 
+                    a.register_no,
+                    a.name,
+                    a.cus_typ_id,
+                    a.basel_cus_type,
+                    b.eng_name
+                INTO
+                    :(customer.register_no),
+                    :(customer.name),
+                    :(customer.cus_typ_id),
+                    :(customer.b2_asset_class),
+                    :(customer.country_of_residence)
+                FROM customer a
+                LEFT OUTER JOIN country b ON a.residency_cou_id = b.cou_id
+                WHERE a.cus_id = :(customer.cus_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            if (customer.register_no != null) customer.register_no = customer.register_no.trim();
+            if (customer.b2_asset_class != null) customer.b2_asset_class = customer.b2_asset_class.trim();
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata opcih podataka za komitenta (CUS_ID=" + customer.cus_id + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCustomerGeneralData");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa cocunat za zadanog komitenta.
+     * @param customer objekt s podacima o komitentu
+     */
+    private void selectCustomerCocunat(CustomerData customer) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO991.selectCustomerCocunat");
+            
+            #sql [connCtx] { 
+                SELECT cocunat
+                INTO :(customer.cocunat)
+                FROM cust_tiger_data
+                WHERE cus_id = :(customer.cus_id)
+                ORDER BY date_until DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata cocunata za komitenta (CUS_ID=" + customer.cus_id + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCustomerCocunat");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o zadanom kolateralu.
+     * @param customer objekt s podacima o komitentu
+     * @param collateral objekt s podacima o kolateralu
+     * @param exchange common za konverziju iznosa
+     * @param rre_cre_mapper common za mapiranje
+     */
+    public void selectCollateralData(CollateralData collateral, CustomerData customer, YRXX0 exchange, YOYM0 rre_cre_mapper) throws Exception
+    {
+        selectCollateralGeneralData(collateral, exchange);
+        if (!collateral.isIncludedInReport()) return;
+        selectCollateralCountry(collateral);
+        selectRealEstateIndicator(collateral, rre_cre_mapper);
+        selectCollateralDataAtDefaultDate(customer, collateral, exchange);
+        selectFirstAndLastWcv(customer, collateral, exchange);
+        selectFirstNcv(collateral, exchange);
+    }
+    
+    
+    /**
+     * Metoda dohvaæa opæe podatke za zadani kolateral.
+     * @param collateral objekt s podacima o kolateralu
+     */
+    private void selectCollateralGeneralData(CollateralData collateral, YRXX0 exchange) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO991.selectCollateralGeneralData");
+            
+            #sql [connCtx] { 
+                SELECT
+                    a.col_num, 
+                    a.col_cat_id,
+                    a.col_type_id,
+                    t.coll_eng_type_name,
+                    a.collateral_status,
+                    a.real_est_nm_cur_id,
+                    c1.code_char,
+                    a.real_est_nomi_date,
+                    a.real_est_nomi_valu,
+                    gctc.name,
+                    prop.name,
+                    obj.name,
+                    a.realization_amount,
+                    a.realization_cur_id,
+                    c2.code_char,
+                    a.realization_date,
+                    a.realization_kind,
+                    a.realization_cost,
+                    a.recovery_amount,
+                    a.recovery_cur_id,
+                    c3.code_char,
+                    a.recovery_comment,
+                    a.recovery_date,
+                    kor.sys_code_desc,
+                    a.part_of_complex,
+                    a.for_sale,
+                    a.for_sale_date
+                INTO
+                    :(collateral.col_num),
+                    :(collateral.col_cat_id),
+                    :(collateral.col_typ_id),
+                    :(collateral.col_typ_name),
+                    :(collateral.collateral_status),
+                    :(collateral.cur_id),
+                    :(collateral.cur_code),
+                    :(collateral.last_ncv_date),
+                    :(collateral.last_ncv),
+                    :(collateral.gctc),
+                    :(collateral.property_type),
+                    :(collateral.object_type),
+                    :(collateral.realization_amount),
+                    :(collateral.realization_cur_id),
+                    :(collateral.realization_cur_code),
+                    :(collateral.realization_date),
+                    :(collateral.kind_of_realization),
+                    :(collateral.realization_cost),
+                    :(collateral.recovery_amount),
+                    :(collateral.recovery_cur_id),
+                    :(collateral.recovery_cur_code),
+                    :(collateral.recovery_comment),
+                    :(collateral.recovery_date),
+                    :(collateral.kind_of_recovery),
+                    :(collateral.part_of_complex),
+                    :(collateral.for_sale),
+                    :(collateral.for_sale_date)
+                FROM coll_head a
+                LEFT OUTER JOIN collateral_type t ON a.col_type_id = t.coll_type_id
+                LEFT OUTER JOIN coll_gcm_type gctc ON a.gctc_id = gctc.col_gcm_typ_id 
+                LEFT OUTER JOIN coll_gcm_type prop ON a.property_type_id = prop.col_gcm_typ_id 
+                LEFT OUTER JOIN coll_gcm_type obj ON a.object_type_id = obj.col_gcm_typ_id
+                LEFT OUTER JOIN currency c1 ON a.real_est_nm_cur_id = c1.cur_id
+                LEFT OUTER JOIN currency c2 ON a.realization_cur_id = c2.cur_id
+                LEFT OUTER JOIN currency c3 ON a.recovery_cur_id = c3.cur_id
+                LEFT OUTER JOIN system_code_value kor ON (kor.sys_cod_id = 'kind_of_recovery' AND a.kind_of_recovery = kor.sys_code_value)
+                WHERE a.col_hea_id = :(collateral.col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            if (collateral.last_ncv != null && collateral.last_ncv_date != null && collateral.cur_id != null) collateral.last_ncv_eur = exchange.exchange(collateral.last_ncv, collateral.cur_id, eur_cur_id, collateral.last_ncv_date);
+            if (collateral.recovery_amount != null && collateral.recovery_date != null && collateral.recovery_cur_id != null) collateral.recovery_amount_eur = exchange.exchange(collateral.recovery_amount, collateral.recovery_cur_id, eur_cur_id, collateral.recovery_date);
+            if (collateral.realization_amount != null && collateral.realization_date != null && collateral.realization_cur_id != null) collateral.realization_amount_eur = exchange.exchange(collateral.realization_amount, collateral.realization_cur_id, eur_cur_id, collateral.realization_date);
+        }
+        catch (Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata opcih podataka za kolateral (COL_HEA_ID=" + collateral.col_hea_id + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCollateralGeneralData");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa državu kolaterala.
+     * @param collateral objekt s podacima o kolateralu
+     */
+    private void selectCollateralCountry(CollateralData collateral) throws Exception
+    {
+        if (collateral.col_cat_id.equals(real_estate_col_cat_id) || collateral.col_cat_id.equals(movable_col_cat_id))  // za nekretnine i pokretnine je Hrvatska
+        {
+            if (domestic_country == null)
+            {
+                bc.startStopWatch("BO991.selectCollateralCountry#realEstate");
+                #sql [connCtx] {
+                    SELECT eng_name
+                    INTO :(domestic_country)
+                    FROM country
+                    WHERE cou_id = 999
+                    WITH UR
+                };
+                bc.stopStopWatch("BO991.selectCollateralCountry#realEstate");
+            }
+            collateral.country_of_collateral = domestic_country;
+        }
+        else if (collateral.col_cat_id.equals(guarantee_estate_col_cat_id))  // za garancije je zemlja garantora
+        {
+            try
+            {
+                bc.startStopWatch("BO991.selectCollateralCountry#guarantee");
+                #sql [connCtx] { 
+                    SELECT b.eng_name
+                    INTO :(collateral.country_of_collateral)
+                    FROM coll_guarantee a
+                    INNER JOIN country b ON a.guar_cou_id = b.cou_id
+                    WHERE a.col_hea_id = :(collateral.col_hea_id)
+                    FETCH FIRST ROW ONLY
+                    WITH UR
+                };
+            }
+            catch (SQLException ex)
+            {
+                if (!bc.getSQLExHandler().isEmptyRowset(ex))
+                {
+                    error("Dogodila se nepredvidjena greska kod dohvata zemlje izdavatelja garancije (COL_HEA_ID=" + collateral.col_hea_id + ")!", ex);
+                    throw ex;
+                }
+            }
+            finally
+            {
+                bc.stopStopWatch("BO991.selectCollateralCountry#guarantee");
+            }
+        }
+    }
+
+    
+    /**
+     * Metoda dohvaæa Real Estate Indicator za zadani kolateral. 
+     * @param collateral objekt s podacima o kolateralu
+     * @param rre_cre_mapper common za mapiranje
+     */
+    private void selectRealEstateIndicator(CollateralData collateral, YOYM0 rre_cre_mapper) throws Exception
+    {
+        // podvrsta nekretnine
+        if (collateral.col_cat_id.equals(real_estate_col_cat_id))
+        {
+            bc.startStopWatch("BO991.selectRealEstateIndicator#realEstateSubtype");
+            try
+            {
+                #sql [connCtx] { 
+                    SELECT real_est_type
+                    INTO :(collateral.col_sub_id)
+                    FROM coll_restate
+                    WHERE col_hea_id = :(collateral.col_hea_id)
+                    FETCH FIRST ROW ONLY
+                    WITH UR
+                };
+            }
+            catch (SQLException ex)
+            {
+                if (!bc.getSQLExHandler().isEmptyRowset(ex))
+                {
+                    error("Dogodila se nepredvidjena greska kod dohvata podvrste nekretnine (COL_HEA_ID=" + collateral.col_hea_id + ")!", ex);
+                    throw ex;
+                }
+            }
+            bc.stopStopWatch("BO991.selectRealEstateIndicator#realEstateSubtype");
+        }
+
+        // Real Estate Indicator
+        bc.startStopWatch("BO991.selectRealEstateIndicator#mapping");
+        GcmTypeData gcmTypeData = rre_cre_mapper.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        if (gcmTypeData != null)
+        {
+            collateral.real_estate_indicator = gcmTypeData.code;
+        }
+        bc.stopStopWatch("BO991.selectRealEstateIndicator#mapping");
+    }
+    
+    
+    /**
+     * Metoda dohvaæa podatke o izraèunu pokrivenosti za zadani kolateral koji su vrijedili na datum defaulta.
+     * @param customer objekt s podacima o komitentu
+     * @param collateral objekt s podacima o kolateralu
+     * @param exchange common za konverziju iznosa
+     */
+    private void selectCollateralDataAtDefaultDate(CustomerData customer, CollateralData collateral, YRXX0 exchange) throws Exception
+    {
+        if (collateral.default_date == null) return;
+        
+        // dohvati datum zadnjeg ND izraèuna pokrivenosti za kolateral prije datuma ulaska u default
+        Date max_value_date = collateral.default_date;
+        if (max_value_date.before(cutoff_date)) max_value_date = cutoff_date;
+        try
+        {
+            bc.startStopWatch("BO991.selectCollateralDataAtDefaultDate#selectMaxValueDate");
+            #sql [connCtx] { 
+                SELECT MAX(b.value_date)
+                INTO :(collateral.wcv_date)
+                FROM cusacc_exp_coll a
+                INNER JOIN col_proc b ON a.col_pro_id = b.col_pro_id
+                WHERE a.col_hea_id = :(collateral.col_hea_id)
+                AND b.proc_type = 'M'
+                AND b.value_date < :(max_value_date)
+                AND b.proc_status = '1'
+                WITH UR 
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata datuma zadnjeg ND izracuna pokrivenosti za COL_HEA_ID=" + collateral.col_hea_id + " za datum prije " + max_value_date +"!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCollateralDataAtDefaultDate#selectMaxValueDate");
+        }
+        
+        if (collateral.wcv_date == null)
+        {
+            bc.debug("Nema ND izracuna pokrivenosti za COL_HEA_ID = " + collateral.col_hea_id + " za datum manji od " + max_value_date + ".");
+            return;
+        }
+        
+        // dohvati ID obrade ND izraèuna pokrivenosti za dohvaæeni datum
+        BigDecimal col_pro_id = null;
+        try
+        {
+            bc.startStopWatch("BO991.selectCollateralDataAtDefaultDate#selectColProId");
+            #sql [connCtx] { 
+                SELECT col_pro_id
+                INTO :(col_pro_id)
+                FROM col_proc
+                WHERE proc_type = 'M'
+                AND value_date = :(collateral.wcv_date)
+                AND proc_status = '1'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata ID-a obrade ND izracuna pokrivenosti za datum " + collateral.wcv_date + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCollateralDataAtDefaultDate#selectColProId");
+        }
+        
+        // dohvati NCV i WCOV
+        BigDecimal cur_id = null;
+        try
+        {
+            bc.startStopWatch("BO991.selectCollateralDataAtDefaultDate#selectNcvWcov");
+            #sql [connCtx] { 
+                SELECT 
+                    coll_amount,
+                    exp_coll_cur_id,
+                    wcov,
+                    real_ponder,
+                    mvp_dfl
+                INTO 
+                    :(collateral.ncv_default),
+                    :(cur_id),
+                    :(collateral.wcov_default), 
+                    :(collateral.actually_applied_discount), 
+                    :(collateral.minimum_discount)
+                FROM cusacc_exp_coll
+                WHERE col_pro_id = :(col_pro_id)
+                AND col_hea_id = :(collateral.col_hea_id)
+                FETCH FIRST ROW ONLY 
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata NCV, WCOV i pondera za COL_HEA_ID = " + collateral.col_hea_id + " i COL_PRO_ID = " + col_pro_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCollateralDataAtDefaultDate#selectNcvWcov");
+        }
+        
+        if (collateral.actually_applied_discount != null) collateral.actually_applied_discount = hundred.subtract(collateral.actually_applied_discount);
+        if (collateral.minimum_discount != null) collateral.minimum_discount = hundred.subtract(collateral.minimum_discount);
+        if (collateral.ncv_default != null && cur_id != null) collateral.ncv_default_eur = exchange.exchange(collateral.ncv_default, cur_id, eur_cur_id, collateral.wcv_date);
+        if (collateral.wcov_default != null && cur_id != null) collateral.wcov_default = exchange.exchange(collateral.wcov_default, hrk_cur_id, cur_id, collateral.wcv_date);
+        
+        // dohvati WCV - uzima se samo pokrivenost plasmana koji su u defaultu i èiji je vlasnik zadani komitent 
+        try
+        {
+            bc.startStopWatch("BO991.selectCollateralDataAtDefaultDate#selectWcv");
+            #sql [connCtx] { 
+                SELECT SUM(a.coll_fc_amount)
+                INTO :(collateral.wcv_default)
+                FROM cusacc_exp_coll a
+                INNER JOIN cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                WHERE a.col_pro_id = :(col_pro_id)
+                AND a.col_hea_id = :(collateral.col_hea_id)
+                AND a.cus_id = :(customer.cus_id)
+                AND b.default_status = 'Y'
+                WITH UR 
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata WCV za COL_HEA_ID = " + collateral.col_hea_id + " i COL_PRO_ID = " + col_pro_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectCollateralDataAtDefaultDate#selectWcv");
+        }
+        
+        if (collateral.wcv_default == null)
+        {
+            collateral.wcv_default = zero;
+            collateral.wcv_default_eur = zero;
+        }
+        if (collateral.wcv_default != null && cur_id != null) collateral.wcv_default_eur = exchange.exchange(collateral.wcv_default, cur_id, eur_cur_id, collateral.wcv_date);
+    }
+    
+    
+    public void selectDefaultDateForRecoveryCollateral(CustomerData customer, CollateralData collateral) throws Exception
+    {
+        bc.startStopWatch("BO991.selectDefaultDateForRecoveryCollateral#last_active_date");
+        Date last_active_date = null;
+        try
+        {
+            #sql [connCtx] { 
+                SELECT MAX(load_date_until) - 30 DAYS
+                INTO :(last_active_date)
+                FROM coll_head_d
+                WHERE col_hea_id = :(collateral.col_hea_id) 
+                AND collateral_status = '3' 
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata zadnjeg dana aktivnosi za COL_HEA_ID = " + collateral.col_hea_id + "!", ex);
+            throw ex;
+        }
+        bc.stopStopWatch("BO991.selectDefaultDateForRecoveryCollateral#last_active_date");
+        
+        bc.debug("recovery_col_hea_id = " + collateral.col_hea_id + " -> last_active_date = " + last_active_date);
+        
+        if (last_active_date == null || last_active_date.before(cutoff_date)) return;
+        
+        try
+        {
+            bc.startStopWatch("BO991.selectDefaultDateForRecoveryCollateral#default_date");
+            
+            DatesIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT f.date_from AS date
+                FROM coll_head_d e
+                    INNER JOIN coll_hf_prior_d d ON d.hf_coll_head_id = e.col_hea_id
+                    INNER JOIN loan_beneficiary_d c ON c.coll_hf_prior_id = d.coll_hf_prior_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                    INNER JOIN cusacc_exp_def f ON (b.cus_acc_id = f.cus_acc_id OR (f.cus_acc_id IS NULL AND b.cus_id = f.cus_id))
+                WHERE e.col_hea_id = :(collateral.col_hea_id)
+                    AND b.cus_id = :(customer.cus_id)
+                    AND :(last_active_date) BETWEEN e.load_date_from AND e.load_date_until
+                    AND :(last_active_date) BETWEEN d.load_date_from AND d.load_date_until
+                    AND :(last_active_date) BETWEEN c.load_date_from AND c.load_date_until
+                    AND :(last_active_date) BETWEEN f.date_from AND f.date_until
+                    AND d.hf_status = 'A'
+                    AND c.status = 'A'
+                ORDER BY f.date_from
+                WITH UR
+            };
+            
+            if (iter.next()) collateral.default_date = iter.date();
+            iter.close();
+            
+            if (collateral.default_date == null)
+            {
+                #sql [connCtx] iter = { 
+                    SELECT f.date_from AS date
+                    FROM coll_head_d e
+                        INNER JOIN loan_beneficiary_d c ON c.col_hea_id = e.col_hea_id
+                        INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                        INNER JOIN cusacc_exp_def f ON (b.cus_acc_id = f.cus_acc_id OR (f.cus_acc_id IS NULL AND b.cus_id = f.cus_id))
+                    WHERE e.col_hea_id = :(collateral.col_hea_id)
+                        AND b.cus_id = :(customer.cus_id)
+                        AND :(last_active_date) BETWEEN e.load_date_from AND e.load_date_until
+                        AND :(last_active_date) BETWEEN c.load_date_from AND c.load_date_until
+                        AND :(last_active_date) BETWEEN f.date_from AND f.date_until
+                        AND c.status = 'A'
+                    ORDER BY f.date_from
+                    WITH UR
+                };
+                
+                if (iter.next()) collateral.default_date = iter.date();
+                iter.close();
+            }
+            
+            bc.debug("recovery_col_hea_id = " + collateral.col_hea_id + " -> default_date = " + collateral.default_date);
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata default date za COL_HEA_ID = " + collateral.col_hea_id + " na dan " + last_active_date + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectDefaultDateForRecoveryCollateral#default_date");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa najstarije i najnovije podatke o pokrivenosti za zadani kolateral.
+     * @param customer objekt s podacima o komitentu
+     * @param collateral objekt s podacima o kolateralu
+     * @param exchange common za konverziju iznosa
+     */
+    private void selectFirstAndLastWcv(CustomerData customer, CollateralData collateral, YRXX0 exchange) throws Exception
+    {
+        // dohvati datum prvog i zadnjeg ND izraèuna pokrivenosti za kolateral
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstAndLastWcv#selectFirstAndLastWcvDate");
+            #sql [connCtx] { 
+                SELECT MIN(b.value_date), MAX(b.value_date)
+                INTO :(collateral.first_wcv_date), :(collateral.last_wcv_date)
+                FROM cusacc_exp_coll a
+                INNER JOIN col_proc b ON a.col_pro_id = b.col_pro_id
+                WHERE a.col_hea_id = :(collateral.col_hea_id)
+                AND b.proc_type = 'M'
+                AND b.proc_status = '1'
+                WITH UR 
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata datuma prvog i zadnjeg ND izracuna pokrivenosti za COL_HEA_ID=" + collateral.col_hea_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstAndLastWcv#selectFirstAndLastWcvDate");
+        }
+        
+        if (collateral.first_wcv_date == null || collateral.last_wcv_date == null)
+        {
+            bc.debug("Nema ND izracuna pokrivenosti za COL_HEA_ID = " + collateral.col_hea_id + ".");
+            return;
+        }
+        
+        // FIRST WCV
+        
+        // dohvati ID obrade ND izraèuna pokrivenosti za dohvaæeni datum
+        BigDecimal first_wcv_col_pro_id = null;
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstAndLastWcv#selectFirstColProId");
+            #sql [connCtx] { 
+                SELECT col_pro_id
+                INTO :(first_wcv_col_pro_id)
+                FROM col_proc
+                WHERE proc_type = 'M'
+                AND value_date = :(collateral.first_wcv_date)
+                AND proc_status = '1'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata ID-a obrade ND izracuna pokrivenosti za datum " + collateral.first_wcv_date + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstAndLastWcv#selectFirstColProId");
+        }
+        
+        // dohvati valutu kolaterala
+        BigDecimal first_wcv_cur_id = null;
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstAndLastWcv#selectFirstCurId");
+            #sql [connCtx] { 
+                SELECT exp_coll_cur_id
+                INTO :(first_wcv_cur_id)
+                FROM cusacc_exp_coll
+                WHERE col_pro_id = :(first_wcv_col_pro_id)
+                AND col_hea_id = :(collateral.col_hea_id)
+                FETCH FIRST ROW ONLY 
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata valute za COL_HEA_ID = " + collateral.col_hea_id + " i COL_PRO_ID = " + first_wcv_col_pro_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstAndLastWcv#selectFirstCurId");
+        }
+       
+        // dohvati WCV - uzima se samo pokrivenost plasmana koji su u defaultu i èiji je vlasnik zadani komitent 
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstAndLastWcv#selectFirstWcv");
+            #sql [connCtx] { 
+                SELECT SUM(a.coll_fc_amount)
+                INTO :(collateral.first_wcv)
+                FROM cusacc_exp_coll a
+                INNER JOIN cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                WHERE a.col_pro_id = :(first_wcv_col_pro_id)
+                AND a.col_hea_id = :(collateral.col_hea_id)
+                AND a.cus_id = :(customer.cus_id)
+                AND b.default_status = 'Y'
+                WITH UR 
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata prvog WCV za COL_HEA_ID = " + collateral.col_hea_id + " i COL_PRO_ID = " + first_wcv_col_pro_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstAndLastWcv#selectFirstWcv");
+        }
+        
+        if (collateral.first_wcv == null) collateral.first_wcv = zero;
+        if (collateral.first_wcv != null && first_wcv_cur_id != null) collateral.first_wcv_eur = exchange.exchange(collateral.first_wcv, first_wcv_cur_id, eur_cur_id, collateral.first_wcv_date);
+        
+        
+        // LAST WCV
+        
+        // dohvati ID obrade ND izraèuna pokrivenosti za dohvaæeni datum
+        BigDecimal last_wcv_col_pro_id = null;
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstAndLastWcv#selectLastColProId");
+            #sql [connCtx] { 
+                SELECT col_pro_id
+                INTO :(last_wcv_col_pro_id)
+                FROM col_proc
+                WHERE proc_type = 'M'
+                AND value_date = :(collateral.last_wcv_date)
+                AND proc_status = '1'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata ID-a obrade ND izracuna pokrivenosti za datum " + collateral.last_wcv_date + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstAndLastWcv#selectLastColProId");
+        }
+        
+        // dohvati valutu kolaterala
+        BigDecimal last_wcv_cur_id = null;
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstAndLastWcv#selectLastCurId");
+            #sql [connCtx] { 
+                SELECT exp_coll_cur_id
+                INTO :(last_wcv_cur_id)
+                FROM cusacc_exp_coll
+                WHERE col_pro_id = :(last_wcv_col_pro_id)
+                AND col_hea_id = :(collateral.col_hea_id)
+                FETCH FIRST ROW ONLY 
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata valute za COL_HEA_ID = " + collateral.col_hea_id + " i COL_PRO_ID = " + last_wcv_col_pro_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstAndLastWcv#selectLastCurId");
+        }
+       
+        // dohvati WCV - uzima se samo pokrivenost plasmana koji su u defaultu i èiji je vlasnik zadani komitent 
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstAndLastWcv#selectLastWcv");
+            #sql [connCtx] { 
+                SELECT SUM(a.coll_fc_amount)
+                INTO :(collateral.last_wcv)
+                FROM cusacc_exp_coll a
+                INNER JOIN cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                WHERE a.col_pro_id = :(last_wcv_col_pro_id)
+                AND a.col_hea_id = :(collateral.col_hea_id)
+                AND a.cus_id = :(customer.cus_id)
+                AND b.default_status = 'Y'
+                WITH UR 
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata zadnjeg WCV za COL_HEA_ID = " + collateral.col_hea_id + " i COL_PRO_ID = " + last_wcv_col_pro_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstAndLastWcv#selectLastWcv");
+        }
+        
+        if (collateral.last_wcv == null) collateral.last_wcv = zero;
+        if (collateral.last_wcv != null && last_wcv_cur_id != null) collateral.last_wcv_eur = exchange.exchange(collateral.last_wcv, last_wcv_cur_id, eur_cur_id, collateral.last_wcv_date);
+    }
+    
+
+    
+    /**
+     * Metoda dohvaæa najstarije podatke o tržišnoj vrijednosti za zadani kolateral.
+     * @param collateral objekt s podacima o kolateralu
+     * @param exchange common za konverziju iznosa
+     */
+    private void selectFirstNcv(CollateralData collateral, YRXX0 exchange) throws Exception
+    {
+        BigDecimal cur_id = null;
+        try
+        {
+            bc.startStopWatch("BO991.selectFirstNcv");
+            #sql [connCtx] { 
+                SELECT a.real_est_nomi_valu, a.real_est_nomi_date, a.real_est_nm_cur_id
+                INTO :(collateral.first_ncv), :(collateral.first_ncv_date), :(cur_id)
+                FROM coll_head_d a
+                WHERE a.col_hea_id = :(collateral.col_hea_id)
+                ORDER BY load_date_from
+                FETCH FIRST ROW ONLY
+                WITH UR 
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata prve trzisne vrijednosti za COL_HEA_ID=" + collateral.col_hea_id + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO991.selectFirstNcv");
+        }
+       
+        if (collateral.first_ncv != null && cur_id != null) collateral.first_ncv_eur = exchange.exchange(collateral.first_ncv, cur_id, eur_cur_id, collateral.first_ncv_date);
+    }
+    
+
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

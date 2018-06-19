@@ -1,0 +1,247 @@
+package hr.vestigo.modules.collateral.jcics.co05;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */
+   
+  
+public class CO053 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co05/CO053.sqlj,v 1.16 2009/08/31 13:30:04 hramkr Exp $";
+	
+	public DeclCO05 decl = null;
+
+	public CO053 (DeclCO05 decl) {
+		this.decl = decl;
+	} 
+
+	CollHeadInsertData chd = new CollHeadInsertData();	
+	
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+//		 insert u COLL_HEAD		
+		YOY40 headIns = new YOY40(tc, chd);
+				
+//		 punjenje objekta chd		
+		fillCHDobj();
+				
+		tc.debug("zovem insert u Head : " + chd.recept);
+				
+		headIns.insertIntoCollHead();
+
+		fillDeclFromCHDObj();		
+
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();
+
+		tc.debug("dohvat collateral_id : "+collaterall_id);
+		
+		decl.collartinsertmapping.COL_SEC_ID = collaterall_id;				
+		
+
+			try{	
+
+					#sql [ctx]{
+							INSERT INTO coll_workofart
+									(	col_wor_id , 
+										col_hea_id , 
+										wot_typ_id , 
+										woa_unit_mes , 
+										woa_num_of_unit , 
+										woa_art_period ,
+										woa_art_year ,
+										woa_art_author ,
+										woa_condition , 
+										woa_cond_date  )
+							VALUES( :(decl.collartinsertmapping.COL_SEC_ID),    													                                                
+									:(decl.collartinsertmapping.COL_HEA_ID),  	
+									:(decl.collartinsertmapping.SEC_TYP_ID),                   
+									:(decl.collartinsertmapping.Coll_txtMovUnitMes), 
+									:(decl.collartinsertmapping.Coll_txtMovNumOfUnit),
+									:(decl.collartinsertmapping.Coll_txtArtPeriod) ,
+									:(decl.collartinsertmapping.Coll_txtArtYear) ,
+									:(decl.collartinsertmapping.Coll_txtArtAuthor) ,
+                  					:(decl.collartinsertmapping.Coll_txtMovCondition),                  
+									:(decl.collartinsertmapping.Coll_txtMovCondDate) )
+									                                          	       
+					};
+
+			}catch(SQLException se){
+				
+				tc.debug ( "......CO053.sqlj insert into coll_workofart SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO053.sqlj insert into coll_workofart SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO053.sqlj insert into coll_workofart SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new VestigoTMException(1, "Transaction CO053: Error inserting coll_workofart! ","err411a", null);
+			}
+					
+			
+//			 insert u COLL_HEAD_A
+			YOY44 headArhIns = new YOY44(tc, chd);
+			
+			chd.action = "I";		
+			tc.debug("zovem insert u COLL_HEAD_A : " + chd.recept);
+					
+			headArhIns.insertIntoCollHeadArh();        
+			tc.debug("gotov insert u COLL_HEAD_A : " + chd.recept);		
+		
+		}//execute
+	private void fillCHDobj () {
+
+		chd.Coll_txtAcouBDate = decl.collartinsertmapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.collartinsertmapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.collartinsertmapping.Coll_txtAcouDate;
+//		chd.Coll_txtAcouPerAco = decl.collartinsertmapping.Coll_txtAcouPerAco;
+//		chd.Coll_txtAcouPerCal = decl.collartinsertmapping.Coll_txtAcouPerCal;
+		chd.Coll_txtAcouValue = decl.collartinsertmapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.collartinsertmapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.collartinsertmapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.collartinsertmapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.collartinsertmapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.collartinsertmapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.collartinsertmapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.collartinsertmapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.collartinsertmapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.collartinsertmapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.collartinsertmapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.collartinsertmapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtCollTypeCode = decl.collartinsertmapping.Coll_txtCollTypeCode;
+		chd.Coll_txtComDoc = decl.collartinsertmapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.collartinsertmapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.collartinsertmapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.collartinsertmapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.collartinsertmapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.collartinsertmapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.collartinsertmapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.collartinsertmapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.collartinsertmapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.collartinsertmapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.collartinsertmapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.collartinsertmapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.collartinsertmapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.collartinsertmapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.collartinsertmapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.collartinsertmapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.collartinsertmapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.collartinsertmapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.collartinsertmapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.collartinsertmapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.collartinsertmapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.collartinsertmapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.collartinsertmapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.collartinsertmapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.collartinsertmapping.Coll_txtNomiValu;
+//		chd.Coll_txtRevaAutMan = decl.collartinsertmapping.Coll_txtRevaAutMan;
+		chd.Coll_txtRevaBDate = decl.collartinsertmapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.collartinsertmapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.collartinsertmapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.collartinsertmapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.collartinsertmapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.collartinsertmapping.Coll_txtRevaDateAM;
+//		chd.Coll_txtRevaDateMan = decl.collartinsertmapping.Coll_txtRevaDateMan;
+//		chd.Coll_txtRevaValue = decl.collartinsertmapping.Coll_txtRevaValue;
+		chd.Coll_txtSumLimitDat = decl.collartinsertmapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.collartinsertmapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.collartinsertmapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.collartinsertmapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.collartinsertmapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.collartinsertmapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.collartinsertmapping.Coll_txtThirdRightInNom;
+		chd.COL_TYPE_ID = decl.collartinsertmapping.COL_TYPE_ID;
+		chd.REAL_EST_EUSE_ID = decl.collartinsertmapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.collartinsertmapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.collartinsertmapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.collartinsertmapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.collartinsertmapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.collartinsertmapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.collartinsertmapping.COL_PLACE;
+		chd.COL_COUNTY = decl.collartinsertmapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.collartinsertmapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.collartinsertmapping.COL_RESI_QUAR;
+		chd.USE_OPEN_ID = decl.collartinsertmapping.USE_OPEN_ID;
+		chd.USE_ID = decl.collartinsertmapping.USE_ID;
+		chd.INSPOL_IND = decl.collartinsertmapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.collartinsertmapping.Coll_txtDesc;	
+		chd.recept = "CLT_AR";  
+		chd.eve_typ_id =  new java.math.BigDecimal("1609268003.0");
+		chd.Coll_txtEligibility = decl.collartinsertmapping.Coll_txtEligibility;
+		chd.Coll_txtAcumBuyValue = decl.collartinsertmapping.Coll_txtAcumBuyValue;	
+		
+//		 dodano 10.06.2006
+		chd.ORIGIN_ORG_UNI_ID = decl.collartinsertmapping.ORIGIN_ORG_UNI_ID;
+		chd.ORG_UNI_ID = decl.collartinsertmapping.ORG_UNI_ID;
+		chd.COL_CAT_ID = decl.collartinsertmapping.col_cat_id;		
+//		 dodano 14.06.2006
+		chd.save_ver_aut_flag = decl.collartinsertmapping.save_ver_aut_flag;	
+		
+//		 dodano 27.10.2006
+		chd.KolLow_txtEligibility = decl.collartinsertmapping.KolLow_txtEligibility;
+		chd.ColRba_txtEligibility = decl.collartinsertmapping.ColRba_txtEligibility;
+		
+//		 dodano 27.12.2006
+		chd.Kol_txtRbaEligDsc = decl.collartinsertmapping.Kol_txtRbaEligDsc; 	
+//		 dodano 19.12.2007
+		chd.Coll_txtB1Eligibility = decl.collartinsertmapping.Coll_txtB1Eligibility;
+		chd.Coll_txtB2IRBEligibility = decl.collartinsertmapping.Coll_txtB2IRBEligibility;
+//      dodano 28.08.2009
+        
+        chd.SPEC_STATUS = decl.collartinsertmapping.SPEC_STATUS;        
+	}			 									
+ 
+	private void fillDeclFromCHDObj () {
+		decl.collartinsertmapping.COL_HEA_ID = chd.COL_HEA_ID;
+		decl.collartinsertmapping.Coll_txtUserLock = chd.Coll_txtUserLock;
+		decl.collartinsertmapping.Coll_txtCode = chd.Coll_txtCode;
+//		decl.collartinsertmapping.STATUS = chd.STATUS;
+		decl.collartinsertmapping.SPEC_STATUS = chd.SPEC_STATUS;
+		decl.collartinsertmapping.Coll_txtOpeningTs = chd.Coll_txtOpeningTs;
+		decl.collartinsertmapping.EVE_ID = chd.EVE_ID;
+		decl.collartinsertmapping.USER_LOCK = chd.USER_LOCK;
+	}
+
+	 
+/*	private void fillHFDobj () {
+		
+		hfd.HF_REF_ID  = decl.collartinsertmapping.COL_SEC_ID;
+		hfd.HF_COLL_HEAD_ID = decl.collartinsertmapping.COL_HEA_ID;
+	
+	
+		hfd.HF_AMOUNT = decl.collartinsertmapping.Coll_txtNomiValu;	// coll_head.real_est_nomi_valu
+		hfd.HF_CUR_ID = decl.collartinsertmapping.REAL_EST_NM_CUR_ID;	// coll_head.real_est_nm_cur_id
+
+		hfd.HF_DRAW_AMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+		hfd.HF_AVAIL_AMO = decl.collartinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+
+		 
+		hfd.DRAW_BAMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+		hfd.AVAIL_BAMO = decl.collartinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+		hfd.DRAW_BAMO_REF = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+		hfd.AVAIL_BAMO_REF = decl.collartinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+		
+		hfd.HF_DATE_HFC_FROM = decl.collartinsertmapping.Coll_txtDateFrom;	// current date
+		hfd.HF_DATE_HFC_UNTIL = decl.collartinsertmapping.Coll_txtDateUnti;  // 9999-12-31
+		hfd.HF_STATUS = decl.collartinsertmapping.STATUS;	// vrijednost A
+		hfd.HF_SPEC_STAT = decl.collartinsertmapping.SPEC_STATUS;	// vrijednost 00
+		hfd.HF_DATE_FROM = decl.collartinsertmapping.Coll_txtDateFrom;	// current date
+		hfd.HF_DATE_UNTIL = decl.collartinsertmapping.Coll_txtDateUnti;  // 9999-12-31	
+		
+		hfd.USE_OPEN_ID = decl.collartinsertmapping.USE_OPEN_ID;
+		hfd.USE_ID = decl.collartinsertmapping.USE_ID;
+		hfd.OPENING_TS = decl.collartinsertmapping.Coll_txtOpeningTs;
+	    hfd.USER_LOCK = decl.collartinsertmapping.Coll_txtUserLock;
+	    hfd.EVE_ID = decl.collartinsertmapping.EVE_ID;
+	    hfd.table_id = "work_of_art";
+		
+	} */	
+}	
+			

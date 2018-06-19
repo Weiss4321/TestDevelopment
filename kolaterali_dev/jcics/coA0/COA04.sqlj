@@ -1,0 +1,63 @@
+package hr.vestigo.modules.collateral.jcics.coA0;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+import java.sql.Date;
+import hr.vestigo.modules.rba.util.DateUtils;
+/**
+ *  * @author hramkr
+ *  	
+ */    
+ public class COA04 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA0/COA04.sqlj,v 1.4 2014/10/07 10:54:19 hrazst Exp $";
+
+	
+	public DeclCOA0 decl = null;
+
+
+	
+	public COA04 (DeclCOA0 decl) {
+		this.decl = decl;
+	} 
+	 
+  
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+		tc.debug("update za  : " + decl.coponderupdatemap.Mvp_col_pon_id);
+		tc.debug("new value  : " + decl.coponderupdatemap.Mvp_txtNewValue);
+		tc.debug("date until : " + decl.coponderupdatemap.Mvp_txtUntil);
+        // dodano postavljanje statusa ovisno o datumu do kada ponder vrijedi		
+		String status_new = "N";
+		Date date_until = decl.coponderupdatemap.Mvp_txtUntil;
+		Date current_date = new Date(System.currentTimeMillis());
+		    
+		if (DateUtils.whoIsOlder(date_until,current_date) == 1 ) {
+		    status_new = "A";
+		}
+		try {
+			#sql [ctx]{
+				UPDATE coll_ponder
+				SET		
+					ponder_value   = :(decl.coponderupdatemap.Mvp_txtNewValue),
+					date_until     = :(decl.coponderupdatemap.Mvp_txtUntil),
+		            status         = :(status_new)         
+				WHERE
+					col_pon_id = :(decl.coponderupdatemap.Mvp_col_pon_id)
+				AND
+					status = 'A'
+				};   
+
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+		}
+			
+	}//execute
+ 	 
+}	   
+			

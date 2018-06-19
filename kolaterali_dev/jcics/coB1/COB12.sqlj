@@ -1,0 +1,94 @@
+package hr.vestigo.modules.collateral.jcics.coB1;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+import java.sql.Date;
+
+public class COB12 extends SQLJScrollableRemoteTransaction {
+    
+    public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB1/COB12.sqlj,v 1.2 2017/11/29 09:46:19 hrazst Exp $";
+    public DeclCOB1 d=null;
+    private Iter1 iter=null;
+    
+    public COB12 (DeclCOB1 d) {
+        this.d = d;  
+    } 
+          
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        setLevel(d.ActionListLevel);
+        setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+        
+        BigDecimal est_cus_id = d.collestimatorqbemapping.EST_CUS_ID;
+        
+        Date dateFrom = d.collestimatorqbemapping.CollEstimatorQBE_txtEstimatorDateFrom;
+        Date dateUntil = d.collestimatorqbemapping.CollEstimatorQBE_txtEstimatorDateUntil;
+        
+        int filterByest_cus_id = est_cus_id == null ? 0 : 1;
+        int filterBydateFrom = dateFrom == null ? 0 : 1;
+        int filterBydateUntil = dateUntil == null ? 0 : 1;       
+        
+        ConnCtx ctx = tc.getContext();
+        
+            #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};        
+            #sql [ctx] iter = {
+                            SELECT  e.EST_ID,
+                                    e.EST_CUS_ID,
+                                    cest.REGISTER_NO as REG_NO_EST,
+                                    cest.NAME as NAME_EST,
+                                    cestc.REGISTER_NO as REG_NO_EST_COMP,
+                                    cestc.NAME as NAME_EST_COMP,
+                                    e.EST_COMP_CUS_ID,
+                                    e.EST_TYPE,
+                                    scv.SYS_CODE_DESC as EST_TYPE_NAME,
+                                    e.DATE_FROM,
+                                    e.DATE_UNTIL,
+                                    e.USE_OPEN_ID,
+                                    e.USE_ID,
+                                    e.OPENING_TS,
+                                    e.USER_LOCK,
+                                    e.est_internal
+                            FROM ESTIMATOR e
+                            INNER JOIN CUSTOMER cest on e.EST_CUS_ID = cest.CUS_ID
+                            INNER JOIN CUSTOMER cestc on e.EST_COMP_CUS_ID = cestc.CUS_ID
+                            INNER JOIN SYSTEM_CODE_VALUE scv on e.EST_TYPE = scv.SYS_CODE_VALUE AND scv.SYS_COD_ID = 'est_type' 
+                            WHERE 
+                            (:filterByest_cus_id = 0 OR e.EST_CUS_ID = :est_cus_id) AND
+                            (:filterBydateFrom = 0 OR e.DATE_FROM <= :dateFrom) AND
+                            (:filterBydateUntil = 0 OR e.DATE_UNTIL >= :dateUntil)
+                            };
+        
+    }
+    
+    public boolean next() throws Exception {
+        return iter.next();
+    }
+    
+    public void close() {
+        if(iter!=null) {
+            try {
+                iter.close();
+            } catch (Exception ignored) {}
+        }
+    }
+ 
+    
+    public void populateRowData() throws Exception {
+                    
+        Vector row=new Vector();
+        
+        row.add(iter.REG_NO_EST());
+        row.add(iter.NAME_EST());
+        row.add(iter.REG_NO_EST_COMP());
+        row.add(iter.NAME_EST_COMP());
+        row.add(iter.est_type_name());
+        row.add(iter.est_internal()); 
+        row.add(iter.date_from());
+        row.add(iter.date_until());            
+        Vector hidden = new Vector();        
+        hidden.add(iter.est_id());  
+        System.out.println(iter.est_id());
+        d.collestimatorqbemapping.tblCollEstimatorList.addRow(row, hidden);       
+    }
+}

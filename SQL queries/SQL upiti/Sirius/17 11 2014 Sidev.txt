@@ -1,0 +1,35 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from payment_order;
+
+select * from CUST_BILL_EXCH;
+
+------------ CNP15 SQL 
+
+ 			 SELECT 
+                    t.eve_id                              
+                FROM
+                    turnover t,
+                    turn_customer tc
+
+                    
+                WHERE 
+                      t.tur_id = tc.tur_id
+                  --  AND tc.cus_acc_id = :(master_acc_no) 
+                   -- AND t.turnover_reference = broj ugovora mjenice (cus_bill_ext_no)
+                    --t.pro_typ_id in(naknadno definirati) 
+
+
+
+                    
+                AND t.reverse_tur_id is null 
+                AND (SELECT turn_storno.tur_id 
+                            FROM
+                            turnover turn_storno
+                             WHERE
+                             turn_storno.reverse_tur_id = t.tur_id) -- is null
+                };
+
+
+   select * FROM turnover;
+                

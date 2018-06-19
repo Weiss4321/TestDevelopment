@@ -1,0 +1,68 @@
+package hr.vestigo.modules.collateral.jcics.co20;
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.*;	
+
+//ovo u import OBAVEZNO (tako mora biti po nareðenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+/**
+ * CO202 class insert data  into table RE_SUB_TYPE
+ *  
+ */
+public class CO202 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co20/CO202.sqlj,v 1.1 2006/06/07 14:05:21 hraamh Exp $";
+    public DeclCO20 decl = null;
+	
+	public CO202 (DeclCO20 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+		
+			 //provjerava da li vec postoji isti vlasnik
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			 		
+    		    
+    		
+            //generator id-a za modul Collateral
+        	YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+			java.math.BigDecimal collaterall_id = id_generator.getNewId();
+	
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n......CO202.sqlj code " + decl.resubtypeinsertm.ReSubTypeD_txtCode);
+			tc.debug ( "\n......CO202.sqlj desc " + decl.resubtypeinsertm.ReSubTypeD_txtName);
+			tc.debug ( "\n......CO202.sqlj status " + decl.resubtypeinsertm.STATUS);
+			tc.debug ( "\n......CO202.sqlj use_id " + decl.resubtypeinsertm.use_id);
+
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			
+			//INSERT INTO re_sub_type
+			try{	
+			    	#sql [ctx]{  insert into re_sub_type (re_sub_type_id, re_sub_type_code, re_sub_type_desc, re_type_id, re_sub_status, 
+			    					use_open_id, use_id, opening_ts, user_lock, bank_sign)
+			    					values (:collaterall_id, 
+									:(decl.resubtypeinsertm.ReSubTypeD_txtCode), 
+									:(decl.resubtypeinsertm.ReSubTypeD_txtName),
+									:(decl.resubtypeinsertm.RE_TYPE_ID),
+									:(decl.resubtypeinsertm.STATUS),
+									:(decl.resubtypeinsertm.use_id),
+									:(decl.resubtypeinsertm.use_id),
+									current timestamp,
+									current timestamp,
+									:(tc.getBankSign())
+							)
+         		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO202.sqlj insert into inserting re_sub_type SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO202.sqlj insert into inserting re_sub_type SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO202.sqlj insert into inserting re_sub_type SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO202: Error inserting re_sub_type! ","err411a", null);
+				}
+		}
+}	
+			

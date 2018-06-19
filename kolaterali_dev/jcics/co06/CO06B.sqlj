@@ -1,0 +1,469 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+ 
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+ 
+     
+public class CO06B extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO06B.sqlj,v 1.6 2017/12/21 14:04:03 hrazst Exp $";
+    private DeclCO06 decl = null;
+    private YOY63 SQLhelper = null;
+    
+    public CO06B(DeclCO06 decl) { 
+        this.decl = decl;
+    }  
+        
+    CollHeadSelectData chs = new CollHeadSelectData();
+    
+    public void execute(TransactionContext tc) throws Exception {
+
+        tc.debug ( "......COL_HEA_ID " + decl.collcesijaselectmapping.COL_HEA_ID);
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data(); 
+        SQLhelper = new YOY63(tc);
+        
+        ConnCtx ctx = tc.getContext(); 
+        #sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+//       select iz COLL_HEAD        
+        YOY42 headSel = new YOY42(tc, chs);
+
+        chs.COL_HEA_ID = decl.collcesijaselectmapping.COL_HEA_ID;
+        
+        headSel.selectFromCollHead();
+        
+        tc.debug ( "......PUNIM DECL  ");       
+// punjenje decla iz objekta chs        
+        fillDeclFromCHSObj();               
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);
+        tc.debug ( "......COL_HEA_ID " + decl.collcesijaselectmapping.Coll_txtCode);        
+        
+          
+        try{
+
+            #sql [ctx] {SELECT 
+                                col_ces_id, 
+                                col_hea_id, 
+                                ces_typ_id,
+                                ces_con_date,
+                                ces_nap_pls,
+                                ces_limit,
+                                ces_regres,
+                                ces_add_data,
+                                ces_exp_date,
+                                ces_amount,
+                                ces_cur_id,
+                                ces_mat_date,
+                                ces_amount_all,
+                                ces_lista,
+                                ces_lista_date,
+                                ces_lista_din,
+                                cec_lista_next,
+                                cedent_id,
+                                ced_rzb_rating,
+                                ced_out_rating,
+                                cesus_id,
+                                ces_rzb_rating,
+                                ces_out_rating
+                INTO 
+                                :(decl.collcesijaselectmapping.COL_SEC_ID),                                                                                                        
+                                :(decl.collcesijaselectmapping.COL_HEA_ID),
+                                :(decl.collcesijaselectmapping.cesija_vrsta_id),       
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaDate),
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaNaplata),
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaLimit),   
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaRegres), 
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaAddData), 
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaDateExp), 
+                                :(decl.collcesijaselectmapping.Kol_txtGuarAmount), 
+                                :(decl.collcesijaselectmapping.cd_cur_id), 
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaMatDate), 
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaAllAmount), 
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaLista), 
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaListaDatum), 
+                                :(decl.collcesijaselectmapping.cesija_dinamika_id),
+                                :(decl.collcesijaselectmapping.Kol_txtCesijaNextLista),
+                                :(decl.collcesijaselectmapping.cedent_id),                   
+                                :(decl.collcesijaselectmapping.Kol_txtCedentRzbRating),
+                                :(decl.collcesijaselectmapping.Kol_txtCedentOutRating),
+                                :(decl.collcesijaselectmapping.cesus_id),
+                                :(decl.collcesijaselectmapping.Kol_txtCesusRzbRating),
+                                :(decl.collcesijaselectmapping.Kol_txtCesusOutRating) 
+                FROM coll_cesija 
+                WHERE COL_HEA_ID = :(decl.collcesijaselectmapping.COL_HEA_ID) };        
+     
+        }catch(SQLException se){ 
+            
+            tc.debug ( "......CO06B.sqlj select from coll_cesija SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO06B.sqlj select from coll_cesija SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO06B.sqlj select from coll_cesija SQL Message " + se.getMessage());
+            se.printStackTrace();
+            throw new VestigoTMException(1, "Transaction CO06B: Error selecting coll_cesija ","err411a", null);
+        }
+                                    
+//      dohvat iz tabele CURRENCY        
+        
+        try{ 
+            if (decl.collcesijaselectmapping.cd_cur_id != null){ 
+                #sql [ctx] {
+                    SELECT code_char
+                        INTO :(decl.collcesijaselectmapping.Coll_txtCdeCurr)
+                        FROM currency
+                        WHERE cur_id = :(decl.collcesijaselectmapping.cd_cur_id)};
+            }
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }                       
+ 
+//dohvat vrste potrazivanja iz USER_CODE_VALUE
+                
+        try{       
+            if (decl.collcesijaselectmapping.cesija_vrsta_id != null){         
+                        #sql [ctx] {
+                            SELECT use_code_value, use_code_desc
+                                INTO :(decl.collcesijaselectmapping.Kol_txtVrstaPotrazivanja),
+                                     :(decl.collcesijaselectmapping.Kol_txtVrstaPotrazivanjaDsc)
+                                FROM user_code_value
+                                WHERE use_cod_val_id = :(decl.collcesijaselectmapping.cesija_vrsta_id) };               
+            }       
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }               
+
+//dohvat dinamike dostavljanja liste potrazivanja iz USER_CODE_VALUE     
+                 
+        try{ 
+            if (decl.collcesijaselectmapping.cesija_dinamika_id != null){ 
+                        #sql [ctx] {
+                            SELECT use_code_value, use_code_desc
+                                INTO :(decl.collcesijaselectmapping.Kol_txtCesijaListaDinamika),
+                                     :(decl.collcesijaselectmapping.Kol_txtCesijaListaDinamikaDsc)
+                                FROM user_code_value
+                                WHERE use_cod_val_id = :(decl.collcesijaselectmapping.cesija_dinamika_id)};
+            }
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }                           
+      
+// dohvat cedenta
+        try{ 
+            if (decl.collcesijaselectmapping.cedent_id != null){ 
+                        #sql [ctx] {
+                            SELECT  a.register_no,
+                                    a.name,
+                                    a.tax_number,
+                                    b.score
+
+                            INTO :(decl.collcesijaselectmapping.Kol_txtCedentMb),
+                                 :(decl.collcesijaselectmapping.Kol_txtCedentName),
+                                 :(decl.collcesijaselectmapping.Kol_txtCedentOIB),
+                                 :(decl.collcesijaselectmapping.Kol_txtCedentRzbRating)
+                                FROM customer a
+                                LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+                                                            AND
+                                                                b.rat_typ_id = 1354776003
+                                                            AND
+                                                                b.date_from <= current date
+                                                            AND
+                                                                b.date_until >= current date)
+                                WHERE
+                                    a.cus_id = :(decl.collcesijaselectmapping.cedent_id)};
+            }
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }              
+// dohvat cesusa        
+        try{ 
+            if (decl.collcesijaselectmapping.cesus_id != null){ 
+                        #sql [ctx] {
+                            SELECT  a.register_no,
+                                    a.name,
+                                    a.tax_number,
+                                    b.score
+
+                            INTO :(decl.collcesijaselectmapping.Kol_txtCesusMb),
+                                 :(decl.collcesijaselectmapping.Kol_txtCesusName),
+                                 :(decl.collcesijaselectmapping.Kol_txtCesusOIB),
+                                 :(decl.collcesijaselectmapping.Kol_txtCesusRzbRating)
+                                FROM customer a
+                                LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+                                                            AND
+                                                                b.rat_typ_id = 1354776003
+                                                            AND
+                                                                b.date_from <= current date
+                                                            AND
+                                                                b.date_until >= current date)
+                                WHERE
+                                    a.cus_id = :(decl.collcesijaselectmapping.cesus_id)};
+            }
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }    
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.collcesijaselectmapping.COL_HEA_ID);               
+        
+        decl.collcesijaselectmapping.Kol_txtPonderMVP = cData.MVP_ponder;
+        decl.collcesijaselectmapping.Coll_txtWcaAmountDate = cData.wcov_date;
+        decl.collcesijaselectmapping.Coll_txtWcaAmount = cData.wcov_amount;
+        decl.collcesijaselectmapping.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+        decl.collcesijaselectmapping.Coll_txtUsedWCAAmount = cData.wca_amount;
+        
+        decl.collcesijaselectmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+        decl.collcesijaselectmapping.Coll_txtRealPonderAmount=cData.real_ponder; 
+        
+//            kada je dohvacen ponder treba izracunati ponderiranu i raspolozivu vrijednost
+                    
+        kolData.colHeaId = decl.collcesijaselectmapping.COL_HEA_ID;
+        kolData.colCurId = decl.collcesijaselectmapping.REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.collcesijaselectmapping.Coll_txtNomiValu;
+ 
+        kolData.colCatId = decl.collcesijaselectmapping.COL_CAT_ID;
+        kolData.colTypId = decl.collcesijaselectmapping.COL_TYPE_ID;
+        kolData.colSubTypId = null;
+        kolData.addRequest = "N";                     
+            
+    
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+    
+          
+          decl.collcesijaselectmapping.Coll_txtAcouValue = kolData.ponderAmount;
+          decl.collcesijaselectmapping.Coll_txtAcouDate = todaySQLDate;
+
+    
+          decl.collcesijaselectmapping.Coll_txtSumPartVal = kolData.exposureAmount;
+          decl.collcesijaselectmapping.Coll_txtSumPartDat = kolData.exposureDate;   
+          
+          decl.collcesijaselectmapping.Coll_txtCollMvpPonderMin = kolData.minPonder;
+          decl.collcesijaselectmapping.Coll_txtCollMvpPonder = kolData.dflPonder;
+          decl.collcesijaselectmapping.Coll_txtCollMvpPonderMax = kolData.maxPonder;
+
+          decl.collcesijaselectmapping.Coll_txtAvailValue = kolData.restAmount;
+          decl.collcesijaselectmapping.Coll_txtAvailDate = kolData.coverDate;
+          
+          decl.collcesijaselectmapping.Coll_txtAvailPonValue = kolData.restPonAmount;
+          decl.collcesijaselectmapping.Coll_txtNDAvailDate = kolData.NDCoverDate;
+      
+
+              //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja
+            
+              try{ 
+                  #sql [ctx] {
+                          SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+                          INTO
+                          :(decl.collcesijaselectmapping.Coll_txtCoConfirm),
+                          :(decl.collcesijaselectmapping.Coll_txtCoConfirmUserId),
+                          :(decl.collcesijaselectmapping.Coll_txtCoConfirmUserName),
+                          :(decl.collcesijaselectmapping.Coll_txtCoConfirmTime)
+                          FROM co_chg_history as a, app_user as app
+                          WHERE 
+                                 a.col_hea_id = :(decl.collcesijaselectmapping.COL_HEA_ID)
+                          and    a.co_use_id=app.use_id
+                          and
+                                  a.co_ind='D'
+                          and
+                                  a.co_chg_ts is null
+                          and co_chg_use_id is null
+                          FETCH FIRST ROWS ONLY
+                         };  
+                      
+              }catch(SQLException e){
+                  if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                  } else {
+                      throw e;
+                  }
+              } 
+              
+              
+    }  
+    
+    private void fillDeclFromCHSObj () {
+        
+        decl.collcesijaselectmapping.COL_HEA_ID = chs.COL_HEA_ID;                                                                                                       
+        decl.collcesijaselectmapping.COL_TYPE_ID = chs.COL_TYPE_ID;  
+        decl.collcesijaselectmapping.Coll_txtCode = chs.Coll_txtCode; 
+        decl.collcesijaselectmapping.Coll_txtDesc = chs.Coll_txtDesc;  
+        decl.collcesijaselectmapping.REAL_EST_EUSE_ID = chs.REAL_EST_EUSE_ID;
+        decl.collcesijaselectmapping.Coll_txtEstnValu = chs.Coll_txtEstnValu;                   
+        decl.collcesijaselectmapping.Coll_txtEstnDate = chs.Coll_txtEstnDate;                   
+        decl.collcesijaselectmapping.Coll_txtDatnFrom = chs.Coll_txtDatnFrom;                   
+        decl.collcesijaselectmapping.Coll_txtDatnUnti = chs.Coll_txtDatnUnti;                   
+        decl.collcesijaselectmapping.Coll_txtNomiDesc = chs.Coll_txtNomiDesc; 
+        decl.collcesijaselectmapping.Coll_txtNomiValu = chs.Coll_txtNomiValu;                           
+        decl.collcesijaselectmapping.Coll_txtNomiDate = chs.Coll_txtNomiDate; 
+        decl.collcesijaselectmapping.Coll_txtLiquValu = chs.Coll_txtLiquValu;                       
+        decl.collcesijaselectmapping.Coll_txtLiquDate = chs.Coll_txtLiquDate;                           
+        decl.collcesijaselectmapping.Coll_txtBptcValu = chs.Coll_txtBptcValu;                           
+        decl.collcesijaselectmapping.Coll_txtBptcDate = chs.Coll_txtBptcDate; 
+        decl.collcesijaselectmapping.REAL_EST_NM_CUR_ID = chs.REAL_EST_NM_CUR_ID; 
+        decl.collcesijaselectmapping.CUS_ID = chs.CUS_ID;   
+        decl.collcesijaselectmapping.COLL_CUS_ID = chs.COLL_CUS_ID;   
+        decl.collcesijaselectmapping.Coll_txtDateToLop = chs.Coll_txtDateToLop;   
+        decl.collcesijaselectmapping.Coll_txtDateRecLop = chs.Coll_txtDateRecLop; 
+        decl.collcesijaselectmapping.Coll_txtRecLop = chs.Coll_txtRecLop; 
+        decl.collcesijaselectmapping.Coll_txtComDoc = chs.Coll_txtComDoc;                                                                         
+        decl.collcesijaselectmapping.Coll_txtMissingDoc = chs.Coll_txtMissingDoc;                                                                     
+        decl.collcesijaselectmapping.Coll_txtDateToDoc = chs.Coll_txtDateToDoc;                                                                       
+        decl.collcesijaselectmapping.Coll_txtDateRecDoc = chs.Coll_txtDateRecDoc;                                                                 
+        decl.collcesijaselectmapping.Coll_txtRevaCoefMan = chs.Coll_txtRevaCoefMan;                                                                      
+        decl.collcesijaselectmapping.Coll_txtRevaDate = chs.Coll_txtRevaDate;                                                                              
+        decl.collcesijaselectmapping.Coll_txtRevaDateAM = chs.Coll_txtRevaDateAM;                                                                        
+        decl.collcesijaselectmapping.Coll_txtRevaBValue = chs.Coll_txtRevaBValue;                                                                         
+        decl.collcesijaselectmapping.Coll_txtRevaBDate = chs.Coll_txtRevaBDate;                                 
+        decl.collcesijaselectmapping.Coll_txtRevaBDateAM = chs.Coll_txtRevaBDateAM;                              
+        decl.collcesijaselectmapping.Coll_txtAmortAge = chs.Coll_txtAmortAge;                                   
+        decl.collcesijaselectmapping.AMORT_PER_CAL_ID = chs.AMORT_PER_CAL_ID;                                                       
+        decl.collcesijaselectmapping.Coll_txtAmortValCal = chs.Coll_txtAmortValCal;
+        decl.collcesijaselectmapping.Coll_txtNepoValue = chs.Coll_txtNepoValue;                                                         
+        decl.collcesijaselectmapping.Coll_txtNepoDate = chs.Coll_txtNepoDate;                                                           
+        decl.collcesijaselectmapping.Coll_txtNepoPerCal = chs.Coll_txtNepoPerCal; 
+        decl.collcesijaselectmapping.Coll_txtThirdRight = chs.Coll_txtThirdRight;                                                       
+        decl.collcesijaselectmapping.THIRD_RIGHT_CUR_ID = chs.THIRD_RIGHT_CUR_ID;                                                   
+        decl.collcesijaselectmapping.Coll_txtThirdRightInNom = chs.Coll_txtThirdRightInNom;                                                                      
+        decl.collcesijaselectmapping.Coll_txtThirdRightDate = chs.Coll_txtThirdRightDate;                                                                                                                                
+        decl.collcesijaselectmapping.Coll_txtHfsValue = chs.Coll_txtHfsValue;                                                                                                                                        
+        decl.collcesijaselectmapping.Coll_txtHfsValueDate = chs.Coll_txtHfsValueDate;                                                                        
+        decl.collcesijaselectmapping.Coll_txtHfsValueLastOne = chs.Coll_txtHfsValueLastOne;                                                                      
+        decl.collcesijaselectmapping.Coll_txtHfsDateLastOne = chs.Coll_txtHfsDateLastOne;     
+        decl.collcesijaselectmapping.Coll_txtAcouValue = chs.Coll_txtAcouValue;                        
+        decl.collcesijaselectmapping.Coll_txtAcouDate = chs.Coll_txtAcouDate;                          
+        decl.collcesijaselectmapping.Coll_txtAcouBValue = chs.Coll_txtAcouBValue;                        
+        decl.collcesijaselectmapping.Coll_txtAcouBDate = chs.Coll_txtAcouBDate;  
+        decl.collcesijaselectmapping.Coll_txtSumLimitVal = chs.Coll_txtSumLimitVal;                                                     
+        decl.collcesijaselectmapping.Coll_txtSumLimitDat = chs.Coll_txtSumLimitDat;                                                       
+        decl.collcesijaselectmapping.Coll_txtSumPartVal = chs.Coll_txtSumPartVal;                                                         
+        decl.collcesijaselectmapping.Coll_txtSumPartDat = chs.Coll_txtSumPartDat;
+        decl.collcesijaselectmapping.Coll_txtAvailValue = chs.Coll_txtAvailValue;                                                       
+        decl.collcesijaselectmapping.Coll_txtAvailPerCal = chs.Coll_txtAvailPerCal;                                                       
+        decl.collcesijaselectmapping.Coll_txtAvailDate = chs.Coll_txtAvailDate;  
+        decl.collcesijaselectmapping.INSPOL_IND = chs.INSPOL_IND;  
+        decl.collcesijaselectmapping.COL_PLACE = chs.COL_PLACE; 
+        decl.collcesijaselectmapping.COL_COUNTY = chs.COL_COUNTY; 
+        decl.collcesijaselectmapping.COL_DISTRICT = chs.COL_DISTRICT; 
+        decl.collcesijaselectmapping.COL_RESI_QUAR = chs.COL_RESI_QUAR; 
+        decl.collcesijaselectmapping.Coll_txtCollMvpPonder = chs.Coll_txtCollMvpPonder;
+        decl.collcesijaselectmapping.Coll_txtCollHnbPonder = chs.Coll_txtCollHnbPonder; 
+        decl.collcesijaselectmapping.Coll_txtCollRzbPonder = chs.Coll_txtCollRzbPonder;
+        decl.collcesijaselectmapping.Coll_txtDateFrom = chs.Coll_txtDateFrom;                                                
+        decl.collcesijaselectmapping.Coll_txtDateUnti = chs.Coll_txtDateUnti;                        
+        decl.collcesijaselectmapping.Coll_txtAddData = chs.Coll_txtAddData;  
+        decl.collcesijaselectmapping.STATUS = chs.STATUS;                                                     
+        decl.collcesijaselectmapping.SPEC_STATUS = chs.SPEC_STATUS;  
+        decl.collcesijaselectmapping.USE_OPEN_ID = chs.USE_OPEN_ID;
+        decl.collcesijaselectmapping.USE_ID = chs.USE_ID;
+        decl.collcesijaselectmapping.Coll_txtOpeningTs = chs.Coll_txtOpeningTs;
+        decl.collcesijaselectmapping.Coll_txtUserLock = chs.Coll_txtUserLock;                
+        decl.collcesijaselectmapping.Coll_txtEUseIdLogin = chs.Coll_txtEUseIdLogin;
+        decl.collcesijaselectmapping.Coll_txtEUseIdName = chs.Coll_txtEUseIdName;
+        decl.collcesijaselectmapping.Coll_txtEstnCurr = chs.Coll_txtEstnCurr;
+        decl.collcesijaselectmapping.Coll_txtCarrierRegisterNo = chs.Coll_txtCarrierRegisterNo;
+        decl.collcesijaselectmapping.Coll_txtCarrierName = chs.Coll_txtCarrierName;
+        decl.collcesijaselectmapping.Coll_txtOwnerRegisterNo = chs.Coll_txtOwnerRegisterNo;
+        decl.collcesijaselectmapping.Coll_txtOwnerName = chs.Coll_txtOwnerName;
+        decl.collcesijaselectmapping.Coll_txtThirdRightCurCodeChar = chs.Coll_txtThirdRightCurCodeChar; 
+        decl.collcesijaselectmapping.Coll_txtUseOpenIdLogin = chs.Coll_txtUseOpenIdLogin;
+        decl.collcesijaselectmapping.Coll_txtUseOpenIdName = chs.Coll_txtUseOpenIdName;
+        decl.collcesijaselectmapping.Coll_txtUseIdLogin = chs.Coll_txtUseIdLogin;
+        decl.collcesijaselectmapping.Coll_txtUseIdName = chs.Coll_txtUseIdName;                     
+        decl.collcesijaselectmapping.Coll_txtAmortPerCal = chs.Coll_txtAmortPerCal; 
+        decl.collcesijaselectmapping.Coll_txtCollTypeCode = chs.Coll_txtCollTypeCode;
+        decl.collcesijaselectmapping.Coll_txtCollTypeName  = chs.Coll_txtCollTypeName;
+        decl.collcesijaselectmapping.USER_LOCK = chs.USER_LOCK;
+        decl.collcesijaselectmapping.Coll_txtNmValCurr = chs.Coll_txtNmValCurr;
+        decl.collcesijaselectmapping.Coll_txtEligibility = chs.Coll_txtEligibility;
+        decl.collcesijaselectmapping.Coll_txtEligDesc = chs.Coll_txtEligDesc;
+        decl.collcesijaselectmapping.Coll_txtAcumBuyValue = chs.Coll_txtAcumBuyValue;
+        decl.collcesijaselectmapping.ORIGIN_ORG_UNI_ID = chs.ORIGIN_ORG_UNI_ID;
+        decl.collcesijaselectmapping.ORG_UNI_ID = chs.ORG_UNI_ID;
+        decl.collcesijaselectmapping.USE_ID_VER = chs.USE_ID_VER;
+        decl.collcesijaselectmapping.USE_ID_AUT = chs.USE_ID_AUT;
+        decl.collcesijaselectmapping.VERIFICATION_TS = chs.VERIFICATION_TS;
+        decl.collcesijaselectmapping.AUTORIZATION_TS = chs.AUTORIZATION_TS;
+        decl.collcesijaselectmapping.MORTGAGE_STATUS = chs.MORTGAGE_STATUS;
+        decl.collcesijaselectmapping.COLLATERAL_STATUS = chs.COLLATERAL_STATUS;
+        decl.collcesijaselectmapping.WORKFLOW_INDIC = chs.WORKFLOW_INDIC;
+        decl.collcesijaselectmapping.COVER_INDIC = chs.COVER_INDIC;
+        decl.collcesijaselectmapping.VER_SEND_TS = chs.VER_SEND_TS;
+        decl.collcesijaselectmapping.BASIC_DATA_STATUS = chs.BASIC_DATA_STATUS;
+        decl.collcesijaselectmapping.COLL_DATA_STATUS = chs.COLL_DATA_STATUS;
+        decl.collcesijaselectmapping.COL_CAT_ID = chs.COL_CAT_ID; 
+        decl.collcesijaselectmapping.USE_ID_VER_SND = chs.USE_ID_VER_SND;
+        decl.collcesijaselectmapping.C_FINANCIAL_FLAG = chs.FINANCIAL_FLAG; 
+        decl.collcesijaselectmapping.C_txtUseIdSndVerLogin = chs.C_txtUseIdSndVerLogin;
+        decl.collcesijaselectmapping.C_txtUseIdSndVerName = chs.C_txtUseIdSndVerName;
+        decl.collcesijaselectmapping.C_txtUseIdVerLogin = chs.C_txtUseIdVerLogin;
+        decl.collcesijaselectmapping.C_txtUseIdVerName = chs.C_txtUseIdVerName;
+        decl.collcesijaselectmapping.C_txtUseIdAutLogin = chs.C_txtUseIdAutLogin;
+        decl.collcesijaselectmapping.C_txtUseIdAutName = chs.C_txtUseIdAutName; 
+        decl.collcesijaselectmapping.Coll_txtBasicDataSt = chs.Coll_txtBasicDataSt;
+        decl.collcesijaselectmapping.Coll_txtCollDataSt = chs.Coll_txtCollDataSt;
+        decl.collcesijaselectmapping.Coll_txtCoverIndic = chs.Coll_txtCoverIndic;
+        decl.collcesijaselectmapping.Coll_txtFinFlag = chs.Coll_txtFinFlag;
+        decl.collcesijaselectmapping.Coll_txtMortgageSt = chs.Coll_txtMortgageSt;
+        decl.collcesijaselectmapping.ColRba_txtEligibility = chs.ColRba_txtEligibility;
+        decl.collcesijaselectmapping.ColRba_txtEligDesc = chs.ColRba_txtEligDesc;
+        decl.collcesijaselectmapping.KolLow_txtEligibility = chs.KolLow_txtEligibility;
+        decl.collcesijaselectmapping.KolLow_txtEligDesc = chs.KolLow_txtEligDesc; 
+        decl.collcesijaselectmapping.Kol_txtRbaEligDsc = chs.Kol_txtRbaEligDsc;
+        decl.collcesijaselectmapping.Coll_txtB1Eligibility = chs.Coll_txtB1Eligibility;
+        decl.collcesijaselectmapping.Coll_txtB1EligDesc = chs.Coll_txtB1EligDesc;
+        decl.collcesijaselectmapping.Coll_txtB2IRBEligibility = chs.Coll_txtB2IRBEligibility;
+        decl.collcesijaselectmapping.Coll_txtB2IRBEligDesc = chs.Coll_txtB2IRBEligDesc;
+        decl.collcesijaselectmapping.Kol_txtPonderMVP = chs.Kol_txtPonderMVP;    
+        decl.collcesijaselectmapping.Kol_txtCRMHnb = chs.Kol_txtCRMHnb;   
+        decl.collcesijaselectmapping.Coll_txtNDEligibility=chs.Coll_txtNDEligibility;
+        decl.collcesijaselectmapping.Coll_txtNDEligDesc=chs.Coll_txtNDEligDesc;    
+        
+        decl.collcesijaselectmapping.Coll_txtTypeTVCode= chs.real_est_nom_type; 
+        decl.collcesijaselectmapping.Coll_txtTypeTV= chs.real_est_nom_type_desc; 
+        decl.collcesijaselectmapping.USE_ID_CO= chs.use_id_co;
+        decl.collcesijaselectmapping.Coll_txtCollOfficer= chs.use_id_co_name;
+        decl.collcesijaselectmapping.Coll_txtContractTypeCode= chs.contract_type; 
+        decl.collcesijaselectmapping.Coll_txtContractTypeDesc= chs.contract_type_desc;
+        
+        decl.collcesijaselectmapping.Coll_txtRealPonderAmount= null; 
+        decl.collcesijaselectmapping.Coll_txtWcaOrigCurrencyCode= null;  
+        decl.collcesijaselectmapping.Coll_txtUsedWCAAmount= null; 
+
+        decl.collcesijaselectmapping.Coll_txtCollateralGCTCCode= chs.gctc_code; 
+        decl.collcesijaselectmapping.Coll_txtCollateralGCTCDesc= chs.gctc_desc; 
+        decl.collcesijaselectmapping.Coll_txtEndorsementTypeGCTCCode= chs.endorsement_type_code;
+        decl.collcesijaselectmapping.Coll_txtEndorsementTypeGCTCDesc= chs.endorsement_type_desc;
+        decl.collcesijaselectmapping.Coll_txtObjectTypeGCTCCode= chs.object_type_code; 
+        decl.collcesijaselectmapping.Coll_txtObjectTypeGCTCDesc= chs.object_type_desc; 
+        decl.collcesijaselectmapping.Coll_txtPropertyTypeGCTCCode= chs.property_type_code; 
+        decl.collcesijaselectmapping.Coll_txtPropertyTypeGCTCDesc= chs.property_type_desc; 
+        decl.collcesijaselectmapping.Coll_txtB2ValueLLAmount= null;
+        decl.collcesijaselectmapping.Coll_txtB2ValueLLCurCode= null; 
+        decl.collcesijaselectmapping.Coll_txtB2ValueGLAmount= null;
+        decl.collcesijaselectmapping.Coll_txtB2ValueGLCurCode= null; 
+        
+        decl.collcesijaselectmapping.Coll_txtProccessing="";
+        decl.collcesijaselectmapping.Coll_txtProccessingTimestamp=chs.chg_nom_val_proc_ts; 
+    }       
+          
+      
+} 
+  

@@ -1,0 +1,535 @@
+package hr.vestigo.modules.collateral.jcics.co37;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.rba.util.DecimalUtils;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
+
+#sql iterator CO371CollateralIter (
+		String coll_type_code, 
+		String coll_type_name, 
+		BigDecimal col_hea_id,  
+		String col_num,
+		BigDecimal col_cat_id,     
+		String rba_eligibility,
+		String eligibility,
+		BigDecimal value,
+		BigDecimal cur_id,
+		String currency,
+        String real_est_nomi_desc,
+        String collateral_status
+	);
+
+#sql iterator CO371OwnerIter(
+		String register_no
+	);
+
+#sql iterator CO371MortgageIter(
+		BigDecimal coll_hf_prior_id,
+		BigDecimal hf_own_cus_id,
+		String hf_priority,
+		BigDecimal hf_rec_lop_id,
+		BigDecimal amount_ref,
+		BigDecimal cur_id_ref
+	);
+
+
+public class CO371 extends RemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co37/CO371.sqlj,v 1.13 2013/06/05 07:48:09 hrazst Exp $";
+	
+	private DeclCO37 decl = null;
+	//private ConnCtx connCtx0 = null;
+	private TransactionContext tc=null;
+	private Map exchangeRate=null;
+	
+//	 fixni dio ulaznog sloga
+	private String branchCode = null;
+	private String blockedAccountFlag = null;
+	private String insufficientBalanceFlag = null;
+	private String cashDeskID = null;
+	private String customerID = null;
+	private String sessionID = null;
+	private String supervisorUserID = null;
+	private String trxCode = null;
+	private Timestamp trxTimeStamp  = null;
+	private String userID = null;
+	private Date processDate = null;
+	private String bank_sign = null;
+	private Integer actionListLevel = null;
+	private BigDecimal rbaMortgage=null;
+	
+	public CO371(DeclCO37 d) {
+		rbaMortgage= new BigDecimal(1602772003);
+		this.exchangeRate= new HashMap();
+		this.exchangeRate.put("63999",new BigDecimal(1));
+		this.decl = d;
+	}
+	
+	private void setFixedHeadersVariables(TransactionContext tc) throws Exception {
+		this.branchCode = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_branchCode);
+		this.blockedAccountFlag = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_blockedAccountFlag);
+		this.insufficientBalanceFlag  = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_insufficientBalanceFlag);
+		this.cashDeskID  = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_cashDeskID);
+		this.customerID = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_customerID);
+		this.sessionID  = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_sessionID);
+		this.supervisorUserID = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_supervisorUserID);
+		this.trxCode  = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_trxCode);
+		this.trxTimeStamp   = this.trxTimeStamp = 
+			(Timestamp) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_trxTimeStamp);
+		this.userID = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_userID);
+		this.processDate = 
+			(Date) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_processDate);
+		this.bank_sign = 
+			(String) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_bankSign);
+		this.actionListLevel = 
+			(Integer) tc.getTransactionHeader().getRequestData(TransactionContext.HEADER_actionListLevel);
+	}
+	
+	public void execute (TransactionContext tc) throws SQLException {
+		this.tc=tc;
+		ConnCtx connCtx0 = tc.getContext();
+		CO371CollateralIter collIter=null;
+		BigDecimal cash_dep=new BigDecimal("612223");
+		Date value_date=getMaxProcDate(connCtx0);
+
+		try{
+			#sql [connCtx0] collIter = {
+				SELECT	
+					d.coll_type_code as coll_type_code,
+					d.coll_type_name as coll_type_name,
+					b.col_hea_id as col_hea_id,
+					b.col_num as col_num,
+					b.col_cat_id as col_cat_id,
+					b.rba_eligibility as rba_eligibility,
+					b.eligibility as eligibility,
+					b.real_est_nomi_valu as value,
+					b.real_est_nm_cur_id as cur_id,
+					e.code_num as currency,
+                    b.real_est_nomi_desc,
+                    b.collateral_status
+				FROM loan_beneficiary a, coll_head b, collateral_type d, currency e
+				WHERE	
+					a.aps_rqst_no=:(decl.RCLRcrdID_in) AND
+					a.col_hea_id = b.col_hea_id AND
+					b.collateral_status in ('0','1','2','3') AND
+					b.col_type_id=d.coll_type_id AND
+					b.real_est_nm_cur_id=e.cur_id AND
+					b.col_cat_id <> :(cash_dep)
+				UNION
+				SELECT	
+					d.coll_type_code as coll_type_code,
+					d.coll_type_name as coll_type_name,
+					b.col_hea_id as col_hea_id,
+					b.col_num as col_num,
+					b.col_cat_id as col_cat_id,
+					b.rba_eligibility as rba_eligibility,
+					b.eligibility as eligibility,
+					b.real_est_nomi_valu as value,
+					b.real_est_nm_cur_id as cur_id,
+					e.code_num as currency,
+                    b.real_est_nomi_desc,
+                    b.collateral_status
+				FROM loan_beneficiary a, coll_hf_prior c, coll_head b, collateral_type d, currency e
+				WHERE	
+					a.aps_rqst_no=:(decl.RCLRcrdID_in) AND
+					a.coll_hf_prior_id = c.coll_hf_prior_id AND
+					c.hf_coll_head_id = b.col_hea_id AND
+					b.collateral_status in ('0','1','2','3') AND
+					b.col_type_id=d.coll_type_id AND
+					b.real_est_nm_cur_id=e.cur_id AND
+					b.col_cat_id <> :(cash_dep)
+			};
+			
+			if(collIter!=null){
+				while(collIter.next()){
+					
+					String year=null;
+					String cde_bank=null;
+					String cde_account=null;
+					String depo_inst_no=null;
+					String[] realEstateData=null;
+					
+					//dohvat vlasnika kolaterala
+					String owner= selectOwner(connCtx0,collIter.col_hea_id());
+					
+					year=selectYear(connCtx0,collIter.col_hea_id(),collIter.col_cat_id());
+					BigDecimal availableSum=null;
+					BigDecimal usedSum=getUsedSum(connCtx0, collIter.col_hea_id(),value_date);
+					BigDecimal mortgageSum=getMortgagesSum(connCtx0, collIter.col_hea_id(),value_date,collIter.cur_id());
+					realEstateData = selectRealEstateData(connCtx0, collIter.col_hea_id());
+					    
+                    if(collIter.value()!=null){
+                        if(usedSum!=null){
+                            availableSum=collIter.value().subtract(usedSum);
+                        }else if(mortgageSum!=null){
+                            availableSum=collIter.value().subtract(mortgageSum);
+                        }else{
+                            availableSum=collIter.value();
+                        }
+                        availableSum=DecimalUtils.scale(availableSum, 2);
+                        if(availableSum.compareTo(new BigDecimal(0))<=0){
+                            availableSum=new BigDecimal(0);
+                        }
+                    }
+					Vector row = new Vector();
+					Vector unique = new Vector();
+					
+					row.add(checkAndCut(collIter.coll_type_name(),60));
+					row.add(checkAndCut(owner,10));
+					row.add(year);
+					row.add(checkAndCut(collIter.rba_eligibility(),1));
+					row.add(checkAndCut(collIter.eligibility(),3));
+					if(collIter.value()!=null){
+						row.add(checkAndCut(collIter.value().toString(),17));
+					}else{
+						row.add(null);
+					}
+					row.add(checkAndCut(collIter.currency(),3));
+					row.add(checkAndCut(collIter.col_num(),20));
+					row.add(availableSum);
+					row.add(value_date);
+					row.add(checkAndCut(collIter.real_est_nomi_desc(),64)); //opis procjene
+					row.add(checkAndCut(collIter.collateral_status(),1)); //status kolaterala
+					
+					row.add(checkAndCut(realEstateData[0],1)); //sifra namjene nekretnine
+					row.add(checkAndCut(realEstateData[1],1)); //ocjena nekretnine
+					
+					decl.tblAPSCollateralData.addRow(row,unique);					
+				}
+				
+				collIter.close();
+			}
+			
+			decl.RCLRcrdID_out=decl.RCLRcrdID_in;
+			
+		}catch (SQLException sqle) {
+			if (sqle.getErrorCode() != 100 && sqle.getErrorCode() != -811){
+				tc.debug("Transaction CO371: SQL error while 1st select" + sqle.getErrorCode());
+				throw sqle;
+			}
+		}
+	}
+	
+	/**
+	* Dohvat vlasnika kolaterala
+	*
+	*@param connCtx0 kontekst
+	*@param col_hea_id id kolaterala
+	*@return register_no vlasnika kolaterala
+	*@throws SQLException ako je doslo do greske
+	*/
+	private String selectOwner(ConnCtx connCtx0, BigDecimal col_hea_id) throws SQLException{
+		String result=null;
+		try{
+			CO371OwnerIter ownerIter=null;
+			#sql [connCtx0] ownerIter = {
+				SELECT	register_no
+				FROM COLL_OWNER
+				WHERE	col_hea_id = :(col_hea_id)
+				FETCH FIRST ROW ONLY
+			};
+			
+			if(ownerIter!=null){
+				while(ownerIter.next()){
+					result=ownerIter.register_no();
+				}
+			}
+			
+		}catch(SQLException sqle) {
+			if (sqle.getErrorCode() != 100 && sqle.getErrorCode() != -811){
+				this.tc.debug("Transaction CO371: SQL error selectOwner..." + sqle.getErrorCode());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+	
+	/**
+	* Dohvat godine proizvodnje
+	*@param connCtx0 kontekst
+	*@param col_hea_id id kolaterala
+	*@param col_cat_id id kategorije kolaterala
+	*@return godina proizvodnje
+	*@throws SQLException ako je doslo do greske
+	*/
+	private String selectYear(ConnCtx connCtx0, BigDecimal col_hea_id, BigDecimal col_cat_id) throws SQLException{
+		String result=null;
+		if(col_cat_id==null) return null;
+		try{
+			if(col_cat_id.compareTo(new BigDecimal("618223"))==0){
+				//nekretnine
+				Integer year=null;
+				#sql [connCtx0]	{
+						SELECT byear
+						INTO :(year)
+						FROM coll_restate
+						WHERE col_hea_id = :(col_hea_id)
+					};
+				if(year!=null){
+					result=year.toString();
+				}
+			}else if(col_cat_id.compareTo(new BigDecimal("624223"))==0){
+				//vozila
+				#sql [connCtx0]	{
+						SELECT veh_made_year
+						INTO :(result)
+						FROM coll_vehicle
+						WHERE col_hea_id = :(col_hea_id)
+					};
+			}else if(col_cat_id.compareTo(new BigDecimal("620223"))==0){
+				//plovila
+				#sql [connCtx0]	{
+						SELECT ves_made_year
+						INTO :(result)
+						FROM coll_vessel
+						WHERE col_hea_id = :(col_hea_id)
+					};
+			}else if(col_cat_id.compareTo(new BigDecimal("621223"))==0){
+				//pokretnine
+				#sql [connCtx0]	{
+						SELECT mov_made_year
+						INTO :(result)
+						FROM coll_movable
+						WHERE col_hea_id = :(col_hea_id)
+					};
+			}
+			if(result!=null){
+				result=result.trim();
+			}
+		}catch(SQLException sqle) {
+			if (sqle.getErrorCode() != 100 && sqle.getErrorCode() != -811){
+				this.tc.debug("Transaction CO371: SQL error selectOwner..." + sqle.getErrorCode());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+	
+	/**
+	* Dohvat vlasnika kolaterala
+	*
+	*@param connCtx0 kontekst
+	*@param col_hea_id id kolaterala
+	*@return cde_bank,cde_account i depo_inst_no u HashMap-i
+	*@throws SQLException ako je doslo do greske
+	*/
+	private HashMap getDepositData(ConnCtx connCtx0, BigDecimal col_hea_id) throws SQLException{
+		HashMap result=null;
+		BigDecimal cde_cus_id=null;;
+		String cde_bank=null;
+		String cde_account=null;
+		String depo_inst_no=null;
+		try{
+			#sql [connCtx0]{
+				select	cde_cus_id, cde_bank, cde_account
+				into :(cde_cus_id), :(cde_bank), :(cde_account)
+				from coll_cashdep
+				where	col_hea_id = :(col_hea_id)
+			};
+			
+			if(cde_cus_id!=null){
+				#sql [connCtx0]{
+					select 	depo_inst_no
+					into :(depo_inst_no)
+					from bank
+					where	ban_id = :(cde_cus_id)
+				};	
+			}
+		}catch(SQLException sqle) {
+			if (sqle.getErrorCode() != 100 && sqle.getErrorCode() != -811){
+				this.tc.debug("Transaction CO371: SQL error selectOwner..." + sqle.getErrorCode());
+				throw sqle;
+			}
+		}
+		result=new HashMap();
+		result.put("cde_bank",cde_bank);
+		result.put("cde_account",cde_account);
+		result.put("depo_inst_no",depo_inst_no);
+		return result;
+	}
+		
+   /**
+    * Dohvat dodatnih podataka za nekretninu
+    *@param connCtx0 kontekst
+    *@param col_hea_id id kolaterala
+    *@return stringovi sa podacima:<br/>
+    * 1-sifra namjena nekretnine<br/>
+    * 2-ocjena nekretnine<br/>
+    *@throws SQLException ako je doslo do greske
+    */
+    private String[] selectRealEstateData(ConnCtx connCtx0, BigDecimal col_hea_id) throws SQLException{
+        String purpose=null;
+        String grade_code=null;
+        try{
+            #sql [connCtx0] {
+                SELECT  b.use_code_value,
+                        real_est_rate
+                INTO
+                        :purpose,
+                        :grade_code
+                FROM coll_restate a
+                LEFT OUTER JOIN user_code_value b ON a.purpose=b.use_cod_val_id
+                WHERE col_hea_id = :col_hea_id
+	        };
+        }catch(SQLException sqle) {
+            if (sqle.getErrorCode() != 100 && sqle.getErrorCode() != -811){
+                this.tc.debug("Transaction CO371: SQL error selectOwner..." + sqle.getErrorCode());
+                throw sqle;
+            }
+        }        
+        return new String[] {purpose, grade_code};
+    }
+	
+	private Date getMaxProcDate(ConnCtx connCtx0) throws SQLException{
+		Date result=null;
+		#sql [connCtx0]{
+			select max(value_date) 
+			into :(result)
+			from col_proc where proc_type ='N'
+		};
+		return result;
+	}	
+	
+	private BigDecimal getUsedSum(ConnCtx connCtx0, BigDecimal col_hea_id, Date value_date) throws SQLException{
+		BigDecimal result=new BigDecimal(0);		
+		try{
+			#sql [connCtx0]{
+				select sum(b.COLL_FC_AMOUNT) 
+				into :(result)
+				from col_proc a, cusacc_exp_coll b
+				where 
+					a.proc_type = 'N' and
+					a.value_date = :(value_date) and
+					a.col_pro_id = b.col_pro_id and
+					b.col_hea_id = :(col_hea_id)
+			};
+            if((result!=null)&&(result.compareTo(new BigDecimal(0))==0)){
+                result=null;
+            }
+		}catch(SQLException sqle) {
+			if (sqle.getErrorCode() != 100 && sqle.getErrorCode() != -811){
+				this.tc.debug("Transaction CO371: SQL error getAvailableSum..." + sqle.getErrorCode());
+				throw sqle;
+			}
+			result=null;
+		}	
+		return result;
+	}
+	
+	private BigDecimal getMortgagesSum(ConnCtx connCtx0, BigDecimal col_hea_id, Date value_date, BigDecimal col_cur_id) throws SQLException{
+		BigDecimal result=new BigDecimal(0);	
+		CO371MortgageIter mortgageIter=null;
+		try{
+			#sql [connCtx0] mortgageIter = {
+				SELECT
+        			coll_hf_prior_id,
+        			hf_own_cus_id,
+        			hf_priority,
+        			hf_rec_lop_id,
+        			amount_ref,
+        			cur_id_ref
+        		FROM
+        			coll_hf_prior
+        		WHERE
+        			hf_coll_head_id=:(col_hea_id) and
+        			hf_status='A' 
+        		order by hf_priority asc
+			};
+			if(mortgageIter!=null){
+				while(mortgageIter.next()){
+					if( rbaMortgage.compareTo(mortgageIter.hf_rec_lop_id())==0){
+						break;
+					}
+					result=result.add(exchange(connCtx0, mortgageIter.cur_id_ref(), col_cur_id, mortgageIter.amount_ref(), value_date));
+				}
+			}
+			
+		}catch(SQLException sqle) {
+			
+			result=null;
+		}	
+		return result;
+	}
+	
+	public BigDecimal selectMiddRate(ConnCtx connCtx0,BigDecimal cur_id, Date date){
+		BigDecimal rate=null;
+		try{
+			#sql[connCtx0]{
+				SELECT midd_rate 
+				INTO :(rate)
+				FROM exchange_rate 
+				WHERE :(date) BETWEEN date_from AND date_until 
+				AND cur_id =:(cur_id)
+				AND BANK_SIGN='RB'
+			};
+		}catch(SQLException e){
+			tc.debug(".....CO371.sqlj selectMiddRate        Message  : " + e.getMessage());
+			tc.debug(".....CO371.sqlj selectMiddRate      Error code : " + e.getErrorCode());
+			tc.debug(".....CO371.sqlj selectMiddRate        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			if(e.getErrorCode() == 100){
+			    rate = null;
+			}
+		}
+		return rate;
+	}
+	
+	private BigDecimal exchange(ConnCtx connCtx0,BigDecimal from_cur_id,BigDecimal to_cur_id,BigDecimal value,Date date){
+		if((value==null)||(to_cur_id==null)||(from_cur_id==null)) return new BigDecimal(0);
+		BigDecimal result=value;	
+		BigDecimal rate=null;
+		
+		if(from_cur_id.equals(to_cur_id)){
+			return result;
+		}
+		
+		//prvo u kune
+		if(!from_cur_id.toString().equals("63999")){
+			rate=(BigDecimal)this.exchangeRate.get(from_cur_id.toString());
+			//ako vec ne postoji valuta u cache-u
+			if(rate==null){
+				rate=selectMiddRate(connCtx0,from_cur_id,date);
+				this.exchangeRate.put(from_cur_id.toString(),rate);
+			}	
+			result=result.divide(rate,BigDecimal.ROUND_HALF_EVEN);
+		}
+		
+		if(!to_cur_id.toString().equals("63999")){
+			rate=(BigDecimal)this.exchangeRate.get(to_cur_id.toString());
+			//ako vec ne postoji valuta u cache-u
+			if(rate==null){
+				rate=selectMiddRate(connCtx0,to_cur_id,date);
+				this.exchangeRate.put(to_cur_id.toString(),rate);
+			}	
+			result=result.multiply(rate);
+		}
+		return result;
+		
+	}
+	
+	private String checkAndCut(String input, int max_size){
+		String result=null;
+		if(input!=null){
+			result=input.trim();
+			if(result.length()>max_size){
+				result=result.substring(0, max_size);
+			}
+		}
+		return result;
+	}	
+}

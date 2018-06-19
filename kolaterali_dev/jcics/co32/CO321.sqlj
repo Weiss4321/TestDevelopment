@@ -1,0 +1,381 @@
+package hr.vestigo.modules.collateral.jcics.co32;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+
+
+  
+#sql iterator Iter1 (
+					BigDecimal fra_agr_id,
+					BigDecimal cus_id,
+					String agreement_no,
+					BigDecimal amount,
+					BigDecimal cur_id,
+					String code_char,
+					String proc_status,
+					String hipo_status,
+					String loan_status,
+					String workflow_indic,
+					String financial_flag,
+					BigDecimal use_id,
+					String user_name,
+					Timestamp user_lock,
+					String status
+					);
+  
+ 
+        
+ 
+public class CO321 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co32/CO321.sqlj,v 1.4 2010/02/10 10:15:34 hramkr Exp $";
+	public DeclCO32 d=null;
+	private Iter1 iter=null;
+	
+	public CO321 (DeclCO32 d) {
+		this.d = d;  
+	} 
+          
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		String screen_entry_param=d.ScreenEntryParam;
+
+		String lista="";
+		Vector vec=new Vector();
+		String proc_status="";
+
+		int i=0;
+		int j=screen_entry_param.indexOf(".");
+		int k=0;
+		tc.info("screen_entry_param : "+screen_entry_param);
+		while(j>0){
+			vec.add(k++, screen_entry_param.substring(i,j));
+			screen_entry_param=screen_entry_param.substring(j+1);
+			tc.debug("screen_entry_param : "+screen_entry_param);
+			j=screen_entry_param.indexOf(".");
+		}
+	
+		if(vec==null) throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+
+		if(vec.elementAt(1)!=null && !((String)vec.elementAt(1)).trim().equals("")) lista=(String)vec.elementAt(1);
+		else throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+
+
+		tc.info("LISTA : "+lista);
+
+		  
+		
+		setLevel(d.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx connCtx0 = tc.getContext();
+		
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+  		if(lista!=null) {
+  			
+  			if (lista.trim().equals("0")) {
+  				proc_status="0";
+// referentska lista za unos, po referentu  			  
+ 				tc.info("tu sam referentska lista.... proc_status : "+proc_status); 			
+				tc.info("tu sam .... use_id : "+d.use_id); 			
+				tc.info("tu sam .... org_uni_id : "+d.org_uni_id); 			
+			
+				#sql [connCtx0] iter = {
+										SELECT
+ 												fa.fra_agr_id,
+												fa.cus_id,
+												fa.agreement_no,
+												fa.amount,
+												fa.cur_id,
+												cu.code_char,
+												fa.proc_status,
+												fa.hipo_status,
+												fa.loan_status,
+												fa.workflow_indic,
+												fa.financial_flag,
+												fa.use_id,
+												au.user_name,
+												fa.user_lock,
+ 												fa.status
+											FROM frame_agreement fa,
+												 currency cu,
+												 app_user au
+ 											WHERE
+												fa.proc_status = :(proc_status)
+											AND
+  												fa.use_id = :(d.use_id)
+ 											AND
+												fa.org_uni_id = :(d.org_uni_id) 
+  											AND
+												fa.cur_id = cu.cur_id
+											AND
+												fa.use_id = au.use_id
+ 											ORDER BY
+												fa.workflow_indic desc, fa.fra_agr_id asc
+  					};
+  			} else if (lista.trim().equals("1")) { 
+// verifikacijska lista, po organizacijskoj jedinici  	
+  				proc_status="1";
+ 				tc.info("tu sam .verifikacijska lista, po org.jedinici... proc_status : "+proc_status);  			  			 
+				tc.info("tu sam .... org_uni_id : "+d.org_uni_id); 		  						
+  							#sql [connCtx0] iter = {
+										SELECT
+ 												fa.fra_agr_id,
+												fa.cus_id,
+												fa.agreement_no,
+												fa.amount,
+												fa.cur_id,
+												cu.code_char,
+												fa.proc_status,
+												fa.hipo_status,
+												fa.loan_status,
+												fa.workflow_indic,
+												fa.financial_flag,
+												fa.use_id,
+												au.user_name,
+												fa.user_lock,
+ 												fa.status
+											FROM frame_agreement fa,
+												 currency cu,
+												 app_user au
+  			 								WHERE
+ 												fa.proc_status = :(proc_status)
+ 											AND
+												fa.org_uni_id = :(d.org_uni_id) 
+ 											AND
+												fa.cur_id = cu.cur_id
+											AND
+												fa.use_id = au.use_id
+  			 							ORDER BY
+ 												fa.workflow_indic desc, fa.fra_agr_id asc
+  			  					};
+  			  				  			
+ 			} else if (lista.trim().equals("2")) {
+// 			 lista aktivnih - jedna za banku  	
+  				proc_status="2";
+ 			 	tc.info("tu sam .lista aktivnih - jedna za banku... proc_status : "+proc_status);  		
+// na listi aktivnih vide se svi kojima je status A bez obzira na datum dospijeæa 			 	
+ 							
+ 							#sql [connCtx0] iter = {
+ 										SELECT
+ 												fa.fra_agr_id,
+												fa.cus_id,
+												fa.agreement_no,
+												fa.amount,
+												fa.cur_id,
+												cu.code_char,
+												fa.proc_status,
+												fa.hipo_status,
+												fa.loan_status,
+												fa.workflow_indic,
+												fa.financial_flag,
+												fa.use_id,
+												au.user_name,
+												fa.user_lock,
+ 												fa.status
+											FROM frame_agreement fa,
+												 currency cu,
+												 app_user au
+  			 								WHERE
+ 												fa.proc_status = :(proc_status)
+ 			 								AND
+ 			 									fa.status = 'A'
+ 											AND
+												fa.cur_id = cu.cur_id
+											AND
+												fa.use_id = au.use_id
+  			 							ORDER BY												
+ 			 									fa.workflow_indic desc, fa.fra_agr_id asc 												
+ 									};  
+ 			 	
+/*                            #sql [connCtx0] iter = {
+                                    SELECT
+                                            fa.fra_agr_id,
+                                            fa.cus_id,
+                                            fa.agreement_no,
+                                            fa.amount,
+                                            fa.cur_id,
+                                            cu.code_char,
+                                            fa.proc_status,
+                                            fa.hipo_status,
+                                            fa.loan_status,
+                                            fa.workflow_indic,
+                                            fa.financial_flag,
+                                            fa.use_id,
+                                            au.user_name,
+                                            fa.user_lock,
+                                            fa.status
+                                        FROM frame_agreement fa,
+                                             currency cu,
+                                             app_user au
+                                        WHERE
+                                            fa.proc_status = :(proc_status)
+                                        AND
+                                            fa.status = 'A'
+                                        AND
+                                            fa.date_until >= current date
+                                        AND
+                                            fa.cur_id = cu.cur_id
+                                        AND
+                                            fa.use_id = au.use_id
+                                    ORDER BY                                                
+                                            fa.workflow_indic desc, fa.fra_agr_id asc                                               
+                                };   		*/	 	
+ 			 	
+  			} else if (lista.trim().equals("M")) {
+//  			 monitoring lista - jedna za banku, svi collaterali koji su u radu, status not in (3,4,5)  		
+  			 			tc.info("tu sam .monitoring lista - jedna za banku,... proc_status : "+proc_status);  			  			 
+  							
+  						#sql [connCtx0] iter = {   
+ 										SELECT
+ 												fa.fra_agr_id,
+												fa.cus_id,
+												fa.agreement_no,
+												fa.amount,
+												fa.cur_id,
+												cu.code_char,
+												fa.proc_status,
+												fa.hipo_status,
+												fa.loan_status,
+												fa.workflow_indic,
+												fa.financial_flag,
+												fa.use_id,
+												au.user_name,
+												fa.user_lock,
+ 												fa.status
+											FROM frame_agreement fa,
+												 currency cu,
+												 app_user au
+  			 								WHERE
+ 												fa.proc_status in ('0','1')
+ 											AND
+												fa.cur_id = cu.cur_id
+											AND
+												fa.use_id = au.use_id
+  			 							ORDER BY
+  												fa.workflow_indic desc, fa.fra_agr_id asc			
+  									};  				
+			} else if (lista.trim().equals("I")) {
+//	 			 lista neaktivnih - jedna za banku  	
+	  				proc_status="2";  
+	 			 	tc.info("tu sam .lista neaktivnih - jedna za banku... proc_status : "+proc_status);  
+// na listi neaktivnih vide se svi deaktivirani DS -ovi 	 			 	
+	 							
+	 							#sql [connCtx0] iter = {
+	 										SELECT
+	 												fa.fra_agr_id,
+													fa.cus_id,
+													fa.agreement_no,
+													fa.amount,
+													fa.cur_id,
+													cu.code_char,
+													fa.proc_status,
+													fa.hipo_status,
+													fa.loan_status,
+													fa.workflow_indic,
+													fa.financial_flag,
+													fa.use_id,
+													au.user_name,
+													fa.user_lock,
+	 												fa.status
+												FROM frame_agreement fa,
+													 currency cu,
+													 app_user au
+	  			 								WHERE
+	 												fa.proc_status = :(proc_status)
+	 			 								AND 
+	 			 									fa.status = 'N' 
+	 											AND
+													fa.cur_id = cu.cur_id
+												AND
+													fa.use_id = au.use_id
+	   			 							ORDER BY												
+	 			 									fa.workflow_indic desc, fa.fra_agr_id asc 												
+	 									};  			 	
+  			} else if (lista.trim().equals("D")) { 
+  				proc_status = "D"; 
+// 		 lista odbijenih jedna za banku 					
+ 		 				tc.info("tu sam lista odbijenih jedna za banku 	.... proc_status : "+proc_status);  				 
+ 						#sql [connCtx0] iter = {
+ 										SELECT
+ 												fa.fra_agr_id,
+												fa.cus_id,
+												fa.agreement_no,
+												fa.amount,
+												fa.cur_id,
+												cu.code_char,
+												fa.proc_status,
+												fa.hipo_status,
+												fa.loan_status,
+												fa.workflow_indic,
+												fa.financial_flag,
+												fa.use_id,
+												au.user_name,
+												fa.user_lock,
+ 												fa.status
+											FROM frame_agreement fa,
+												 currency cu,
+												 app_user au
+  			 								WHERE
+ 												fa.proc_status = :(proc_status)
+ 											AND
+												fa.cur_id = cu.cur_id
+											AND
+												fa.use_id = au.use_id
+  			 							ORDER BY
+  												fa.workflow_indic desc, fa.fra_agr_id asc	
+ 		  						}; 		 				
+  			}
+  		}  
+	} 
+ 	
+	public boolean next() throws Exception {
+		return iter.next();
+	}
+    
+	public void close() {
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}
+	}
+ 
+	
+	public void populateRowData() throws Exception {
+					
+		Vector row=new Vector();
+		
+		row.add(iter.workflow_indic());
+		row.add(iter.proc_status());
+		row.add(iter.agreement_no());
+		row.add(iter.code_char());
+		row.add(iter.amount());
+		row.add(iter.hipo_status());
+		row.add(iter.loan_status());
+		row.add(iter.financial_flag());  
+		row.add(iter.user_name());
+
+			
+		Vector unique = new Vector();
+		
+		unique.add(iter.fra_agr_id());
+		unique.add(iter.cus_id());
+		unique.add(iter.cur_id());
+		unique.add(iter.use_id());
+		unique.add(iter.user_lock());
+		unique.add(iter.status());
+
+  
+
+		d.tblAgreementList.addRow(row, unique);
+		
+		
+
+//			AND 
+//				((fa.status = 'N') OR
+//				(fa.status = 'A' AND fa.date_until < current date))
+		
+	}
+}

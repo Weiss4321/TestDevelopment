@@ -1,0 +1,40 @@
+package hr.vestigo.modules.collateral.jcics.co39;
+
+import java.math.BigDecimal;
+
+/**
+ * mapping getCollateralCashDepositByNaturalKey
+ *
+*/
+public class CO394 extends AbstractLoxonRunnerData{
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co39/CO394.sqlj,v 1.5 2008/05/21 11:39:08 hraamh Exp $";
+	
+	public CO394(DeclCO39 decl){
+		this.decl=decl;
+	}
+	
+	public void run() throws Exception{
+		
+		BigDecimal col_hea_id=null;
+		String cde_reg_no=decl.getcollateralcashdepositbynaturalkey.internaId.trim();
+		String cde_account=decl.getcollateralcashdepositbynaturalkey.accountId.trim();
+		
+		#sql[connCtx]{
+			select col_hea_id
+			into :(col_hea_id)
+			from coll_cashdep 
+			where 
+				cde_reg_no=:(cde_reg_no) and 
+				cde_account=:(cde_account)
+		};
+		
+		getRunner().gatherByColHeaId(col_hea_id);
+	}
+	
+	protected  DeclLoxonMappingInterface getMappingDecl(){
+		return (decl.getcollateralcashdepositbynaturalkey);
+	}
+	
+	
+}

@@ -1,0 +1,125 @@
+package hr.vestigo.modules.collateral.batch.bo53;
+
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.util.StringUtils;
+import java.sql.Timestamp;
+
+public class BO531{
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo53/BO531.sqlj,v 1.2 2010/04/02 06:56:14 hramlo Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+
+
+
+    #sql public iterator CustDataIterator with (holdability=true)(
+
+        String col_num,
+        String collateral_status,
+        String cm_cde_account,
+        java.sql.Date cm_cde_dep_until,
+        String code_char,
+        BigDecimal cm_cde_amount,
+        String dwh_cde_account,
+        Timestamp create_ts,
+        String register_no,
+        String name,
+        String b2_asset); 
+
+
+    public BO531(BatchContext bc)throws Exception{
+        this.bc = bc;
+        connCtx = bc.getContext(); 
+    }
+
+
+    public CustDataIterator getCustData()throws SQLException {
+        CustDataIterator iter = null;
+
+        try{
+
+            #sql [connCtx] iter={select distinct
+            c.col_num as col_num,
+            c.collateral_status as collateral_status,
+            a.cde_account as cm_cde_account, 
+            a.cde_dep_unti as cm_cde_dep_until,
+            d.code_char as code_char, 
+            a.cde_amount as cm_cde_amount,
+            b.cde_account as dwh_cde_account,
+            b.create_ts as create_ts, 
+            g.register_no as register_no,
+            g.name as name,
+            g.basel_cus_type as b2_asset
+
+            from coll_cashdep a left outer join cashdep_dwh b on                                                   a.cde_account = b.cde_account,
+            coll_head c,
+            coll_hf_prior e,
+            loan_beneficiary f,
+            customer g,
+            currency d
+            where 
+            a.col_hea_id = c.col_hea_id
+            and
+            c.col_hea_id = e.hf_coll_head_id
+            and
+            e.coll_hf_prior_id = f.coll_hf_prior_id
+            and
+            f.cus_id = g.cus_id 
+            and
+            a.cde_cur_id = d.cur_id
+            order by 2,1
+            with ur};
+
+        }catch (SQLException sqle) {
+            bc.debug("getCustData() - ERROR:"+sqle);
+            bc.error("getCustData() - ERROR", sqle);
+            throw sqle;
+        }
+
+        return iter;
+    }
+
+
+    public String getRecipients() throws SQLException{
+        bc.info("Usla u  getRecipients."); 
+
+        String address = null;
+        try{
+
+
+
+            #sql[connCtx]{
+            SELECT dest_mail_address 
+            INTO :address
+            FROM report_def 
+            WHERE rpt_code = 'csv227'
+
+            }; 
+            bc.debug("sqlj fetchRecipients gotov."); 
+            bc.debug("address"+address); 
+            if(address == null)
+                bc.info("Nije definirana e-mail adresa na koju se salje izvjesce!");
+
+            bc.debug("address:"+address); 
+            return address;   
+
+        }catch(SQLException e){
+            bc.error("Greska kod dohvata mail adrese!", e);
+            return null;            
+        }
+
+    }
+
+
+
+
+}

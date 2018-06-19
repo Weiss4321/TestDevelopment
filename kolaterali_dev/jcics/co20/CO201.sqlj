@@ -1,0 +1,116 @@
+package hr.vestigo.modules.collateral.jcics.co20;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//COLL_RESTATE LIST
+/**
+ * CO001 class selects all data from table REAL_ESTATE	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+
+#sql iterator Iter1 (	BigDecimal re_sub_type_id , 
+						BigDecimal re_type_id ,
+						String re_sub_status,
+						String re_sub_spec_stat ,
+						BigDecimal use_open_id,
+						BigDecimal use_id,      
+						java.sql.Timestamp opening_ts ,	
+						java.sql.Timestamp user_lock ,
+						String chg_user ,
+						String chg_login,
+						String open_login,
+						String re_sub_type_code ,
+						String re_sub_type_desc,
+						String desc_status,
+						String open_user
+	
+						);	
+
+public class CO201 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co20/CO201.sqlj,v 1.3 2006/06/14 07:53:53 hraamh Exp $";
+	
+	public DeclCO20 decl = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO201 (DeclCO20 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+			#sql [ctx] iter1 = {                                                                                                           
+								select a.re_sub_type_id, a.re_type_id, a.re_sub_status, a.re_sub_spec_stat ,a.use_open_id, a.use_id, a.opening_ts,a.user_lock,  c.user_name as chg_user, c.login as chg_login, b.login as open_login, 
+										 re_sub_type_code, re_sub_type_desc, d.desc_status, b.user_name as open_user  
+								from re_sub_type a, app_user b, app_user c, status_dictionary d
+								where a.use_open_id=b.use_id and a.use_id=c.use_id 
+									and d.table_name='RE_SUB_TYPE' and d.attribute='RE_SUB_STATUS' and a.re_sub_status=d.status
+									and a.re_type_id=:(decl.RE_TYPE_ID)
+								order by re_sub_type_code, re_sub_type_desc                                                                      
+					                                                                      
+				};  
+		
+	}
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector data = new Vector();
+		Vector hidden = new Vector();
+		//Treba paziti na redosijed dodavanja u data da bude kao u tablici!!!
+		
+		//šifra podvrste
+		//naziv podvrste
+		//status
+		//referent
+		
+		
+		
+		
+		data.add(iter1.re_sub_type_code());	
+		data.add(iter1.re_sub_type_desc());
+		data.add(iter1.desc_status());
+		data.add(iter1.open_user());
+		
+		
+		
+		hidden.add(iter1.re_sub_type_id());
+		hidden.add(iter1.re_sub_status());
+		hidden.add(iter1.re_sub_spec_stat());
+		hidden.add(iter1.opening_ts());
+		hidden.add(iter1.user_lock());
+		hidden.add(iter1.open_login());
+		hidden.add(iter1.open_user());
+		hidden.add(iter1.chg_login());
+		hidden.add(iter1.chg_user());
+		hidden.add(iter1.use_open_id());
+		hidden.add(iter1.use_id());
+		hidden.add(iter1.re_type_id());
+		decl.tblReSubType.addRow(data,hidden);
+    	
+		
+	}
+	
+}

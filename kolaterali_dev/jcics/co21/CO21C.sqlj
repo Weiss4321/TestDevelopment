@@ -1,0 +1,112 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+#sql iterator IterLB(BigDecimal loan_ben_id,
+                    String krad_admin_ind,
+                    BigDecimal kred_admin_use_id,
+                    Timestamp kred_admin_ts);
+
+public class CO21C extends RemoteTransaction {
+    // akcija vrati collateral nazad na aktivnu ili slobodnu listu sa verifikacije deaktivacije
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO21C.sqlj,v 1.2 2014/11/24 11:38:47 hrazst Exp $";
+       
+    private DeclCO21 d = null;
+
+    private Date CURR_DATE = null;
+    private Timestamp CREATE_DATE_TIME = null;
+    private IterLB iter=null;
+    private TransactionContext tc=null;
+    
+    public CO21C(DeclCO21 d) {
+        this.d = d;
+    }  
+    
+    public void execute(TransactionContext tc) throws Exception {       
+        ConnCtx ctx = tc.getContext();
+
+        #sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+        
+        #sql[ctx] { 
+            SELECT current date, current timestamp 
+            INTO :(CURR_DATE), :(CREATE_DATE_TIME)
+            FROM sysibm.sysdummy1 
+        };
+        
+        String col_lis_typ_id ="";
+        #sql[ctx] { 
+            SELECT col_lis_typ_id 
+            INTO :(col_lis_typ_id)
+            FROM coll_list_q 
+            WHERE col_hea_id=:(d.kolateralreturndeact.col_hea_id) 
+            AND release_time is not null 
+            AND coll_deact_reason is not null 
+            ORDER BY release_time desc 
+            FETCH FIRST ROW ONLY
+        };  
+         
+        YOY60 YOY60=new YOY60(tc);
+        YOY62 YOY62=new YOY62(tc); 
+        
+        CollListQData plq = new CollListQData();   
+  
+        plq.col_hea_id=d.kolateralreturndeact.col_hea_id;   
+        plq.status="1";
+        plq.income_time = CREATE_DATE_TIME;
+        plq.use_id=d.kolateralreturndeact.use_id;   
+        plq.release_time = CREATE_DATE_TIME;
+        plq.cmnt=d.kolateralreturndeact.CollListQ_txaCmnt;
+        plq.action_type="VRATI SA DEAKTIV.";     
+        plq.org_uni_id = d.kolateralreturndeact.org_uni_id;
+        plq.source_list = "711223";
+        plq.status_source_list = "1";   
+        plq.target_list = col_lis_typ_id;  
+        plq.status_target_list = "0";
+        
+        //odreduje se sa koje je liste dosao kolateral da bi se na tu listu i vratio ako se deaktivacija odbije
+        String status="";
+        if (col_lis_typ_id.equalsIgnoreCase("700223"))
+            status = "3";  // lista aktivnih                          
+        else if (col_lis_typ_id.equalsIgnoreCase("710223"))
+            status = "F";  // lista slobodnih
+        else
+            throw new VestigoTMException(1, "Transaction CO21C: Ne mogu odrediti sa koje je liste dosao na verifikaciju deaktivacije! ","qwszstColl04", null);
+         
+        YOY60.update_insert_CollListQ(plq); 
+         
+        //napraviti update statusa  
+        #sql[ctx]{
+            UPDATE COLL_HEAD
+            SET collateral_status = :status, 
+                user_lock = :(CREATE_DATE_TIME),
+                use_id = :(d.kolateralreturndeact.use_id),
+                org_uni_id = :(d.kolateralreturndeact.org_uni_id)
+                WHERE col_hea_id = :(d.kolateralreturndeact.col_hea_id)
+        };  
+        
+        int num_mortage=YOY62.getNumberOfActiveMortageExceptThis(ctx, d.kolateralreturndeact.col_hea_id, new BigDecimal(0));
+        if(num_mortage==1){
+            BigDecimal coll_hf_prior_id=YOY62.getLastActiveMortageId(ctx, d.kolateralreturndeact.col_hea_id);
+            String cmnt="Zadnja deaktivirana hipoteka vraæena u aktivne automatski zbog odbijanja verifikacije deaktivacije nadreðenog kolaterala";
+            YOY62.insertIntoHfHistory(ctx, coll_hf_prior_id, d.kolateralreturndeact.col_hea_id, d.kolateralreturndeact.use_id, cmnt);
+        }else if(num_mortage>1){
+            throw new VestigoTMException(1, "Transaction CO21C: Vise aktivnih hipoteka na kolateralu koji je na verifikaciji deaktivacije. ! ","qwszstColl05", null);
+        }else{
+            tc.debug("Nema aktivnih hipoteka pa ne radim insert u history");
+        }
+    }    
+}
+
+

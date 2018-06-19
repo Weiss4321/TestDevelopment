@@ -1,0 +1,119 @@
+package hr.vestigo.modules.collateral.jcics.coA6;
+
+import java.math.*;
+import java.util.Vector;
+import java.sql.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+#sql iterator Iter2(
+    BigDecimal cas_exc_id,
+    String cde_account,
+    String status,
+    Date date_from,
+    Date date_until,
+    String user_login,
+    String user_name,
+    Timestamp user_lock,
+    String interni_mb,
+    String naziv
+);
+
+
+public class COA65 extends SQLJScrollableRemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA6/COA65.sqlj,v 1.5 2014/04/24 14:19:23 hraaks Exp $";
+
+    private DeclCOA6 decl;
+    private ConnCtx ctx;
+    private Iter2 iter;
+
+    public COA65(DeclCOA6 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void executeScrollable(TransactionContext tc) throws Exception
+    {
+        setLevel(decl.collcashdepexceptionquerym.ActionListLevel);
+        ctx = tc.getContext();
+        int filterbyCus_id = 0;
+        if(decl.collcashdepexceptionquerym.cus_id_qbe != null)
+            filterbyCus_id = 1;
+       
+        if(decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtCus_Acc_No == null || 
+                decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtCus_Acc_No.equals("")) 
+            decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtCus_Acc_No = "%";
+        else
+            decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtCus_Acc_No = decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtCus_Acc_No.replace('*','%');
+        
+        if (decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtDateFrom == null)
+            decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtDateFrom = Date.valueOf("1900-01-01");
+        if (decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtDateUntil == null)
+            decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtDateUntil = Date.valueOf("9999-12-31");
+        
+        #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+        
+        #sql [ctx] iter = {
+            SELECT
+                a.cas_exc_id        AS cas_exc_id,
+                a.cde_account       AS cde_account,
+                a.status            AS status,
+                a.date_from         AS date_from,
+                a.date_until        AS date_until,
+                ec.login            AS user_login,
+                ec.user_name        AS user_name,
+                a.user_lock         AS user_lock,
+                d.register_no       AS interni_mb,
+                d.name              AS naziv
+            FROM
+                cashdep_exception a LEFT OUTER JOIN app_user ec ON a.use_id = ec.use_id
+                left outer join coll_cashdep c on a.cde_account = c.cde_account
+                left outer join coll_owner e on c.col_hea_id = e.col_hea_id
+                left outer join customer d on e.cus_id = d.cus_id
+            WHERE
+                 a.cde_account like :(decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtCus_Acc_No)
+             AND 
+             
+                 a.date_from  >= :(decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtDateFrom) 
+             AND   
+                 a.date_until <= :(decl.collcashdepexceptionquerym.CollCashDepExceptionQBE_txtDateUntil)
+             AND
+                (:filterbyCus_id = 0 OR d.cus_id = :(decl.collcashdepexceptionquerym.cus_id_qbe)) 
+
+            order by a.status, d.name asc
+        };
+    }
+  
+    public boolean next() throws Exception
+    {
+        return iter.next();
+    }
+
+    public void close()
+    {
+        if (iter != null)
+        {
+            try {iter.close(); }
+            catch (Exception ignored) { }
+        }
+    }
+
+    public void populateRowData() throws Exception
+    {
+        Vector row = new Vector();
+        Vector hiddenRow = new Vector();
+        
+        row.add(iter.cde_account());
+        row.add(iter.interni_mb());  
+        row.add(iter.naziv());
+        row.add(iter.status());
+        row.add(iter.date_from());
+        row.add(iter.date_until());
+        row.add(iter.user_name());
+//        row.add(iter.user_lock());
+        
+        hiddenRow.add(iter.cas_exc_id());
+
+        decl.collcashdepexceptionquerym.tblCollCashDepException.addRow(row, hiddenRow);
+    }
+}

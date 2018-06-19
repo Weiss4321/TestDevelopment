@@ -1,0 +1,41 @@
+package hr.vestigo.modules.collateral.jcics.co41;
+
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.sql.*;
+import sqlj.runtime.ref.*;
+
+public class CO412 extends RemoteTransaction {
+
+    
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co41/CO412.sqlj,v 1.1 2014/04/03 07:10:59 hraaks Exp $";
+
+    private DeclCO41 decl;
+    private ConnCtx ctx;
+    
+    public CO412(DeclCO41 decl){
+        this.decl = decl;
+    }
+    
+    public void execute(TransactionContext p_ctx) throws Exception{
+        ctx = p_ctx.getContext();
+        Date date = decl.collinvestpartiesallquerrydate.CollInvestPartiesAll_ReportDate;
+        int cnt=0;
+        try {
+            #sql [ctx] {select count(*) into :cnt from COL_PROC where value_date = :(date) and proc_type ='M' with ur};
+        } catch (Exception e) {
+            
+        }
+        if(cnt>0){
+            decl.collinvestpartiesallquerrydate.flag="1";
+        }else
+            decl.collinvestpartiesallquerrydate.flag="0";
+        
+        return;
+    }
+}

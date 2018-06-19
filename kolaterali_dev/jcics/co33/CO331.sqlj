@@ -1,0 +1,177 @@
+package hr.vestigo.modules.collateral.jcics.co33;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+ 
+public class CO331 extends RemoteTransaction {
+// akcija slanja na verifikaciju s referentske liste 
+// update aktivnog sloga za radnu listu s koje se predmet salje:
+// 		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = SLANJE NA VERIF.	
+// insert u tbl. AGR_LIST_Q sloga za verifikacijsku listu
+// 		status=0
+//		income_time = current timestamp
+//		use_id = null
+//		org_uni_id = null	
+// update statusa 	predmeta, org_uni_id, use_id_ver_snd, ver_send_ts
+
+
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co33/CO331.sqlj,v 1.2 2011/12/02 14:20:51 hramkr Exp $";
+	  
+	private DeclCO33 d = null;
+
+	
+	public CO331(DeclCO33 d) {
+		this.d = d;
+	}    
+
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		
+		String proc_status = "";
+		
+	
+		Timestamp ver_snd_ts = null;
+
+//	slanjem na verifikaciju mijenja se:
+//		proc_status iz 0 na 1
+//		use_id_ver_snd na korisnika koji je poslao predmet na verifikaciju
+//		ver_send_ts na vrijeme slanja na verifikaciju
+
+		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+
+		try {
+		
+			#sql[ctx]{  
+					SELECT
+							proc_status
+					INTO
+							:(proc_status)
+					FROM
+							frame_agreement
+					WHERE
+							fra_agr_id=:(d.w_fra_agr_id)
+					AND	
+							proc_status = '0'
+					AND
+							use_id = :(d.use_id)
+					AND
+							org_uni_id = :(d.org_uni_id)
+
+			};  
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO331: Predmet nije na ref listi! ","colErr017", null);	
+			}
+		}		
+ 
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(ver_snd_ts)
+			FROM sysibm.sysdummy1 
+		};		
+		
+		tc.info("FRA_AGR_ID:...." + d.w_fra_agr_id);
+		tc.info("PROC_STATUS:...." + d.w_proc_status);
+		
+
+		  
+ 
+// postaviti statuse za update, target listu, akciju  ovisno na koju listu ide predmet		
+
+
+		YOY61 YOY61=new YOY61(tc);
+		
+		CollListQData plq=new CollListQData();   		
+		
+// predmet ide na verifikaciju - statusi se ne mijenjaju, 		
+
+		
+		plq.col_hea_id=d.w_fra_agr_id;
+
+		
+// source lista
+		plq.source_list = d.source_list;		
+		plq.status_source_list = "1";		
+		plq.release_time = ver_snd_ts;
+		plq.use_id=d.use_id;	
+		plq.org_uni_id = d.org_uni_id;
+		plq.cmnt=null;		
+		plq.action_type=d.action_type;		
+// target lista		
+		plq.target_list = d.target_list;  // verifikacijska lista
+		plq.status_target_list = "0";		
+		plq.income_time = ver_snd_ts;
+		plq.target_list_use_id = null;
+		plq.target_list_org_uni_id = null;
+		
+		
+		plq.status=d.w_proc_status;
+
+		tc.info("AGR_FRA_ID .....:" + plq.col_hea_id);
+		tc.info("INCOME_TIME ....."+plq.income_time);
+		tc.info("USE_ID....."+plq.use_id);
+		tc.info("RELEASE TIME .....:" + plq.release_time);
+		tc.info("CMNT......:"+plq.cmnt);
+		tc.info("ACTION_TYPE ....."+plq.action_type);
+		tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+		tc.info("SOURCE_LIST .....:" + plq.source_list);
+		tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		tc.info("TARGET_LIST ....."+plq.target_list);
+		tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+		tc.info("PROC_STATUS....."+plq.status);				
+		 
+		YOY61.update_insert_AgrListQ(plq); 
+		  
+//		proc_status iz 0 na 1
+//		use_id_ver_snd na korisnika koji je poslao predmet na verifikaciju
+//		ver_send_ts na vrijeme slanja na verifikaciju	
+
+// 1 - predmet je poslan na verifikacjsku listu
+
+		try {
+			#sql[ctx]{
+					UPDATE
+							frame_agreement
+					SET
+							proc_status = :(d.w_proc_status),
+							use_id_ver_snd = :(d.use_id),
+							ver_send_ts = :(ver_snd_ts),
+		                    user_lock = current timestamp
+					WHERE
+							fra_agr_id=:(d.w_fra_agr_id)
+					AND	
+							proc_status = '0'
+					AND
+							use_id = :(d.use_id)
+					AND
+							org_uni_id = :(d.org_uni_id)
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO331: Predmet nije na ref listi! ","colErr017", null);	
+			}
+		}  
+
+	}
+	 
+
+} 
+
+
+  

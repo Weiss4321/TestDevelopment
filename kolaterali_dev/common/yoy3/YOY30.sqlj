@@ -1,0 +1,432 @@
+package hr.vestigo.modules.collateral.common.yoy3;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.RemoteContext;
+import java.math.BigDecimal;
+import java.sql.*;
+
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.jcics.co05.*;
+
+
+
+#sql iterator SelectIter(BigDecimal org_uni_id);
+/**
+ * @author hramkr
+ *
+ * To change this generated comment edit the template variable "typecomment":
+ * Window>Preferences>Java>Templates.
+ * To enable and disable the creation of type comments go to
+ * Window>Preferences>Java>Code Generation.
+ */
+public class YOY30{
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy3/YOY30.sqlj,v 1.4 2006/02/09 09:15:11 hramkr Exp $";
+	
+	private TransactionContext tc = null;
+	private SelectIter iter;
+	
+
+	
+	private BigDecimal COLL_HF_PRIOR_ID = null;
+	private BigDecimal HF_TABLE_ID = null;
+	private BigDecimal HF_REF_ID  = null;
+	private BigDecimal HF_COLL_HEAD_ID = null;
+	
+	private BigDecimal HF_OWN_CUS_ID = null;
+	private String HF_REGISTER_NO = null;    // 910000
+	private String HF_OWN_CODE = null;
+	private String HF_OWN_LNAME = null;
+	
+	private BigDecimal HF_HFC_ID = null;  // vrijednost P u system_code_value
+	private String HF_PRIORITY = null;	// vrijednost = 1
+	private BigDecimal HF_REC_LOP_ID = null;	// vrijednost R u system_code_value
+	
+	private BigDecimal HF_AMOUNT = null;	// coll_head.real_est_nomi_valu
+	private BigDecimal HF_CUR_ID = null;	// coll_head.real_est_nm_cur_id
+
+	private BigDecimal HF_DRAW_AMO = null;	// KOD 1. PUNJENJA = 0
+	private BigDecimal HF_AVAIL_AMO = null;	// KOD 1. PUNJENJA = HF_AMOUNT
+	private Date HF_AVAIL_DAT = null;	// current_date
+	
+	private BigDecimal DRAW_BAMO = null;	// KOD 1. PUNJENJA = 0
+	private BigDecimal AVAIL_BAMO = null;	// KOD 1. PUNJENJA = HF_AMOUNT
+	private BigDecimal DRAW_BAMO_REF = null;	// KOD 1. PUNJENJA = 0
+	private BigDecimal AVAIL_BAMO_REF = null;	// KOD 1. PUNJENJA = HF_AMOUNT
+	private Date AVAIL_BDAT = null;	// kod 1. punjenja null	
+	
+	private Date HF_DATE_HFC_FROM = null;	// current date
+	private Date HF_DATE_HFC_UNTIL = null;  // 9999-12-31
+	private String HF_STATUS = null;	// vrijednost A
+	private String HF_SPEC_STAT = null;	// vrijednost 00
+	private Date HF_DATE_FROM = null;	// current date
+	private Date HF_DATE_UNTIL = null;  // 9999-12-31	
+	
+	private BigDecimal USE_OPEN_ID = null;
+	private BigDecimal USE_ID = null;
+	private Timestamp OPENING_TS = null;
+    private Timestamp USER_LOCK = null;
+    private BigDecimal EVE_ID = null;
+
+    private java.sql.Timestamp CREATE_DATE_TIME = null;
+    private Date CURR_DATE = null;
+    
+
+//////////////////////////////////////////////////////////////
+	
+	private ConnCtx connCtx=null;
+	private RemoteContext rc=null;
+ 
+
+	public YOY30(TransactionContext tc) {
+		this.tc = tc;
+	}
+	
+	public YOY30(RemoteContext rc) throws Exception {
+		this.rc=rc;
+		this.connCtx = rc.getContext();	 
+	}	
+	
+	public BigDecimal insertHfPrior(DeclCO05 dcl) throws Exception{
+		
+// GENERATOR ID
+		hr.vestigo.modules.collateral.common.yoy0.YOY00 id_generator = new hr.vestigo.modules.collateral.common.yoy0.YOY00(tc);//COLLATERAL_IDN
+		BigDecimal id = id_generator.getNewId();		
+		
+		ConnCtx ctx = tc.getContext();
+		
+		String mapping = tc.getMapping();
+
+	      #sql[ctx] {
+			SELECT current date, current timestamp 
+			INTO :CURR_DATE, :CREATE_DATE_TIME
+			FROM sysibm.sysdummy1
+		};		
+               
+		if(mapping.equals("CollSecPaperInsertMapping")) {//BASIC
+
+			this.HF_REF_ID  = dcl.COL_SEC_ID;
+			this.HF_COLL_HEAD_ID = dcl.COL_HEA_ID;
+		
+		
+			this.HF_AMOUNT = dcl.Coll_txtNomiValu;	// coll_head.real_est_nomi_valu
+			this.HF_CUR_ID = dcl.REAL_EST_NM_CUR_ID;	// coll_head.real_est_nm_cur_id
+
+			this.HF_DRAW_AMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.HF_AVAIL_AMO = dcl.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.HF_AVAIL_DAT = CURR_DATE;	// current_date
+			
+			this.DRAW_BAMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO = dcl.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.DRAW_BAMO_REF = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO_REF = dcl.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			
+			this.HF_DATE_HFC_FROM = dcl.Coll_txtDateFrom;	// current date
+			this.HF_DATE_HFC_UNTIL = dcl.Coll_txtDateUnti;  // 9999-12-31
+			this.HF_STATUS = dcl.STATUS;	// vrijednost A
+			this.HF_SPEC_STAT = dcl.SPEC_STATUS;	// vrijednost 00
+			this.HF_DATE_FROM = dcl.Coll_txtDateFrom;	// current date
+			this.HF_DATE_UNTIL = dcl.Coll_txtDateUnti;  // 9999-12-31	
+			
+			this.USE_OPEN_ID = dcl.USE_OPEN_ID;
+			this.USE_ID = dcl.USE_ID;
+			this.OPENING_TS = dcl.Coll_txtOpeningTs;
+		    this.USER_LOCK = dcl.Coll_txtUserLock;
+		    this.EVE_ID = dcl.EVE_ID;
+					
+		} else if (mapping.equals("CollMovableInsertMapping")) {
+			this.HF_REF_ID  = dcl.collmovableinsertmapping.COL_SEC_ID;
+			this.HF_COLL_HEAD_ID = dcl.collmovableinsertmapping.COL_HEA_ID;
+		
+		
+			this.HF_AMOUNT = dcl.collmovableinsertmapping.Coll_txtNomiValu;	// coll_head.real_est_nomi_valu
+			this.HF_CUR_ID = dcl.collmovableinsertmapping.REAL_EST_NM_CUR_ID;	// coll_head.real_est_nm_cur_id
+
+			this.HF_DRAW_AMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.HF_AVAIL_AMO = dcl.collmovableinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.HF_AVAIL_DAT = CURR_DATE;	// current_date
+			
+			this.DRAW_BAMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO = dcl.collmovableinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.DRAW_BAMO_REF = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO_REF = dcl.collmovableinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			
+			this.HF_DATE_HFC_FROM = dcl.collmovableinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_HFC_UNTIL = dcl.collmovableinsertmapping.Coll_txtDateUnti;  // 9999-12-31
+			this.HF_STATUS = dcl.collmovableinsertmapping.STATUS;	// vrijednost A
+			this.HF_SPEC_STAT = dcl.collmovableinsertmapping.SPEC_STATUS;	// vrijednost 00
+			this.HF_DATE_FROM = dcl.collmovableinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_UNTIL = dcl.collmovableinsertmapping.Coll_txtDateUnti;  // 9999-12-31	
+			
+			this.USE_OPEN_ID = dcl.collmovableinsertmapping.USE_OPEN_ID;
+			this.USE_ID = dcl.collmovableinsertmapping.USE_ID;
+			this.OPENING_TS = dcl.collmovableinsertmapping.Coll_txtOpeningTs;
+		    this.USER_LOCK = dcl.collmovableinsertmapping.Coll_txtUserLock;
+		    this.EVE_ID = dcl.collmovableinsertmapping.EVE_ID;		
+		    
+		} else if (mapping.equals("CollArtInsertMapping")) {
+			this.HF_REF_ID  = dcl.collartinsertmapping.COL_SEC_ID;
+			this.HF_COLL_HEAD_ID = dcl.collartinsertmapping.COL_HEA_ID;
+		
+		
+			this.HF_AMOUNT = dcl.collartinsertmapping.Coll_txtNomiValu;	// coll_head.real_est_nomi_valu
+			this.HF_CUR_ID = dcl.collartinsertmapping.REAL_EST_NM_CUR_ID;	// coll_head.real_est_nm_cur_id
+
+			this.HF_DRAW_AMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.HF_AVAIL_AMO = dcl.collartinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.HF_AVAIL_DAT = CURR_DATE;	// current_date
+			
+			this.DRAW_BAMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO = dcl.collartinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.DRAW_BAMO_REF = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO_REF = dcl.collartinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			
+			this.HF_DATE_HFC_FROM = dcl.collartinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_HFC_UNTIL = dcl.collartinsertmapping.Coll_txtDateUnti;  // 9999-12-31
+			this.HF_STATUS = dcl.collartinsertmapping.STATUS;	// vrijednost A
+			this.HF_SPEC_STAT = dcl.collartinsertmapping.SPEC_STATUS;	// vrijednost 00
+			this.HF_DATE_FROM = dcl.collartinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_UNTIL = dcl.collartinsertmapping.Coll_txtDateUnti;  // 9999-12-31	
+			
+			this.USE_OPEN_ID = dcl.collartinsertmapping.USE_OPEN_ID;
+			this.USE_ID = dcl.collartinsertmapping.USE_ID;
+			this.OPENING_TS = dcl.collartinsertmapping.Coll_txtOpeningTs;
+		    this.USER_LOCK = dcl.collartinsertmapping.Coll_txtUserLock;
+		    this.EVE_ID = dcl.collartinsertmapping.EVE_ID;			
+		} else if (mapping.equals("CollPrecInsertMapping")) {
+			this.HF_REF_ID  = dcl.collprecinsertmapping.COL_SEC_ID;
+			this.HF_COLL_HEAD_ID = dcl.collprecinsertmapping.COL_HEA_ID;
+		
+		
+			this.HF_AMOUNT = dcl.collprecinsertmapping.Coll_txtNomiValu;	// coll_head.real_est_nomi_valu
+			this.HF_CUR_ID = dcl.collprecinsertmapping.REAL_EST_NM_CUR_ID;	// coll_head.real_est_nm_cur_id
+
+			this.HF_DRAW_AMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.HF_AVAIL_AMO = dcl.collprecinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.HF_AVAIL_DAT = CURR_DATE;	// current_date
+			
+			this.DRAW_BAMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO = dcl.collprecinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.DRAW_BAMO_REF = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO_REF = dcl.collprecinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			
+			this.HF_DATE_HFC_FROM = dcl.collprecinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_HFC_UNTIL = dcl.collprecinsertmapping.Coll_txtDateUnti;  // 9999-12-31
+			this.HF_STATUS = dcl.collprecinsertmapping.STATUS;	// vrijednost A
+			this.HF_SPEC_STAT = dcl.collprecinsertmapping.SPEC_STATUS;	// vrijednost 00
+			this.HF_DATE_FROM = dcl.collprecinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_UNTIL = dcl.collprecinsertmapping.Coll_txtDateUnti;  // 9999-12-31	
+			
+			this.USE_OPEN_ID = dcl.collprecinsertmapping.USE_OPEN_ID;
+			this.USE_ID = dcl.collprecinsertmapping.USE_ID;
+			this.OPENING_TS = dcl.collprecinsertmapping.Coll_txtOpeningTs;
+		    this.USER_LOCK = dcl.collprecinsertmapping.Coll_txtUserLock;
+		    this.EVE_ID = dcl.collprecinsertmapping.EVE_ID;	
+		    
+		} else if (mapping.equals("VesselInsertMapping")) {
+			this.HF_REF_ID  = dcl.vesselinsertmapping.COL_SEC_ID;
+			this.HF_COLL_HEAD_ID = dcl.vesselinsertmapping.COL_HEA_ID;
+		
+		
+			this.HF_AMOUNT = dcl.vesselinsertmapping.Coll_txtNomiValu;	// coll_head.real_est_nomi_valu
+			this.HF_CUR_ID = dcl.vesselinsertmapping.REAL_EST_NM_CUR_ID;	// coll_head.real_est_nm_cur_id
+
+			this.HF_DRAW_AMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.HF_AVAIL_AMO = dcl.vesselinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.HF_AVAIL_DAT = CURR_DATE;	// current_date
+			
+			this.DRAW_BAMO = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO = dcl.vesselinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			this.DRAW_BAMO_REF = new BigDecimal("0.00");	// KOD 1. PUNJENJA = 0
+			this.AVAIL_BAMO_REF = dcl.vesselinsertmapping.Coll_txtNomiValu;	// KOD 1. PUNJENJA = HF_AMOUNT
+			
+			this.HF_DATE_HFC_FROM = dcl.vesselinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_HFC_UNTIL = dcl.vesselinsertmapping.Coll_txtDateUnti;  // 9999-12-31
+			this.HF_STATUS = dcl.vesselinsertmapping.STATUS;	// vrijednost A
+			this.HF_SPEC_STAT = dcl.vesselinsertmapping.SPEC_STATUS;	// vrijednost 00
+			this.HF_DATE_FROM = dcl.vesselinsertmapping.Coll_txtDateFrom;	// current date
+			this.HF_DATE_UNTIL = dcl.vesselinsertmapping.Coll_txtDateUnti;  // 9999-12-31	
+			
+			this.USE_OPEN_ID = dcl.vesselinsertmapping.USE_OPEN_ID;
+			this.USE_ID = dcl.vesselinsertmapping.USE_ID;
+			this.OPENING_TS = dcl.vesselinsertmapping.Coll_txtOpeningTs;
+		    this.USER_LOCK = dcl.vesselinsertmapping.Coll_txtUserLock;
+		    this.EVE_ID = dcl.vesselinsertmapping.EVE_ID;			
+		}
+ 
+ 
+ 
+// punim HF_TABLE_ID		
+		
+        #sql[ctx] {
+			SELECT sys_cod_val_id
+			INTO :HF_TABLE_ID
+			FROM SYSTEM_CODE_VALUE
+			WHERE SYS_COD_ID='clt_coll_table' and SYS_CODE_VALUE = 'security'
+		};	
+
+// punim komitenta u ciju je korist upisana hipoteka		
+        #sql[ctx] {
+			SELECT ban_id, code, register_no, name
+			INTO :HF_OWN_CUS_ID, :HF_OWN_CODE, :HF_REGISTER_NO, :HF_OWN_LNAME
+			FROM BANK
+			WHERE register_no = '910000'
+		};	
+		
+// punim vrijednost za vrstu tereta  HF_HFC_ID	
+       #sql[ctx] {
+			SELECT sys_cod_val_id
+			INTO :HF_HFC_ID
+			FROM SYSTEM_CODE_VALUE
+			WHERE SYS_COD_ID='clt_coll_hypo_fidu' and SYS_CODE_VALUE = 'P'
+		};			
+
+//		 punim vrijednost za HF_REC_LOP_ID, JE LI UPISANO PRAVO	
+       #sql[ctx] {
+			SELECT sys_cod_val_id
+				INTO :HF_REC_LOP_ID
+				FROM SYSTEM_CODE_VALUE
+			WHERE SYS_COD_ID='clt_hfreclop' and SYS_CODE_VALUE = 'R'
+		};					
+	
+		
+		COLL_HF_PRIOR_ID = id;	
+		HF_PRIORITY = "1";
+		
+
+		tc.debug ( ".........COL_HF_PRIOR_ID    " + COLL_HF_PRIOR_ID);												                                                
+		tc.debug ( ".........HF_TABLE_ID   " + HF_TABLE_ID);  
+		tc.debug ( ".........HF_REF_ID  " + HF_REF_ID); 
+
+		tc.debug ( ".........HF_COLL_HEAD_ID" + HF_COLL_HEAD_ID);                    		
+		tc.debug ( ".........HF_OWN_CUS_ID" + HF_OWN_CUS_ID);                   
+		tc.debug ( ".........HF_REGISTER_NO" +  HF_REGISTER_NO);                
+		tc.debug ( ".........HF_OWN_CODE" + HF_OWN_CODE);                   
+		tc.debug ( ".........HF_OWN_LNAME" + HF_OWN_LNAME);                   
+						 
+		tc.debug ( ".........HF_HFC_ID" + HF_HFC_ID);                   		
+		tc.debug ( ".........HF_PRIORITY" + HF_PRIORITY);
+ 
+		tc.debug ( ".........HF_REC_LOP_ID" + HF_REC_LOP_ID); 
+ 
+		tc.debug ( ".........HF_AMOUNT" + HF_AMOUNT);                             		                                      
+                          		                                      
+		tc.debug ( ".........HF_CUR_ID" +  HF_CUR_ID);                         		                                      
+                   	                            
+ 
+		tc.debug ( ".........HF_DRAW_AMO" + HF_DRAW_AMO);                   	                         
+		tc.debug ( ".........HF_AVAIL_AMO" +  HF_AVAIL_AMO);     
+		tc.debug ( ".........HF_AVAIL_DAT" +  HF_AVAIL_DAT);		
+		
+		tc.debug ( ".........DRAW_BAMO" + DRAW_BAMO);                   	                         
+		tc.debug ( ".........AVAIL_BAMO" +  AVAIL_BAMO); 
+		tc.debug ( ".........DRAW_BAMO_REF" + DRAW_BAMO_REF);                   	                         
+		tc.debug ( ".........AVAIL_BAMO_REF" +  AVAIL_BAMO_REF); 		
+		tc.debug ( ".........AVAIL_BDAT" +  HF_AVAIL_DAT);	 
+
+		tc.debug ( ".........HF_DATE_HFC_FROM" +  HF_DATE_HFC_FROM); 		
+		tc.debug ( ".........HF_DATE_HFC_UNTIL" +  HF_DATE_HFC_UNTIL);	 		
+		tc.debug ( ".........HF_STATUS" + HF_STATUS);                      		                          
+		tc.debug ( ".........HF_SPEC_STAT" + HF_SPEC_STAT);
+		tc.debug ( ".........HF_DATE_FROM" +  HF_DATE_FROM); 		
+		tc.debug ( ".........HF_DATE_UNTIL" +  HF_DATE_UNTIL);	 			
+		tc.debug ( ".........USE_OPEN_ID" + USE_OPEN_ID);
+		tc.debug ( ".........USE_ID" + USE_ID);
+		tc.debug ( ".........OPENING_TS" + OPENING_TS);
+		tc.debug ( ".........USER_LOCK" + USER_LOCK);
+		tc.debug ( ".........EVE_ID" + EVE_ID);
+		tc.debug ( ".........(tc.getBankSign())" + tc.getBankSign());		
+		
+		
+ 
+				                        				
+        //INSERT INTO coll_hf_prior	
+		try{	
+			
+			#sql [ctx]{
+					INSERT INTO coll_hf_prior
+							(	
+							 	coll_hf_prior_id , 
+								hf_table_id ,      
+								hf_ref_id ,    
+								hf_coll_head_id, 
+								hf_own_cus_id ,    
+								hf_register_no,    
+								hf_own_code,       
+								hf_own_lname,      
+								hf_hfc_id ,        
+								hf_priority ,      
+								hf_rec_lop_id,
+								hf_amount,        
+								hf_cur_id ,
+								hf_draw_amo,
+								hf_avail_amo,
+								hf_avail_dat,
+								draw_bamo,
+								avail_bamo,
+								draw_bamo_ref,
+								avail_bamo_ref,
+								avail_bdat,
+								hf_date_hfc_from ,
+								hf_date_hfc_until,
+								hf_status ,       
+								hf_spec_stat,     
+								hf_date_from ,    
+								hf_date_until,    
+								use_open_id,      
+								use_id ,          
+								opening_ts,       
+								user_lock ,        
+								eve_id ,          
+								bank_sign )        
+
+					VALUES( 		:COLL_HF_PRIOR_ID,   
+									:HF_TABLE_ID,           
+									:HF_REF_ID,
+									:HF_COLL_HEAD_ID,
+									:HF_OWN_CUS_ID,
+									:HF_REGISTER_NO,            
+             						:HF_OWN_CODE,  
+                  					:HF_OWN_LNAME,         
+									:HF_HFC_ID,
+									:HF_PRIORITY,  
+               						:HF_REC_LOP_ID, 
+               						:HF_AMOUNT,  
+                  					:HF_CUR_ID,  
+               						:HF_DRAW_AMO,  
+                  					:HF_AVAIL_AMO,  
+                 					:HF_AVAIL_DAT,  
+        							:DRAW_BAMO,
+               						:AVAIL_BAMO,
+               						:DRAW_BAMO_REF,
+               						:AVAIL_BAMO_REF,         
+									:AVAIL_BDAT, 
+									:HF_DATE_HFC_FROM, 
+									:HF_DATE_HFC_UNTIL,
+									:HF_STATUS,
+									:HF_SPEC_STAT,
+									:HF_DATE_FROM,
+									:HF_DATE_UNTIL,
+									:USE_OPEN_ID,
+									:USE_ID,  
+									:OPENING_TS,
+									:USER_LOCK,
+									:EVE_ID,
+									:(tc.getBankSign()) )                        	
+					};
+
+			}catch(java.sql.SQLException se){
+					tc.debug ( "......YOY30.sqlj insert into coll_head SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......YOY30.sqlj insert into coll_head SQL SQLState " + se.getSQLState());
+					tc.debug ( "......YOY30.sqlj insert into coll_head SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction YOY30: Error inserting coll_hf_prior! ","err411a", null);
+
+			}
+		
+		return id;
+	}
+	
+	
+
+
+}

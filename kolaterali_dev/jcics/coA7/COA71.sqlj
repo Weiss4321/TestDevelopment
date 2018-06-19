@@ -1,0 +1,107 @@
+package hr.vestigo.modules.collateral.jcics.coA7;
+
+import java.math.*;
+import java.util.Vector;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+#sql iterator Iter1(
+    BigDecimal fra_acc_exc_id,
+    BigDecimal cus_acc_id,
+    String status,
+    Timestamp user_lock,
+    String cus_acc_no,
+    String contract_no,
+    BigDecimal cus_id,
+    String register_no,
+    String name,
+    String login,
+    String user_name
+);
+
+
+public class COA71 extends SQLJScrollableRemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA7/COA71.sqlj,v 1.2 2011/04/27 12:47:56 hrakis Exp $";
+
+    private DeclCOA7 decl;
+    private ConnCtx ctx;
+    private Iter1 iter;
+
+    public COA71(DeclCOA7 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void executeScrollable(TransactionContext tc) throws Exception
+    {
+        setLevel(decl.ActionListLevel);
+        ctx = tc.getContext();
+        
+        try
+        {
+            #sql [ctx] iter = {
+                SELECT
+                    f.fra_acc_exc_id AS fra_acc_exc_id,
+                    f.cus_acc_id     AS cus_acc_id,
+                    f.status         AS status,
+                    f.user_lock      AS user_lock,
+                    e.cus_acc_no     AS cus_acc_no,
+                    e.contract_no    AS contract_no,
+                    e.cus_id         AS cus_id,
+                    c.register_no    AS register_no,
+                    c.name           AS name,
+                    u.login          AS login,
+                    u.user_name      AS user_name
+                FROM frame_acc_exception f
+                INNER JOIN cusacc_exposure e ON f.cus_acc_id = e.cus_acc_id
+                INNER JOIN customer c ON e.cus_id = c.cus_id
+                INNER JOIN app_user u ON f.use_id = u.use_id
+                WHERE f.exception_type = :(decl.EXCEPTION_TYPE)
+                ORDER BY c.register_no, e.cus_acc_no
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA71: Error selecting from FRAME_ACC_EXCEPTION!", "fw_wrn_017", null, ex);
+        }
+    }
+
+    public boolean next() throws Exception
+    {
+        return iter.next();
+    }
+
+    public void close()
+    {
+        if (iter != null)
+        {
+            try {iter.close(); }
+            catch (Exception ignored) { }
+        }
+    }
+
+    public void populateRowData() throws Exception
+    {
+        Vector row = new Vector();
+        Vector rowHidden = new Vector();
+        
+        rowHidden.add(iter.fra_acc_exc_id());
+        rowHidden.add(iter.cus_acc_id());
+        rowHidden.add(iter.cus_id());
+        rowHidden.add(iter.login());
+        rowHidden.add(iter.user_lock());
+
+        row.add(iter.register_no());
+        row.add(iter.name());
+        row.add(iter.cus_acc_no());
+        row.add(iter.contract_no());
+        row.add(iter.status());
+        row.add(iter.user_name());
+
+        decl.tblFrameAccException.addRow(row, rowHidden);
+    }
+}

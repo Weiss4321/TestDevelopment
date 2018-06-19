@@ -1,0 +1,42 @@
+package hr.vestigo.modules.collateral.jcics.co12;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO122 class delete row from table POLITICAL_MAP 	
+ *  	
+ */
+public class CO123 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co12/CO123.sqlj,v 1.3 2006/04/14 10:07:12 hrarmv Exp $";
+	public DeclCO12 decl = null;
+	
+	public CO123 (DeclCO12 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+							
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+	    
+        //DELETE FROM political_map
+			try{	
+								
+				#sql [ctx]{ 
+			    	DELETE FROM political_map 
+			    	WHERE POL_MAP_ID=:(decl.polmapdistrictdeletemapping.DISTRICT_ID)
+			    	AND USER_LOCK=:(decl.polmapdistrictdeletemapping.USER_LOCK)
+			    	};
+
+				}catch(java.sql.SQLException se){
+
+						tc.debug ( "......CO123.sqlj delete from political_map SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO123.sqlj delete from political_map SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO123.sqlj delete from political_map SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO122: Error deleting row in political_map! ","err411a", null);
+				}
+		}//execute
+	
+}	
+			

@@ -1,0 +1,216 @@
+package hr.vestigo.modules.collateral.batch.bo34;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+
+#sql iterator VRPIterator with(holdability = true) (
+                    BigDecimal col_hea_id,
+                    BigDecimal col_cat_id,
+                    String col_num,
+                    BigDecimal third_right_nom,
+                    BigDecimal hfs_value,
+                    BigDecimal col_vrp_id,
+                    BigDecimal nom_cur_id,
+                    BigDecimal one_nom_amo,
+                    BigDecimal num_of_sec,
+                    BigDecimal col_in2_pri_id,
+                    Date date_from,
+                    BigDecimal price,
+                    BigDecimal mvp_ponder,
+                    BigDecimal mid_rate,
+                    BigDecimal margin_granica,
+                    String code_char,
+                    String register_no,
+                    String name
+    );
+
+#sql iterator EXPIterator with(holdability = true) (BigDecimal exposure_cur_id, BigDecimal exposure_amount);
+
+
+public class BO341{   
+
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo34/BO341.sqlj,v 1.13 2017/03/22 10:31:35 hrazst Exp $";
+
+    private BatchContext bc = null;
+    private ConnCtx connCtx;
+    private ConnCtx conn2 = null;
+    private YOY00 yoy00 = null;
+
+    private BigDecimal col_pro_id = null;
+    private BigDecimal org_uni_id = null;
+    private BigDecimal use_id = null;
+    private BigDecimal eve_id = null;
+    private YOY00 primary = null;
+
+
+    public BO341(BatchContext bc,BigDecimal org_uni_id, BigDecimal use_id) throws Exception{
+        this.bc = bc;
+        this.connCtx = bc.getContext();
+        this.conn2 = new ConnCtx(bc.getNewConnection());
+        this.use_id = use_id;
+        this.org_uni_id = org_uni_id;
+        primary = new YOY00(bc);
+    }
+
+    public void closeExtraConnection() throws Exception{
+        if(conn2!=null){
+            this.conn2.close();
+        }   
+    }
+
+    public VRPIterator selectVRPIterator() throws Exception{
+        VRPIterator iter = null;
+        try{ 
+            #sql [conn2]iter={
+                SELECT DISTINCT  ch.col_hea_id as col_hea_id,
+                        ch.col_cat_id as col_cat_id,
+                        ch.col_num as col_num,
+                        ch.third_right_nom as third_right_nom,
+                        ch.hfs_value as hfs_value,
+                        cv.col_vrp_id  as col_vrp_id,
+                        cin2.nom_cur_id as nom_cur_id,
+                        cin2.nom_amount as one_nom_amo,
+                        cv.num_of_sec as num_of_sec,
+                        cip.col_in2_pri_id as col_in2_pri_id,
+                        cip.date_from as date_from,
+                        cip.price as price, 
+                        ca.mvp_dfl as mvp_ponder,
+                        er.midd_rate as mid_rate,
+                        cv.margin_granica,
+                        cu.code_char,
+                        lb.register_no,
+                        c.name
+                FROM    coll_head ch
+                LEFT OUTER JOIN coll_atr ca ON (ch.col_cat_id = ca.col_cat_id AND ch.col_type_id = ca.coll_type_id)
+                LEFT OUTER JOIN coll_hf_prior cfp ON (cfp.hf_coll_head_id = ch.col_hea_id)
+                LEFT OUTER JOIN loan_beneficiary lb ON (cfp.coll_hf_prior_id = lb.coll_hf_prior_id)
+                LEFT OUTER JOIN customer c ON (c.cus_id = lb.CUS_ID),
+                                coll_vrp cv,
+                                coll_in2 cin2,
+                                coll_in2_price cip,
+                                exchange_rate er,
+                                currency cu
+                WHERE   ch.col_cat_id IN (613223,619223,622223,627223) 
+                AND     ch.collateral_status IN ('0','1','2','3') 
+                AND     ch.col_hea_id = cv.col_hea_id 
+                AND     cv.col_in2_id = cin2.col_in2_id 
+                AND     cv.col_in2_id = cip.col_in2_id 
+                AND     cip.date_from <= current date 
+                AND     cip.date_to >= current date 
+                AND     cv.nom_cur_id = er.cur_id 
+                AND     er.date_from <= current date 
+                AND     er.date_until >= current date 
+                AND     cin2.nom_cur_id = cu.cur_id 
+                AND     ch.col_hea_id NOT IN (SELECT iddi.input_id FROM in_data_dwh_item iddi WHERE iddi.col_pro_id=:(col_pro_id))
+                ORDER BY ch.col_num
+                WITH UR
+            };
+            return iter;
+
+        }catch(SQLException e){
+            bc.debug(".....BO341.sqlj selectVRPIterator        Message  : " + e.getMessage());
+            bc.debug(".....BO341.sqlj selectVRPIterator      Error code : " + e.getErrorCode());
+            bc.debug(".....BO341.sqlj selectVRPIterator        SQLState : " + e.getSQLState());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+
+    public EXPIterator selectEXPIterator(BigDecimal col_hea_id) throws Exception{
+        EXPIterator iter=null;
+        try{ 
+            #sql[conn2] iter={
+                SELECT  c.exposure_cur_id as exposure_cur_id, sum(c.exposure_balance) as exposure_amount
+                FROM    coll_hf_prior a, loan_beneficiary b, cusacc_exposure c
+                WHERE   a.hf_coll_head_id = :(col_hea_id)
+                AND     a.hf_status = 'A'
+                AND     a.coll_hf_prior_id = b.coll_hf_prior_id 
+                AND     b.status = 'A'
+                AND     (b.la_acc_id = c.cus_acc_id OR b.acc_no = c.cus_acc_no OR b.request_no=c.request_no)
+                AND     (c.cus_acc_status = 'A' OR (c.cus_acc_status = 'C' AND ((c.module_code='TRC' AND c.cus_acc_orig_st='E') OR 
+                                                                                (c.module_code='PKR' AND c.cus_acc_orig_st='T') OR 
+                                                                                (c.module_code='PPZ' AND c.cus_acc_orig_st IN ('SS', 'NM')) OR
+                                                                                (c.module_code='SDR' AND c.cus_acc_orig_st IN ('SS', 'NM')) OR  
+                                                                                (c.module_code='KRD' AND c.cus_acc_orig_st='SS') OR 
+                                                                                (c.module_code='GAR' AND c.cus_acc_orig_st='SS') OR 
+                                                                                (c.module_code='KKR' AND c.cus_acc_orig_st IN ('94','95')) OR 
+                                                                                (c.module_code='LOC' AND c.cus_acc_orig_st='SS'))))
+                GROUP BY c.exposure_cur_id 
+            };
+            return iter;
+
+        }catch(SQLException e){
+            bc.debug(".....BO341.sqlj selectEXPIterator        Message  : " + e.getMessage());
+            bc.debug(".....BO341.sqlj selectEXPIterator      Error code : " + e.getErrorCode());
+            bc.debug(".....BO341.sqlj selectEXPIterator        SQLState : " + e.getSQLState());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    public void updateCollHead(CollHeadNewData data, BigDecimal col_hea_id) throws Exception{
+        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+        //use_id=:(use_id), user_lock=current timestamp
+        #sql [connCtx]{
+            UPDATE coll_head  
+            SET 
+                real_est_nomi_valu =:(data.market_amount),
+                real_est_nomi_date =:(data.price_date),
+                nepo_value  =:(data.market_amount),
+                nepo_date   =:(data.price_date),
+                weigh_value =:(data.weigh_value),
+                weigh_date  =:(data.price_date),
+                avail_value =:(data.avail_value),
+                avail_date  =:(data.price_date),
+                CHG_NOM_VAL_PROC_TS = current timestamp
+            WHERE col_hea_id =:(col_hea_id)
+            WITH UR
+        }; 
+    }
+
+
+    public void updateCollVrp(VRPNewData data, BigDecimal col_vrp_id) throws Exception{
+        #sql [connCtx]{
+            UPDATE coll_vrp 
+            SET
+                one_nom_amo     =:(data.one_nom_amo),
+                nominal_amount  =:(data.nominal_amount),
+                one_mar_amo     =:(data.one_mar_amo),
+                one_nom_amo_kn  =:(data.one_nom_amo_kn),
+                nominal_amount_kn =:(data.nominal_amount_kn),
+                one_mar_amo_kn  =:(data.one_mar_amo_kn),
+                one_mar_amo_per =:(data.one_mar_amo_per),
+                market_amount   =:(data.market_amount),
+                market_amount_kn =:(data.market_amount_kn),
+                price_date      =:(data.price_date),
+                margin_omjer    =:(data.margin_omjer)
+            WHERE   col_vrp_id  =:(col_vrp_id)
+            WITH UR
+        };
+    }
+
+    /**
+     * Dohvat id obrade
+     * @return id obrade
+     */
+    public BigDecimal getColProId() throws Exception{
+        if(this.col_pro_id==null){           
+            this.col_pro_id = primary.getNewId();
+        }
+        return this.col_pro_id;
+    }
+
+    public void setColProId(BigDecimal col_pro_id){
+        this.col_pro_id = col_pro_id;
+    }
+}

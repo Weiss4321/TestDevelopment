@@ -1,0 +1,45 @@
+
+SET CURRENT_SCHEMA = 'SIP'
+
+SELECT min(balance_date)
+        FROM sms_log l1
+        WHERE 
+        balance_date=(select max(balance_date)
+                        FROM sms_log l2
+                        WHERE 
+                        l2.acc_num_id = l1.acc_num_id
+                        and l2.cur_id = l1.cur_id
+                        and l2.com_address = l1.com_address
+                        and l2.bank_sign=l1.bank_sign)
+                        with ur;
+
+------------------------------------------------------
+select * from cusacc_ban_subserv;
+
+
+
+	SELECT
+            min(sl.balance_date)
+        FROM
+            cusacc_ban_subserv cbs
+            , customer_account ca,
+            customer c,
+            cusacc_balance_last cbl,
+            sms_log sl
+        WHERE
+            cbs.ban_sub_typ_id = 23062019
+        AND 
+            current_date BETWEEN cbs.date_from AND cbs.date_until
+        AND cbs.status in ('1', '2')
+        AND c.cus_id = cbs.cus_id
+        AND ca.cus_id = c.cus_id
+        AND ca.external_flag = '0'
+        AND ca.ban_rel_typ_id = 787172005
+        AND ca.cus_acc_status NOT IN ('I','C','E')
+        AND cbs.bank_sign = 'RB'
+        and cbl.cus_acc_id = ca.cus_acc_id
+        and cbl.pro_typ_id IN (826790005, 826791005)
+        and sl.acc_num_id = cbl.acc_num_id
+        and sl.cur_id = cbl.cur_id
+        and sl.balance_date = (select max(sl2.balance_date) from sms_log sl2 where sl2.acc_num_id = sl.acc_num_id and sl2.cur_id = sl.cur_id)
+        with ur;

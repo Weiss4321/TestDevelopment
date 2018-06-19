@@ -1,0 +1,589 @@
+package hr.vestigo.modules.collateral.batch.bo17;
+
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*; 
+
+
+ 
+
+public class BO171 {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo17/BO171.sqlj,v 1.6 2009/01/15 13:09:41 hraaks Exp $";
+	
+	#sql public iterator Iter (
+			BigDecimal cus_id,
+			String org_uni_code,
+			String org_uni_name,
+			String register_no,
+			String name,
+			String address,
+			String postoffice,
+			String city,
+			String party_no,
+			String col_num
+	);
+	
+
+	private BigDecimal eve_id = null;
+	
+	private ConnCtx connCtx;
+	
+	private hr.vestigo.framework.remote.batch.BatchContext bc;
+	
+	private Iter iter = null;
+	
+	public BO171(hr.vestigo.framework.remote.batch.BatchContext bc) {
+		this.bc = bc;
+		try {
+			this.connCtx = bc.getContext();
+		}catch (SQLException e) {
+			
+		}
+	}
+	
+
+	public Iter fetchData(BO17Data p_data) throws SQLException {//dohvat podataka 
+		
+	Date date_from = p_data.getDeliverDateFrom();
+	Date date_until= p_data.getDeliverDateUntil();
+	BigDecimal org_uni_id = p_data.getOrg_uni_id();
+	
+    	try {
+    		
+    		#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    		
+    		if (p_data.getOrg_uni_id() !=null) {
+    			
+    			if (p_data.getClientType().trim().equals("P")) {
+    			
+    				#sql [connCtx] iter = {
+   	        			select
+
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+    	    				from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+    	    					((cv.lic_date_to between :(date_from) and :(date_until)) )
+    						and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.com_doc = 'N'
+    						and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (2999,2998,999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id
+							and
+								ou.org_uni_id = :(org_uni_id)    	    		
+
+
+    				UNION
+
+
+     	    				select
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+   	    					from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+    	    					rtrim (cv.veh_lic_return) = 'N'
+    	    				and
+    	    					cv.veh_date_lic_to between :(date_from) and :(date_until)
+    	    				and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (2999,2998,999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id   
+    	    				and
+								ou.org_uni_id = :(org_uni_id)    	  
+    	    				
+   	    				};
+
+    			} else if (p_data.getClientType().trim().equals("F")) {
+    				
+    					#sql [connCtx] iter = {
+    	        			select
+
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+    	    				from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+     	    					((cv.lic_date_to between :(date_from) and :(date_until)) )	
+    	    				and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.com_doc = 'N'	
+    	    				and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (1998,1999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id
+							and
+								ou.org_uni_id = :(org_uni_id)    	    					
+	
+   	    					UNION
+
+    	    				select
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+   	    					from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+    	    					rtrim (cv.veh_lic_return) = 'N'
+    	    				and
+    	    					cv.veh_date_lic_to between :(date_from) and :(date_until)
+    	    				and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (1998,1999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id   
+    	    				and
+								ou.org_uni_id = :(org_uni_id)    	  	       	    
+
+    		    		};
+
+    				}
+    		} else {
+    			if (p_data.getClientType().trim().equals("P")) {
+    				#sql [connCtx] iter = {
+    	        			select
+
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+    	    				from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+    	    					((cv.lic_date_to between :(date_from) and :(date_until)) )	
+    	    				and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.com_doc = 'N'	
+    	    				and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (2999,2998,999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id
+
+    					UNION
+
+    	        			select
+
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+    	    				from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+    	    					rtrim (cv.veh_lic_return) = 'N'
+    	    				and
+    	    					cv.veh_date_lic_to between :(date_from) and :(date_until)
+    	    				and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (2999,2998,999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id   	    
+
+    	    				};
+
+    			} else if (p_data.getClientType().trim().equals("F")) {
+    	    		
+    	    			#sql [connCtx] iter = {
+    	        			select
+
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+    	    				from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+     	    					((cv.lic_date_to between :(date_from) and :(date_until)) )	
+    	    				and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.com_doc = 'N'	
+    	    				and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (1998,1999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id
+	
+   	    					UNION
+
+    	    				select
+    	    						c.cus_id,
+    	    						ou.code as org_uni_code,
+    	    						ou.name as org_uni_name,
+    	    						lb.register_no,
+    	    						c.name,
+    	    						c.address,
+    	    						c.xpostoffice as postoffice,
+    	    						c.xcity as city,
+    	    						lb.acc_no as party_no,
+    	    						ch.col_num
+   	    					from
+    	    					COLL_VEHICLE cv,
+    	    					COLL_HEAD ch,
+    	    					COLL_HF_PRIOR cf,
+    	    					LOAN_BENEFICIARY lb,    	    				    
+    	    					CUSACC_EXPOSURE ce,   	
+    	    					CUSTOMER c,    						  
+    	    					ORGANIZATION_UNIT ou
+    	    				where 
+    	    					rtrim (cv.veh_lic_return) = 'N'
+    	    				and
+    	    					cv.veh_date_lic_to between :(date_from) and :(date_until)
+    	    				and
+    	    					cv.col_hea_id = ch.col_hea_id											
+    	    				and
+    	    					ch.collateral_status in ('0','1','2','3')  
+    	    				and
+    	    					ch.col_hea_id = cf.hf_coll_head_id		
+    	    				and
+    	    					cf.hf_status = 'A'
+    	    				and
+    	    					cf.hf_own_cus_id = 8218251		 	
+    	    				and	
+    	    					cf.coll_hf_prior_id = lb.coll_hf_prior_id 
+    	    				and	
+    	    					(lb.la_acc_id = ce.cus_acc_id or
+    	    					lb.acc_no = ce.cus_acc_no or
+    	    					lb.request_no = ce.request_no)
+    	    				and
+    	    					ce.cus_id = c.cus_id
+    	    				and
+    	    					c.cus_typ_id in (1998,1999)	
+    	    				and
+    	    					ce.org_uni_id = ou.org_uni_id   	    						
+    	        		};
+
+    	    		}
+    		
+    		}
+    			
+    	}
+    	catch (SQLException sqle) {
+    		throw sqle;
+    	}
+    	return iter;
+	} 
+
+	
+	 public BigDecimal getEveId(){
+    	return this.eve_id;
+    }
+	 
+	 
+	 /**
+	* Uzima osnovnu adresu ukoliko opca dopisna aresa ne postoji
+	*/
+    public void getBasicAddress(BigDecimal cus_id,BO17Data p_data) throws SQLException{
+    try {	
+    	
+    	#sql [connCtx]  {
+			select 
+    			a.address,a.postoffice,a.city_name 
+    		into
+    			:(p_data.customer_address),:(p_data.customer_postoffice),:(p_data.customer_city)
+    		from 
+    			cust_address a, 
+    			address_type b 
+    		where 
+    			a.add_typ_id = b.add_typ_id  and
+    			upper(rtrim(ltrim(b.add_typ_id)))='MAINADDRESS' and
+    			a.cus_id = :(cus_id)
+
+			};
+    	
+    } catch(SQLException e) {
+		if (e.getErrorCode()!=100){
+			System.out.println("SQL select getBasicAddress  izbacio Exception!!!" + e.getMessage());	
+			throw e;
+		}
+		else 
+			{
+				System.out.println("SQL select getBasicAddress  nije selektirao nista!!!" + e.getMessage());
+				throw e;
+			}
+    }
+}
+    
+    public void organizationUnit(BO17Data p_data) throws SQLException{
+    	 try {	
+        	String code="";
+        	String name="";
+        	if (p_data.getOrg_uni_id()==null) 
+        		{
+        			p_data.setOrg_uni_code("");
+        			p_data.setOrg_uni_name("");
+        			return;
+        		}
+        	#sql [connCtx]  {
+    			select 
+        			a.code,a.name
+        		into
+        			:(code),:(name)
+        		from  
+        			organization_unit a 
+        		where 
+        			a.org_uni_id=:(p_data.getOrg_uni_id())
+    			};
+    			p_data.setOrg_uni_code(code);
+            	p_data.setOrg_uni_name(name);
+        } catch(SQLException e) {
+    		if (e.getErrorCode()!=100){
+    			System.out.println("SQL select organizationUnit()  izbacio Exception!!!" + e.getMessage());	
+    			throw e;
+    		}
+    		else 
+    			{
+    				System.out.println("SQL select organizationUnit()  nije selektirao nista!!!" + e.getMessage());
+    				throw e;
+    			}
+        }
+    }
+    
+	public BigDecimal insertIntoEvent() {
+		eve_id = null;
+	
+		try {
+			YXYB0 eve1 = new YXYB0(bc); 
+			YXYD0 genId = new YXYD0(bc);
+			eve_id = genId.getNewId();
+			
+			HashMap event = new HashMap();
+			
+			event.put("eve_id",eve_id);
+			event.put("eve_typ_id",new BigDecimal("1888325003"));
+			event.put("event_date",new java.sql.Date(System.currentTimeMillis()));
+			event.put("cmnt","Izvješæe za knjižice vozila");
+			event.put("use_id",bc.getUserID());
+			event.put("ext_event_code",null);
+			event.put("ext_event_num",null);
+			//event.put("org_uni_id", new BigDecimal("53253"));
+			event.put("bank_sign",bc.getBankSign());
+			eve1.insertEvent(event);
+			bc.updateEveID(eve_id);
+		}
+		catch(Exception e) {
+			return null;
+		}
+		return eve_id;
+	}
+	
+}

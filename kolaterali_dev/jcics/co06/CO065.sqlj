@@ -1,0 +1,464 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+
+#sql iterator Iter65 (
+		String ip_activ_and_pay
+		);    
+public class CO065 extends RemoteTransaction {
+ 	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO065.sqlj,v 1.32 2017/12/21 14:04:04 hrazst Exp $";
+	private DeclCO06 decl = null;
+	private YOY63 SQLhelper = null;
+	CollHeadSelectData chs = new CollHeadSelectData();
+	
+	public CO065(DeclCO06 decl) { 
+		this.decl = decl;
+	}
+	
+	public void execute(TransactionContext tc) throws Exception {
+		tc.debug ( "......COL_HEA_ID " + decl.vesselselectmapping.COL_HEA_ID);
+        
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();             
+        SQLhelper = new YOY63(tc);
+        
+		Iter65 iter65=null;	   		   		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		// select iz COLL_HEAD		
+		YOY42 headSel = new YOY42(tc, chs);
+		chs.COL_HEA_ID = decl.vesselselectmapping.COL_HEA_ID;		
+		headSel.selectFromCollHead();
+		fillDeclFromCHSObj();				
+		tc.debug(chs.toString());
+        
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);    		
+
+		try{
+
+			#sql [ctx] {SELECT 
+								col_ves_id , 
+								col_hea_id , 
+								ves_typ_id ,
+								har_off_id , 
+								ves_name ,
+								ves_made_year ,
+								ves_num_engine ,
+								ves_sign ,
+								ves_brutto ,
+								ves_netto ,
+								ves_number ,
+								ves_licence ,
+								ves_colour ,							
+								ves_power_kw ,
+								ves_equipment ,
+								har_sec_id ,
+								ves_dsc ,
+								ves_ins_date ,
+		                        estimate_cus_id  
+		INTO
+								:(decl.vesselselectmapping.COL_SEC_ID),    													                                                
+								:(decl.vesselselectmapping.COL_HEA_ID),
+								:(decl.vesselselectmapping.SEC_TYP_ID),                  
+ 								:(decl.vesselselectmapping.HAR_OFF_ID),
+								:(decl.vesselselectmapping.Ves_txtName),                  
+								:(decl.vesselselectmapping.Ves_txMadeYear), 
+								:(decl.vesselselectmapping.Vessel_txtNumEngine), 
+								:(decl.vesselselectmapping.Ves_txtSign), 
+								:(decl.vesselselectmapping.Ves_txtBrutto), 
+								:(decl.vesselselectmapping.Ves_txtNetto), 
+								:(decl.vesselselectmapping.Ves_txtNumber), 
+								:(decl.vesselselectmapping.Ves_txtLicence), 
+								:(decl.vesselselectmapping.Vehicle_txtVehColour), 
+								:(decl.vesselselectmapping.Vessel_txtVehPowerKW), 
+								:(decl.vesselselectmapping.Vehicle_txtVehEquipment), 
+								:(decl.vesselselectmapping.HAR_SEC_ID), 
+								:(decl.vesselselectmapping.Ves_txtDsc), 
+								:(decl.vesselselectmapping.Vehi_txtVehInsDate),
+		                        :(decl.vesselselectmapping.Coll_txtEUsePersonCusId)
+		FROM coll_vessel
+		WHERE COL_HEA_ID = :(decl.vesselselectmapping.COL_HEA_ID) };		
+	 
+		}catch(java.sql.SQLException se){			
+			tc.debug ( "......CO065.sqlj select from coll_vessel SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO065.sqlj select from coll_vessel SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO065.sqlj select from coll_vessel SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO065: Error selecting coll_vessel ","err411a", null);
+		}
+				                    
+        if(decl.vesselselectmapping.Coll_txtEUsePersonCusId != null){
+
+            try{
+                    #sql [ctx]  {SELECT register_no,
+                                        name,
+                                        tax_number
+                                INTO
+                                        :(decl.vesselselectmapping.Coll_txtEUsePersonId),
+                                        :(decl.vesselselectmapping.Coll_txtEUsePersonName),
+                                        :(decl.vesselselectmapping.Coll_txtEUsePersonIdOIB)
+                                FROM  customer  
+                                WHERE cus_id =:(decl.vesselselectmapping.Coll_txtEUsePersonCusId)
+                            }; 
+            }catch(java.sql.SQLException se) {
+                 if (se.getErrorCode()==100) 
+                    throw new VestigoTMException(1,"No data found!", "err012", null);
+                else 
+                    throw se;
+            }       
+        }          
+        // dohvat iz tabele VESSEL_TYPE
+		try{    
+			if (decl.vesselselectmapping.SEC_TYP_ID != null){
+	
+					#sql [ctx] {SELECT	ves_code, ves_dsc
+             			INTO	:(decl.vesselselectmapping.Coll_txtSecTypeCode), :(decl.vesselselectmapping.Coll_txtSecTypeName)
+             			FROM 	VESSEL_TYPE 
+     	       			WHERE 	ves_typ_id = :(decl.vesselselectmapping.SEC_TYP_ID) };					
+				 
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }
+	    
+	    //dohvat iz tabele HARBOUR_OFFICE
+		try{    
+			if (decl.vesselselectmapping.HAR_OFF_ID != null){
+	
+					#sql [ctx] {SELECT hao_office
+	             			INTO	:(decl.vesselselectmapping.Vessel_txtHarbour)
+	             			FROM 	HARBOUR_OFFICE 
+	     	       			WHERE 	har_off_id = :(decl.vesselselectmapping.HAR_OFF_ID) };					
+				
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }
+    
+	    //dohvat iz tabele HARBOUR_OFF_SEC
+	    try{    
+			if (decl.vesselselectmapping.HAR_SEC_ID != null){
+	
+					#sql [ctx] {SELECT has_office
+		             			INTO	:(decl.vesselselectmapping.Vessel_txtHarbourSec)
+		             			FROM 	HARBOUR_OFF_SEC 
+		     	       			WHERE 	har_sec_id = :(decl.vesselselectmapping.HAR_SEC_ID) };					
+				
+	    	} 
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }
+    
+	    //provjera da li kolateral ima aktivnu policu za koju je placena premija
+	    //dohvatiti status police osiguranja i da li je placena premija
+		decl.vesselselectmapping.ip_activ_and_pay = "N";
+        String add_request = "N";   						
+		#sql[ctx] iter65 = {
+				SELECT ip_act_noact as ip_activ_and_pay
+			 	FROM insurance_policy
+				WHERE col_hea_id = :(decl.vesselselectmapping.COL_HEA_ID)
+				AND ip_act_noact = 'A' and
+				ip_date_sec_val >= current date and
+			    ip_vali_until >= current date
+				fetch first row only
+		    };
+		while (iter65.next()) {
+			 decl.vesselselectmapping.ip_activ_and_pay = iter65.ip_activ_and_pay();
+             add_request = "D";   
+		}
+		if(iter65!=null) {
+		      try {
+		          iter65.close();
+		      } catch (Exception ignored) {}
+		} 
+		//dohvat podataka koji se izracunavaju
+		CalculationData cData = SQLhelper.getAllCalculationData(decl.vesselselectmapping.COL_HEA_ID);               
+        
+        decl.vesselselectmapping.Kol_txtPonderMVP = cData.MVP_ponder;
+        decl.vesselselectmapping.Coll_txtWcaAmountDate = cData.wcov_date;
+        decl.vesselselectmapping.Coll_txtWcaAmount = cData.wcov_amount;
+        decl.vesselselectmapping.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+        decl.vesselselectmapping.Coll_txtUsedWCAAmount = cData.wca_amount;
+        
+        decl.vesselselectmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+        decl.vesselselectmapping.Coll_txtRealPonderAmount=cData.real_ponder;           				
+        
+        kolData.colHeaId = decl.vesselselectmapping.COL_HEA_ID;
+        kolData.colCurId = decl.vesselselectmapping.REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.vesselselectmapping.Coll_txtNomiValu;
+        
+        kolData.colCatId = decl.vesselselectmapping.COL_CAT_ID;
+        kolData.colTypId = decl.vesselselectmapping.COL_TYPE_ID;
+        kolData.colSubTypId = decl.vesselselectmapping.SEC_TYP_ID;
+        kolData.addRequest = add_request;
+
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+        
+        decl.vesselselectmapping.Coll_txtAcouValue = kolData.ponderAmount;
+        decl.vesselselectmapping.Coll_txtAcouDate = todaySQLDate;
+
+        decl.vesselselectmapping.Coll_txtSumPartVal = kolData.exposureAmount;
+        decl.vesselselectmapping.Coll_txtSumPartDat = kolData.exposureDate;   
+        
+        decl.vesselselectmapping.Coll_txtCollMvpPonderMin = kolData.minPonder;
+        decl.vesselselectmapping.Coll_txtCollMvpPonder = kolData.dflPonder;
+        decl.vesselselectmapping.Coll_txtCollMvpPonderMax = kolData.maxPonder;
+        
+        decl.vesselselectmapping.Coll_txtAvailPonValue = kolData.restPonAmount;
+        decl.vesselselectmapping.Coll_txtNDAvailDate = kolData.NDCoverDate;
+        
+        decl.vesselselectmapping.Coll_txtAvailValue = kolData.restAmount;
+        decl.vesselselectmapping.Coll_txtAvailDate = kolData.coverDate;
+        
+        //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja
+
+        try{ 
+            #sql [ctx] {
+                            SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+                            INTO
+                            :(decl.vesselselectmapping.Coll_txtCoConfirm),
+                            :(decl.vesselselectmapping.Coll_txtCoConfirmUserId),
+                            :(decl.vesselselectmapping.Coll_txtCoConfirmUserName),
+                            :(decl.vesselselectmapping.Coll_txtCoConfirmTime)
+                            FROM co_chg_history as a, app_user as app
+                            WHERE 
+                                   a.col_hea_id = :(decl.vesselselectmapping.COL_HEA_ID)
+                            and    a.co_use_id=app.use_id
+                            and
+                                    a.co_ind='D'
+                            and
+                                    a.co_chg_ts is null
+                            and co_chg_use_id is null
+                            FETCH FIRST ROWS ONLY
+                           };  
+                
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        } 
+	}
+	  
+	private void fillDeclFromCHSObj () throws Exception {		
+		decl.vesselselectmapping.COL_HEA_ID = chs.COL_HEA_ID;    													                                                
+		decl.vesselselectmapping.COL_TYPE_ID = chs.COL_TYPE_ID;  
+		decl.vesselselectmapping.Coll_txtCode = chs.Coll_txtCode; 
+		decl.vesselselectmapping.Coll_txtDesc = chs.Coll_txtDesc;  
+		decl.vesselselectmapping.REAL_EST_EUSE_ID = chs.REAL_EST_EUSE_ID;
+		decl.vesselselectmapping.Coll_txtEstnValu = chs.Coll_txtEstnValu;                   
+		decl.vesselselectmapping.Coll_txtEstnDate = chs.Coll_txtEstnDate;                   
+		decl.vesselselectmapping.Coll_txtDatnFrom = chs.Coll_txtDatnFrom;                   
+		decl.vesselselectmapping.Coll_txtDatnUnti = chs.Coll_txtDatnUnti;                   
+		decl.vesselselectmapping.Coll_txtNomiDesc = chs.Coll_txtNomiDesc; 
+		decl.vesselselectmapping.Coll_txtNomiValu = chs.Coll_txtNomiValu;                   		
+		decl.vesselselectmapping.Coll_txtNomiDate = chs.Coll_txtNomiDate; 
+		decl.vesselselectmapping.Coll_txtLiquValu = chs.Coll_txtLiquValu;                  		
+		decl.vesselselectmapping.Coll_txtLiquDate = chs.Coll_txtLiquDate;                   		
+		decl.vesselselectmapping.Coll_txtBptcValu = chs.Coll_txtBptcValu;                   		
+		decl.vesselselectmapping.Coll_txtBptcDate = chs.Coll_txtBptcDate; 
+		decl.vesselselectmapping.REAL_EST_NM_CUR_ID = chs.REAL_EST_NM_CUR_ID; 
+		decl.vesselselectmapping.CUS_ID = chs.CUS_ID;   
+		decl.vesselselectmapping.COLL_CUS_ID = chs.COLL_CUS_ID;   
+		decl.vesselselectmapping.Coll_txtDateToLop = chs.Coll_txtDateToLop;   
+		decl.vesselselectmapping.Coll_txtDateRecLop = chs.Coll_txtDateRecLop; 
+		decl.vesselselectmapping.Coll_txtRecLop = chs.Coll_txtRecLop; 
+		decl.vesselselectmapping.Coll_txtComDoc = chs.Coll_txtComDoc;                              		                                      
+		decl.vesselselectmapping.Coll_txtMissingDoc = chs.Coll_txtMissingDoc;                          		                                      
+		decl.vesselselectmapping.Coll_txtDateToDoc = chs.Coll_txtDateToDoc;                          		                                      
+		decl.vesselselectmapping.Coll_txtDateRecDoc = chs.Coll_txtDateRecDoc;                  		                                    
+		decl.vesselselectmapping.Coll_txtRevaCoefMan = chs.Coll_txtRevaCoefMan;                    		                                         
+		decl.vesselselectmapping.Coll_txtRevaDate = chs.Coll_txtRevaDate;                            		                                           
+		decl.vesselselectmapping.Coll_txtRevaDateAM = chs.Coll_txtRevaDateAM;                         		                                         
+		decl.vesselselectmapping.Coll_txtRevaBValue = chs.Coll_txtRevaBValue;                          		                                          
+		decl.vesselselectmapping.Coll_txtRevaBDate = chs.Coll_txtRevaBDate;                           		
+		decl.vesselselectmapping.Coll_txtRevaBDateAM = chs.Coll_txtRevaBDateAM;                       	     
+		decl.vesselselectmapping.Coll_txtAmortAge = chs.Coll_txtAmortAge;                            	    
+		decl.vesselselectmapping.AMORT_PER_CAL_ID = chs.AMORT_PER_CAL_ID;                        	                            
+		decl.vesselselectmapping.Coll_txtAmortValCal = chs.Coll_txtAmortValCal;
+		decl.vesselselectmapping.Coll_txtNepoValue = chs.Coll_txtNepoValue;                           	                            
+		decl.vesselselectmapping.Coll_txtNepoDate = chs.Coll_txtNepoDate;                            	                            
+		decl.vesselselectmapping.Coll_txtNepoPerCal = chs.Coll_txtNepoPerCal; 
+		decl.vesselselectmapping.Coll_txtThirdRight = chs.Coll_txtThirdRight;                          	                            
+		decl.vesselselectmapping.THIRD_RIGHT_CUR_ID = chs.THIRD_RIGHT_CUR_ID;                   	                            
+		decl.vesselselectmapping.Coll_txtThirdRightInNom = chs.Coll_txtThirdRightInNom;                      		                                         
+		decl.vesselselectmapping.Coll_txtThirdRightDate = chs.Coll_txtThirdRightDate;                    	                                                        		                                         
+		decl.vesselselectmapping.Coll_txtHfsValue = chs.Coll_txtHfsValue;                           	                                                        		                                         
+		decl.vesselselectmapping.Coll_txtHfsValueDate = chs.Coll_txtHfsValueDate;                         		                                         
+		decl.vesselselectmapping.Coll_txtHfsValueLastOne = chs.Coll_txtHfsValueLastOne;                      		                                         
+		decl.vesselselectmapping.Coll_txtHfsDateLastOne = chs.Coll_txtHfsDateLastOne;     
+		decl.vesselselectmapping.Coll_txtAcouValue = chs.Coll_txtAcouValue;                  
+		decl.vesselselectmapping.Coll_txtAcouDate = chs.Coll_txtAcouDate;                          
+		decl.vesselselectmapping.Coll_txtAcouBValue = chs.Coll_txtAcouBValue;                        
+		decl.vesselselectmapping.Coll_txtAcouBDate = chs.Coll_txtAcouBDate;  
+		decl.vesselselectmapping.Coll_txtSumLimitVal = chs.Coll_txtSumLimitVal;                                                     
+		decl.vesselselectmapping.Coll_txtSumLimitDat = chs.Coll_txtSumLimitDat;                                                       
+		decl.vesselselectmapping.Coll_txtSumPartVal = chs.Coll_txtSumPartVal;                                                         
+		decl.vesselselectmapping.Coll_txtSumPartDat = chs.Coll_txtSumPartDat;
+		decl.vesselselectmapping.Coll_txtAvailValue = chs.Coll_txtAvailValue;                                                       
+		decl.vesselselectmapping.Coll_txtAvailPerCal = chs.Coll_txtAvailPerCal;                                                       
+		decl.vesselselectmapping.Coll_txtAvailDate = chs.Coll_txtAvailDate;  
+		decl.vesselselectmapping.INSPOL_IND = chs.INSPOL_IND;  
+		decl.vesselselectmapping.COL_PLACE = chs.COL_PLACE; 
+		decl.vesselselectmapping.COL_COUNTY = chs.COL_COUNTY; 
+		decl.vesselselectmapping.COL_DISTRICT = chs.COL_DISTRICT; 
+		decl.vesselselectmapping.COL_RESI_QUAR = chs.COL_RESI_QUAR; 
+		decl.vesselselectmapping.Coll_txtCollMvpPonder = chs.Coll_txtCollMvpPonder;
+		decl.vesselselectmapping.Coll_txtCollHnbPonder = chs.Coll_txtCollHnbPonder; 
+		decl.vesselselectmapping.Coll_txtCollRzbPonder = chs.Coll_txtCollRzbPonder;
+		decl.vesselselectmapping.Coll_txtDateFrom = chs.Coll_txtDateFrom;                   	                         
+		decl.vesselselectmapping.Coll_txtDateUnti = chs.Coll_txtDateUnti;                   	 
+		decl.vesselselectmapping.Coll_txtAddData = chs.Coll_txtAddData;  
+		decl.vesselselectmapping.STATUS = chs.STATUS;                      		                          
+		decl.vesselselectmapping.SPEC_STATUS = chs.SPEC_STATUS;  
+		decl.vesselselectmapping.USE_OPEN_ID = chs.USE_OPEN_ID;
+		decl.vesselselectmapping.USE_ID = chs.USE_ID;
+		decl.vesselselectmapping.Coll_txtOpeningTs = chs.Coll_txtOpeningTs;
+		decl.vesselselectmapping.Coll_txtUserLock = chs.Coll_txtUserLock;
+		decl.vesselselectmapping.Coll_txtEUseIdLogin = chs.Coll_txtEUseIdLogin;
+		decl.vesselselectmapping.Coll_txtEUseIdName = chs.Coll_txtEUseIdName;
+		decl.vesselselectmapping.Coll_txtEUseIdLoginOIB=chs.Coll_txtEUseIdLoginOIB;
+		decl.vesselselectmapping.Coll_txtEstnCurr = chs.Coll_txtEstnCurr;
+		decl.vesselselectmapping.Coll_txtCarrierRegisterNo = chs.Coll_txtCarrierRegisterNo;
+		decl.vesselselectmapping.Coll_txtCarrierName = chs.Coll_txtCarrierName;
+		decl.vesselselectmapping.Coll_txtOwnerRegisterNo = chs.Coll_txtOwnerRegisterNo;
+		decl.vesselselectmapping.Coll_txtOwnerName = chs.Coll_txtOwnerName;
+		decl.vesselselectmapping.Coll_txtThirdRightCurCodeChar = chs.Coll_txtThirdRightCurCodeChar;	
+		decl.vesselselectmapping.Coll_txtUseOpenIdLogin = chs.Coll_txtUseOpenIdLogin;
+		decl.vesselselectmapping.Coll_txtUseOpenIdName = chs.Coll_txtUseOpenIdName;
+		decl.vesselselectmapping.Coll_txtUseIdLogin = chs.Coll_txtUseIdLogin;
+		decl.vesselselectmapping.Coll_txtUseIdName = chs.Coll_txtUseIdName; 					
+		decl.vesselselectmapping.Coll_txtAmortPerCal = chs.Coll_txtAmortPerCal;				
+		decl.vesselselectmapping.Coll_txtCollTypeCode = chs.Coll_txtCollTypeCode;
+		decl.vesselselectmapping.Coll_txtCollTypeName  = chs.Coll_txtCollTypeName;
+		decl.vesselselectmapping.USER_LOCK = chs.USER_LOCK;
+		decl.vesselselectmapping.Coll_txtNmValCurr = chs.Coll_txtNmValCurr;
+		decl.vesselselectmapping.Coll_txtEligibility = chs.Coll_txtEligibility; 
+		decl.vesselselectmapping.Coll_txtEligDesc = chs.Coll_txtEligDesc;
+		decl.vesselselectmapping.Coll_txtAcumBuyValue = chs.Coll_txtAcumBuyValue;
+		decl.vesselselectmapping.ORIGIN_ORG_UNI_ID = chs.ORIGIN_ORG_UNI_ID;
+		decl.vesselselectmapping.ORG_UNI_ID = chs.ORG_UNI_ID;
+		decl.vesselselectmapping.USE_ID_VER = chs.USE_ID_VER;
+		decl.vesselselectmapping.USE_ID_AUT = chs.USE_ID_AUT;
+		decl.vesselselectmapping.VERIFICATION_TS = chs.VERIFICATION_TS;
+		decl.vesselselectmapping.AUTORIZATION_TS = chs.AUTORIZATION_TS;
+		decl.vesselselectmapping.MORTGAGE_STATUS = chs.MORTGAGE_STATUS;
+		decl.vesselselectmapping.COLLATERAL_STATUS = chs.COLLATERAL_STATUS;
+		decl.vesselselectmapping.WORKFLOW_INDIC = chs.WORKFLOW_INDIC;
+		decl.vesselselectmapping.COVER_INDIC = chs.COVER_INDIC;
+		decl.vesselselectmapping.VER_SEND_TS = chs.VER_SEND_TS;
+		decl.vesselselectmapping.BASIC_DATA_STATUS = chs.BASIC_DATA_STATUS;
+		decl.vesselselectmapping.COLL_DATA_STATUS = chs.COLL_DATA_STATUS;
+		decl.vesselselectmapping.COL_CAT_ID = chs.COL_CAT_ID;	
+		decl.vesselselectmapping.USE_ID_VER_SND = chs.USE_ID_VER_SND;
+		decl.vesselselectmapping.C_FINANCIAL_FLAG = chs.FINANCIAL_FLAG;	
+		decl.vesselselectmapping.C_txtUseIdSndVerLogin = chs.C_txtUseIdSndVerLogin;
+		decl.vesselselectmapping.C_txtUseIdSndVerName = chs.C_txtUseIdSndVerName;
+		decl.vesselselectmapping.C_txtUseIdVerLogin = chs.C_txtUseIdVerLogin;
+		decl.vesselselectmapping.C_txtUseIdVerName = chs.C_txtUseIdVerName;
+		decl.vesselselectmapping.C_txtUseIdAutLogin = chs.C_txtUseIdAutLogin;
+		decl.vesselselectmapping.C_txtUseIdAutName = chs.C_txtUseIdAutName;	
+		decl.vesselselectmapping.Coll_txtBasicDataSt = chs.Coll_txtBasicDataSt;
+		decl.vesselselectmapping.Coll_txtCollDataSt = chs.Coll_txtCollDataSt;
+		decl.vesselselectmapping.Coll_txtCoverIndic = chs.Coll_txtCoverIndic;
+		decl.vesselselectmapping.Coll_txtFinFlag = chs.Coll_txtFinFlag;
+		decl.vesselselectmapping.Coll_txtMortgageSt = chs.Coll_txtMortgageSt;
+		decl.vesselselectmapping.ColRba_txtEligibility = chs.ColRba_txtEligibility;
+		decl.vesselselectmapping.ColRba_txtEligDesc = chs.ColRba_txtEligDesc;
+		decl.vesselselectmapping.KolLow_txtEligibility = chs.KolLow_txtEligibility;
+		decl.vesselselectmapping.KolLow_txtEligDesc = chs.KolLow_txtEligDesc;		
+		decl.vesselselectmapping.Kol_txtRbaEligDsc = chs.Kol_txtRbaEligDsc; 	
+		decl.vesselselectmapping.Kol_txtVehiAmount = chs.Coll_txtEstnValu;  
+		decl.vesselselectmapping.Kol_txtVehiCur = chs.Coll_txtNmValCurr;           
+		decl.vesselselectmapping.veh_cur_id = chs.REAL_EST_NM_CUR_ID;		
+		decl.vesselselectmapping.Vehi_txtVehKasko = chs.INSPOL_IND;   
+		decl.vesselselectmapping.Coll_txtB1Eligibility = chs.Coll_txtB1Eligibility;
+		decl.vesselselectmapping.Coll_txtB1EligDesc = chs.Coll_txtB1EligDesc;
+		decl.vesselselectmapping.Coll_txtB2IRBEligibility = chs.Coll_txtB2IRBEligibility;
+		decl.vesselselectmapping.Coll_txtB2IRBEligDesc = chs.Coll_txtB2IRBEligDesc;		
+		decl.vesselselectmapping.Kol_txtCRMHnb=chs.Kol_txtCRMHnb;		
+		decl.vesselselectmapping.Coll_txtNDEligibility=chs.Coll_txtNDEligibility;
+        decl.vesselselectmapping.Coll_txtNDEligDesc=chs.Coll_txtNDEligDesc;        
+
+        decl.vesselselectmapping.Coll_txtB2HNB= chs.b2_hnb_insag_elig;
+        decl.vesselselectmapping.Coll_txtB2IRB= chs.b2_irb_insag_elig;
+        decl.vesselselectmapping.Coll_txtB2HNB_OLD= chs.b2_hnb_insag_elig;
+        decl.vesselselectmapping.Coll_txtB2IRB_OLD= chs.b2_irb_insag_elig;
+        decl.vesselselectmapping.EST_TYPE_CODE= chs.est_type;
+        decl.vesselselectmapping.Coll_txtTypelValuer= chs.est_type_desc; 
+        decl.vesselselectmapping.Coll_txtInternalValuer= chs.real_est_estn_int; 
+        decl.vesselselectmapping.Coll_txtAssessmentMethod1Code= chs.met_est_1;
+        decl.vesselselectmapping.Coll_txtAssessmentMethod2Code= chs.met_est_2;
+        decl.vesselselectmapping.Coll_txtInsTotalCoverCode= null;
+        decl.vesselselectmapping.Coll_txtNonInsReasoneCode= chs.non_ins_reason;
+        decl.vesselselectmapping.Coll_txtAccuracyEstimatesCode= chs.prec_exec_est;
+        decl.vesselselectmapping.Coll_txtFairnessValuesCode= chs.correct_value; 
+        decl.vesselselectmapping.Coll_txtDeadLinesCode= chs.respect_deadline;
+        decl.vesselselectmapping.Coll_txtProfByRBACode= chs.prof_to_rba;
+        decl.vesselselectmapping.Coll_txtProfByClientCode= chs.prof_to_client; 
+        decl.vesselselectmapping.Coll_txtTypeTVCode= chs.real_est_nom_type; 
+        decl.vesselselectmapping.Coll_txtTypeTV= chs.real_est_nom_type_desc; 
+        decl.vesselselectmapping.USE_ID_CO= chs.use_id_co;
+        decl.vesselselectmapping.Coll_txtCollOfficer= chs.use_id_co_name;
+        decl.vesselselectmapping.Coll_txtContractTypeCode= chs.contract_type; 
+        decl.vesselselectmapping.Coll_txtContractTypeDesc= chs.contract_type_desc; 
+        decl.vesselselectmapping.Coll_txtRealPonderAmount= null; 
+        decl.vesselselectmapping.Coll_txtWcaOrigCurrencyCode= null;  
+        decl.vesselselectmapping.Coll_txtUsedWCAAmount= null; 
+
+        decl.vesselselectmapping.Coll_txtUsedInRecovery= chs.used_in_recovery; 
+        decl.vesselselectmapping.Coll_txtRecoveryProcStat= chs.recovery_proc_stat; 
+        decl.vesselselectmapping.Coll_txtKindOfRecoveryCode= chs.kind_of_recovery; 
+        decl.vesselselectmapping.Coll_txtKindOfRecoveryDesc= chs.kind_of_recovery_desc; 
+        decl.vesselselectmapping.Coll_txtFullAmountRecovery= chs.full_amount; 
+        decl.vesselselectmapping.Coll_txtFullAmountRecoveryCur= chs.full_amount_cur_codeChar;
+        decl.vesselselectmapping.CUR_ID_FULL_AMOUNT= chs.full_amount_cur_id; 
+        decl.vesselselectmapping.Coll_txtRecoveryAmount= chs.recovery_amount; 
+        decl.vesselselectmapping.Coll_txtRecoveryAmountCur= chs.recovery_cur_codeChar;
+        decl.vesselselectmapping.CUR_ID_RECOVERY_AMOUNT= chs.recovery_cur_id; 
+        decl.vesselselectmapping.Coll_txtRecoveryDate= chs.recovery_date; 
+        decl.vesselselectmapping.Coll_txtRecoveryRate= chs.recovery_rate; 
+        decl.vesselselectmapping.Coll_txtRecoveryComment= chs.recovery_comment;
+        
+        decl.vesselselectmapping.Coll_txtRealizationAmount=chs.realization_amount;
+        decl.vesselselectmapping.CUR_ID_REALIZATION_AMOUNT=chs.realization_cur_id;
+        decl.vesselselectmapping.Coll_txtRealizationAmountCur=chs.realization_cur_char;
+        decl.vesselselectmapping.Coll_txtRealizationDate=chs.realization_date;
+        decl.vesselselectmapping.Coll_txtKindOfRealization=chs.realization_kind;
+        decl.vesselselectmapping.Coll_txtCostRealization=chs.realization_cost;   
+        
+        decl.vesselselectmapping.REALIZATION_COST_CUR_ID=chs.realization_cost_cur_id;
+        decl.vesselselectmapping.Coll_txtCostRealizationCur=chs.realization_cost_cur_code_char;
+        decl.vesselselectmapping.Coll_txtForSale=chs.for_sale;
+        decl.vesselselectmapping.Coll_txtForSaleDate=chs.for_sale_date;
+        decl.vesselselectmapping.Coll_txtTakeOverBank=chs.takeover_from_bank;
+        
+        decl.vesselselectmapping.Coll_txtCollateralGCTCCode= chs.gctc_code; 
+        decl.vesselselectmapping.Coll_txtCollateralGCTCDesc= chs.gctc_desc; 
+        decl.vesselselectmapping.Coll_txtEndorsementTypeGCTCCode= chs.endorsement_type_code;
+        decl.vesselselectmapping.Coll_txtEndorsementTypeGCTCDesc= chs.endorsement_type_desc;
+        decl.vesselselectmapping.Coll_txtObjectTypeGCTCCode= chs.object_type_code; 
+        decl.vesselselectmapping.Coll_txtObjectTypeGCTCDesc= chs.object_type_desc; 
+        decl.vesselselectmapping.Coll_txtPropertyTypeGCTCCode= chs.property_type_code; 
+        decl.vesselselectmapping.Coll_txtPropertyTypeGCTCDesc= chs.property_type_desc; 
+        decl.vesselselectmapping.Coll_txtB2ValueLLAmount= null;
+        decl.vesselselectmapping.Coll_txtB2ValueLLCurCode= null; 
+        decl.vesselselectmapping.Coll_txtB2ValueGLAmount= null;
+        decl.vesselselectmapping.Coll_txtB2ValueGLCurCode= null; 
+        decl.vesselselectmapping.Coll_txtEconomicLife = chs.col_eco_life; 
+        
+        decl.vesselselectmapping.Coll_txtProccessing="";
+        decl.vesselselectmapping.Coll_txtProccessingTimestamp=chs.chg_nom_val_proc_ts;   
+	}	 
+}   
+

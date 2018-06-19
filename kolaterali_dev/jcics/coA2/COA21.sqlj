@@ -1,0 +1,627 @@
+package hr.vestigo.modules.collateral.jcics.coA2;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.framework.util.CharUtil;
+
+import java.sql.SQLException;  
+import java.math.BigDecimal;
+import java.util.Vector;
+import java.sql.Date;
+ 
+#sql iterator Iter31 (
+	BigDecimal col_in2_id,
+	String isin,
+	String name,
+	BigDecimal cus_id,
+	String register_no,
+	BigDecimal sto_mar_id,
+	String market_code,
+	String market_dsc,
+	String stock_ind,
+	BigDecimal nom_cur_id,
+	String nom_cur_code,
+	BigDecimal nom_amount,
+	BigDecimal price,
+	Date price_date,
+	BigDecimal int_rate,
+	Date maturity_date,
+	String currency_clause,
+    BigDecimal col_typ_id,
+    String col_typ_id_code,
+    String oib_vrp,
+    String daily_price,
+    String seniority_indic,
+    String basel_cus_type
+);  
+
+public class COA21 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA2/COA21.sqlj,v 1.12 2015/04/20 11:38:39 hrazst Exp $";
+	private DeclCOA2 d = null;
+
+	private class RatingData{
+	    public BigDecimal score_id=null;
+	    public String score=null;
+	}
+	
+	ConnCtx connCtx0=null;
+	
+    BigDecimal rat_typ_id_long_vrp = new BigDecimal("660835251");
+    BigDecimal rat_typ_id_short_vrp = new BigDecimal("660836251");
+
+    BigDecimal rat_typ_id_long_vrp_MD = new BigDecimal("660757251");
+    BigDecimal rat_typ_id_short_vrp_MD = new BigDecimal("660833251");
+    
+    BigDecimal rat_typ_id_VP_SP = new BigDecimal("91982780351");
+    BigDecimal rat_typ_id_VP_MD = new BigDecimal("91982745351");
+	
+	public COA21(DeclCOA2 d) {
+		this.d = d;
+	}
+	
+	public void execute (TransactionContext tc) throws Exception {
+
+		BigDecimal col_in2_id = null;		
+		BigDecimal cus_id = null;
+		String rating = "";
+		
+		if(d.isin==null) d.isin="";
+		if(CharUtil.isAsteriskWrong(d.isin)){
+			throw new VestigoTMException(1, "Transaction coA11: Wrong data! ","wrn367", null);
+		}
+		connCtx0 = tc.getContext();
+
+		Iter31 iter1=null;
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+
+		String isin_control=d.isin;
+		if (d.isin!=null){ 
+		    d.isin = d.isin.replace('*','%');
+		} else {
+		    d.isin ="%";		
+		}
+		if (d.isin .equals("")) d.isin ="%";
+		tc.debug("***isin="+d.isin);
+		
+		BigDecimal colCatId = d.col_cat_id;
+	    BigDecimal colTypId = d.col_typ_id;
+		
+	    // samo za obveznice: 619223 
+		if ( colCatId.compareTo(new BigDecimal("619223")) == 0 ) {
+		  //1. - bez LIKE
+		    // nije zadan col_typ_id
+		    if (colTypId == null) {
+                if(CharUtil.isWholeAsterisk(d.isin)) {
+                    tc.debug("[1. 0 - bez LIKE] ");
+                    #sql [connCtx0] iter1 = {    
+                        SELECT
+                            a.col_in2_id as col_in2_id,
+                            a.isin as isin,
+                            c.name as name,
+                            a.iss_cus_id as cus_id,
+                            c.register_no as register_no,
+                            c.tax_number as oib_vrp,
+                            a.nom_cur_id as nom_cur_id,
+                            a.nom_amount as nom_amount,
+                            a.sto_mar_id as sto_mar_id,
+                            a.maturity_date as maturity_date,
+                            a.int_rate as int_rate,
+                            a.stock_ind as stock_ind, 
+                            b.price as price,
+                            b.date_from as price_date,
+                            e.code_char as nom_cur_code,
+                            f.code as market_code,
+                            f.name as market_dsc,
+                            a.currency_clause as currency_clause,
+                            a.col_typ_id as col_typ_id,
+                            ct.coll_type_code as col_typ_id_code,
+                            a.daily_price,
+                            a.seniority_indic,
+                            c.basel_cus_type
+                        FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+                        WHERE a.col_cat_id = :(d.col_cat_id)
+                        and a.col_in2_id = b.col_in2_id 
+                        and b.date_from <= current date
+                        and b.date_to >= current date
+                        and a.nom_cur_id = e.cur_id
+                        and a.sto_mar_id = f.sto_exc_id
+                        and a.iss_cus_id = c.cus_id
+                        and a.col_typ_id = ct.coll_type_id
+                        ORDER BY 3 
+                        with ur
+                    };
+                    //2+.  1 - isin
+                } else if (!CharUtil.isWholeAsterisk(d.isin)) {
+                    //kontrola na isin da li je potreban like ili ne
+                    if(CharUtil.hasAsterisk(isin_control)){
+                        tc.debug("[2. 1 - sa LIKE] ");              
+                        // sa like              
+                        #sql [connCtx0] iter1 = {
+                        SELECT
+                            a.col_in2_id as col_in2_id,
+                            a.isin as isin,
+                            c.name as name,
+                            a.iss_cus_id as cus_id,
+                            c.register_no as register_no,
+                            c.tax_number as oib_vrp,
+                            a.nom_cur_id as nom_cur_id,
+                            a.nom_amount as nom_amount,
+                            a.sto_mar_id as sto_mar_id,
+                            a.maturity_date as maturity_date,
+                            a.int_rate as int_rate,
+                            a.stock_ind as stock_ind, 
+                            b.price as price,
+                            b.date_from as price_date,
+                            e.code_char as nom_cur_code,
+                            f.code as market_code,
+                            f.name as market_dsc,
+                            a.currency_clause as currency_clause,
+                            a.col_typ_id as col_typ_id,
+                            ct.coll_type_code as col_typ_id_code,
+                            a.daily_price,
+                            a.seniority_indic,
+                            c.basel_cus_type
+                        FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+                        WHERE a.col_cat_id = :(d.col_cat_id)
+                        and a.isin like :(d.isin)
+                        and a.col_in2_id = b.col_in2_id 
+                        and b.date_from <= current date
+                        and b.date_to >= current date
+                        and a.nom_cur_id = e.cur_id
+                        and a.sto_mar_id = f.sto_exc_id
+                        and a.iss_cus_id = c.cus_id
+                        and a.col_typ_id = ct.coll_type_id
+                        ORDER BY 3 
+                        with ur
+                        };          
+                    } else{
+                        tc.debug("[2.  1 - bez LIKE] ");                    
+                        // bez like         
+                        #sql [connCtx0] iter1 = {
+                        SELECT
+                            a.col_in2_id as col_in2_id,
+                            a.isin as isin,
+                            c.name as name,
+                            a.iss_cus_id as cus_id,
+                            c.register_no as register_no,
+                            c.tax_number as oib_vrp,
+                            a.nom_cur_id as nom_cur_id,
+                            a.nom_amount as nom_amount,
+                            a.sto_mar_id as sto_mar_id,
+                            a.maturity_date as maturity_date,
+                            a.int_rate as int_rate,
+                            a.stock_ind as stock_ind, 
+                            b.price as price,
+                            b.date_from as price_date,
+                            e.code_char as nom_cur_code,
+                            f.code as market_code,
+                            f.name as market_dsc,
+                            a.currency_clause as currency_clause,
+                            a.col_typ_id as col_typ_id,
+                            ct.coll_type_code as col_typ_id_code,
+                            a.daily_price,
+                            a.seniority_indic,
+                            c.basel_cus_type
+                        FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+                        WHERE a.col_cat_id = :(d.col_cat_id)
+                        and a.isin = :(isin_control)
+                        and a.col_in2_id = b.col_in2_id 
+                        and b.date_from <= current date
+                        and b.date_to >= current date
+                        and a.nom_cur_id = e.cur_id
+                        and a.sto_mar_id = f.sto_exc_id
+                        and a.iss_cus_id = c.cus_id
+                        and a.col_typ_id = ct.coll_type_id
+                        ORDER BY 3 
+                        with ur
+                        };                          
+                    }
+                }       		                
+		    } else {
+		        if(CharUtil.isWholeAsterisk(d.isin)) {
+                    tc.debug("[1. 0 - bez LIKE] ");
+                    #sql [connCtx0] iter1 = {    
+                        SELECT
+                            a.col_in2_id as col_in2_id,
+                            a.isin as isin,
+                            c.name as name,
+                            a.iss_cus_id as cus_id,
+                            c.register_no as register_no,
+                            c.tax_number as oib_vrp,
+                            a.nom_cur_id as nom_cur_id,
+                            a.nom_amount as nom_amount,
+                            a.sto_mar_id as sto_mar_id,
+                            a.maturity_date as maturity_date,
+                            a.int_rate as int_rate,
+                            a.stock_ind as stock_ind, 
+                            b.price as price,
+                            b.date_from as price_date,
+                            e.code_char as nom_cur_code,
+                            f.code as market_code,
+                            f.name as market_dsc,
+                            a.currency_clause as currency_clause,
+                            a.col_typ_id as col_typ_id,
+                            ct.coll_type_code as col_typ_id_code,
+                            a.daily_price,
+                            a.seniority_indic,
+                            c.basel_cus_type
+                        FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+                        WHERE a.col_cat_id = :(d.col_cat_id)
+                        and (a.col_typ_id = :(d.col_typ_id) OR a.col_typ_id is null)
+                        and a.col_in2_id = b.col_in2_id 
+                        and b.date_from <= current date
+                        and b.date_to >= current date
+                        and a.nom_cur_id = e.cur_id
+                        and a.sto_mar_id = f.sto_exc_id
+                        and a.iss_cus_id = c.cus_id
+                        and a.col_typ_id = ct.coll_type_id
+                        ORDER BY 3 
+                        with ur
+                    };
+                    //2+.  1 - isin
+                } else if (!CharUtil.isWholeAsterisk(d.isin)) {
+                    // kontrola na isin da li je potreban like ili ne
+                    if(CharUtil.hasAsterisk(isin_control)){
+                        tc.debug("[2. 1 - sa LIKE] ");              
+                        // sa like              
+                        #sql [connCtx0] iter1 = {
+                        SELECT
+                            a.col_in2_id as col_in2_id,
+                            a.isin as isin,
+                            c.name as name,
+                            a.iss_cus_id as cus_id,
+                            c.register_no as register_no,
+                            c.tax_number as oib_vrp,
+                            a.nom_cur_id as nom_cur_id,
+                            a.nom_amount as nom_amount,
+                            a.sto_mar_id as sto_mar_id,
+                            a.maturity_date as maturity_date,
+                            a.int_rate as int_rate,
+                            a.stock_ind as stock_ind, 
+                            b.price as price,
+                            b.date_from as price_date,
+                            e.code_char as nom_cur_code,
+                            f.code as market_code,
+                            f.name as market_dsc,
+                            a.currency_clause as currency_clause,
+                            a.col_typ_id as col_typ_id,
+                            ct.coll_type_code as col_typ_id_code,
+                            a.daily_price,
+                            a.seniority_indic,
+                            c.basel_cus_type
+                        FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+                        WHERE a.col_cat_id = :(d.col_cat_id)
+                        and (a.col_typ_id = :(d.col_typ_id) OR a.col_typ_id is null)
+                        and a.isin like :(d.isin)
+                        and a.col_in2_id = b.col_in2_id 
+                        and b.date_from <= current date
+                        and b.date_to >= current date
+                        and a.nom_cur_id = e.cur_id
+                        and a.sto_mar_id = f.sto_exc_id
+                        and a.iss_cus_id = c.cus_id
+                        and a.col_typ_id = ct.coll_type_id
+                        ORDER BY 3 
+                        with ur
+                        };          
+                    } else{
+                        tc.debug("[2.  1 - bez LIKE] ");                    
+                        // bez like         
+                        #sql [connCtx0] iter1 = {
+                        SELECT
+                            a.col_in2_id as col_in2_id,
+                            a.isin as isin,
+                            c.name as name,
+                            a.iss_cus_id as cus_id,
+                            c.register_no as register_no,
+                            c.tax_number as oib_vrp,
+                            a.nom_cur_id as nom_cur_id,
+                            a.nom_amount as nom_amount,
+                            a.sto_mar_id as sto_mar_id,
+                            a.maturity_date as maturity_date,
+                            a.int_rate as int_rate,
+                            a.stock_ind as stock_ind, 
+                            b.price as price,
+                            b.date_from as price_date,
+                            e.code_char as nom_cur_code,
+                            f.code as market_code,
+                            f.name as market_dsc,
+                            a.currency_clause as currency_clause,
+                            a.col_typ_id as col_typ_id,
+                            ct.coll_type_code as col_typ_id_code,
+                            a.daily_price,
+                            a.seniority_indic,
+                            c.basel_cus_type
+                        FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+                        WHERE a.col_cat_id = :(d.col_cat_id)
+                        and (a.col_typ_id = :(d.col_typ_id) OR a.col_typ_id is null)
+                        and a.isin = :(isin_control)
+                        and a.col_in2_id = b.col_in2_id 
+                        and b.date_from <= current date
+                        and b.date_to >= current date
+                        and a.nom_cur_id = e.cur_id
+                        and a.sto_mar_id = f.sto_exc_id
+                        and a.iss_cus_id = c.cus_id
+                        and a.col_typ_id = ct.coll_type_id
+                        ORDER BY 3 
+                        with ur
+                        };                          
+                    }
+                } 		   
+		    }
+		} else {
+            // nisu obveznice		    
+            //1. - bez LIKE
+		    if(CharUtil.isWholeAsterisk(d.isin)) {
+		        tc.debug("[1. 0 - bez LIKE] ");
+		        #sql [connCtx0] iter1 = {    
+					SELECT
+						a.col_in2_id as col_in2_id,
+						a.isin as isin,
+						c.name as name,
+						a.iss_cus_id as cus_id,
+						c.register_no as register_no,
+                        c.tax_number as oib_vrp,
+						a.nom_cur_id as nom_cur_id,
+						a.nom_amount as nom_amount,
+						a.sto_mar_id as sto_mar_id,
+						a.maturity_date as maturity_date,
+						a.int_rate as int_rate,
+						a.stock_ind as stock_ind, 
+						b.price as price,
+						b.date_from as price_date,
+						e.code_char as nom_cur_code,
+						f.code as market_code,
+						f.name as market_dsc,
+                        a.currency_clause as currency_clause,
+                        a.col_typ_id as col_typ_id,
+                        ct.coll_type_code as col_typ_id_code,
+                        a.daily_price,
+                        a.seniority_indic,
+		                c.basel_cus_type
+                    FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+					WHERE a.col_cat_id = :(d.col_cat_id)
+					and (a.col_typ_id = :(d.col_typ_id) OR a.col_typ_id is null)
+					and a.col_in2_id = b.col_in2_id 
+					and b.date_from <= current date
+					and b.date_to >= current date
+					and a.nom_cur_id = e.cur_id
+					and a.sto_mar_id = f.sto_exc_id
+					and a.iss_cus_id = c.cus_id
+                    and a.col_typ_id = ct.coll_type_id
+					ORDER BY 3 
+			        with ur
+			};
+		        //2+.  1 - isin
+		    } else if (!CharUtil.isWholeAsterisk(d.isin)) {
+			//kontrola na isin da li je potreban like ili ne
+		        if(CharUtil.hasAsterisk(isin_control)){
+		            tc.debug("[2. 1 - sa LIKE] ");				
+		            // sa like 				
+		            #sql [connCtx0] iter1 = {
+					SELECT
+						a.col_in2_id as col_in2_id,
+						a.isin as isin,
+						c.name as name,
+						a.iss_cus_id as cus_id,
+						c.register_no as register_no,
+                        c.tax_number as oib_vrp,
+						a.nom_cur_id as nom_cur_id,
+						a.nom_amount as nom_amount,
+						a.sto_mar_id as sto_mar_id,
+						a.maturity_date as maturity_date,
+						a.int_rate as int_rate,
+						a.stock_ind as stock_ind, 
+						b.price as price,
+						b.date_from as price_date,
+						e.code_char as nom_cur_code,
+						f.code as market_code,
+						f.name as market_dsc,
+                        a.currency_clause as currency_clause,
+                        a.col_typ_id as col_typ_id,
+                        ct.coll_type_code as col_typ_id_code,
+                        a.daily_price,
+                        a.seniority_indic,
+		                c.basel_cus_type
+                    FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+					WHERE a.col_cat_id = :(d.col_cat_id)
+					and (a.col_typ_id = :(d.col_typ_id) OR a.col_typ_id is null)
+					and a.isin like :(d.isin)
+					and a.col_in2_id = b.col_in2_id 
+					and b.date_from <= current date
+					and b.date_to >= current date
+					and a.nom_cur_id = e.cur_id
+					and a.sto_mar_id = f.sto_exc_id
+					and a.iss_cus_id = c.cus_id
+                    and a.col_typ_id = ct.coll_type_id
+                    ORDER BY 3 
+                    with ur
+				};			
+		        } else{
+		            tc.debug("[2.  1 - bez LIKE] ");					
+		            // bez like			
+		            #sql [connCtx0] iter1 = {
+					SELECT
+						a.col_in2_id as col_in2_id,
+						a.isin as isin,
+						c.name as name,
+						a.iss_cus_id as cus_id,
+						c.register_no as register_no,
+                        c.tax_number as oib_vrp,
+						a.nom_cur_id as nom_cur_id,
+						a.nom_amount as nom_amount,
+						a.sto_mar_id as sto_mar_id,
+						a.maturity_date as maturity_date,
+						a.int_rate as int_rate,
+						a.stock_ind as stock_ind, 
+						b.price as price,
+						b.date_from as price_date,
+						e.code_char as nom_cur_code,
+						f.code as market_code,
+						f.name as market_dsc,
+                        a.currency_clause as currency_clause,
+                        a.col_typ_id as col_typ_id,
+                        ct.coll_type_code as col_typ_id_code,
+                        a.daily_price,
+                        a.seniority_indic,
+		                c.basel_cus_type
+                    FROM coll_in2 a, coll_in2_price b, currency e, stock_exchange f, customer c, collateral_type ct
+					WHERE a.col_cat_id = :(d.col_cat_id)
+					and (a.col_typ_id = :(d.col_typ_id) OR a.col_typ_id is null)
+					and a.isin = :(isin_control)
+					and a.col_in2_id = b.col_in2_id 
+					and b.date_from <= current date
+					and b.date_to >= current date
+					and a.nom_cur_id = e.cur_id
+					and a.sto_mar_id = f.sto_exc_id
+					and a.iss_cus_id = c.cus_id
+                    and a.col_typ_id = ct.coll_type_id
+                    ORDER BY 3 
+                    with ur
+				};							
+		        }
+		    } 
+		}
+		tc.debug ("*** Zavrseni svi IF-ovi! ***");
+		int number_of_rows=TransactionContext.LOOKUP_FETCH_SIZE;
+		int level=d.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+
+		int count=0;
+		int count_returned=0;
+		while (iter1.next()){
+		    // za svaki ISIN dohvatiti long i short rating			
+			if(start<=count && start+number_of_rows>count){
+				Vector row = new Vector();
+				Vector unique = new Vector();
+				rating = "";				
+				col_in2_id = iter1.col_in2_id();
+				cus_id = iter1.cus_id();
+				
+				RatingData data_short_SP = this.GetRatingData(col_in2_id, this.rat_typ_id_short_vrp);
+				RatingData data_long_SP = this.GetRatingData(col_in2_id, this.rat_typ_id_long_vrp);
+
+                RatingData data_short_MD = this.GetRatingData(col_in2_id, this.rat_typ_id_short_vrp_MD);
+                RatingData data_long_MD = this.GetRatingData(col_in2_id, this.rat_typ_id_long_vrp_MD);
+                
+                RatingData data_SP_VP = this.GetRatingData(col_in2_id, this.rat_typ_id_VP_SP);
+                RatingData data_MD_VP = this.GetRatingData(col_in2_id, this.rat_typ_id_VP_MD);
+										
+			 	// dohvatiti rating i podatke za izdavatelja
+			 	try{  
+				    #sql [connCtx0] {SELECT b.score INTO :(rating)
+			 					FROM	customer a
+			 					LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+								AND b.rat_typ_id = 1354776003
+								AND b.date_from <= current date
+								AND b.date_until >= current date)
+					     		WHERE 
+			 						a.cus_id = :(cus_id)
+								};
+			 	} catch(SQLException e){
+					if (e.getErrorCode()!=100) throw e;
+			 	}
+			 	
+	            // dohvatiti rating i podatke za izdavatelja
+			 	String baselDesc="";
+                try{  
+                    #sql [connCtx0] {
+                        SELECT basel_cus_desc INTO :baselDesc FROM BASEL_CUS_TYPE WHERE basel_cus_code=:(iter1.basel_cus_type())
+                    };
+                } catch(SQLException e){
+                    if (e.getErrorCode()!=100) throw e;
+                }
+                
+                String issuerType="", issuerTypeDesc="";
+                try{  
+                    #sql [connCtx0] {
+                        SELECT map_out_code, map_out_desc 
+                        INTO :issuerType, :issuerTypeDesc
+                        FROM mapping_sch
+                        WHERE map_type='b2_issuer_type'
+                        AND map_in_cod1=:(iter1.basel_cus_type())
+                    };
+                } catch(SQLException e){
+                    if (e.getErrorCode()!=100) throw e;
+                }
+			 				 	 
+				row.add(iter1.isin());
+				row.add(iter1.name());
+                row.add(iter1.maturity_date());
+				row.add(iter1.market_dsc());
+				row.add(iter1.nom_cur_code());
+				row.add(iter1.nom_amount());
+                row.add(iter1.price());
+                row.add(iter1.price_date()); 
+                
+				unique.add(iter1.col_in2_id());				
+				unique.add(iter1.cus_id());
+				unique.add(iter1.register_no());
+				unique.add(rating);
+				unique.add(data_long_SP.score);				
+				unique.add(data_short_SP.score);
+				unique.add(iter1.sto_mar_id());
+				unique.add(iter1.market_code());
+				unique.add(iter1.stock_ind());
+				unique.add(iter1.nom_cur_id());
+				unique.add(iter1.int_rate());				
+				unique.add(iter1.currency_clause());
+				unique.add(this.rat_typ_id_long_vrp);
+				unique.add(this.rat_typ_id_short_vrp);
+				unique.add(data_long_SP.score_id);
+				unique.add(data_short_SP.score_id);
+				
+                unique.add(iter1.col_typ_id());
+                unique.add(iter1.col_typ_id_code());
+                unique.add(iter1.oib_vrp());
+                unique.add(iter1.daily_price());
+                unique.add(iter1.seniority_indic());
+                unique.add(iter1.basel_cus_type());
+                unique.add(baselDesc);
+                unique.add(issuerType);
+                unique.add(issuerTypeDesc);
+                unique.add(this.rat_typ_id_long_vrp_MD);
+                unique.add(this.rat_typ_id_short_vrp_MD);
+                unique.add(data_long_MD.score_id);
+                unique.add(data_short_MD.score_id);
+                unique.add(data_long_MD.score);
+                unique.add(data_short_MD.score);
+                unique.add(data_SP_VP.score);
+                unique.add(data_MD_VP.score);
+               
+				d.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			}
+			count++;
+		}
+		if(count_returned==0){
+			throw new VestigoTMException(1, "Transaction coA21: No more data! ","wrn090", null);
+		}
+		if(iter1 != null) iter1.close();
+	}
+	
+	private RatingData GetRatingData(BigDecimal col_in2_id, BigDecimal rat_typ_id) throws Exception{
+        RatingData data=new RatingData();
+
+	    try{  
+            #sql [connCtx0] {
+                        SELECT rat_sco_id, score
+                        INTO 
+                            :(data.score_id), :(data.score)
+                        FROM coll_in2_rating
+                        WHERE col_in2_id = :(col_in2_id)
+                        AND rat_typ_id = :(rat_typ_id)
+                        AND date_from <= current date
+                        AND date_to >= current date
+                        };
+        } catch(SQLException e){
+            if (e.getErrorCode()!=100) throw e;
+        }        
+        return data;
+	}
+}
+  
+

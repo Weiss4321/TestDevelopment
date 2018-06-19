@@ -1,0 +1,151 @@
+package hr.vestigo.modules.collateral.jcics.coA9;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+
+/**
+ * COA92 transakcija za unos veze partija plasmana - sudužnik u tablicu LOAN_COBORROWER
+ *      
+ */
+public class COA92 extends RemoteTransaction {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA9/COA92.sqlj,v 1.5 2013/01/16 12:02:09 hradnp Exp $";
+    public DeclCOA9 decl = null;
+    
+    public COA92 (DeclCOA9 decl) {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception {
+
+        ConnCtx ctx = tc.getContext();
+        sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+        int broj = 0;          
+
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+        //generator id-a za modul Collateral
+        YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+        java.math.BigDecimal collateral_id = id_generator.getNewId();
+
+        java.sql.Date todaySQLDate = null;
+        YXYB0 yxyBobj  = new YXYB0(tc);
+
+        //insert into event atributi
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new Date(timeT);
+
+        java.math.BigDecimal eve_id = null;
+        BigDecimal eve_typ_id =  new BigDecimal("5119007704.0");
+
+        // postavljanje atributa na vrijednosti koje æe se spremati u tablicu (null umjesto praznog stringa)
+        BigDecimal cus_acc_id = decl.coborrowerinsertm.CUS_ACC_ID;
+        int cusAccIdFlag = 0;
+        if(cus_acc_id != null) cusAccIdFlag = 1;
+        
+        String cus_acc_no = null;
+        int cusAccNoFlag = 0;
+        if(!decl.coborrowerinsertm.CoBorrower_txtLBenAccNo.equals("")){
+            cus_acc_no = decl.coborrowerinsertm.CoBorrower_txtLBenAccNo;
+            cusAccNoFlag = 1;
+        }
+        String request_no = null;
+        int requestNoFlag = 0;
+        if(!decl.coborrowerinsertm.CoBorrower_txtLBenRequestNo.equals("")){
+            request_no = decl.coborrowerinsertm.CoBorrower_txtLBenRequestNo;
+            requestNoFlag = 1;
+        }
+        String contract_no = null;
+        int contractNoFlag = 0;
+        if(!decl.coborrowerinsertm.CONTRACT_NO.equals("")){
+            contract_no = decl.coborrowerinsertm.CONTRACT_NO;
+            contractNoFlag = 1;
+        }
+        // ako su sva èetiri null - nije moguæe napraviti insert u bazu
+        // FBPr200016215 - izmjenjen naèin provjere za isti zapis (pomoæu flagova)
+        if(cusAccIdFlag==0 && cusAccNoFlag==0 && requestNoFlag==0 && contractNoFlag==0)
+            throw new VestigoTMException(1, "Transaction COA92: Error inserting into loan_coborrower! ","wrndnp4", null);
+        
+        try{
+            #sql [ctx] {SELECT  COUNT(*) 
+                        INTO    :broj 
+                        FROM    loan_coborrower lc
+                        WHERE   lc.cus_id = :(decl.coborrowerinsertm.CUS_ID)
+                        AND     (:(cusAccIdFlag)=0 OR lc.cus_acc_id = :(cus_acc_id))
+                        AND     (:(cusAccNoFlag)=0 OR lc.cus_acc_no = :(cus_acc_no))
+                        AND     (:(requestNoFlag)=0 OR lc.request_no = :(request_no))
+                        AND     (:(contractNoFlag)=0 OR lc.contract_no = :(contract_no))
+                        WITH UR
+            };
+        }catch(java.sql.SQLException  sqle){
+            tc.info ( "......COA92.sqlj select count(*) from loan_coborrower SQL ErrorCode " + sqle.getErrorCode());
+            tc.info ( "......COA92.sqlj select count(*) from loan_coborrower SQL SQLState " + sqle.getSQLState());
+            tc.info ( "......COA92.sqlj select count(*) from loan_coborrower SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction COA92: Error select count(*) from loan_coborrower! ","err411a", null);
+        }
+        
+        if(broj > 0){
+            throw new VestigoTMException(1, "Transaction COA92: Error select count(*) from loan_coborrower! ","errclt8", null);
+        } 
+        
+        // insert into event
+        try{
+            java.util.HashMap event = new java.util.HashMap();
+            event.put("eve_typ_id", eve_typ_id);
+            event.put("event_date", todaySQLDate);
+            event.put("cmnt", "Insert into loan_coborrower");
+            event.put("use_id",decl.coborrowerinsertm.use_id);
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", tc.getBankSign());
+            eve_id = yxyBobj.insertEventWithGeneratedId(event);
+        }catch(java.sql.SQLException e){
+            tc.info (".......COA92.sqlj ..... Insert into event unsuccessful.");
+            tc.info ( "......COA92.sqlj insert into event  SQL ErrorCode " + e.getErrorCode());
+            tc.info ( "......COA92.sqlj insert into event  SQL SQLState " + e.getSQLState());
+            tc.info ( "......COA92.sqlj insert into event  SQL Message " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        } 
+        
+        // FBPr200016215 - dodan atribut loa_cob_role
+        try{    
+            #sql [ctx, exCtx]{ INSERT INTO   loan_coborrower
+                                            (loa_cob_id, cus_acc_id, cus_acc_no, request_no, 
+                                             contract_no, cus_id, date_from, date_until, 
+                                             use_open_id, opening_ts, use_id, user_lock, loa_cob_role) 
+                               VALUES       (:collateral_id,
+                                             :cus_acc_id,
+                                             :cus_acc_no,
+                                             :request_no,
+                                             :contract_no,
+                                             :(decl.coborrowerinsertm.CUS_ID),
+                                             current date,
+                                             '9999-12-31',
+                                             :(decl.coborrowerinsertm.use_id),
+                                             current timestamp,
+                                             :(decl.coborrowerinsertm.use_id),
+                                             current timestamp,
+                                             :(decl.coborrowerinsertm.CoBorrower_txtRole))
+                };
+            if(exCtx.getUpdateCount()==0){
+                throw new VestigoTMException(1,"Transaction COA92: Error update count","erruptzst2", null);
+            }
+        }catch(java.sql.SQLException se){
+            tc.info ( "......COA92.sqlj insert into loan_coborrower SQL ErrorCode " + se.getErrorCode());
+            tc.info ( "......COA92.sqlj insert into loan_coborrower SQL SQLState " + se.getSQLState());
+            tc.info ( "......COA92.sqlj insert into loan_coborrower SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction COA92: Error inserting into loan_coborrower! ","err411a", null);
+        }
+    }    
+}

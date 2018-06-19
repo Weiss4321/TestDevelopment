@@ -1,0 +1,136 @@
+package hr.vestigo.modules.collateral.jcics.co38;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.util.Vector;
+import java.util.HashMap;
+import java.math.BigDecimal;
+import java.sql.Date;
+ 
+
+#sql iterator Iter1 (
+    Date value_date,
+    String proc_type
+);
+
+public class CO381 extends RemoteTransaction
+{
+    class AllocationTypeData
+    {
+        public String name;
+        public String desc;
+        public boolean ponder;
+        
+        public AllocationTypeData(String name, boolean ponder, String desc)
+        {
+            this.name = name;
+            this.ponder = ponder;
+            this.desc = desc;
+        }
+    }
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co38/CO381.sqlj,v 1.14 2017/05/19 11:50:18 hrakis Exp $";
+	private DeclCO38 decl = null;
+
+	public CO381(DeclCO38 decl)
+    {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception
+    {
+		HashMap types = new HashMap();
+		types.put("N",  new AllocationTypeData("RBA"  , false, "RBA prihvatljivost"));
+		types.put("NG", new AllocationTypeData("RBAGK", false, "RBA prihvatljivost - GK"));
+		types.put("NU", new AllocationTypeData("RBA"  , false, "RBA prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+		types.put("P",  new AllocationTypeData("RBA"  , true , "RBA prihvatljivost"));
+		types.put("PG", new AllocationTypeData("RBAGK", true , "RBA prihvatljivost - GK"));
+		types.put("PU", new AllocationTypeData("RBA"  , true , "RBA prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));       
+		types.put("T",  new AllocationTypeData("RBAMICRO",true,"RBA prihvatljivost za Micro klijente"));
+
+		types.put("C",  new AllocationTypeData("B1"  , false, "Prihvatljivost za rezervacije"));
+		types.put("CG", new AllocationTypeData("B1GK", false, "Prihvatljivost za rezervacije - GK"));
+		types.put("CU", new AllocationTypeData("B1"  , false, "Prihvatljivost za rezervacije - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+		types.put("E",  new AllocationTypeData("B1"  , true , "Prihvatljivost za rezervacije"));
+		types.put("EG", new AllocationTypeData("B1GK", true , "Prihvatljivost za rezervacije - GK"));
+		types.put("EU", new AllocationTypeData("B1"  , true , "Prihvatljivost za rezervacije - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+
+		types.put("H",  new AllocationTypeData("B2"  , false, "B2 HNB Stand. prihvatljivost"));
+		types.put("HG", new AllocationTypeData("B2GK", false, "B2 HNB Stand. prihvatljivost - GK"));
+		types.put("HU", new AllocationTypeData("B2"  , false, "B2 HNB Stand. prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+		types.put("I",  new AllocationTypeData("B2"  , true , "B2 HNB Stand. prihvatljivost"));
+		types.put("IG", new AllocationTypeData("B2GK", true , "B2 HNB Stand. prihvatljivost - GK"));
+		types.put("IU", new AllocationTypeData("B2"  , true , "B2 HNB Stand. prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+
+		types.put("J",  new AllocationTypeData("B2IRB"  , false, "B2 IRB prihvatljivost"));
+		types.put("JG", new AllocationTypeData("B2IRBGK", false, "B2 IRB prihvatljivost - GK"));
+		types.put("JU", new AllocationTypeData("B2IRB"  , false, "B2 IRB prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+		types.put("K",  new AllocationTypeData("B2IRB"  , true , "B2 IRB prihvatljivost"));
+		types.put("KG", new AllocationTypeData("B2IRBGK", true , "B2 IRB prihvatljivost - GK"));
+		types.put("KU", new AllocationTypeData("B2IRB"  , true , "B2 IRB prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+
+		types.put("M",  new AllocationTypeData("ND", true , "ND prihvatljivost"));
+		types.put("MU", new AllocationTypeData("ND", true , "ND prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+	    types.put("L",  new AllocationTypeData("ND", false, "ND prihvatljivost"));
+	    types.put("LU", new AllocationTypeData("ND", false, "ND prihvatljivost - alocirani kolateral bez rezanja na izlo\u017Eenost"));
+
+
+	    ConnCtx connCtx0 = tc.getContext();
+		Iter1 iter1 = null;
+
+		#sql [connCtx0] iter1 =	{
+		    SELECT DISTINCT value_date, proc_type
+			FROM col_proc
+			WHERE proc_type IN ('N', 'NG', 'NU', 'P', 'PG', 'PU', 'T', 'C', 'CG', 'CU', 'E', 'EG', 'EU', 'H', 'HG', 'HU', 'I', 'IG', 'IU', 'J', 'JG', 'JU', 'K', 'KG', 'KU', 'M', 'MU', 'L', 'LU')
+		    AND proc_status = '1'
+			ORDER BY value_date DESC, proc_type
+		    WITH UR
+		};
+
+		tc.debug("TU SAM, ");
+		int number_of_rows = 10;  //tc.LOOKUP_FETCH_SIZE;
+		int level = decl.LookUpLevel.intValue();
+		int start = number_of_rows*level;
+		int count = 0;
+		int count_returned = 0;
+		while (iter1.next())
+        {
+			if (start<=count && start+number_of_rows>count)
+            {
+				Vector row = new Vector();
+				Vector unique = new Vector();
+
+				row.add(iter1.value_date());
+
+                String proc_type = iter1.proc_type();
+                unique.add(proc_type);
+
+                AllocationTypeData type = (AllocationTypeData)types.get(proc_type);
+                if (type != null)
+                {
+                    row.add(type.name);
+                    row.add(type.desc);
+                    row.add(type.ponder ? "P" : "N");
+                }
+                else
+                {
+                    row.add("");
+                    row.add("");
+                    row.add("");
+                }
+
+				decl.LookUpTableData.addRow(row, unique);
+				count_returned++;
+			}
+            else if (count>=(start+number_of_rows))
+            {
+				break;
+			}
+			count++;
+		}
+
+		if (count_returned==0) throw new VestigoTMException(1, "Transaction CO381: No more data! ","wrn090", null);
+
+		if (iter1 != null) iter1.close();
+	}
+}

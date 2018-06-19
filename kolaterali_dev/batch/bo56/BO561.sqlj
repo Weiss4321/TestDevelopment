@@ -1,0 +1,101 @@
+package hr.vestigo.modules.collateral.batch.bo56;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+
+public class BO561
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo56/BO561.sqlj,v 1.2 2011/11/07 08:50:01 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+
+    #sql iterator Iter1 with (holdability = true)( 
+        BigDecimal col_hea_id
+    );
+
+    public BO561(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("3751697954"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Azuriranje prihvatljivosti");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+   
+    /**
+     * Metoda koja dohvaæa kolaterale iz zadane kategorije.
+     * @param col_cat_code Šifra kategorije kolaterala. Ako se preda "SVE", dohvaæaju se svi kolaterali. 
+     * @return Iterator. Ako se dogodila greška, vraæa null.
+     */
+    public Iter1 selectData(String col_cat_code)
+    { 
+        batchContext.startStopWatch("select"+col_cat_code);
+        
+        // odredi opseg upita
+        int filterByCategory = 1;
+        if("SVE".equalsIgnoreCase(col_cat_code)) filterByCategory = 0; 
+
+        Iter1 iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT a.col_hea_id AS col_hea_id
+                FROM coll_head a
+                INNER JOIN coll_category b ON a.col_cat_id = b.col_cat_id
+                WHERE (:filterByCategory = 0 OR b.code = :(col_cat_code))
+                AND a.collateral_status IN ('0','1','2','3')
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata podataka!",ex);
+        }
+        batchContext.stopStopWatch("select"+col_cat_code);
+        return iter;
+    }
+}

@@ -1,0 +1,51 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from customer_account where iban_acc_no = 'HR1824840083205003215';  -- 3205003215 - Mikec Ana
+
+select * from customer where cus_id = 39309275; - Mikec Ana
+
+select * from customer where cus_id = 6999853; --  VILET ZDESLAVA register no = 2001936                 -- 3205002013 iban  HR7424840083205002013 oib 54789654123
+
+   			SELECT
+                      use_id                 
+                    FROM
+                      app_user
+                    WHERE login = 'VU00301'
+
+
+select * from CUST_BILL_EXCH;
+
+--- nova trx za dohvat podataka o komitentu koji je odabran
+select * from customer;
+
+
+select * from customer where register_no = '2002123'; -- iz tablice Customer to napuniti
+
+
+select address, name, register_no from customer where register_no = '2002123';
+
+  SELECT              
+              issue_date,
+              cus_bill_exch_no,
+              amount,
+              maturity_date,
+              payer_reg_no,
+              payer_tax_number,
+              payer_address,
+              ben_iban,
+              ben_name,
+              ben_tax_number            
+
+
+select * from cusacc_external;
+
+----------------------------------------------------
+
+				select * from customer_account;
+
+				select * FROM cusacc_external;
+
+
+
+
+                    

@@ -1,0 +1,109 @@
+package hr.vestigo.modules.collateral.jcics.co03;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import java.sql.SQLException;
+
+public class CO037 extends RemoteTransaction {
+    // provjera da li je na hipoteku u korist RBA vezan koji plasman 	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co03/CO037.sqlj,v 1.4 2014/10/07 10:54:20 hrazst Exp $";
+	
+	private DeclCO03 d = null;
+
+	public CO037(DeclCO03 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception, VestigoTMException {		
+		ConnCtx ctx = tc.getContext();
+		
+		int countMortgage = 0;
+		String agr_flag = "";
+		String proc_status = "";
+		String agreement_status = "";
+		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+		tc.debug ( "......poceo CO037  =   " +d.chploanmap.COLL_HF_PRIOR_ID + " " + d.chploanmap.Kol_txtFrameAgr + " " + d.chploanmap.fra_agr_id);
+//		 dohvatiti vrijednosti za okvirni sporazum
+		try{
+			#sql [ctx]{
+				SELECT	b.proc_status, b.status
+				INTO	:proc_status, :agreement_status
+				FROM coll_hf_prior a, frame_agreement b
+				WHERE coll_hf_prior_id 	= :(d.chploanmap.COLL_HF_PRIOR_ID)
+				AND	a.fra_agr_id = b.fra_agr_id
+			};	 	
+	 	}catch(SQLException sel){ }	
+	 	
+		if (d.chploanmap.Kol_txtFrameAgr.equalsIgnoreCase("N")) {
+		    // ako je hipoteka bila dio okvirnog sporazuma, provjeriti da li je ostala jos koja vezana na taj ugovor, ako nije-greska			
+		    // hipoteka je bila dio okvirnog sporazuma, provjeriti da li je ugovor na koji je vezana aktivan
+		    // ugovor nije aktivan - dozvoliti iskljucivanje hipoteke iz sporazuma						
+		    // ugovor je aktivan i ovo je zadnja ukljucena hipoteka - ne dozvoliti iskljucivanje	
+		    // Milka, promjena - dozvoliti iskljucivanje ako kolateral nije verificiran			
+			if (agreement_status.equalsIgnoreCase("A") && proc_status.equalsIgnoreCase("2")) {
+				try{
+					#sql [ctx] {SELECT count(a.coll_hf_prior_id) INTO :(countMortgage)
+								FROM
+									coll_hf_prior a, frame_agreement b
+								WHERE
+									a.fra_agr_id = :(d.chploanmap.fra_agr_id)
+								AND
+									a.agreement = 'D'
+								AND	
+									a.hf_status = 'A' 
+								AND
+									((a.hf_date_hfc_until is null) or
+									(a.hf_date_hfc_until >= current date))
+								AND
+									a.hf_own_cus_id = 8218251
+								AND
+									a.fra_agr_id = b.fra_agr_id 
+								AND 
+									b.status = 'A'
+								AND 
+									b.date_until >= current date
+								AND
+									b.proc_status = '2'
+							};  
+				} catch(SQLException e){
+					if (e.getErrorCode()!=100) throw e;
+				}				      	      				
+				tc.debug("num_of_RBA hipoteka vezanih za sporazum: "+countMortgage);		
+				if (countMortgage < 2) {
+					throw new VestigoTMException(1, "Transaction CO037: Veza hipoteka - ugovor! ","colErr019", null);	
+				}			
+			}			
+		} else if (d.chploanmap.Kol_txtFrameAgr.equalsIgnoreCase("D")) {
+			try {			
+				#sql [ctx] {SELECT count(*) INTO :(countMortgage)
+					FROM
+						coll_hf_prior a, loan_beneficiary b
+					WHERE
+						a.coll_hf_prior_id = :(d.chploanmap.COLL_HF_PRIOR_ID)
+					AND
+						a.hf_status = 'A' 
+					AND
+						((a.hf_date_hfc_until is null) or
+						(a.hf_date_hfc_until >= current date))
+					AND
+						a.hf_own_cus_id = 8218251
+					AND
+						(a.agreement = 'N' OR a.agreement is null)
+					AND 
+						a.coll_hf_prior_id = b.coll_hf_prior_id
+					AND 
+						b.status = 'A' AND b.date_from <= current date AND b.date_until = '9999-12-31'
+				};
+			}catch(SQLException sqle){ }			
+			tc.debug ( "......countMortgage " +countMortgage);			
+			if (countMortgage > 0) {
+			    // na hipoteku vezan plasman-ne moze ju se ukljuciti u okvirni sporazum
+				throw new VestigoTMException(1, "Transaction CO037: Na hipoteku vezan plasman! ","colErr025", null);				
+			}			
+		}
+	} 
+}

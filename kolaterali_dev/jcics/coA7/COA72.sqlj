@@ -1,0 +1,66 @@
+package hr.vestigo.modules.collateral.jcics.coA7;
+
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.SQLException;
+
+
+public class COA72
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA7/COA72.sqlj,v 1.1 2011/03/24 14:26:29 hrakis Exp $";
+
+    public DeclCOA7 decl = null;
+    
+
+    public COA72(DeclCOA7 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        try
+        {
+            #sql [ctx] {
+                SELECT
+                    f.cus_acc_id,
+                    f.status,
+                    f.comment,
+                    f.user_lock,
+                    e.cus_acc_no,
+                    e.contract_no,
+                    e.cus_id,
+                    c.register_no,
+                    c.name,
+                    u.use_id,
+                    u.login,
+                    u.user_name
+                INTO
+                    :(decl.frameaccexceptiondialogselectm.CUS_ACC_ID),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtStatus),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtComment),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtUserLock),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtCusAccNo),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtContractNo),
+                    :(decl.frameaccexceptiondialogselectm.CUS_ID),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtRegisterNo),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtName),
+                    :(decl.frameaccexceptiondialogselectm.USE_ID),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtUserLogin),
+                    :(decl.frameaccexceptiondialogselectm.FrameAccExceptionDialog_txtUserName)
+                FROM frame_acc_exception f
+                INNER JOIN cusacc_exposure e ON f.cus_acc_id = e.cus_acc_id
+                INNER JOIN customer c ON e.cus_id = c.cus_id
+                INNER JOIN app_user u ON f.use_id = u.use_id
+                WHERE f.fra_acc_exc_id = :(decl.frameaccexceptiondialogselectm.FRA_ACC_EXC_ID)
+                ORDER BY e.cus_acc_no
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA72: Error selecting from FRAME_ACC_EXCEPTION!", "fw_wrn_017", null, ex);
+        }
+    }
+}

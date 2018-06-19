@@ -1,0 +1,366 @@
+package hr.vestigo.modules.collateral.batch.bo80;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za Izvješæe o dospijeæu kolaterala i plasmana
+* @author hrakis
+*/
+public class BO801
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo80/BO801.sqlj,v 1.3 2017/05/04 10:32:00 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private final BigDecimal guar_col_cat_id = new BigDecimal("615223");
+    private final BigDecimal ces_col_cat_id = new BigDecimal("614223");
+    private final BigDecimal inspol_col_cat_id = new BigDecimal("616223");
+    
+    
+    #sql iterator DataIterator (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal real_est_nomi_value,
+        BigDecimal real_est_nm_cur_id,
+        BigDecimal col_cat_id,
+        BigDecimal col_typ_id,
+        String col_typ_name,
+        BigDecimal coll_hf_prior_id,
+        String hf_priority,
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        Date placement_due_date,
+        BigDecimal exp_balance_hrk,
+        String register_no,
+        String name,
+        BigDecimal cus_typ_id,
+        Date fra_agr_date_until
+    );
+    
+    #sql iterator CollateralSubtypeIterator (
+        BigDecimal col_sub_id,
+        String code,
+        String name
+    );
+    
+    #sql iterator CollSubtypeIdsIterator (
+        BigDecimal col_hea_id,
+        BigDecimal col_sub_id
+    );
+
+              
+    public BO801(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+    
+    
+    /**
+     * Metoda dohvaæa ID obrade izraèuna pokrivenosti za zadani datum.
+     * Dohvaæa se bilo koji izraèun pokrivenosti zato što se u izvještaju ne prikazuju iznosi pokrivenosti.
+     * @param report_date Datum izvještaja
+     * @return ID obrade izraèuna pokrivenosti
+     */
+    public BigDecimal selectColProId(Date report_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO801.selectColProId");
+            
+            BigDecimal col_pro_id = null;
+            #sql [connCtx] { 
+                SELECT col_pro_id
+                INTO :(col_pro_id) 
+                FROM col_proc
+                WHERE value_date = :(report_date)
+                  AND proc_type IN ('N','P','C','E','H','I','J','K','L','M')
+                  AND proc_status = '1'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return col_pro_id;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Za datum " + report_date + " nije izvrsen izracun pokrivenosti!", null);
+                return null;
+            }
+            else
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata ID-a obrade izracuna pokrivenosti! (datum valute = " + report_date + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO801.selectColProId");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke koji ulaze u izvještaj.
+     * U izvještaj ulaze samo kolaterali na aktivnoj listi koji su povezani na barem jedan aktivni plasman kojemu je vlasnik Corporate komitent.
+     * U izvještaj ne ulaze kolaterali kojima je vrijednost 0. 
+     * Takoðer, u izvještaj ne ulaze depoziti za netiranje, police RS, mjenice i zadužnice (osim mjenica i zadužnica za DS). 
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param report_date Datum izvještaja
+     * @return iterator s podacima
+     */
+    public DataIterator selectData(BigDecimal col_pro_id, Date report_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO801.selectData");
+            
+            DataIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    b.col_hea_id            AS col_hea_id,
+                    b.col_num               AS col_num,
+                    b.real_est_nomi_valu    AS real_est_nomi_value,
+                    b.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    b.col_cat_id            AS col_cat_id,
+                    b.col_type_id           AS col_typ_id,
+                    c.coll_type_name        AS col_typ_name,
+                    h.coll_hf_prior_id      AS coll_hf_prior_id,
+                    h.hf_priority           AS hf_priority,
+                    d.cus_acc_id            AS cus_acc_id,
+                    d.cus_acc_no            AS cus_acc_no,
+                    d.due_date              AS placement_due_date,
+                    a.exp_balance_hrk       AS exp_balance_hrk,
+                    e.register_no           AS register_no,
+                    e.name                  AS name,
+                    e.cus_typ_id            AS cus_typ_id,
+                    f.date_until            AS fra_agr_date_until
+                FROM cusacc_exp_coll a
+                INNER JOIN coll_head_d b ON a.col_hea_id = b.col_hea_id
+                INNER JOIN collateral_type c ON b.col_type_id = c.coll_type_id
+                INNER JOIN cusacc_exposure d ON a.cus_acc_id = d.cus_acc_id
+                INNER JOIN customer e ON d.cus_id = e.cus_id
+                LEFT OUTER JOIN coll_hf_prior_d h ON (a.coll_hf_prior_id = h.coll_hf_prior_id AND :(report_date) BETWEEN h.load_date_from AND h.load_date_until)
+                LEFT OUTER JOIN frame_agreement_d f ON (h.fra_agr_id = f.fra_agr_id AND :(report_date) BETWEEN f.load_date_from AND f.load_date_until)
+                WHERE a.col_pro_id = :(col_pro_id)
+                AND :(report_date) BETWEEN b.load_date_from AND b.load_date_until
+                AND b.collateral_status = '3'
+                AND b.real_est_nomi_valu > 0
+                AND b.col_type_id NOT IN (76777,77777,79777)
+                AND (b.col_cat_id NOT IN (617223,625223) OR b.col_type_id IN (80777,81777))
+                ORDER BY b.col_num, h.hf_priority, d.cus_acc_no
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka koji ulaze u izvjestaj! (Datum izvjestaja=" + report_date + ", ID obrade izracuna pokrivenosti=" + col_pro_id + ")" , ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO801.selectData");
+        }
+    }
+
+    
+    /**
+     * Metoda koja dohvaæa potrebne podatke o podvrstama kolaterala. 
+     * @return iterator s podacima
+     */
+    public CollateralSubtypeIterator selectCollateralSubtypes() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO801.selectCollateralSubtypes");
+            
+            CollateralSubtypeIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    real_es_type_id     AS col_sub_id,
+                    real_es_type_code   AS code,
+                    real_es_type_desc   AS name
+                FROM real_estate_type
+
+                UNION
+
+                SELECT
+                    veh_gro_id      AS col_sub_id,
+                    veh_gro_code    AS code,
+                    veh_gro_desc    AS name
+                FROM vehicle_group
+
+                UNION
+
+                SELECT
+                    ves_typ_id  AS col_sub_id,
+                    ves_code    AS code,
+                    ves_dsc     AS name
+                FROM vessel_type
+
+                UNION
+
+                SELECT
+                    mov_typ_id      AS col_sub_id,
+                    mov_typ_code    AS code,
+                    mov_typ_dsc     AS name
+                FROM movable_type
+
+                ORDER BY 1
+
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka o podvrstama kolaterala!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO801.selectCollateralSubtypes");
+        }
+    }
+
+    
+    /**
+     * Metoda koja dohvaæa ID-eve svih kolaterala koji imaju podvrstu, te ID pripadajuæe podvrste kolaterala.
+     * @return iterator s podacima.
+     */
+    public CollSubtypeIdsIterator selectCollSubtypeIds() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO801.selectCollSubtypeIds");
+            
+            CollSubtypeIdsIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    real_est_type   AS col_sub_id
+                FROM coll_restate
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    veh_group_id    AS col_sub_id
+                FROM coll_vehicle
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    ves_typ_id      AS col_sub_id
+                FROM coll_vessel
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    mov_typ_id      AS col_sub_id
+                FROM coll_movable
+
+                WITH UR
+            };
+            
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata ID-eva podvrsta svih kolaterala koji imaju podvrstu!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO801.selectCollSubtypeIds");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa datum dospijeæa kolaterala.
+     * @param collateral objekt s podacima o kolateralu
+     */
+    public Date selectCollateralDueDate(CollateralData collateral) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO801.selectCollateralDueDate");
+            
+            Date due_date = null;
+            
+            if (collateral.col_cat_id.equals(guar_col_cat_id))
+            {
+                #sql [connCtx] { 
+                    SELECT respiro_date
+                    INTO :(due_date) 
+                    FROM coll_guarantee
+                    WHERE col_hea_id = :(collateral.col_hea_id)
+                    WITH UR
+                };
+
+                if (due_date != null) return due_date;
+
+                #sql [connCtx] { 
+                    SELECT guar_datn_unti
+                    INTO :(due_date) 
+                    FROM coll_guarantee
+                    WHERE col_hea_id = :(collateral.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (collateral.col_cat_id.equals(ces_col_cat_id))
+            {
+                #sql [connCtx] { 
+                    SELECT ces_mat_date
+                    INTO :(due_date) 
+                    FROM coll_cesija
+                    WHERE col_hea_id = :(collateral.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (collateral.col_cat_id.equals(inspol_col_cat_id))
+            {
+                #sql [connCtx] { 
+                    SELECT ip_valid_until
+                    INTO :(due_date) 
+                    FROM coll_inspolicy
+                    WHERE col_hea_id = :(collateral.col_hea_id)
+                    WITH UR
+                };
+            }
+            
+            return due_date;
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata datuma dospijeca kolaterala! (sifra kolaterala = " + collateral.col_num + ")", ex);
+                throw ex;
+            }
+            return null;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO801.selectCollateralDueDate");
+        }
+    }    
+    
+    
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

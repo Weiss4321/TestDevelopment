@@ -1,0 +1,478 @@
+package hr.vestigo.modules.collateral.batch.bo32;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Vector;
+
+import sqlj.runtime.ExecutionContext;
+
+
+public class BO321
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo32/BO321.sqlj,v 1.16 2017/01/16 08:16:20 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    private ExecutionContext exCtx;
+    
+    #sql iterator ColProcIterator with (holdability = true) (BigDecimal col_pro_id, String proc_status);
+    #sql iterator ColHfIterator with (holdability = true) 
+    		(BigDecimal col_hea_id,
+            String col_num,
+    		BigDecimal col_cat_id,
+    		BigDecimal coll_hf_prior_id,
+            String hf_priority,
+    		Date datum_hipoteke_old,
+    		BigDecimal okvir_id,
+    		BigDecimal cus_acc_id,
+    		Date datum_plasmana,
+            String module_code,
+            String cus_acc_orig_st
+    );
+    
+
+    public BO321(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+            this.exCtx = new ExecutionContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	BigDecimal eve_id = null;
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("2540067003"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Promjena datuma 'važenje hipoteke do'");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+	
+	/**
+	 * Metoda koja provjerava da li u tabeli COL_PROC za ovu vrstu obrade i current date postoji slog.
+	 * @return Vektor s atributima col_pro_id i proc_status ukoliko je metoda uspješno završila, inaèe null.
+	 */
+	public Vector selectColProId()
+	{
+		Vector vect = new Vector();
+		ColProcIterator iter = null;
+		try
+		{
+			#sql [connCtx] iter = {
+				SELECT col_pro_id, proc_status 
+				FROM col_proc 
+				WHERE proc_type = '6' AND value_date = current date
+			};
+			if(iter.next())
+			{
+				vect.add(iter.col_pro_id());
+				vect.add(iter.proc_status());
+			}
+			else
+			{
+				vect.add(null);
+				vect.add(null);
+			}
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod provjere da li je obrada vec pustena za danasnji datum!", ex);
+			return null;
+		}
+		return vect;
+	}
+
+	
+	/** 
+	 * Metoda koja evidentira poèetak izvoðenja obrade ubacujuæi novi zapis u tablicu COL_PROC.
+	 * @return Primarni kljuè zapisa iz tablice COL_PROC
+	 */
+	public BigDecimal insertIntoColProc()
+	{
+		BigDecimal col_pro_id = null;
+		try
+		{
+			YOY00 yoy00 = new YOY00(connCtx);
+			col_pro_id = yoy00.getNewId();
+			
+			batchContext.beginTransaction();
+			#sql [connCtx] {
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					org_uni_id,
+					use_id,
+					user_lock )
+				VALUES (
+					:col_pro_id,
+					current date,
+					current date,
+					'6',
+					'A',
+					'0',
+					0,
+					53253,
+					1,
+					current timestamp )
+			};
+			batchContext.commitTransaction();
+		}
+		catch(Exception ex)
+		{
+			batchContext.error("Greska kod ubacivanja zapisa u tablicu COL_PROC!", ex);
+			return null;
+		}
+		return col_pro_id;
+	}
+
+	 
+	/**
+	 * Metoda koja dohvaæa skup podataka koji ulaze u obradu.
+	 * @return Iterator
+	 */
+	public ColHfIterator selectColHf()
+	{
+		ColHfIterator iter = null;
+		try
+		{
+			#sql [connCtx] iter = {
+				SELECT 
+					d.col_hea_id 		AS col_hea_id,
+		            d.col_num           AS col_num,
+					d.col_cat_id 		AS col_cat_id,
+					a.coll_hf_prior_id 	AS coll_hf_prior_id,
+		            a.hf_priority       AS hf_priority,
+					a.hf_date_hfc_until AS datum_hipoteke_old,
+					a.fra_agr_id 		AS okvir_id,
+					c.cus_acc_id 		AS cus_acc_id,
+					c.due_date 			AS datum_plasmana,
+		            c.module_code       AS module_code,
+		            c.cus_acc_orig_st   AS cus_acc_orig_st
+				FROM coll_head d
+		        INNER JOIN coll_hf_prior a ON d.col_hea_id = a.hf_coll_head_id 
+				INNER JOIN loan_beneficiary b ON a.coll_hf_prior_id = b.coll_hf_prior_id 
+				LEFT OUTER JOIN cusacc_exposure c ON (b.la_acc_id = c.cus_acc_id OR b.acc_no = c.cus_acc_no OR b.request_no = c.request_no)
+				WHERE a.fra_agr_id IS NOT NULL OR c.due_date IS NOT NULL 
+				ORDER BY coll_hf_prior_id, datum_plasmana DESC
+				WITH UR
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja hipoteka i plasmana!", ex);
+		}
+		return iter;
+	} 	
+
+	
+/*	public ColHfIterator selectColHf()
+	{
+		ColHfIterator iter = null;
+		try
+		{
+			#sql [connCtx] iter = {
+				SELECT 
+					a.coll_hf_prior_id 	AS coll_hf_prior_id,
+					a.hf_date_hfc_until AS datum_hipoteke_old,
+					a.agreement 		AS okvir_flag,
+					c.cus_acc_id 		AS cus_acc_id,
+					c.due_date 			AS datum_plasmana
+				FROM 
+					coll_hf_prior a, 
+					loan_beneficiary b, 
+					cusacc_exposure c
+				WHERE 
+					a.hf_status = 'A' AND 
+					a.coll_hf_prior_id = b.coll_hf_prior_id AND 
+					b.status = 'A' AND 
+					(b.la_acc_id = c.cus_acc_id OR b.acc_no = c.cus_acc_no OR b.request_no = c.request_no) AND 
+					( cus_acc_status='A' OR
+						( cus_acc_status='C' AND (
+							(module_code='TRC' AND cus_acc_orig_st='E') OR 
+							(module_code='PKR' AND cus_acc_orig_st='T') OR 
+							(module_code='PPZ' AND cus_acc_orig_st='SS') OR 
+							(module_code='KRD' AND cus_acc_orig_st='SS') OR 
+							(module_code='GAR' AND cus_acc_orig_st='SS') OR 
+							(module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+							(module_code='LOC' AND cus_acc_orig_st='SS') )
+						)
+					)
+				ORDER BY coll_hf_prior_id, datum_plasmana DESC
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja hipoteka i plasmana!", ex);
+		}
+		return iter;
+	} */
+
+
+	/**
+	 * Metoda dohvaæa datum dospijeæa zadanog okvirnog sporazuma.
+	 * @param fra_agr_id ID okvirnog sporazuma.
+	 * @return Datum dospijeæa okvirnog sporazuma. Ako dohvat nije uspio, vraæa null.
+	 */
+	public Date selectFrameAgreementMaturityDate(BigDecimal fra_agr_id)
+	{
+		Date date = null;
+		try
+		{
+			#sql [connCtx] {
+				SELECT date_until INTO :date
+				FROM frame_agreement
+				WHERE fra_agr_id = :(fra_agr_id)
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja datuma dospijeca okvirnog sporazuma!", ex);
+		}
+		return date;
+	}
+
+	/**
+	 * Metoda dohvaæa datum dospijeæa zadane obveznice.
+	 * @param col_hea_id ID kolaterala.
+	 * @return Datum dospijeæa obveznice. Ako dohvat nije uspio, vraæa null.
+	 */
+	public Date selectBondMaturityDate(BigDecimal col_hea_id)
+	{
+		Date date = null;
+		try
+		{
+			#sql [connCtx] {
+				SELECT b.maturity_date INTO :date
+				FROM coll_vrp a, coll_in2 b
+				WHERE a.col_hea_id = :(col_hea_id)
+				AND a.col_in2_id = b.col_in2_id
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja datuma dospijeca obveznice!", ex);
+		}
+		return date;
+	}
+	
+	/**
+	 * Metoda dohvaæa datum dospijeæa zadanog depozita.
+	 * @param col_hea_id ID kolaterala.
+	 * @return Datum dospijeæa depozita. Ako dohvat nije uspio, vraæa null.
+	 */
+	public Date selectDepositMaturityDate(BigDecimal col_hea_id)
+	{
+		Date date = null;
+		try
+		{
+			#sql [connCtx] {
+				SELECT b.cde_dep_unti_final INTO :date
+				FROM coll_cashdep b
+				WHERE b.col_hea_id = :(col_hea_id)
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja datuma dospijeca depozita!", ex);
+		}
+		return date;
+	}
+	
+	/**
+	 * Metoda dohvaæa datum dospijeæa zadane garancije.
+	 * @param col_hea_id ID kolaterala.
+	 * @return Datum dospijeæa garancije. Ako dohvat nije uspio, vraæa null.
+	 */
+	public Date selectGuaranteeMaturityDate(BigDecimal col_hea_id)
+	{
+		Date date = null;
+		try
+		{
+			#sql [connCtx] {
+				SELECT b.guar_datn_unti INTO :date
+				FROM coll_guarantee b
+				WHERE b.col_hea_id = :(col_hea_id)
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja datuma dospijeca garancije!", ex);
+		}
+		return date;
+	}
+
+
+	  
+	/**
+	 * Metoda koja zadanoj hipoteci mijenja datum do kada vrijedi. 
+	 * @param col_hea_id ID hipoteke
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean updateColHf(BigDecimal coll_hf_prior_id, Date datum_hipoteke)
+	{
+		// batchContext.debug("-> Novi datum vazenja hipoteke (" + coll_hf_prior_id + ") = " + datum_hipoteke);
+		try
+		{
+			#sql [connCtx] {
+				UPDATE coll_hf_prior
+				SET hf_date_hfc_until = :(datum_hipoteke), 
+					use_id = 1,
+					user_lock = current timestamp
+				WHERE coll_hf_prior_id = :(coll_hf_prior_id)
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod promjene datuma do kada vrijedi hipoteka!", ex);
+			return false;
+		}
+		return true;		
+	}
+
+	
+	/**
+	 * Metoda koja mijenja zapis o obradi odreðene hipoteke u tablicu IN_DATA_DWH_ITEM.
+	 * @param col_pro_id ID obrade
+	 * @param coll_hf_prior_id ID hipoteke
+	 * @param datum_hipoteke_old datum dospijeæa hipoteke prije promjene
+	 * @param cus_acc_id ID plasmana èiji je datum dospijeæa korišten za izraèun i update datuma dospijeæa hipoteke
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean updateIntoInDataDwhItem(BigDecimal col_pro_id, BigDecimal coll_hf_prior_id, Date datum_hipoteke_old, BigDecimal cus_acc_id)
+	{
+		String s = null;
+		if(datum_hipoteke_old != null) s = datum_hipoteke_old.toString();
+		try
+		{
+			#sql [connCtx,exCtx] {
+				UPDATE in_data_dwh_item 
+				SET input_code = :s, 
+					status = '0',
+					output_id = :cus_acc_id
+				WHERE 
+					col_pro_id = :col_pro_id AND
+					input_id = :coll_hf_prior_id
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod mijenjanja zapisa u tablici IN_DATA_DWH_ITEM!", ex);
+			return false;
+		}
+		
+		if(exCtx.getUpdateCount() == 0)  // ako update nije uspio jer nema zapisa, ubaci novi zapis
+		{
+			return insertIntoInDataDwhItem(col_pro_id, coll_hf_prior_id, datum_hipoteke_old, cus_acc_id);
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja ubacuje zapis o obradi odreðene hipoteke u tablicu IN_DATA_DWH_ITEM.
+	 * @param col_pro_id ID obrade
+	 * @param coll_hf_prior_id ID hipoteke
+	 * @param datum_hipoteke_old datum dospijeæa hipoteke prije promjene
+	 * @param cus_acc_id ID plasmana èiji je datum dospijeæa korišten za izraèun i update datuma dospijeæa hipoteke
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertIntoInDataDwhItem(BigDecimal col_pro_id, BigDecimal coll_hf_prior_id, Date datum_hipoteke_old, BigDecimal cus_acc_id)
+	{
+		String s = null;
+		if(datum_hipoteke_old != null) s = datum_hipoteke_old.toString();
+		try
+		{
+			#sql [connCtx] {
+				INSERT INTO in_data_dwh_item (
+					col_pro_id,
+					input_id,
+					input_code,
+					status,
+					output_id )
+				VALUES (
+					:col_pro_id,
+					:coll_hf_prior_id,
+					:s,
+					'0',
+					:cus_acc_id )
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod ubacivanja zapisa u tablicu IN_DATA_DWH_ITEM!", ex);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja u tablicu COL_PROC zapisuje broj obraðenih slogova u obradi. 
+	 * @param col_pro_id ID obrade
+	 * @return Da li je metoda uspješno završila
+	 */	
+	public boolean updateColProc(BigDecimal col_pro_id, int cnt)
+	{
+		try
+		{
+			batchContext.beginTransaction();
+			#sql [connCtx] {
+				UPDATE col_proc
+				SET	col_number = :(cnt),
+					proc_ts = current timestamp,
+					proc_status = '1'
+				WHERE col_pro_id = :(col_pro_id)
+			}; 
+			batchContext.commitTransaction();
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod spremanja broja obraðenih slogova u tablicu COL_PROC!", ex);
+			return false;
+		}
+		return true;
+	}
+}

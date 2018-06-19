@@ -1,0 +1,69 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+select * from batch_log where bat_def_id = 4667183704 order by recording_time desc;
+
+select * FROM customer;
+
+select * from direct_notices;
+
+select * from direct_notices where user_lock between '2014-01-27 00:00:00.000000' AND '2014-01-31 00:00:00.000000' order by user_lock desc; -- testni unosi
+
+
+
+
+
+       this.tc = tc;
+    	conn = tc.getConnection();
+    	setFixedHeadersVariables();
+
+		
+		
+------------------------------------------------------------------
+
+	public BigDecimal getOrgUnitIdFromOrganizationUnit(String branchCode)   throws Exception {
+		
+		tc.debug("C1P081: getOrgUnitIdFromOrganizationUni");
+		BigDecimal orgUniId = null;
+		PreparedStatement pst = null;
+        ResultSet rs = null;
+
+		String sql=
+			"SELECT " + 
+				"ORG_UNI_ID  "+
+			"FROM " + 
+				"ORGANIZATION_UNIT "+
+			"WHERE " + 
+				"CODE = ? " + 
+			"AND BANK_SIGN = ? ";
+
+		try {
+			pst = conn.prepareStatement(sql);
+			pst.setString(1, branchCode);
+			pst.setString(2, tc.getBankSign());
+
+			rs = pst.executeQuery();
+
+			if (rs.next()) {
+				orgUniId = rs.getBigDecimal(1);
+
+				if (rs.next()) {
+					HashMap errMap = new HashMap();
+					errMap.put("class_name", "C1P081.getOrgUnitIdOrganizationUnit");
+            		tc.raiseException(811, "Multiple rows found for select into statement!", "err1916", errMap);
+				}
+			} else {
+				HashMap errMap = new HashMap();
+				errMap.put("class_name", "C1P081.getOrgUnitIdOrganizationUnit");
+				tc.raiseException(100, "No rows found for select into statement!", "err1915", errMap);
+			}
+		} finally {
+			if (rs != null) {
+				rs.close();
+			}
+			if (pst != null) {
+				pst.close();
+			}
+		}
+
+		return orgUniId;     
+	}          	

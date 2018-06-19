@@ -1,0 +1,13 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from INT_TAX_RECAP_DIST;
+
+select * from POLITICAL_MAP;
+
+select * from political_map where name like  'VR%';
+
+SELECT COUNT(DISTINCT name) FROM POLITICAL_MAP;
+
+select distinct  *  from POLITICAL_MAP  where (distinct name);
+
+select * from CUST_BILL_EXCH;

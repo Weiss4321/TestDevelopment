@@ -1,0 +1,544 @@
+package hr.vestigo.modules.collateral.common.yoyA;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+import java.sql.SQLException;
+
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import java.sql.Date;
+import java.math.BigDecimal;
+
+// 
+ 
+
+#sql iterator Iter1 (BigDecimal la_acc_id);
+
+#sql iterator Iter11 (String acc_no);
+
+#sql iterator Iter2 (String register_no ,
+					BigDecimal cus_id,
+		 			String acc_no,
+					BigDecimal la_acc_id,
+					BigDecimal coll_hf_prior_id,
+					BigDecimal col_hea_id,
+					BigDecimal ser_num,
+					Date date_from,
+					Date date_until,
+					String status,
+					String spec_status,
+					String request_no,
+					String priority_no,
+					String acc_no_old
+					);	
+
+#sql iterator Iter3 (BigDecimal loan_ben_id);
+
+public class YOYA0 {
+
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyA/YOYA0.sqlj,v 1.5 2009/12/09 10:10:31 hramkr Exp $";
+
+	private String bank_sign=null;
+	private ConnCtx ctx=null;
+	private RemoteContext rc=null;
+	private YOY00 idGen=null;
+
+	private Iter1 iter1 = null;	
+    
+    private Iter11 iter11 = null; 
+	
+	private Iter2 iter2 = null;	
+	
+	private Iter3 iter3 = null;	
+ 
+	
+	public YOYA0(RemoteContext rc) throws Exception {
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc=rc;
+		this.idGen=new YOY00(rc);
+	}
+
+	public void addMortgage( YOYAData hfData) throws Exception{
+// ako je hipoteka dodana u sporazum-treba ju vezati na sve aktivne plasmane vezane na ugovor
+// pronaci sve aktivne plasmane vezane na ugovor
+		rc.info ( "......POCEO YOYA0......addMortgage" + hfData.hf_id + hfData.fra_agr_id);
+
+		BigDecimal loanBenId = null;
+		BigDecimal la_acc_id = null;
+        String acc_no = null;
+		BigDecimal hf_id = hfData.hf_id;  // ID hipoteke dodane u OS
+		BigDecimal fra_agr_id = hfData.fra_agr_id;  // ID okvirnosg sporazuma
+		BigDecimal use_id = hfData.use_id;
+		
+// ZA INSERT U LOAN_BENEFICIARY
+		String register_no_2 = null;
+		BigDecimal cus_id_2 = null;
+	 	String acc_no_2 = null;
+		BigDecimal la_acc_id_2 = null;
+		BigDecimal coll_hf_prior_id_2 = null;
+		BigDecimal col_hea_id_2 = null;
+		BigDecimal ser_num_2 = null;
+		Date date_from_2 = null;
+		Date date_until_2 = null;
+		String status_2 = null;
+		String spec_status_2 = null;
+		String request_no_2 = null;
+		String priority_no_2 = null;
+		String acc_no_old_2 = null;		
+		
+// za provjeru da li je hipoteka vec povezana s plasmanom
+		BigDecimal hf_id_old = null;
+		
+		int i = 0;
+		boolean hipoteka_plasman = false;
+		BigDecimal loan_ben_id_old = null;
+// Milka, 23.11.2009 - dohvat id-a plasmana zamijenjen brojem partije plasmana
+
+/*		try {
+				#sql [ctx] iter1 = { SELECT 	
+									distinct la_acc_id as la_acc_id
+								FROM
+									loan_beneficiary 
+								WHERE
+									fra_agr_id = :(fra_agr_id)                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+								AND
+									status = 'A'
+								AND 
+									date_from <= current date 
+								AND 
+									date_until = '9999-12-31'
+					};          			
+		} catch (SQLException se) {
+
+		} */
+        
+		try {
+		    #sql [ctx] iter11 = { SELECT     
+                            distinct acc_no as acc_no
+                        FROM
+                            loan_beneficiary 
+                        WHERE
+                            fra_agr_id = :(fra_agr_id)                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+                        AND
+                            status = 'A'
+                        AND 
+                            date_from <= current date 
+                        AND 
+                            date_until = '9999-12-31'
+            };                      
+		} catch (SQLException se) {
+
+		}         
+        
+		rc.info ( "......DOHVATIO PLASMANE VEZANE NA OKVIRNI SPORAZUM" + hfData.fra_agr_id);	
+		hfData.imaPlasman = false;	
+		hfData.brojPlasmana = 0;
+			
+		if (iter11 != null) { 
+// na dodanu hipoteku vezati svaki plasman koji je dio okvirnog sporazuma
+			while (iter11.next()) {
+			
+				hfData.imaPlasman = true;
+				hfData.brojPlasmana = hfData.brojPlasmana +1 ;
+//				la_acc_id = iter1.la_acc_id();
+                acc_no = iter11.acc_no();
+				rc.info ( "....ITERACIJA PLASMANA........INSERT VEZE HIPOTEKA - PLASMAN  " + acc_no);
+//                rc.info ( "....ITERACIJA PLASMANA........INSERT VEZE HIPOTEKA - PLASMAN  " + la_acc_id); 
+				
+//				 za svaki plasman iz okvirnog sporazuma najprije provjeriti da li je vec vezan na dodanu hipoteku u os bez obzira na status
+//				 ako je vezana treba napraviti update statusa i datuma do
+//				 ako nije vezana treba dodati vezu 				
+				
+				rc.info ( "....PROVJERA DA LI JE HIPOTEKA: " + hf_id + " DODANA U OS VEC AKTIVNO VEZANA NA PLASMAN........" + acc_no);
+//                rc.info ( "....PROVJERA DA LI JE HIPOTEKA: " + hf_id + " DODANA U OS VEC AKTIVNO VEZANA NA PLASMAN........" + la_acc_id);   
+				
+				try {
+					#sql [ctx] iter3 = { SELECT 	
+										 loan_ben_id as loan_ben_id
+									FROM
+										loan_beneficiary 
+									WHERE
+										coll_hf_prior_id = :(hf_id)
+									AND
+										fra_agr_id = :(fra_agr_id)
+									AND
+										acc_no = :(acc_no)
+									AND
+										status = 'A'
+									FETCH FIRST 1 ROWS ONLY   
+  						};          			
+				} catch (SQLException se) {
+
+				} 		
+ /*               try {
+                    #sql [ctx] iter3 = { SELECT     
+                                         loan_ben_id as loan_ben_id
+                                    FROM
+                                        loan_beneficiary 
+                                    WHERE
+                                        coll_hf_prior_id = :(hf_id)
+                                    AND
+                                        fra_agr_id = :(fra_agr_id)
+                                    AND
+                                        la_acc_id = :(la_acc_id)
+                                    AND
+                                        status = 'A'
+                                    FETCH FIRST 1 ROWS ONLY   
+                        };                      
+                } catch (SQLException se) {
+
+                }       			*/	
+				hipoteka_plasman = false;
+				loan_ben_id_old = null;
+				
+				while (iter3.next()) {     
+					hipoteka_plasman = true;  // hipoteka je povezana na plasman
+					loan_ben_id_old = iter3.loan_ben_id();
+				}
+				
+// ako je povezana, napraviti update
+				if (hipoteka_plasman) {
+					try {
+						#sql [ctx] { UPDATE
+								loan_beneficiary 
+							SET
+								status = 'A',
+								date_until = '9999-12-31',
+								use_id = :(use_id),
+								user_lock = current timestamp
+							WHERE
+								loan_ben_id = :(loan_ben_id_old)  
+						};          									
+					} catch (SQLException se) {
+				 		if (se.getErrorCode()!=100) throw se;
+					} 
+					continue;
+				}
+				  
+				
+				rc.info ( "....PROVJERA DA LI JE HIPOTEKA: " + hf_id + " DODANA U OS VEC NEAKTIVNO VEZANA NA PLASMAN........" + acc_no); 				
+//                rc.info ( "....PROVJERA DA LI JE HIPOTEKA: " + hf_id + " DODANA U OS VEC NEAKTIVNO VEZANA NA PLASMAN........" + la_acc_id);
+
+				try {
+					#sql [ctx] iter3 = { SELECT 	
+										 loan_ben_id as loan_ben_id
+									FROM
+										loan_beneficiary 
+									WHERE
+										coll_hf_prior_id = :(hf_id)
+									AND
+										fra_agr_id = :(fra_agr_id)
+									AND
+										acc_no = :(acc_no)
+									AND
+										status = 'N'
+									FETCH FIRST 1 ROWS ONLY   
+  						};          			
+				} catch (SQLException se) {
+
+				} 		
+ /*               try {
+                    #sql [ctx] iter3 = { SELECT     
+                                         loan_ben_id as loan_ben_id
+                                    FROM
+                                        loan_beneficiary 
+                                    WHERE
+                                        coll_hf_prior_id = :(hf_id)
+                                    AND
+                                        fra_agr_id = :(fra_agr_id)
+                                    AND
+                                        la_acc_id = :(la_acc_id)
+                                    AND
+                                        status = 'N'
+                                    FETCH FIRST 1 ROWS ONLY   
+                        };                      
+                } catch (SQLException se) {
+
+                }       */
+				
+				hipoteka_plasman = false;
+				loan_ben_id_old = null;
+				
+				while (iter3.next()) {     
+					hipoteka_plasman = true;  // hipoteka je povezana na plasman
+					loan_ben_id_old = iter3.loan_ben_id();
+				}
+				
+// ako je povezana, napraviti update
+				if (hipoteka_plasman) {
+					try {
+						#sql [ctx] { UPDATE
+								loan_beneficiary 
+							SET
+								status = 'A',
+								date_until = '9999-12-31',
+								use_id = :(use_id),
+								user_lock = current timestamp
+							WHERE
+								loan_ben_id = :(loan_ben_id_old)  
+						};          									
+					} catch (SQLException se) {
+				 		if (se.getErrorCode()!=100) throw se;
+					} 
+					continue;
+				}				
+
+				if(iter3!=null) {
+					try {
+						iter3.close();
+					} catch (Exception ignored) {}
+				}				
+				
+// hipoteka nije vezana, treba ju vezati na plasman				
+				
+// dohvatiti podatke za svaki plasman iz iteratora 1
+//   
+				try {
+					#sql [ctx] iter2 = { SELECT 
+											register_no as register_no,
+											cus_id as cus_id,
+											acc_no as acc_no,
+											la_acc_id as la_acc_id,
+											coll_hf_prior_id as coll_hf_prior_id,
+											col_hea_id as col_hea_id,
+											ser_num as ser_num,
+											date_from as date_from,
+											date_until as date_until,
+											status as status,
+											spec_status as spec_status,
+											request_no as request_no,
+											priority_no as priority_no,
+											acc_no_old as acc_no_old
+										FROM
+											loan_beneficiary 
+										WHERE
+											acc_no = :(acc_no)  
+										AND
+											fra_agr_id = :(fra_agr_id)
+										FETCH FIRST 1 ROWS ONLY   
+										};          			
+                    
+/*                    #sql [ctx] iter2 = { SELECT 
+                            register_no as register_no,
+                            cus_id as cus_id,
+                            acc_no as acc_no,
+                            la_acc_id as la_acc_id,
+                            coll_hf_prior_id as coll_hf_prior_id,
+                            col_hea_id as col_hea_id,
+                            ser_num as ser_num,
+                            date_from as date_from,
+                            date_until as date_until,
+                            status as status,
+                            spec_status as spec_status,
+                            request_no as request_no,
+                            priority_no as priority_no,
+                            acc_no_old as acc_no_old
+                        FROM
+                            loan_beneficiary 
+                        WHERE
+                            la_acc_id = :(la_acc_id)  
+                        AND
+                            fra_agr_id = :(fra_agr_id)
+                        FETCH FIRST 1 ROWS ONLY   
+                        }; */                                         
+
+				} catch (SQLException se) {
+
+				} 				
+
+				
+				register_no_2 = null;
+				cus_id_2 = null;
+				acc_no_2 = null;
+				la_acc_id_2 = null;
+				coll_hf_prior_id_2 = null;
+				col_hea_id_2 = null;
+				ser_num_2 = null;
+				date_from_2 = null;
+				date_until_2 = null;
+				status_2 = null;
+				spec_status_2 = null;
+				request_no_2 = null;
+				priority_no_2 = null;
+				acc_no_old_2 = null;
+
+				hf_id_old = null; 
+				
+				if (iter2 != null) {
+					while (iter2.next()) {
+						
+// svaki dohvaceni plasman insertirati za hipoteku		
+
+						hf_id_old = iter2.coll_hf_prior_id();
+						rc.info ( ".....HIPOTEKA IZ DOHVACENOG PLASMANA  "+hf_id_old);	
+// ako je hipoteka vec povezana s plasmanom preskoci insert - ovo ne valja 
+//aaa						
+//						if (hf_id.compareTo(hf_id_old) == 0) {
+//							continue;
+//						}
+					 	  
+						loanBenId=getId();
+						rc.info ( ".....INSERT PLASMANA  "+loanBenId + "...." + la_acc_id + ".....ZA HIPOTEKU.." + hfData.hf_id);	
+					
+						register_no_2 = iter2.register_no();
+						cus_id_2 = iter2.cus_id();
+						acc_no_2 = iter2.acc_no();
+						la_acc_id_2 = iter2.la_acc_id();
+						coll_hf_prior_id_2 = hf_id;
+						col_hea_id_2 = iter2.col_hea_id();
+						ser_num_2 = iter2.ser_num();
+						date_from_2 = iter2.date_from();
+						date_until_2 = iter2.date_until();
+//						status_2 = iter2.status();
+						status_2 = "A";
+//						spec_status_2 = iter2.spec_status();
+						spec_status_2 = "00";
+						request_no_2 = iter2.request_no();
+						priority_no_2 = iter2.priority_no();
+						acc_no_old_2 = iter2.acc_no_old();							
+				
+						try{	 
+					
+							#sql [ctx]{
+								INSERT INTO loan_beneficiary (
+									loan_ben_id,
+									register_no,	
+									cus_id,
+									acc_no,
+									la_acc_id,
+									coll_hf_prior_id,
+									col_hea_id,
+									ser_num,
+									date_from,
+									date_until,
+									status,
+									spec_status,
+									use_open_id,
+									use_id,
+									opening_ts,
+									user_lock,
+									request_no,
+									priority_no,
+									acc_no_old,
+									fra_agr_id) 	
+								VALUES( 
+									:(loanBenId), 
+									:(register_no_2), 
+									:(cus_id_2),
+	   								:(acc_no_2),
+									:(la_acc_id_2),
+									:(coll_hf_prior_id_2),
+									null,
+									:(ser_num_2),
+									current date,
+									'9999-12-31',
+									:(status_2),
+									:(spec_status_2),
+									:(use_id),
+									:(use_id),
+									current timestamp,
+									current timestamp,
+									:(request_no_2),
+									:(priority_no_2),	
+									:(acc_no_old_2),
+									:(fra_agr_id)
+								)
+							}; 
+
+						}catch(SQLException se){
+						}				
+					}
+				}
+				if(iter2!=null) {
+					try {
+						iter2.close();
+					} catch (Exception ignored) {}
+				}				
+				
+			} 
+		}  
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}	   
+ 
+	public void delMortgage(YOYAData hfData) throws Exception{ 
+// ako je hipoteka izuzeta iz sporazuma-treba raskinuti veze s plasmanima vezanim na taj sporazum
+// ?? dodati update i veze na okvir ???
+		
+		BigDecimal fra_agr_id_new = null;
+// pronaci sve aktivne plasmane vezane na hipoteku koji su dio sporazuma 
+		rc.info ( "......POCEO YOYA0......delMortgage" + hfData.hf_id + hfData.fra_agr_id);
+
+		BigDecimal hf_id = hfData.hf_id;
+		BigDecimal fra_agr_id = hfData.fra_agr_id;
+		BigDecimal use_id = hfData.use_id;
+				
+//	ZA update U LOAN_BENEFICIARY
+				String register_no_2 = null;
+				BigDecimal cus_id_2 = null;
+			 	String acc_no_2 = null;
+				BigDecimal la_acc_id_2 = null;
+				BigDecimal coll_hf_prior_id_2 = null;
+				BigDecimal col_hea_id_2 = null;
+				BigDecimal ser_num_2 = null;
+				Date date_from_2 = null;
+				Date date_until_2 = null;
+				String status_2 = null;
+				String spec_status_2 = null;
+				String request_no_2 = null;
+				String priority_no_2 = null;
+				String acc_no_old_2 = null;		
+				
+		try {
+			#sql [ctx] { UPDATE
+									loan_beneficiary 
+								SET
+									status = 'N',
+									date_until = current date,
+									use_id = :(use_id),
+									user_lock = current timestamp,
+		                            fra_agr_id = :(fra_agr_id_new)
+								WHERE
+									fra_agr_id = :(fra_agr_id)  
+								AND
+									coll_hf_prior_id = :(hf_id)
+								AND
+									status = 'A'
+							};          			
+			  
+/*							#sql [ctx] { UPDATE
+								loan_beneficiary 
+							SET
+								status = 'N',
+								date_until = current date,
+								use_id = :(use_id),
+								user_lock = current timestamp
+							WHERE
+								fra_agr_id = :(fra_agr_id)  
+							AND
+								coll_hf_prior_id = :(hf_id)
+							AND
+								status = 'A'
+							AND 
+								date_from <= current date AND date_until = '9999-12-31'
+						};*/          						
+			
+		} catch (SQLException se) {
+	 		if (se.getErrorCode()!=100) throw se;
+		} 
+	}	
+	
+	private BigDecimal getId() throws Exception{
+		return idGen.getNewId();
+	}
+	
+}
+ 
+				
+			
+		
+		

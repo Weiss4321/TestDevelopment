@@ -1,0 +1,68 @@
+package hr.vestigo.modules.collateral.jcics.coA8;
+
+import java.math.*;
+import java.util.Vector;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+public class COA82
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA8/COA82.sqlj,v 1.3 2017/02/07 12:34:52 hrakis Exp $";
+
+    private DeclCOA8 decl;
+
+    public COA82(DeclCOA8 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        try
+        {
+            if(decl.inspolwarningnotesliststopsendm.INS_WAR_NOT_ID != null)
+            {
+                #sql [ctx] {
+                    UPDATE ip_warning_notes
+                    SET 
+                        candidate_status = :(decl.inspolwarningnotesliststopsendm.CANDIDATE_STATUS),
+                        use_id = :(decl.inspolwarningnotesliststopsendm.use_id),
+                        user_lock = CURRENT TIMESTAMP
+                    WHERE
+                        ins_war_not_id = :(decl.inspolwarningnotesliststopsendm.INS_WAR_NOT_ID) AND
+                        candidate_status IN ('K','N','A')
+                };
+            }
+            else
+            {
+                #sql [ctx] {
+                    UPDATE ip_warning_notes
+                    SET 
+                        candidate_status = :(decl.inspolwarningnotesliststopsendm.CANDIDATE_STATUS),
+                        use_id = :(decl.inspolwarningnotesliststopsendm.use_id),
+                        user_lock = CURRENT TIMESTAMP
+                    WHERE ins_war_not_id IN
+                    (
+                        SELECT a.ins_war_not_id
+                        FROM ip_warning_notes a
+                        WHERE a.ip_id IS NOT NULL
+                          AND a.candidate_status IN ('K','N','A')
+                    )
+                };
+            }
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA82: Error updating IP_WARNING_NOTES!", "err411a", null, ex);
+        }
+    }
+    
+    private boolean isEmpty(Object obj)
+    {
+        return (obj == null || obj.equals(""));
+    }
+}

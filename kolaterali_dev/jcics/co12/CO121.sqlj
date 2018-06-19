@@ -1,0 +1,86 @@
+package hr.vestigo.modules.collateral.jcics.co12;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//POLITICAL_MAP  DISTRICT  LIST
+/**
+ * CO001 class selects all data about DISTRICT for one place id 
+ * from table POLITICAL_MAP	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+#sql iterator Iter121 (	BigDecimal pol_map_id ,
+						java.sql.Timestamp user_lock,
+						String code ,      
+						String name 
+					 );	
+
+public class CO121 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co12/CO121.sqlj,v 1.4 2006/05/05 09:40:20 hrarmv Exp $";
+	
+	public DeclCO12 decl = null;
+	
+	private Iter121 iter1 = null; 
+	
+	private java.math.BigDecimal districtTypeId = new java.math.BigDecimal("5854877003.0");
+	
+	
+	public CO121 (DeclCO12 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+			#sql [ctx] iter1 = {
+					SELECT  polm.pol_map_id as pol_map_id, polm.user_lock,
+							polm.code as code ,
+							polm.name as name
+					FROM
+							political_map polm
+					WHERE
+						polm.parent_pol_map_id = :(decl.POL_MAP_ID_PLACE)
+					AND polm.pol_map_typ_id = :(districtTypeId)	
+			};
+			
+		
+	}
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		//sifra gradske cetvrti 
+		//naziv cetvrti
+	
+		row.add(iter1.code());	
+		row.add(iter1.name());
+		
+		row1.add(iter1.pol_map_id());
+		row1.add(iter1.user_lock());
+		decl.tblPolMapDistrict.addRow(row,row1);
+	}
+}

@@ -1,0 +1,54 @@
+package hr.vestigo.modules.collateral.common.yoy5;
+
+
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+
+
+
+public class YOY50 {
+ 
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy5/YOY50.sqlj,v 1.2 2006/03/25 11:18:30 hrasia Exp $";
+
+	private String bank_sign = null;
+	private ConnCtx ctx = null;
+	private RemoteContext rc = null;
+	private java.sql.Date todaySQLDate = null;
+	private java.sql.Timestamp curSQLTimestamp = null;
+	
+
+	public YOY50(RemoteContext rc) throws Exception {
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc = rc;
+	}
+	 
+
+
+
+	private void getDateTime() throws Exception {
+		#sql[ctx] {
+			SELECT current date, current timestamp 
+			INTO :(todaySQLDate), :(curSQLTimestamp)
+			FROM sysibm.sysdummy1
+		};		
+
+	}//getDateTime
+	
+	
+	public java.sql.Timestamp getUserLockFromCollHead (java.math.BigDecimal argColHeaId)throws java.sql.SQLException{
+		java.sql.Timestamp userLock = null;
+		#sql[ctx] {
+			SELECT user_lock 
+			INTO :(userLock)
+			FROM coll_head
+			WHERE col_hea_id =  :(argColHeaId)
+		};	
+	   return userLock;
+	}//getUserLockFromCollHead
+
+	
+}
+

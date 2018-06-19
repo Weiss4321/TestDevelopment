@@ -1,0 +1,310 @@
+package hr.vestigo.modules.collateral.jcics.co13;
+
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLData;
+import java.sql.SQLException;
+import java.util.GregorianCalendar;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+//import hr.vestigo.modules.collateral.common.yoyH.YOYH0;
+import hr.vestigo.modules.coreapp.common.yxyD.*;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+/**
+ * CO128 class close entry in table collowners (resident quarter)
+ *  	
+ */
+
+
+
+
+public class CO133 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co13/CO133.sqlj,v 1.20 2011/11/09 12:55:19 hramkr Exp $";
+    public DeclCO13 decl = null;
+
+    public CO133 (DeclCO13 decl) {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception {
+
+        ConnCtx ctx = tc.getContext();
+
+        Date today = null;
+        GregorianCalendar calendar = new GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        today = new Date(timeT);
+        Date yesterday = backDay(today,1);
+
+        Date datum_do = null;
+        Date datum_new = DateUtils.createDateFromString("31.12.9999");
+        String main_owner = null;
+        String financial_flag=null;
+        BigDecimal cus_id=null;
+        BigDecimal col_cus_id=null;
+
+        boolean deactivated = false;
+
+
+        int broj = 0;		
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+        //provjera da li je kolateral knjizen na komitenta kojeg se zeli deaktivirati/azurirati
+        //FBPr200010974 25.03.2011
+
+        try{    
+            
+                #sql [ctx]{ 
+                SELECT financial_flag
+                INTO :(financial_flag)
+                FROM coll_head
+                WHERE col_hea_id=:(decl.collownersdeletemapping.CollOwners_COL_HEA_ID)                
+                };
+            
+            if(financial_flag!=null){
+                if(financial_flag.equalsIgnoreCase("1")){ 
+                  //kolateral je knjizen- dohvat komitenta na kojeg je kolateral knjizen
+                    
+                    #sql [ctx]{ 
+                        SELECT cus_id
+                        INTO :(cus_id)
+                        FROM customer_account
+                        WHERE cus_acc_id=:(decl.collownersdeletemapping.CollOwners_COL_HEA_ID)                
+                        };
+                    
+                    //komitent kolaterala
+                        #sql [ctx]{ 
+                            SELECT cus_id
+                            INTO :(col_cus_id)
+                            FROM coll_owner
+                            WHERE col_hea_id=:(decl.collownersdeletemapping.CollOwners_COL_HEA_ID)                
+                            };
+                    
+                  
+                    
+                    if(cus_id.equals(col_cus_id)){
+                        throw new VestigoTMException(1, "Transaction CO133: KOlateral knjizen na komitenta koji se zeli deaktivirati","wrnclt177", null);
+                    } 
+                }
+            }
+
+        }catch(SQLException se){
+
+            tc.debug ( "......CO133.sqlj insert into coll_owner_a SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO133.sqlj insert into coll_owner_a SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO133.sqlj insert into coll_owner_a SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO133: Greska kod provjere komitenta na kojeg je knjizen kolateral! ","err411a", null);
+        }
+        
+        
+
+        try {
+            #sql [ctx]{ 
+            SELECT date_until, main_owner
+            INTO :(datum_do), :(main_owner)
+            FROM coll_owner
+            WHERE coll_own_id=:(decl.collownersdeletemapping.CollOwnersDialog_COLL_OWN_ID) 
+            AND user_lock=:(decl.collownersdeletemapping.CollOwnersDialog_USER_LOCK_NF)
+            };
+        } catch (SQLException se) {
+
+        }
+
+        int flag = DateUtils.whoIsOlder(datum_do, datum_new);
+
+        try{	
+
+            #sql [ctx]{ 
+            INSERT INTO coll_owner_a
+            SELECT * FROM coll_owner
+            WHERE coll_own_id=:(decl.collownersdeletemapping.CollOwnersDialog_COLL_OWN_ID) 
+            AND user_lock=:(decl.collownersdeletemapping.CollOwnersDialog_USER_LOCK_NF)
+            };
+
+        }catch(SQLException se){
+
+            tc.debug ( "......CO133.sqlj insert into coll_owner_a SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO133.sqlj insert into coll_owner_a SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO133.sqlj insert into coll_owner_a SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO133: Error insert row in coll_owner_a! ","err411a", null);
+        }
+
+        //set date_until and use_id
+        // brisanje zamijenizi sa deaktivacijom - update data_until i use_id
+        // ako je zapis u statusu A - znaci deaktiviram ga	
+
+        if (flag == 0) {				  
+            try{	
+
+                // zapis je aktivan - treba ga deaktivirati					
+                #sql [ctx]{ 
+                UPDATE coll_owner
+                SET date_until = :(yesterday) ,
+                use_id = :(decl.collownersdeletemapping.CollOwnersDialog_USE_ID) ,
+                user_lock = current timestamp
+                WHERE coll_own_id=:(decl.collownersdeletemapping.CollOwnersDialog_COLL_OWN_ID) 
+                AND user_lock=:(decl.collownersdeletemapping.CollOwnersDialog_USER_LOCK_NF)
+                };
+
+
+            }catch(SQLException se){
+
+                tc.debug ( "......CO133.sqlj update coll_owner SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO133.sqlj update coll_owner SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO133.sqlj update coll_owner SQL Message " + se.getMessage());
+                throw new VestigoTMException(1, "Transaction CO133: Error update row in coll_owners! ","err411a", null);
+            }
+            deactivated = true;
+        }else {
+            //	 zapis je neaktivan - treba ga aktivirati		
+
+            //	za kolaterale koji smiju imati samo jednog vlasnika, provjeriti da li postoji aktivan
+            try {
+                #sql [ctx] {SELECT COUNT(*)
+                INTO :broj 
+                FROM coll_head a, coll_owner b
+                WHERE 
+                a.col_hea_id = :(decl.collownersdeletemapping.CollOwners_COL_HEA_ID)
+                AND
+                a.col_cat_id in (612223,613223,619223,622223,627223)
+                AND
+                a.col_hea_id = b.col_hea_id
+                AND
+                b.date_until = '9999-12-31'
+                };	    	
+                tc.debug ( "...broj: " + broj);
+            } catch (SQLException se) {
+                tc.debug ( "......CO133.sqlj select from coll_owner SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO133.sqlj select from coll_owner SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO133.sqlj select from coll_owner SQL Message " + se.getMessage());
+                throw new VestigoTMException(1, "Transaction CO133: Error select from coll_owner! ","err411a", null);
+            }
+            if(broj > 0){
+                throw new VestigoTMException(1, "Transaction CO133: Error select from coll_owner! ","wrnclt123", null);
+            }	
+
+            try {
+
+                #sql [ctx]{ 
+                UPDATE coll_owner
+                SET date_until = :(datum_new) ,
+                use_id = :(decl.collownersdeletemapping.CollOwnersDialog_USE_ID) ,
+                user_lock = current timestamp 
+                WHERE coll_own_id=:(decl.collownersdeletemapping.CollOwnersDialog_COLL_OWN_ID) 
+                AND user_lock=:(decl.collownersdeletemapping.CollOwnersDialog_USER_LOCK_NF)
+
+                };	
+            } catch (SQLException se) {
+
+                tc.debug ( "......CO133.sqlj update coll_owner SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO133.sqlj update coll_owner SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO133.sqlj update coll_owner SQL Message " + se.getMessage());
+                throw new VestigoTMException(1, "Transaction CO133: Error update row in coll_owners! ","err411a", null);				
+            }
+            deactivated = false;
+        }
+
+        // provjera indikatora glavnog vlasnika, dozvoljen je samo jedan aktivan glavni vlasnik
+
+        broj = -1;  
+
+        try {
+            #sql [ctx] {SELECT COUNT(*) INTO :broj 
+            FROM coll_owner 
+            WHERE col_hea_id = :(decl.collownersdeletemapping.CollOwners_COL_HEA_ID)
+            AND 
+            date_until = '9999-12-31'
+            AND
+            main_owner = 'D'
+            AND 
+            coll_own_id <> :(decl.collownersdeletemapping.CollOwnersDialog_COLL_OWN_ID)
+            };
+
+            tc.debug ( "...broj: " + broj);
+
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO133.sqlj select main owner from coll_owners SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......CO133.sqlj select main owner from coll_owners SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......CO133.sqlj select main owner from coll_owners SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction CO133: Error selecting from coll_owners! ","err411a", null);
+        }  
+
+        if(broj > 0 && main_owner != null && main_owner.equalsIgnoreCase("D") && !deactivated )
+            throw new VestigoTMException(1, "Transaction CO133: Error inserting into coll_owners! ","errclt16", null);       
+        else if (broj <= 0 && deactivated)
+            throw new VestigoTMException(1, "Transaction CO133: Error inserting into coll_owners! ","errclt14", null);     
+
+
+        BigDecimal col_hea_id = decl.collownersdeletemapping.CollOwners_COL_HEA_ID;
+        BigDecimal col_cat_id = null;
+        BigDecimal col_typ_id = null;
+        BigDecimal col_sub_typ_id = null;
+        try
+        {
+            #sql [ctx] {
+                 SELECT
+                    a.col_cat_id,
+                    a.col_type_id,
+                    b.real_est_type
+                INTO
+                    :(col_cat_id),
+                    :(col_typ_id),
+                    :(col_sub_typ_id)
+                FROM coll_head a left outer join coll_restate b on a.col_hea_id = b.col_hea_id 
+                WHERE a.col_hea_id = :(col_hea_id)
+             };
+        }
+        catch(java.sql.SQLException se)
+        {
+            if(se.getErrorCode() != 100) throw se;
+        }
+
+
+        // samo za stambene nekretnine   col_typ_id = 8777     
+/*        if ( col_cat_id != null && col_cat_id.compareTo(new BigDecimal("618223")) == 0 && 
+                col_typ_id != null && col_typ_id.compareTo(new BigDecimal("8777")) == 0 &&
+                col_sub_typ_id != null && col_sub_typ_id.compareTo(new BigDecimal("1156953223")) != 0) {
+            YOYH0 yoyh0 = new YOYH0(tc, col_hea_id);            
+            yoyh0.azurirajCRM_HNBPrihvatljivost();
+            decl.collownersdeletemapping.Kol_CRMHnb = yoyh0.getCRM_HNBPrihvatljivost();          
+        } */
+
+        // poziv common-a za update prihvatljivosti  
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collownersdeletemapping.Kol_ND =yoyg0.getNDPrihvatljivost();
+        decl.collownersdeletemapping.Kol_B2 = yoyg0.getB2StandPrihvatljivost();
+        decl.collownersdeletemapping.Kol_HNB = yoyg0.getHNBPrihvatljivost();
+        decl.collownersdeletemapping.Kol_B2IRB = yoyg0.getB2IRBPrihvatljivost();   
+
+        decl.collownersdeletemapping.Kol_ND_dsc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collownersdeletemapping.Kol_B2_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collownersdeletemapping.Kol_HNB_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collownersdeletemapping.Kol_B2IRB_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();
+
+        decl.collownersdeletemapping.Kol_CRMHnb = yoyg0.getCRMHNBMisljenje();
+    }//execute
+ 
+    // metoda vraca datum za dan koji je za argNumOfDays dana bio prije danasnjeg dana	
+    public Date backDay(Date argNow, int argNumOfDays) {
+
+        GregorianCalendar util_date = new GregorianCalendar();
+
+        util_date.setTime(argNow);
+        int day = util_date.get(GregorianCalendar.DAY_OF_MONTH);
+
+        util_date.set(GregorianCalendar.DAY_OF_MONTH, day - argNumOfDays);
+        int year = util_date.get(GregorianCalendar.YEAR);
+        int month = util_date.get(GregorianCalendar.MONTH) + 1;
+        int d_new = util_date.get(GregorianCalendar.DAY_OF_MONTH);
+        String z_pom = year + "-" + month + "-" + d_new;
+        Date novo3 = Date.valueOf(z_pom);
+        return novo3;
+    }
+}	
+

@@ -1,0 +1,42 @@
+package hr.vestigo.modules.collateral.jcics.coA2;
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+public class COA23 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA2/COA23.sqlj,v 1.1 2015/04/24 13:41:06 hrazst Exp $";
+	private DeclCOA2 d = null;
+
+	public COA23(DeclCOA2 d) {
+		this.d = d;
+	}
+	
+	public void execute (TransactionContext tc) throws Exception {
+	    ConnCtx ctx = tc.getContext();
+	    
+        BigDecimal col_cat_id = d.economiclifeselectmapping.col_cat_id;
+        BigDecimal col_typ_id = d.economiclifeselectmapping.col_typ_id;
+        BigDecimal col_sub_id = d.economiclifeselectmapping.col_sub_id; 
+        
+        YOYM0 yoym_eco=new YOYM0(tc, "economic_life", DateUtils.getCurrentDate()); 
+        
+        GcmTypeData gtd=yoym_eco.resolve(col_cat_id, col_typ_id, col_sub_id, null);
+        
+        if(gtd==null){
+            d.economiclifeselectmapping.economic_life= 0;
+        }else{
+            try{
+                d.economiclifeselectmapping.economic_life = Integer.parseInt(gtd.code);
+            }catch (Exception e) {
+                d.economiclifeselectmapping.economic_life = 0;
+            }
+        }
+	}
+}

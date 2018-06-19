@@ -1,0 +1,347 @@
+package hr.vestigo.modules.collateral.jcics.co11;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyD.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+/**
+ *@author hramkr	
+ */ 
+       
+public class CO11A extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co11/CO11A.sqlj,v 1.23 2017/06/01 12:03:41 hrazst Exp $";
+	
+	public DeclCO11 decl = null;
+	YOY63 SQLhelper = null;
+	
+	public CO11A (DeclCO11 decl) {
+		this.decl = decl;
+	} 
+	//obj za select sloga iz col_head
+	CollHeadSelectData chds = new CollHeadSelectData();
+	//obj za update tbl coll_head	
+	CollHeadUpdateData chd = new CollHeadUpdateData();
+	// obj za update valute kolaterala u hipotekama
+	YOYDData mortgage = new YOYDData();
+	
+	public void execute(TransactionContext tc) throws Exception {		  
+	    ConnCtx ctx = tc.getContext();
+	    SQLhelper = new YOY63(tc);
+	    
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+	    String broj_sasije = decl.vehupdatemapping.Vehi_txtVIN;      
+	    //najprije provjeriti da li postoji u bazi vozilo s istim brojem sasije
+	    if(broj_sasije != null && !(broj_sasije.trim().equals(""))){
+	        int broj = 0;           
+	        try {
+	            #sql [ctx] {SELECT COUNT(*)
+                        INTO :broj 
+                        FROM coll_vehicle a, coll_head b
+                        WHERE 
+                            a.veh_vin_num = :(decl.vehupdatemapping.Vehi_txtVIN) 
+                        AND
+                            a.col_veh_id <> :(decl.vehupdatemapping.COL_SEC_ID)
+                        AND
+                            a.col_hea_id = b.col_hea_id
+                        AND
+                            b.collateral_status <> '4'
+                };          
+                tc.debug ( "...broj: " + broj);
+	        } catch (SQLException  sqle) {
+	            throw  sqle;
+	        }
+	        if(broj > 0){
+	            throw new VestigoTMException(1, "Transaction CO05A: Error update into coll_vehicle! ","colErr013", null);
+	        }   
+	    }	
+	    //select starog sloga iz baze za USER_LOCK_IN - select iz COLL_HEAD 
+		//SELECT FROM coll_head
+	    
+		try{
+			#sql [ctx]{
+			    SELECT
+				    a.col_hea_id,
+					a.basic_data_status,
+					a.mortgage_status,
+					a.coll_data_status,
+					a.cover_indic,
+					a.origin_org_uni_id
+				INTO 
+					:(chds.COL_HEA_ID),    
+					:(chds.BASIC_DATA_STATUS),
+					:(chds.MORTGAGE_STATUS),
+					:(chds.COLL_DATA_STATUS),
+					:(chds.COVER_INDIC),
+					:(chds.ORIGIN_ORG_UNI_ID) 
+				FROM COLL_HEAD a, COLL_VEHICLE b
+				WHERE a.col_hea_id = :(decl.vehupdatemapping.COL_HEA_ID)
+				AND	  a.col_hea_id = b.col_hea_id    				               		                   
+			};
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+			else {
+				throw new VestigoTMException(1, "CO11A - Cannot change, user_lock!", "errclt7", null);				
+			}
+		}
+		chds.USER_LOCK = decl.vehupdatemapping.USER_LOCK;		
+		//napraviti update COLL_HEAD punjenje objekta chd iz decl-a		
+		fillCHDobj(); 
+		tc.debug("zovem update Head : " + chd.COL_HEA_ID);	
+		tc.debug("USER_LOCK_IN : " + chd.USER_LOCK_IN);
+		
+		YOY43 headUpdate = new YOY43(tc, chd);		
+		headUpdate.updateCollHead(); 
+		
+		tc.debug("gotov update Head : "+chd.COL_HEA_ID); 
+		tc.debug("gotov update Head PUNIM user_lock : "+chd.USER_LOCK);
+			
+		decl.vehupdatemapping.USER_LOCK = chd.USER_LOCK;
+        decl.vehupdatemapping.Coll_txtUserLock = chd.USER_LOCK;  
+        
+		tc.debug("UPDATE SATELIT: "+decl.vehupdatemapping.COL_SEC_ID);  				
+		tc.debug("veh_typ_id: "+decl.vehupdatemapping.SEC_TYP_ID);  		
+		   
+		try{	 
+    
+					#sql [ctx]{
+							UPDATE coll_vehicle
+								SET		veh_group_id 		= :(decl.vehupdatemapping.SEC_TYP_ID),
+										veh_subgr_id 		= :(decl.vehupdatemapping.veh_subgr_id),
+										veh_made 			= :(decl.vehupdatemapping.Vehi_txtVehMade),
+										veh_type 			=:(decl.vehupdatemapping.Vehi_txtVehType), 	
+										veh_model 			=:(decl.vehupdatemapping.Vehi_txtVehModel),         
+										veh_colour 			=:(decl.vehupdatemapping.Vehi_txtVehColour),
+										veh_chassis 		=:(decl.vehupdatemapping.Vehi_txtVehChassis),
+										veh_base_purpose 	=:(decl.vehupdatemapping.Vehi_txtVehBasePurp),
+										veh_producer 		=:(decl.vehupdatemapping.Vehi_txtVehProducer),
+										veh_cou_id_prod 	=:(decl.vehupdatemapping.veh_cou_id_prod),
+										veh_made_year 		=:(decl.vehupdatemapping.Vehi_txtVehMadeYear),
+										veh_sit_no 			=:(decl.vehupdatemapping.Vehi_txtVehSitNo),
+										veh_sta_no 			=:(decl.vehupdatemapping.Vehi_txtVehStaNo),
+										veh_lyi_no 			=:(decl.vehupdatemapping.Vehi_txtVehLyiNo),
+										veh_allow_load 		=:(decl.vehupdatemapping.Vehi_txtVehAllowLoad),
+										veh_empty_mass 		=:(decl.vehupdatemapping.Vehi_txtVehEmptyMass),
+										veh_max_allo_mass	=:(decl.vehupdatemapping.Vehi_txtVehAlloMass),
+										veh_max_velocity	=:(decl.vehupdatemapping.Vehi_txtVehMaxVelocity),
+										veh_axis_no			=:(decl.vehupdatemapping.Vehi_txtVehAxisNo),
+										veh_engine_type		=:(decl.vehupdatemapping.Vehi_txtVehEngineType),
+										veh_power_kw		=:(decl.vehupdatemapping.Vehi_txtVehPowerKw),
+										veh_ccm				=:(decl.vehupdatemapping.Vehi_txtVehCcm),
+										veh_no_wheel		=:(decl.vehupdatemapping.Vehi_txtVehNoWheel),
+										veh_tracks			=:(decl.vehupdatemapping.Vehi_txtVehTracks),
+										veh_brake			=:(decl.vehupdatemapping.Vehi_txtVehBrake),
+										veh_km_trav			=:(decl.vehupdatemapping.Vehi_txtVehKmTravel),
+										veh_equipment 		=:(decl.vehupdatemapping.Vehi_txtVehEquipment),
+										veh_veh_licence		=:(decl.vehupdatemapping.Vehi_txtVehVehLicence),
+										veh_f_plate			=:(decl.vehupdatemapping.Vehi_txtVehFPlate),
+										veh_f_plate_dat		=:(decl.vehupdatemapping.Vehi_txtVehFPlateDate),
+										veh_date_lic		=:(decl.vehupdatemapping.Vehi_txtVehDateLic),   
+										veh_date_lic_to		=:(decl.vehupdatemapping.Vehi_txtVehDateLicTo),
+										veh_lic_return		=:(decl.vehupdatemapping.Vehi_txtVehLicReturn),
+										veh_lic_reamark		=:(decl.vehupdatemapping.Vehi_txtVehLicRemark),
+										veh_insurance		=:(decl.vehupdatemapping.Vehi_txtVehInsurance),
+										veh_con_num			=:(decl.vehupdatemapping.Vehi_txtVehConNum),
+										fid_typ				=:(decl.vehupdatemapping.Vehi_txtFidTyp),
+										veh_state			=:(decl.vehupdatemapping.Kol_txtVehState),
+										veh_kasko			=:(decl.vehupdatemapping.Vehi_txtVehKasko),
+										veh_insdate			=:(decl.vehupdatemapping.Vehi_txtVehInsDate),
+										veh_ins_id			=:(decl.vehupdatemapping.veh_ins_id),
+										veh_vin_num			=:(decl.vehupdatemapping.Vehi_txtVIN),
+										lic_ret_own			=:(decl.vehupdatemapping.Vehi_txtVehLicRetOwn),
+										lic_ret_own_dat		=:(decl.vehupdatemapping.Vehi_txtVehLicRetDat),
+										lic_ret_who			=:(decl.vehupdatemapping.Vehi_txtVehLicRetWho),	
+										lic_ret_own_rem		=:(decl.vehupdatemapping.Vehi_txtVehLicRetRem),
+                                        estimate_cus_id     =:(decl.vehupdatemapping.Coll_txtEUsePersonCusId)   
+							WHERE col_veh_id = :(decl.vehupdatemapping.COL_SEC_ID)
+					};  
+  			  
+			}catch(SQLException se){
+				if (se.getErrorCode()!=-803) throw se;
+				else {
+					throw new VestigoTMException(1, "Transaction CO11A: Error updating into coll_vehicle! ","colErr013", null);			
+				}				
+		}
+	
+  
+// ako se promijenila valuta kolaterala promijeniti i na svim vezanim hipotekama
+		
+		tc.debug("radim update hipoteka: "+mortgage.col_hea_id);	
+		
+		YOYD0 YOYD0 = new YOYD0(tc);
+		YOYDData mortgage = new YOYDData();   	
+		
+		mortgage.col_hea_id = decl.vehupdatemapping.COL_HEA_ID;
+		mortgage.cur_id = decl.vehupdatemapping.REAL_EST_NM_CUR_ID;;
+		
+		YOYD0.chgMortgageCurrencyAmount(mortgage); 
+		
+		tc.debug("gotov update hipoteka: "+mortgage.col_hea_id);			
+
+		// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.vehupdatemapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+        yoyg0.azurirajPrihvatljivosti();
+        decl.vehupdatemapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.vehupdatemapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.vehupdatemapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.vehupdatemapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();
+
+        decl.vehupdatemapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.vehupdatemapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.vehupdatemapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.vehupdatemapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();
+        
+        this.fillDeclFromCHDObj();
+	}//execute
+	
+	private void fillCHDobj (){
+	    chd.Coll_txtAcouBDate = decl.vehupdatemapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.vehupdatemapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.vehupdatemapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.vehupdatemapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.vehupdatemapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.vehupdatemapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.vehupdatemapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.vehupdatemapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.vehupdatemapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.vehupdatemapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.vehupdatemapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.vehupdatemapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.vehupdatemapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.vehupdatemapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.vehupdatemapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtComDoc = decl.vehupdatemapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.vehupdatemapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.vehupdatemapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.vehupdatemapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.vehupdatemapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.vehupdatemapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.vehupdatemapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.vehupdatemapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.vehupdatemapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.vehupdatemapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.vehupdatemapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.vehupdatemapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.vehupdatemapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.vehupdatemapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.vehupdatemapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.vehupdatemapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.vehupdatemapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.vehupdatemapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.vehupdatemapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.vehupdatemapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.vehupdatemapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.vehupdatemapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.vehupdatemapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.vehupdatemapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.vehupdatemapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.vehupdatemapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.vehupdatemapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.vehupdatemapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.vehupdatemapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.vehupdatemapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.vehupdatemapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.vehupdatemapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.vehupdatemapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.vehupdatemapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.vehupdatemapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.vehupdatemapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.vehupdatemapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.vehupdatemapping.Coll_txtThirdRightInNom;
+		chd.REAL_EST_EUSE_ID = decl.vehupdatemapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.vehupdatemapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.vehupdatemapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.vehupdatemapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.vehupdatemapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.vehupdatemapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.vehupdatemapping.COL_PLACE;
+		chd.COL_COUNTY = decl.vehupdatemapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.vehupdatemapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.vehupdatemapping.COL_RESI_QUAR;
+		chd.USE_ID = decl.vehupdatemapping.USE_ID;
+		chd.INSPOL_IND = decl.vehupdatemapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.vehupdatemapping.Coll_txtDesc;	
+		chd.COL_HEA_ID = decl.vehupdatemapping.COL_HEA_ID; 
+		chd.USER_LOCK_IN = decl.vehupdatemapping.USER_LOCK_IN;
+		chd.Coll_txtAcumBuyValue = decl.vehupdatemapping.Coll_txtAcumBuyValue;
+		chd.ORG_UNI_ID = decl.vehupdatemapping.ORG_UNI_ID;		
+		chd.save_ver_aut_flag = decl.vehupdatemapping.save_ver_aut_flag;
+		chd.BASIC_DATA_STATUS = chds.BASIC_DATA_STATUS;
+		chd.MORTGAGE_STATUS = chds.MORTGAGE_STATUS;
+		chd.COLL_DATA_STATUS = chds.COLL_DATA_STATUS;
+		chd.COVER_INDIC = chds.COVER_INDIC;
+		chd.COL_TYPE_ID = decl.vehupdatemapping.COL_TYPE_ID;
+        chd.COL_SUB_ID = decl.vehupdatemapping.SEC_TYP_ID;
+        chd.COL_GRO_ID = decl.vehupdatemapping.veh_subgr_id;
+        chd.COL_CAT_ID = decl.vehupdatemapping.col_cat_id;
+		chd.ORIGIN_ORG_UNI_ID = chds.ORIGIN_ORG_UNI_ID;
+		chd.ColRba_txtEligibility = decl.vehupdatemapping.ColRba_txtEligibility;
+		chd.KolLow_txtEligibility = decl.vehupdatemapping.KolLow_txtEligibility;
+		chd.Kol_txtRbaEligDsc = decl.vehupdatemapping.Kol_txtRbaEligDsc; 
+        chd.SPEC_STATUS = decl.vehupdatemapping.SPEC_STATUS;      
+        chd.Kol_txtCRMHnb= decl.vehupdatemapping.Kol_txtCRMHnb;
+	
+        chd.used_in_recovery = decl.vehupdatemapping.Coll_txtUsedInRecovery;
+        chd.kind_of_recovery = decl.vehupdatemapping.Coll_txtKindOfRecoveryCode;
+        chd.full_amount = decl.vehupdatemapping.Coll_txtFullAmountRecovery;
+        chd.full_amount_cur_id = decl.vehupdatemapping.CUR_ID_FULL_AMOUNT;
+        chd.recovery_amount = decl.vehupdatemapping.Coll_txtRecoveryAmount;
+        chd.recovery_cur_id = decl.vehupdatemapping.CUR_ID_RECOVERY_AMOUNT;
+        chd.recovery_comment = decl.vehupdatemapping.Coll_txtRecoveryComment;
+        chd.recovery_date = decl.vehupdatemapping.Coll_txtRecoveryDate;
+        chd.recovery_rate = decl.vehupdatemapping.Coll_txtRecoveryRate;
+
+        chd.realization_amount = decl.vehupdatemapping.Coll_txtRealizationAmount;
+        chd.realization_cur_id = decl.vehupdatemapping.CUR_ID_REALIZATION_AMOUNT;
+        chd.realization_date = decl.vehupdatemapping.Coll_txtRealizationDate;
+        chd.realization_kind = decl.vehupdatemapping.Coll_txtKindOfRealization;
+        chd.realization_cost = decl.vehupdatemapping.Coll_txtCostRealization;  
+        
+        chd.realization_cost_cur_id=decl.vehupdatemapping.REALIZATION_COST_CUR_ID;
+        chd.for_sale=decl.vehupdatemapping.Coll_txtForSale;
+        chd.for_sale_date=decl.vehupdatemapping.Coll_txtForSaleDate;
+        
+        chd.b2_irb_insag_elig = decl.vehupdatemapping.Coll_txtB2IRB;
+        chd.b2_hnb_insag_elig = decl.vehupdatemapping.Coll_txtB2HNB;
+        chd.use_id_co = decl.vehupdatemapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.vehupdatemapping.Coll_txtTypeTVCode;
+        chd.prec_exec_est = decl.vehupdatemapping.Coll_txtAccuracyEstimatesCode;
+        chd.correct_value = decl.vehupdatemapping.Coll_txtFairnessValuesCode;
+        chd.respect_deadline = decl.vehupdatemapping.Coll_txtDeadLinesCode;
+        chd.prof_to_rba = decl.vehupdatemapping.Coll_txtProfByRBACode;
+        chd.prof_to_client = decl.vehupdatemapping.Coll_txtProfByClientCode;
+        chd.col_eco_life = decl.vehupdatemapping.Coll_txtEconomicLife;
+        chd.real_est_estn_int = decl.vehupdatemapping.Coll_txtInternalValuer;
+        chd.est_type = decl.vehupdatemapping.EST_TYPE_CODE;
+        chd.met_est_1 = decl.vehupdatemapping.Coll_txtAssessmentMethod1Code;
+        chd.met_est_2 = decl.vehupdatemapping.Coll_txtAssessmentMethod2Code;
+        chd.non_ins_reason = decl.vehupdatemapping.Coll_txtNonInsReasoneCode;
+        chd.ins_cov_coll = decl.vehupdatemapping.Coll_txtInsTotalCoverCode;
+        chd.recovery_proc_stat = decl.vehupdatemapping.Coll_txtRecoveryProcStat; 
+        chd.contract_type = decl.vehupdatemapping.Coll_txtContractTypeCode;   
+	}
+	
+   private void fillDeclFromCHDObj () throws Exception{            
+        decl.vehupdatemapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.vehupdatemapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.vehupdatemapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.vehupdatemapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.vehupdatemapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.vehupdatemapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.vehupdatemapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.vehupdatemapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.vehupdatemapping.COL_HEA_ID);
+        decl.vehupdatemapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+    } 
+}	
+	

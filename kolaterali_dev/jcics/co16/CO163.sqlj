@@ -1,0 +1,647 @@
+package hr.vestigo.modules.collateral.jcics.co16;
+      
+//Transaction gets data about placement connected to coll_hf_prior or coll_head for given loan_ben_id
+  
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.sql.Date;
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.sql.SQLException;
+     
+#sql iterator Iter633 (BigDecimal loan_ben_id,
+						String register_no ,
+						BigDecimal cus_id,
+						String acc_no,
+						BigDecimal la_acc_id,
+						BigDecimal coll_hf_prior_id,
+						BigDecimal col_hea_id,
+						Integer ser_num,
+						Date date_from,
+						Date date_until,
+						String status,
+						String spec_status,
+						BigDecimal use_open_id, 
+						BigDecimal use_id,
+						Timestamp opening_ts,
+						Timestamp user_lock,
+						String request_no,
+						String priority_no,
+                        String acc_no_old,
+						BigDecimal fra_agr_id,
+						String aps_rqst_no,
+						String inspol_ind,
+						BigDecimal ip_cus_id,
+						String krad_admin_ind, 
+						BigDecimal kred_admin_use_id,
+						Timestamp kred_admin_ts
+		);	
+      
+public class CO163 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co16/CO163.sqlj,v 1.21 2018/03/27 07:54:31 hraskd Exp $";
+
+	private DeclCO16 decl = null;
+	private Iter633 iter63 = null;
+	private final BigDecimal hrk_cur_id = new BigDecimal("63999");
+	
+	public CO163(DeclCO16 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO163.sqlj     " );
+		tc.debug ( "......CO163.sqlj     TRANSAKCIJA ZA DOHVAT JEDNOG PLASMANA ZA HIPOTEKU ILI KOLATERAL" );
+		tc.debug ( "......CO163.sqlj     decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID " +  decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID );
+
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		if(decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID != null && 
+			(decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID).compareTo(new BigDecimal("0.00")) != 0){
+		
+			tc.debug ( "......CO163.sqlj     tu sam.... nije sporazum" );		
+			
+			try{			
+					#sql [ctx] {SELECT  loan_ben_id,
+										register_no,
+										cus_id,
+										acc_no,
+										la_acc_id,
+										coll_hf_prior_id,
+										col_hea_id,
+										ser_num,
+										date_from,
+										date_until,
+										status,
+										spec_status,
+										use_open_id,
+										use_id,
+										opening_ts,
+										user_lock,
+										request_no,
+										priority_no,
+			                            acc_no_old,
+										fra_agr_id,
+										aps_rqst_no,
+										inspol_ind,
+										ip_cus_id,
+										krad_admin_ind, 
+										kred_admin_use_id,
+										kred_admin_ts
+
+						INTO    :(decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID ),          
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtRegNo),              
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_CUS_ID ),               
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtAccNo ),             
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_LA_ACC_ID ),            
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HF_PRIOR_ID ),     
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HEA_ID  ),         
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtSerNum ),            
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtDateFrom ),          
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtDateUntil ), 
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtStatus ),          
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtSpecStatus ), 
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_USE_OPEN_ID ),                           
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_USE_ID ),                               
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtOpeningTS ),                         
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtUserLock ),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtRequestNo ),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtPriorityNo),
+			                    :(decl.loanbeneficiarydetailmapping.LBenDialog_txtContractNo),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_fra_agr_id),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtApsRqstNo),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_Insu),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_IP_CUS_ID),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdmin),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_KredAdminUSE_ID),
+								:(decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdminTime)
+						FROM 	loan_beneficiary 
+						WHERE  	loan_ben_id = :(decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID)                                                
+								
+				};    			
+			}catch(java.sql.SQLException se){
+				tc.debug ( "......CO163.sqlj  SQLException   decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID     " + decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID );
+				tc.debug ( "......CO163.sqlj select  from loan_beneficiary  SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO163.sqlj select  from loan_beneficiary  SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO163.sqlj select  from loan_beneficiary  SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new VestigoTMException(1, "Transaction CO163: Error selecting * from loan_beneficiary   ! ","errclt1", null);
+			}
+		} else {
+		    //	dohvat za plasmane koji su unutar sporazuma
+			tc.debug ( "......CO163.sqlj     tu sam.... plasman iz sporazuma: laAccId " + decl.loanbeneficiarydetailmapping.laAccId);
+			tc.debug ( "......CO163.sqlj     tu sam.... plasman iz sporazuma: laAccNo " + decl.loanbeneficiarydetailmapping.laAccNo);
+			tc.debug ( "......CO163.sqlj     tu sam.... plasman iz sporazuma: laRequestNo " + decl.loanbeneficiarydetailmapping.laRequestNo);
+			try {
+				if (decl.loanbeneficiarydetailmapping.laAccId != null && decl.loanbeneficiarydetailmapping.laAccId.compareTo(new BigDecimal("0.00")) != 0 ) {
+				 tc.debug ( "......CO163.sqlj   tu sam.... plasman iz sporazuma---------1" );				
+					#sql [ctx] iter63 = { SELECT 
+										loan_ben_id as loan_ben_id,
+										register_no as register_no,
+										cus_id as cus_id,
+										acc_no as acc_no,
+										la_acc_id as la_acc_id,
+										coll_hf_prior_id as coll_hf_prior_id,
+										col_hea_id as col_hea_id,
+										ser_num as ser_num,
+										date_from as date_from,
+										date_until as date_until,
+										status as status,
+										spec_status as spec_status,
+										use_open_id as use_open_id,
+										use_id as use_id,
+										opening_ts as opening_ts,
+										user_lock as user_lock,
+										request_no as request_no,
+										priority_no as priority_no,
+					                    acc_no_old as acc_no_old, 
+										fra_agr_id as fra_agr_id,
+										aps_rqst_no as aps_rqst_no,
+										inspol_ind as inspol_ind,
+										ip_cus_id as ip_cus_id,
+										krad_admin_ind as krad_admin_ind, 
+										kred_admin_use_id as kred_admin_use_id,
+										kred_admin_ts as kred_admin_ts
+								FROM
+									loan_beneficiary 
+								WHERE
+									la_acc_id = :(decl.loanbeneficiarydetailmapping.laAccId)         
+								AND
+									fra_agr_id = :(decl.loanbeneficiarydetailmapping.l_fra_agr_id)
+					            AND 
+					                date_until = '9999-12-31'
+								FETCH FIRST 1 ROWS ONLY
+					};
+				} else if (decl.loanbeneficiarydetailmapping.laAccNo != null &&  !decl.loanbeneficiarydetailmapping.laAccNo.trim().equals("")){
+					tc.debug ( "......CO163.sqlj   tu sam.... plasman iz sporazuma---------2" );	
+					#sql [ctx] iter63 = { SELECT 
+										loan_ben_id as loan_ben_id,
+										register_no as register_no,
+										cus_id as cus_id,
+										acc_no as acc_no,
+										la_acc_id as la_acc_id,
+										coll_hf_prior_id as coll_hf_prior_id,
+										col_hea_id as col_hea_id,
+										ser_num as ser_num,
+										date_from as date_from,
+										date_until as date_until,
+										status as status,
+										spec_status as spec_status,
+										use_open_id as use_open_id,
+										use_id as use_id,
+										opening_ts as opening_ts,
+										user_lock as user_lock,
+										request_no as request_no,
+										priority_no as priority_no,
+					                    acc_no_old as acc_no_old,
+										fra_agr_id as fra_agr_id,
+										aps_rqst_no as aps_rqst_no,
+										inspol_ind as inspol_ind,
+										ip_cus_id as ip_cus_id,
+										krad_admin_ind as krad_admin_ind, 
+										kred_admin_use_id as kred_admin_use_id,
+										kred_admin_ts as kred_admin_ts
+								FROM
+									loan_beneficiary 
+								WHERE
+									acc_no = :(decl.loanbeneficiarydetailmapping.laAccNo)         
+								AND
+									fra_agr_id = :(decl.loanbeneficiarydetailmapping.l_fra_agr_id)
+                                AND 
+                                    date_until = '9999-12-31'       
+								FETCH FIRST 1 ROWS ONLY
+						};		  		
+				} else if (decl.loanbeneficiarydetailmapping.laRequestNo != null && !decl.loanbeneficiarydetailmapping.laRequestNo.trim().equals("")) {
+					tc.debug ( "......CO163.sqlj   tu sam.... plasman iz sporazuma---------3" );	
+					#sql [ctx] iter63 = { SELECT 
+											loan_ben_id as loan_ben_id,
+											register_no as register_no,
+											cus_id as cus_id,
+											acc_no as acc_no,
+											la_acc_id as la_acc_id,
+											coll_hf_prior_id as coll_hf_prior_id,
+											col_hea_id as col_hea_id,
+											ser_num as ser_num,
+											date_from as date_from,
+											date_until as date_until,
+											status as status,
+											spec_status as spec_status,
+											use_open_id as use_open_id,
+											use_id as use_id,
+											opening_ts as opening_ts,
+											user_lock as user_lock,
+											request_no as request_no,
+											priority_no as priority_no,
+					                        acc_no_old as acc_no_old,
+											fra_agr_id as fra_agr_id,
+											aps_rqst_no as aps_rqst_no,
+											inspol_ind as inspol_ind,
+											ip_cus_id as ip_cus_id,
+											krad_admin_ind as krad_admin_ind, 
+											kred_admin_use_id as kred_admin_use_id,
+											kred_admin_ts as kred_admin_ts
+									FROM
+										loan_beneficiary 
+									WHERE
+										request_no = :(decl.loanbeneficiarydetailmapping.laRequestNo)         
+									AND
+										fra_agr_id = :(decl.loanbeneficiarydetailmapping.l_fra_agr_id)
+                                    AND 
+                                        date_until = '9999-12-31'       
+									FETCH FIRST 1 ROWS ONLY
+					    };									
+				} else if (decl.loanbeneficiarydetailmapping.laContractNo != null && !decl.loanbeneficiarydetailmapping.laContractNo.trim().equals("")) {
+                    tc.debug ( "......CO163.sqlj   tu sam.... plasman iz sporazuma---------3" );    
+                    #sql [ctx] iter63 = { SELECT 
+                                            loan_ben_id as loan_ben_id,
+                                            register_no as register_no,
+                                            cus_id as cus_id,
+                                            acc_no as acc_no,
+                                            la_acc_id as la_acc_id,
+                                            coll_hf_prior_id as coll_hf_prior_id,
+                                            col_hea_id as col_hea_id,
+                                            ser_num as ser_num,
+                                            date_from as date_from,
+                                            date_until as date_until,
+                                            status as status,
+                                            spec_status as spec_status,
+                                            use_open_id as use_open_id,
+                                            use_id as use_id,
+                                            opening_ts as opening_ts,
+                                            user_lock as user_lock,
+                                            request_no as request_no,
+                                            priority_no as priority_no,
+                                            acc_no_old as acc_no_old,
+                                            fra_agr_id as fra_agr_id,
+                                            aps_rqst_no as aps_rqst_no,
+                                            inspol_ind as inspol_ind,
+                                            ip_cus_id as ip_cus_id,
+                                            krad_admin_ind as krad_admin_ind, 
+                                            kred_admin_use_id as kred_admin_use_id,
+                                            kred_admin_ts as kred_admin_ts
+                                    FROM
+                                        loan_beneficiary 
+                                    WHERE
+                                        acc_no_old = :(decl.loanbeneficiarydetailmapping.laContractNo)         
+                                    AND
+                                        fra_agr_id = :(decl.loanbeneficiarydetailmapping.l_fra_agr_id)
+                                    AND 
+                                        date_until = '9999-12-31'       
+                                    FETCH FIRST 1 ROWS ONLY
+                        };                                  
+                }
+			} catch (SQLException se) {
+  
+			} 		
+			     
+			if (iter63 != null) {
+				while (iter63.next()) {
+					decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID = iter63.loan_ben_id();          
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtRegNo = iter63.register_no();              
+					decl.loanbeneficiarydetailmapping.LBenDialog_CUS_ID = iter63.cus_id();              
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtAccNo = iter63.acc_no();            
+					decl.loanbeneficiarydetailmapping.LBenDialog_LA_ACC_ID = iter63.la_acc_id();           
+					decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HF_PRIOR_ID = iter63.coll_hf_prior_id();     
+					decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HEA_ID = iter63.col_hea_id();         
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtSerNum = iter63.ser_num();          
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtDateFrom = iter63.date_from();         
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtDateUntil = iter63.date_until(); 
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtStatus = iter63.status();          
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtSpecStatus = iter63.spec_status(); 
+					decl.loanbeneficiarydetailmapping.LBenDialog_USE_OPEN_ID = iter63.use_open_id();                          
+					decl.loanbeneficiarydetailmapping.LBenDialog_USE_ID = iter63.use_id();                              
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtOpeningTS = iter63.opening_ts();                         
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtUserLock = iter63.user_lock();
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtRequestNo  = iter63.request_no();
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtPriorityNo  = iter63.priority_no();
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtContractNo = iter63.acc_no_old();
+					decl.loanbeneficiarydetailmapping.LBenDialog_fra_agr_id = iter63.fra_agr_id();	
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtApsRqstNo = iter63.aps_rqst_no();	
+					decl.loanbeneficiarydetailmapping.LBenDialog_Insu = iter63.inspol_ind();	
+					decl.loanbeneficiarydetailmapping.LBenDialog_IP_CUS_ID = iter63.ip_cus_id	();	
+					
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdmin = iter63.krad_admin_ind();	
+					decl.loanbeneficiarydetailmapping.LBenDialog_KredAdminUSE_ID = iter63.kred_admin_use_id();	
+					decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdminTime = iter63.kred_admin_ts();
+				}
+			}
+
+			if(iter63!=null) {
+				try {
+					iter63.close();
+				} catch (Exception ignored) {}
+			}
+		}
+		         
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtRegNo_O   			= 	decl.loanbeneficiarydetailmapping.LBenDialog_txtRegNo  ;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_CUS_ID_O     			= 	decl.loanbeneficiarydetailmapping.LBenDialog_CUS_ID  ; 	   			                                        
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtAccNo_O    			= 	decl.loanbeneficiarydetailmapping.LBenDialog_txtAccNo  ; 	  			                                        
+    	decl.loanbeneficiarydetailmapping.LBenDialog_LA_ACC_ID_O        	=  	decl.loanbeneficiarydetailmapping.LBenDialog_LA_ACC_ID   ; 	                                             
+    	decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HF_PRIOR_ID_O 	=  	decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HF_PRIOR_ID; 	                                          
+    	decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HEA_ID_O      	=  	decl.loanbeneficiarydetailmapping.LBenDialog_COLL_HEA_ID ; 	                                              
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtSerNum_O        	=  	decl.loanbeneficiarydetailmapping.LBenDialog_txtSerNum ; 	                                               
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtDateFrom_O      	=  	decl.loanbeneficiarydetailmapping.LBenDialog_txtDateFrom ; 	                             
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtDateUntil_O     	=  	decl.loanbeneficiarydetailmapping.LBenDialog_txtDateUntil ; 	                            
+    	decl.loanbeneficiarydetailmapping.LBenDialog_USE_OPEN_ID_O      	=  	decl.loanbeneficiarydetailmapping.LBenDialog_USE_OPEN_ID ; 	                             
+    	decl.loanbeneficiarydetailmapping.LBenDialog_USE_ID_O           	=  	decl.loanbeneficiarydetailmapping.LBenDialog_USE_ID ; 	                                  
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtOpeningTS_O    		=  	decl.loanbeneficiarydetailmapping.LBenDialog_txtOpeningTS   ; 	                          
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtUserLock_O      	=  	decl.loanbeneficiarydetailmapping.LBenDialog_txtUserLock ; 	
+    	
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtStatus_O 			=   decl.loanbeneficiarydetailmapping.LBenDialog_txtStatus;       
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtSpecStatus_O  		=	decl.loanbeneficiarydetailmapping.LBenDialog_txtSpecStatus;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtRequestNo_O  		=	decl.loanbeneficiarydetailmapping.LBenDialog_txtRequestNo;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtPriorityNo_O  		=	decl.loanbeneficiarydetailmapping.LBenDialog_txtPriorityNo;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_fra_agr_id_O			=	decl.loanbeneficiarydetailmapping.LBenDialog_fra_agr_id;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtApsRqstNo_O			=	decl.loanbeneficiarydetailmapping.LBenDialog_txtApsRqstNo;
+    	
+    	decl.loanbeneficiarydetailmapping.LBenDialog_Insu_O					=	decl.loanbeneficiarydetailmapping.LBenDialog_Insu;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_IP_CUS_ID_O			=	decl.loanbeneficiarydetailmapping.LBenDialog_IP_CUS_ID;
+    	
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdmin_O			=	decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdmin;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_KredAdminUSE_ID_O		=	decl.loanbeneficiarydetailmapping.LBenDialog_KredAdminUSE_ID;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdminTime_O		=	decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdminTime;
+    	decl.loanbeneficiarydetailmapping.LBenDialog_txtContractNo_O        =   decl.loanbeneficiarydetailmapping.LBenDialog_txtContractNo;
+		
+//    	BigDecimal max_col_pro_id=BigDecimal.ZERO;
+//        try{
+//            #sql [ctx]  {
+//                        SELECT MAX(col_pro_id) as max_id 
+//                        INTO :max_col_pro_id
+//                        FROM col_proc 
+//                        WHERE proc_type IN ('M','N','P') AND proc_status='1' 
+//            };             
+//        }catch(java.sql.SQLException se) {
+//            tc.debug ( "......CO163.sqlj select from col_proc  SQL ErrorCode " + se.getErrorCode());
+//            tc.debug ( "......CO163.sqlj select from col_proc  SQL SQLState " + se.getSQLState());
+//            tc.debug ( "......CO163.sqlj select from col_proc  SQL Message " + se.getMessage());
+//            se.printStackTrace();
+//            if (se.getErrorCode()!=100) {
+//                throw se;
+//            } 
+//        }
+        String contract_no=decl.loanbeneficiarydetailmapping.LBenDialog_txtContractNo;
+        if(contract_no!=null && contract_no.trim().equals("")) contract_no=null;
+        
+    	BigDecimal exposure_cur_id=null, exposure_balance=null;    	
+ /*       try{
+            #sql [ctx]  {
+                SELECT ce.default_status, ce.default_date, ce.usage_date, ce.due_date, exposure_cur_id, exposure_balance, ce.exp_off_bal_lcy, ce.exposure_date               
+                INTO :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDefault),
+                     :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDafaultDate),
+                     :(decl.loanbeneficiarydetailmapping.LBenDialog_txtUseDate),
+                     :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDueDate),
+                     :(exposure_cur_id),
+                     :(exposure_balance),
+                     :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureExpOffBalLcy),
+                     :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureDate)
+                FROM CUSACC_EXPOSURE ce
+                WHERE ce.cus_acc_id = :(decl.loanbeneficiarydetailmapping.LBenDialog_LA_ACC_ID) 
+                OR ce.cus_acc_no = :(decl.loanbeneficiarydetailmapping.LBenDialog_txtAccNo)
+                OR ce.contract_no = :(contract_no)
+                ORDER BY user_lock DESC 
+                FETCH FIRST ROW ONLY  
+            };             
+        }catch(java.sql.SQLException se) {
+            tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL Message " + se.getMessage());
+            se.printStackTrace();
+            if (se.getErrorCode()!=100) {
+                throw se;
+            } 
+        } 
+       */
+        boolean find_exposure = false;
+       if(decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID != null && 
+               (decl.loanbeneficiarydetailmapping.LBenDialog_LOAN_BEN_ID).compareTo(new BigDecimal("0.00")) != 0){
+           try{
+               find_exposure = true;
+               #sql [ctx]  {
+                   SELECT ce.default_status, ce.default_date, ce.usage_date, ce.due_date, exposure_cur_id, exposure_balance, ce.exp_off_bal_lcy, ce.exposure_date               
+                   INTO :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDefault),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDafaultDate),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtUseDate),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDueDate),
+                        :(exposure_cur_id),
+                        :(exposure_balance),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureExpOffBalLcy),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureDate)
+                   FROM CUSACC_EXPOSURE ce
+                   WHERE ce.cus_acc_id = :(decl.loanbeneficiarydetailmapping.LBenDialog_LA_ACC_ID) 
+                   ORDER BY user_lock DESC 
+                   FETCH FIRST ROW ONLY  
+               };             
+           }catch(java.sql.SQLException se) {
+               find_exposure = false;
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL ErrorCode " + se.getErrorCode());
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL SQLState " + se.getSQLState());
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL Message " + se.getMessage());
+               se.printStackTrace();
+               if (se.getErrorCode()!=100) {
+                   throw se;
+               } 
+           } 
+           
+       }
+       
+       if( !find_exposure &&  decl.loanbeneficiarydetailmapping.laAccNo != null &&  !decl.loanbeneficiarydetailmapping.laAccNo.trim().equals("")){
+           try{
+               find_exposure = true;
+               #sql [ctx]  {
+                   SELECT ce.default_status, ce.default_date, ce.usage_date, ce.due_date, exposure_cur_id, exposure_balance, ce.exp_off_bal_lcy, ce.exposure_date               
+                   INTO :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDefault),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDafaultDate),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtUseDate),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDueDate),
+                        :(exposure_cur_id),
+                        :(exposure_balance),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureExpOffBalLcy),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureDate)
+                   FROM CUSACC_EXPOSURE ce
+                   WHERE  ce.cus_acc_no = :(decl.loanbeneficiarydetailmapping.LBenDialog_txtAccNo)
+                   ORDER BY user_lock DESC 
+                   FETCH FIRST ROW ONLY  
+               };             
+           }catch(java.sql.SQLException se) {
+               find_exposure = false;
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL ErrorCode " + se.getErrorCode());
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL SQLState " + se.getSQLState());
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL Message " + se.getMessage());
+               se.printStackTrace();
+               if (se.getErrorCode()!=100) {
+                   throw se;
+               } 
+           } 
+           
+       }
+       
+       if(!find_exposure &&  contract_no != null){
+           try{
+               find_exposure = true;
+               #sql [ctx]  {
+                   SELECT ce.default_status, ce.default_date, ce.usage_date, ce.due_date, exposure_cur_id, exposure_balance, ce.exp_off_bal_lcy, ce.exposure_date               
+                   INTO :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDefault),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDafaultDate),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtUseDate),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtDueDate),
+                        :(exposure_cur_id),
+                        :(exposure_balance),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureExpOffBalLcy),
+                        :(decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureDate)
+                   FROM CUSACC_EXPOSURE ce
+                   WHERE ce.contract_no = :(contract_no)
+                   ORDER BY user_lock DESC 
+                   FETCH FIRST ROW ONLY  
+               };             
+           }catch(java.sql.SQLException se) {
+               find_exposure = false;
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL ErrorCode " + se.getErrorCode());
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL SQLState " + se.getSQLState());
+               tc.debug ( "......CO163.sqlj select from cusacc_exposure  SQL Message " + se.getMessage());
+               se.printStackTrace();
+               if (se.getErrorCode()!=100) {
+                   throw se;
+               } 
+           } 
+           
+       }
+       
+        if(exposure_cur_id!=null && exposure_balance!=null){
+            YRXX0 yrxx0 = new YRXX0(tc); 
+            decl.loanbeneficiarydetailmapping.LBenDialog_txtExposure = yrxx0.exchange(exposure_balance, exposure_cur_id, hrk_cur_id, decl.loanbeneficiarydetailmapping.LBenDialog_txtExposureDate);
+        }
+        
+    	try{
+			#sql [ctx]  {SELECT	code, name, tax_number
+					INTO 	:(decl.loanbeneficiarydetailmapping.LBenDialog_txtCode),
+							:(decl.loanbeneficiarydetailmapping.LBenDialog_txtName),
+			                :(decl.loanbeneficiarydetailmapping.LBenDialog_txtOIB)
+					FROM  customer  
+					WHERE cus_id =:(decl.loanbeneficiarydetailmapping.LBenDialog_CUS_ID)
+				}; 
+		}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO163.sqlj select from customer  SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO163.sqlj select from customer  SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO163.sqlj select from customer  SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100) {
+						
+					}else{
+						throw se;
+					} 
+		}
+		try{
+			#sql [ctx]  {SELECT	name,
+						    	   surname
+					INTO 	:(decl.loanbeneficiarydetailmapping.LBenDialog_txtFName ),
+							:(decl.loanbeneficiarydetailmapping.LBenDialog_txtSurName  )                             
+					FROM  citizen  
+					WHERE cus_id =:(decl.loanbeneficiarydetailmapping.LBenDialog_CUS_ID)
+				}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO163.sqlj select from citizen  SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO163.sqlj select from citizen  SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO163.sqlj select from citizen  SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100) {
+				
+			}else{
+				throw se;
+			} 
+		}
+		
+		decl.loanbeneficiarydetailmapping.LBenDialog_txtCode_O   = decl.loanbeneficiarydetailmapping.LBenDialog_txtCode; 
+		decl.loanbeneficiarydetailmapping.LBenDialog_txtName_O   = decl.loanbeneficiarydetailmapping.LBenDialog_txtName;      
+		decl.loanbeneficiarydetailmapping.LBenDialog_txtFName_O     = decl.loanbeneficiarydetailmapping.LBenDialog_txtFName ;
+		decl.loanbeneficiarydetailmapping.LBenDialog_txtSurName_O   = decl.loanbeneficiarydetailmapping.LBenDialog_txtSurName ;
+		//USE_OPEN_ID+
+		try{
+				#sql [ctx]  {SELECT	
+									login, 
+									user_name  
+								INTO
+									:(decl.loanbeneficiarydetailmapping.LBenDialog_txtUserOpenLogin ),
+									:(decl.loanbeneficiarydetailmapping.LBenDialog_txtUserOpenName)
+								FROM  app_user  
+								WHERE use_id =:(decl.loanbeneficiarydetailmapping.LBenDialog_USE_OPEN_ID)
+			 		
+					}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO163.sqlj select from app_user USE_OPEN_ID SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO163.sqlj select from app_user USE_OPEN_ID SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO163.sqlj select from app_user USE_OPEN_ID SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//USE_OPEN_ID+
+			
+			//USE_ID+
+			try{
+					#sql [ctx]  {SELECT	
+									login, 
+									user_name  
+								INTO
+									:(decl.loanbeneficiarydetailmapping.LBenDialog_txtUserLogin ),
+									:(decl.loanbeneficiarydetailmapping.LBenDialog_txtUserName )
+							FROM  app_user  
+							WHERE use_id =:(decl.loanbeneficiarydetailmapping.LBenDialog_USE_ID)
+
+			 	  							  
+			 			
+					}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO163.sqlj select from app_user USE_ID SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO163.sqlj select from app_user USE_ID SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO163.sqlj select from app_user USE_ID SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//USE_ID+
+               
+			decl.loanbeneficiarydetailmapping.LBenDialog_txtUserLogin_O      =      decl.loanbeneficiarydetailmapping.LBenDialog_txtUserLogin  ;                  
+			decl.loanbeneficiarydetailmapping.LBenDialog_txtUserName_O       =      decl.loanbeneficiarydetailmapping.LBenDialog_txtUserName  ;                  
+			decl.loanbeneficiarydetailmapping.LBenDialog_txtUserOpenLogin_O  =      decl.loanbeneficiarydetailmapping.LBenDialog_txtUserOpenLogin ;               
+			decl.loanbeneficiarydetailmapping.LBenDialog_txtUserOpenName_O   =      decl.loanbeneficiarydetailmapping.LBenDialog_txtUserOpenName ;                
+
+			// KRED_ADMIN_USE_ID			
+			try{ 
+				if (decl.loanbeneficiarydetailmapping.LBenDialog_KredAdminUSE_ID != null){ 
+							#sql [ctx] {
+			                    SELECT login, user_name
+			                        INTO :(decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdminUserId),
+										 :(decl.loanbeneficiarydetailmapping.LBenDialog_txtKredAdminUserName)
+			                        FROM app_user 
+			                        WHERE use_id =:(decl.loanbeneficiarydetailmapping.LBenDialog_KredAdminUSE_ID)
+									};
+	      		}
+	        }catch(SQLException e){
+	        	if (e.getErrorCode()!=100) throw e;
+		    }	      		
+	        
+	        //dohvat osiguravatelja dohvat iz tabele osiguravatelja INSU_COMPANY
+			try{ 
+				if (decl.loanbeneficiarydetailmapping.LBenDialog_IP_CUS_ID != null){ 
+							#sql [ctx] {
+			                    SELECT c.register_no, c.name, c.tax_number
+			                        INTO :(decl.loanbeneficiarydetailmapping.LBenDialog_txtInsPolRegNo),
+										 :(decl.loanbeneficiarydetailmapping.LBenDialog_txtInsPolName),
+				                         :(decl.loanbeneficiarydetailmapping.LBenDialog_txtInsPolOIB)
+			                        FROM INSU_COMPANY a, customer c
+			                        WHERE a.ic_id = :(decl.loanbeneficiarydetailmapping.LBenDialog_IP_CUS_ID)
+									AND	  a.ic_cus_id = c.cus_id 	};
+	      		}
+	        }catch(SQLException e){
+	        	if (e.getErrorCode()!=100) throw e;  
+		    }	      							               
+
+	}//execute 
+	 
+}  
+

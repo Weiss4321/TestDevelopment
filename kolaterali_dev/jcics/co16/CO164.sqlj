@@ -1,0 +1,688 @@
+package hr.vestigo.modules.collateral.jcics.co16;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+/**
+ * CO164 class update data about loan beneficiary in table loan_beneficiary
+ *  	
+ */
+public class CO164 extends RemoteTransaction {
+		
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co16/CO164.sqlj,v 1.25 2014/04/11 10:04:24 hraskd Exp $";
+    public DeclCO16 decl = null;
+	
+	public CO164 (DeclCO16 decl) {
+		this.decl = decl;
+	}
+  		  
+	public void execute(TransactionContext tc) throws Exception {
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();    			
+		ConnCtx ctx = tc.getContext();
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+		int broj=0;
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);          
+        
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		
+		boolean isThereDiff = false;
+		String  newStringOne = null;
+		String  oldStringOne = null;
+		Date newDateOne = null;
+		Date oldDateOne = null;
+			
+		if((!isThereDiff) && (decl.loanbeneficiaryupdmapping.LBenDialog_CUS_ID.compareTo(decl.loanbeneficiaryupdmapping.LBenDialog_CUS_ID_O) != 0)){
+			isThereDiff = true;
+		}
+		if((!isThereDiff)){
+				
+			newStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo;
+			oldStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo_O;
+			if(newStringOne != null && oldStringOne != null){
+				newStringOne = newStringOne.trim();
+				oldStringOne = oldStringOne.trim();
+				if(newStringOne.compareTo(oldStringOne) == 0){
+					isThereDiff = true;
+				}
+			}
+		}
+
+		
+		if((!isThereDiff)){
+			
+			newStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo;
+			oldStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo_O;
+			if(newStringOne != null && oldStringOne != null){
+				newStringOne = newStringOne.trim();
+				oldStringOne = oldStringOne.trim();
+				if(newStringOne.compareTo(oldStringOne) == 0){
+					isThereDiff = true;
+				}
+			}
+		}		
+		
+		if((!isThereDiff)){
+				
+			newStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo;
+			oldStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo_O;
+			if(newStringOne != null && oldStringOne != null){
+				newStringOne = newStringOne.trim();
+				oldStringOne = oldStringOne.trim();
+				if(newStringOne.compareTo(oldStringOne) == 0){
+					isThereDiff = true;
+				}
+			}
+		}
+		
+		if((!isThereDiff)){
+				
+			newStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtPriorityNo;
+			oldStringOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtPriorityNo_O;
+			if(newStringOne != null && oldStringOne != null){
+				newStringOne = newStringOne.trim();
+				oldStringOne = oldStringOne.trim();
+				if(newStringOne.compareTo(oldStringOne) == 0){
+					isThereDiff = true;
+				}
+			}
+		}
+			
+		if((!isThereDiff) ){
+			newDateOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtDateFrom;
+			oldDateOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtDateFrom_O;
+				
+			if(newDateOne != null && oldDateOne != null){
+				if(newDateOne.compareTo(oldDateOne) == 0){
+					isThereDiff = true;
+				}
+			}
+		}
+		
+		if((!isThereDiff) ){
+			newDateOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtDateUntil;
+			oldDateOne = decl.loanbeneficiaryupdmapping.LBenDialog_txtDateUntil_O;
+				
+			if(newDateOne != null && oldDateOne != null){
+				if(newDateOne.compareTo(oldDateOne) == 0){
+					isThereDiff = true;
+				}
+			}
+		}
+			 
+//Ako je stvarno bila promjena 
+		if(isThereDiff){
+		 	int brojZapisa = 0;
+			String acc_no = null;
+			String request_no = null;
+			String aps_no = null;
+			
+			acc_no = decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo;
+			request_no = decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo;
+			aps_no = decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo;
+			
+			
+	         
+			// dohvat ID-a za partiju   
+			// pozvati samo ako je  decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID == null     
+            //get la_acc_id from loan_account
+            String partija = decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo;
+            partija = partija.trim();
+
+            if (decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID == null) {
+            
+                try{
+                    #sql [ctx]{
+			           SELECT cus_acc_id  INTO :(decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID)
+			           FROM cusacc_exposure
+			           WHERE cus_acc_no = :partija
+			        };
+                    tc.debug("Dohvacen ID partije plasmana je " + decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo + " " + decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID ); 
+                }catch(java.sql.SQLException sel){
+                    tc.debug("DOGODILA SE SQL GRESKA U CO164.sqlj  " );
+                    if (sel.getErrorCode()==100){
+                        tc.debug("Nije dohvacen ID partije plasmana je " + decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo + " " + decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID );    
+                    } else {
+                        tc.debug ( "......CO164.sqlj SELECT la_acc_id FROM loan_account SQL ErrorCode " + sel.getErrorCode());
+                        tc.debug ( "......CO164.sqlj SELECT la_acc_id FROM loan_account SQL SQLState " + sel.getSQLState());
+                        tc.debug ( "......CO164.sqlj SELECT la_acc_id FROM loan_account SQL Message " + sel.getMessage());
+                        tc.debug ( "......CO164.sqlj SELECT la_acc_id FROM loan_account for LBenDialog_txtAccN " + decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo);
+                        throw new VestigoTMException(1, "Transaction CO164: Error inserting loan_beneficiary! ","err411a", null);
+                    }
+                }   
+            }
+            
+            // dohvati smije li se partija višestruko dodavati
+            int brojIzuzetaka = 0;
+            if(decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID != null) {
+                #sql[ctx] { 
+                    SELECT COUNT(*) 
+                    INTO :(brojIzuzetaka)
+                    FROM frame_acc_exception
+                    WHERE cus_acc_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID)
+                    AND exception_type = 'D'
+                    AND status = 'A'
+                };
+            }
+			
+			
+// za plasmane vezane na hipoteku koja nije dio okvirnog sporazuma			 	
+//			 	if(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HF_PRIOR_ID != null){
+		 	if(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HF_PRIOR_ID != null && decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id == null){			 		
+//COLL_HF_PRIOR_ID
+//PROVJERA POSTOJI LI ZAPIS JEDNAK ONOM KOJI SE ZELI UBACITI U BAZU
+		 		try{
+//		 			provjertiti sto je upisano, broj partije, broj zahtjeva ili broj aps
+// 1. zadan broj partije 				
+					if (acc_no != null && !(acc_no.trim().equals(""))) {
+				    	System.out.println(" CO162 - TU SAM 1 --->>>> " );
+				    	
+			 			#sql [ctx]{
+							SELECT count(*)  INTO :brojZapisa
+		 					FROM loan_beneficiary a, coll_hf_prior b, coll_head c 
+		 					WHERE 
+				 				a.acc_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo)
+		 					AND
+		 						a.loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+				    		AND
+				    			a.status = 'A'
+		 					AND
+								a.coll_hf_prior_id = b.coll_hf_prior_id 
+				    		AND
+				    			b.hf_status = 'A'
+		 					AND
+								b.hf_coll_head_id = c.col_hea_id 
+		 					AND
+								c.col_hea_id = :(decl.loanbeneficiaryupdmapping.LBen_col_hea_id_check) 
+						};				    	
+					}else {
+//	2.1 nije zadan broj partije, zadan broj zahtjeva					
+						if ((request_no != null && !(request_no.trim().equals("")))&& (aps_no == null || aps_no.trim().equals(""))) {
+							System.out.println(" CO162 - TU SAM 2 --->>>> " );
+				 			#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+			 					FROM loan_beneficiary a, coll_hf_prior b, coll_head c 
+			 					WHERE 
+									a.request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo)
+			 					AND
+			 						a.loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+				    			AND
+				    				a.status = 'A'
+			 					AND
+									a.coll_hf_prior_id = b.coll_hf_prior_id 
+				    			AND
+				    				b.hf_status = 'A'
+			 					AND
+									b.hf_coll_head_id = c.col_hea_id 
+			 					AND
+									c.col_hea_id = :(decl.loanbeneficiaryupdmapping.LBen_col_hea_id_check) 
+							};							
+							
+							
+//							2.2 nije zadan broj partije, zadan broj APS zahtjeva						
+						} else if ((request_no == null || request_no.trim().equals("")) && (aps_no != null && !(aps_no.trim().equals("")))) {
+							System.out.println(" CO162 - TU SAM 3 --->>>> " );
+				 			#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+			 					FROM loan_beneficiary a, coll_hf_prior b, coll_head c 
+			 					WHERE 
+									a.aps_rqst_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo)
+			 					AND
+			 						a.loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+				    			AND
+				    				a.status = 'A'
+			 					AND
+									a.coll_hf_prior_id = b.coll_hf_prior_id 
+				    			AND
+				    				b.hf_status = 'A'
+			 					AND
+									b.hf_coll_head_id = c.col_hea_id 
+			 					AND
+									c.col_hea_id = :(decl.loanbeneficiaryupdmapping.LBen_col_hea_id_check) 
+							};							
+//							2.3 nije zadan broj partije, zadan broj zahtjeva i broj APS zahtjeva									
+						} else if ((request_no != null && !(request_no.trim().equals(""))) && (aps_no != null && !(aps_no.trim().equals("")))) {
+							System.out.println(" CO162 - TU SAM 4 --->>>> " );
+				 			#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+			 					FROM loan_beneficiary a, coll_hf_prior b, coll_head c 
+			 					WHERE 
+									(a.request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo)
+			 					OR 
+									a.aps_rqst_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo))
+			 					AND
+			 						a.loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+				    			AND
+				    				a.status = 'A'
+			 					AND
+									a.coll_hf_prior_id = b.coll_hf_prior_id 
+				    			AND
+				    				b.hf_status = 'A'
+			 					AND
+									b.hf_coll_head_id = c.col_hea_id 
+			 					AND
+									c.col_hea_id = :(decl.loanbeneficiaryupdmapping.LBen_col_hea_id_check) 
+							};							
+						}
+				    }
+/*		 			#sql [ctx]{
+							SELECT count(*)  INTO :brojZapisa
+		 					FROM loan_beneficiary a, coll_hf_prior b, coll_head c 
+		 					WHERE 
+				 				(a.acc_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo)
+		 					AND
+								a.request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo)
+		 					AND 
+								a.aps_rqst_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo))
+		 					AND
+		 						a.loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+		 					AND
+								a.coll_hf_prior_id = b.coll_hf_prior_id 
+		 					AND
+								b.hf_coll_head_id = c.col_hea_id 
+		 					AND
+								c.col_hea_id = :(decl.loanbeneficiaryupdmapping.LBen_col_hea_id_check) 
+						}; */
+		 			
+		 			
+/*			 			#sql [ctx]{
+							SELECT count(*)  INTO :brojZapisa
+							FROM loan_beneficiary 
+							WHERE coll_hf_prior_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HF_PRIOR_ID)
+							AND acc_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo)
+							AND loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+						};  */		 			
+		 			
+		 		 
+					
+		 		}catch(java.sql.SQLException sel){
+		 			tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL ErrorCode " + sel.getErrorCode());
+		 			tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL SQLState " + sel.getSQLState());
+		 			tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL Message " + sel.getMessage());
+		 			throw new VestigoTMException(1, "Transaction CO164: Error updating loan_beneficiary! ","err411a", null);
+		 		}
+			
+		 		if(brojZapisa > 0 && brojIzuzetaka <= 0){
+		 			throw new VestigoTMException(1, "Transaction CO164: Error updating loan_beneficiary! ","wrnclt137", null);
+		 		}
+		 	}
+		
+		
+// za plasmane vezane na kolateral		
+		 	if(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID != null){
+//COLL_HEA_ID
+//PROVJERA POSTOJI LI ZAPIS JEDNAK ONOM KOJI SE ZELI UBACITI U BAZU
+		 		try{
+		 			
+//					provjertiti sto je upisano, broj partije, broj zahtjeva ili broj aps
+// 1. zadan broj partije 				
+					if (acc_no != null && !(acc_no.trim().equals(""))) {
+						System.out.println(" CO162 - TU SAM 5 --->>>> " );
+			 			#sql [ctx]{
+							SELECT count(*)  INTO :brojZapisa
+							FROM loan_beneficiary 
+							WHERE
+								col_hea_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID)
+							AND 
+								acc_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo)
+							AND 
+								loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+					  		AND
+				    			status = 'A'
+						};						
+						
+					} else {
+//	2.1 nije zadan broj partije, zadan broj zahtjeva					
+						if ((request_no != null && !(request_no.trim().equals("")))&& (aps_no == null || aps_no.trim().equals(""))) {
+							System.out.println(" CO162 - TU SAM 6 --->>>> " );
+				 			#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+								FROM loan_beneficiary 
+								WHERE
+									col_hea_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID)
+								AND 
+									request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo)
+								AND 
+									loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+					  			AND
+				    				status = 'A'
+							};							
+// 2.2 nije zadan broj partije, zadan broj APS zahtjeva						
+						} else if ((request_no == null || request_no.trim().equals("")) && (aps_no != null && !(aps_no.trim().equals("")))) {
+							System.out.println(" CO162 - TU SAM 7 --->>>> " );
+				 			#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+								FROM loan_beneficiary 
+								WHERE 
+									col_hea_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID)
+								AND 
+									aps_rqst_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo)
+								AND 
+									loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+								AND
+				    				status = 'A'
+							};							
+							
+// 2.3 nije zadan broj partije, zadan broj zahtjeva i broj APS zahtjeva								
+						} else if ((request_no != null && !(request_no.trim().equals(""))) && (aps_no != null && !(aps_no.trim().equals("")))) {
+							System.out.println(" CO162 - TU SAM 8 --->>>> " );
+							
+				 			#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+								FROM loan_beneficiary 
+								WHERE 
+									col_hea_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID)
+								AND 
+									(request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo)
+								OR 
+									aps_rqst_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo))
+								AND 
+									loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+					  			AND
+				    				status = 'A'
+							};														
+						}
+							
+					}
+		 			
+/*		 			#sql [ctx]{
+							SELECT count(*)  INTO :brojZapisa
+							FROM loan_beneficiary 
+							WHERE col_hea_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID)
+							AND (acc_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo)
+							AND request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo))
+							AND loan_ben_id <> :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+						}; */
+					
+		 		}catch(java.sql.SQLException sel){
+		 			tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL ErrorCode " + sel.getErrorCode());
+		 			tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL SQLState " + sel.getSQLState());
+		 			tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL Message " + sel.getMessage());
+		 			throw new VestigoTMException(1, "Transaction CO164: Error updating loan_beneficiary! ","err411a", null);
+		 		}
+			
+		 		if(brojZapisa > 0 && brojIzuzetaka <= 0){
+					throw new VestigoTMException(1, "Transaction CO164: Error updating loan_beneficiary! ","wrnclt137", null);
+		 		}
+		 	}
+
+// za plasmane vezane na okvirni sporazum
+		 	
+			boolean isNewAccount = false;
+			
+		 	if(decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id != null){			 		
+// FRAME_AGREEMENT		 		
+// PROVJERA POSTOJI LI ZAPIS JEDNAK ONOM KOJI SE ZELI UBACITI U BAZU
+// samo ako je upisan broj partije razlicit od starog
+		 		
+				if(newStringOne != null && oldStringOne != null){
+					newStringOne = newStringOne.trim();
+					oldStringOne = oldStringOne.trim();
+					if(newStringOne.compareTo(oldStringOne) != 0){
+						isNewAccount = true;
+					}
+				}
+		 		if (isNewAccount) {
+		 			try{
+//	1. zadan broj partije
+						if (acc_no != null && !(acc_no.trim().equals(""))) {
+							System.out.println(" CO162 - TU SAM 9 --->>>> " );
+			 				#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+								FROM loan_beneficiary 
+								WHERE 
+		 							acc_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo)
+		 						AND
+		 							fra_agr_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id)
+					  			AND
+				    				status = 'A'
+
+		 					};							
+						} else {
+//	2.1. nije zadan broj partije, zadan broj zahtjeva					
+							if ((request_no != null && !(request_no.trim().equals("")))&& (aps_no == null || aps_no.trim().equals(""))) {
+								System.out.println(" CO162 - TU SAM 10 --->>>> " );
+								#sql [ctx]{
+									SELECT count(*)  INTO :brojZapisa
+									FROM loan_beneficiary 
+									WHERE fra_agr_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id)
+									AND
+										request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo)
+									AND
+				    					status = 'A'
+								};										
+//	2.2. nije zadan broj partije, zadan broj APS zahtjeva									
+							} else if ((request_no == null || request_no.trim().equals("")) && (aps_no != null && !(aps_no.trim().equals("")))) {
+								System.out.println(" CO162 - TU SAM 11 --->>>> " );
+								#sql [ctx]{
+									SELECT count(*)  INTO :brojZapisa
+									FROM loan_beneficiary 
+									WHERE fra_agr_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id)
+									AND
+										aps_rqst_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo)
+									AND
+				    					status = 'A'
+								};										
+//	2.3. nije zadan broj partije, zadan broj zahtjeva i broj APS zahtjeva						
+							} else if ((request_no != null && !(request_no.trim().equals(""))) && (aps_no != null && !(aps_no.trim().equals("")))) {
+								System.out.println(" CO162 - TU SAM 12 --->>>> " );
+								#sql [ctx]{
+									SELECT count(*)  INTO :brojZapisa
+									FROM loan_beneficiary 
+									WHERE fra_agr_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id)
+									AND
+										(request_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo)
+									OR
+										aps_rqst_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo))
+									AND
+				    					status = 'A'
+								};										
+							}
+						}
+						
+/*		 				#sql [ctx]{
+								SELECT count(*)  INTO :brojZapisa
+								FROM loan_beneficiary 
+								WHERE 
+		 							acc_no = :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo)
+		 						AND
+		 							fra_agr_id = :(decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id)
+
+		 					};*/
+		 							
+		 			}catch(java.sql.SQLException sel){
+		 				tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL ErrorCode " + sel.getErrorCode());
+		 				tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL SQLState " + sel.getSQLState());
+		 				tc.debug ( "......CO164.sqlj SELECT count(*) FROM loan_beneficiary SQL Message " + sel.getMessage());
+		 				throw new VestigoTMException(1, "Transaction CO164:1: Error updating loan_beneficiary! ","err411a", null);
+		 			}
+		 					
+		 			if(brojZapisa > 0 && brojIzuzetaka <= 0){
+		 				throw new VestigoTMException(1, "Transaction CO164:2: Error updating loan_beneficiary! ","wrnclt137", null);
+		 			}
+		 		}  
+		 	}		 	
+		 	
+			     	
+// update loan_beneficiary  
+		 	String acc_no_old = decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo_O;
+		 	String acc_no_old_old = decl.loanbeneficiaryupdmapping.LBenDialog_txtContractNo_O; // rtc11337 
+  
+// za plasmane koji su dio okvirnog sporazuma		 	
+		 	if(decl.loanbeneficiaryupdmapping.l_fra_agr_id != null){	
+		 		tc.debug ( "......CO164.sqlj update plasmana iz sporazuma... " + decl.loanbeneficiaryupdmapping.l_fra_agr_id);	
+		 		tc.debug ( "......CO164.sqlj update plasmana ... " + acc_no_old);
+		 		
+		 		try{	
+		 			#sql [ctx, exCtx]{ 
+		 			UPDATE loan_beneficiary  
+			    	SET register_no 					=   :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRegNo ),  
+			    			cus_id          			=   :(decl.loanbeneficiaryupdmapping.LBenDialog_CUS_ID  ),  
+			    			acc_no  					=   :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo   ),      
+			    			la_acc_id       			=	:(decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID  ),  
+			    			use_id       				=  	:(decl.loanbeneficiaryupdmapping.LBenDialog_USE_ID  ),    
+			    			user_lock   				= 	current timestamp  ,
+							request_no 					= 	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo),
+							priority_no 				= 	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtPriorityNo),
+                            acc_no_old                  =   :(decl.loanbeneficiaryupdmapping.LBenDialog_txtContractNo),
+		 					aps_rqst_no					=	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo),
+		 					inspol_ind					=	:(decl.loanbeneficiaryupdmapping.LBenDialog_Insu),
+		 					ip_cus_id 					=	:(decl.loanbeneficiaryupdmapping.LBenDialog_IP_CUS_ID)
+
+			     		WHERE 	acc_no  = :(acc_no_old)
+			    		AND 	fra_agr_id = :(decl.loanbeneficiaryupdmapping.l_fra_agr_id) 
+                        AND     date_until = '9999-12-31'
+                        AND     acc_no_old  = :(acc_no_old_old)
+			    	};
+			    	
+		 			if(exCtx.getUpdateCount()==0){
+		 				throw new VestigoTMException(1,"Transaction CO164: Error updating loan_beneficiary because of user_lock","errclt7", null);
+		 			}
+		 		}catch(java.sql.SQLException se){
+		 			tc.debug ( "......CO164.sqlj update loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+		 			tc.debug ( "......CO164.sqlj update loan_beneficiary SQL SQLState " + se.getSQLState());
+		 			tc.debug ( "......CO164.sqlj update loan_beneficiary SQL Message " + se.getMessage());
+		 			throw new VestigoTMException(1, "Transaction CO164: Error updating  loan_beneficiary! ","err411a", null);
+		 		}		 		
+		 	} else {
+		 		tc.debug ( "......CO164.sqlj update plasmana koji nisu iz sporazuma... " );	
+//	za plasmane koji nisu dio okvirnog sporazuma			 	
+		 		try{	
+		 			#sql [ctx, exCtx]{ 
+		 			UPDATE loan_beneficiary  
+			    	SET register_no 					=   :(decl.loanbeneficiaryupdmapping.LBenDialog_txtRegNo),  
+			    			cus_id          			=   :(decl.loanbeneficiaryupdmapping.LBenDialog_CUS_ID),  
+			    			acc_no  					=   :(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo),      
+			    			la_acc_id       			=	:(decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID),  
+			    			date_from   				=  	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtDateFrom),    
+			    			date_until   				=  	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtDateUntil),    
+			    			use_id       				=  	:(decl.loanbeneficiaryupdmapping.LBenDialog_USE_ID),    
+			    			user_lock   				= 	current timestamp  ,
+							request_no 					= 	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo),
+							priority_no 				= 	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtPriorityNo),
+		 		            acc_no_old                  =   :(decl.loanbeneficiaryupdmapping.LBenDialog_txtContractNo),
+		 					aps_rqst_no					=	:(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo),
+		 					inspol_ind					=	:(decl.loanbeneficiaryupdmapping.LBenDialog_Insu),
+		 					ip_cus_id 					=	:(decl.loanbeneficiaryupdmapping.LBenDialog_IP_CUS_ID)
+			     		WHERE 	loan_ben_id  =:(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID)
+			    		AND 	user_lock =:(decl.loanbeneficiaryupdmapping.LBenDialog_txtUserLock_O)  
+			    	};
+			    	
+		 			if(exCtx.getUpdateCount()==0){
+		 				throw new VestigoTMException(1,"Transaction CO164: Error updating loan_beneficiary because of user_lock","errclt7", null);
+		 			}
+		 		}catch(java.sql.SQLException se){
+		 			tc.debug ( "......CO164.sqlj update loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+		 			tc.debug ( "......CO164.sqlj update loan_beneficiary SQL SQLState " + se.getSQLState());
+		 			tc.debug ( "......CO164.sqlj update loan_beneficiary SQL Message " + se.getMessage());
+		 			throw new VestigoTMException(1, "Transaction CO164: Error updating  loan_beneficiary! ","err411a", null);
+		 		}
+		 	}
+
+		   	
+		 	
+// insert u loan_beneficiary_a		 	
+		 	try{	 
+		 		#sql [ctx]{	INSERT INTO loan_beneficiary_a
+						          				(	loan_ben_id,
+													register_no,
+													cus_id,
+													acc_no,
+													la_acc_id,
+													coll_hf_prior_id,
+													col_hea_id,
+													ser_num,
+													date_from,
+													date_until,
+													status,
+													spec_status,
+													use_open_id,
+													use_id,
+													opening_ts,
+													user_lock,
+													request_no,
+													priority_no,
+		 	                                        acc_no_old,
+		 											fra_agr_id,
+		 											aps_rqst_no,
+													inspol_ind,
+													ip_cus_id) 	
+							VALUES( :(decl.loanbeneficiaryupdmapping.LBenDialog_LOAN_BEN_ID),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtRegNo_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_CUS_ID_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtAccNo_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_LA_ACC_ID_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HF_PRIOR_ID_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtSerNum_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtDateFrom_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtDateUntil_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtStatus_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtSpecStatus_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_USE_OPEN_ID_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_USE_ID_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtOpeningTS_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtUserLock_O),
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtRequestNo_O)	,
+									:(decl.loanbeneficiaryupdmapping.LBenDialog_txtPriorityNo_O),
+		 	                        :(decl.loanbeneficiaryupdmapping.LBenDialog_txtContractNo_O),
+		 							:(decl.loanbeneficiaryupdmapping.LBenDialog_fra_agr_id_O),
+		 							:(decl.loanbeneficiaryupdmapping.LBenDialog_txtApsRqstNo_O),
+		 							:(decl.loanbeneficiaryupdmapping.LBenDialog_Insu_O),
+		 							:(decl.loanbeneficiaryupdmapping.LBenDialog_IP_CUS_ID_O))	
+	 			 	};  
+		 	}catch(java.sql.SQLException se){
+		 		tc.debug ( "......CO164.sqlj insert into loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+		 		tc.debug ( "......CO164.sqlj insert into loan_beneficiary SQL SQLState " + se.getSQLState());
+		 		tc.debug ( "......CO164.sqlj insert into loan_beneficiary SQL Message " + se.getMessage());
+		 		throw new VestigoTMException(1, "Transaction CO164: Error inserting loan_beneficiary! ","err411a", null);
+		 	}			
+			 	 
+		}//stvarno bila promjena
+        
+//       pozivi izracuna ponderirane i raspolozive vrijednosti
+        
+        kolData.colHeaId = decl.loanbeneficiaryupdmapping.RealEstate_COL_HEA_ID;
+        kolData.colCurId = decl.loanbeneficiaryupdmapping.RealEstate_REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.loanbeneficiaryupdmapping.RealEstate_txtNomiValu;
+        kolData.ponder = decl.loanbeneficiaryupdmapping.RealEstate_txtCollMvpPonder;
+
+        yoye0.getPonderAndRestAmount(kolData);
+        
+        decl.loanbeneficiaryupdmapping.RealEstate_txtWeighValue = kolData.ponderAmount;
+        decl.loanbeneficiaryupdmapping.RealEstate_txtWeighDate = todaySQLDate;
+        decl.loanbeneficiaryupdmapping.RealEstate_txtAvailValue = kolData.restAmount;
+        decl.loanbeneficiaryupdmapping.RealEstate_txtAvailDate = todaySQLDate;
+        decl.loanbeneficiaryupdmapping.RealEstate_txtSumPartVal = kolData.exposureAmount;
+        decl.loanbeneficiaryupdmapping.RealEstate_txtSumPartDat = kolData.exposureDate;             
+        
+     // poziv common-a za update prihvatljivosti-samo za direktno vezane kolaterale
+        BigDecimal col_hea_id = decl.loanbeneficiaryupdmapping.LBenDialog_COLL_HEA_ID;
+        
+        if (col_hea_id !=null) {
+            YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+    
+            yoyg0.azurirajPrihvatljivosti();
+            decl.loanbeneficiaryupdmapping.Kol_ND_lb =yoyg0.getNDPrihvatljivost();
+            decl.loanbeneficiaryupdmapping.Kol_B2_lb = yoyg0.getB2StandPrihvatljivost();
+            decl.loanbeneficiaryupdmapping.Kol_HNB_lb = yoyg0.getHNBPrihvatljivost();
+            decl.loanbeneficiaryupdmapping.Kol_B2IRB_lb = yoyg0.getB2IRBPrihvatljivost();    
+            
+            decl.loanbeneficiaryupdmapping.Kol_ND_lb_dsc = yoyg0.getOpisNDPrihvatljivosti();
+            decl.loanbeneficiaryupdmapping.Kol_B2_lb_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+            decl.loanbeneficiaryupdmapping.Kol_HNB_lb_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+            decl.loanbeneficiaryupdmapping.Kol_B2IRB_lb_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();        
+        
+        }			
+	}//	execute
+}  
+			   

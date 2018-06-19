@@ -1,0 +1,110 @@
+package hr.vestigo.modules.collateral.jcics.co24;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.*;
+
+import hr.vestigo.framework.remote.transaction.*;	
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+/**
+ * CO243 class insert data  into table COLL_COURT
+ *  
+ */
+public class CO243 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co24/CO243.sqlj,v 1.5 2006/09/05 13:58:48 hraaks Exp $";
+    public DeclCO24 decl = null;
+	
+	public CO243 (DeclCO24 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			//generiranje event id-a mora biti tocno ovoliki broj parametara u Mapi
+			BigDecimal eve_typ_id =  new BigDecimal("1619348003.0");
+			BigDecimal eve_id=null;
+			YXYB0 yxyBobj  = new YXYB0(tc);
+			try{
+				
+							HashMap event = new HashMap();
+							event.put("eve_typ_id", eve_typ_id);
+							event.put("event_date", new java.sql.Date(System.currentTimeMillis()));	
+							event.put("cmnt", "Insert into real_estate");
+							event.put("use_id",decl.collcourtinsertm.use_id);
+							event.put("ext_event_code", null);
+							event.put("ext_event_num", null);
+							event.put("bank_sign", tc.getBankSign());
+							eve_id = yxyBobj.insertEventWithGeneratedId(event);
+						}catch(java.sql.SQLException e){
+							
+							
+							tc.debug (".......CO002.sqlj ..... Insert into event unsuccessful.");
+							tc.debug ( "......CO002.sqlj insert into event  SQL ErrorCode " + e.getErrorCode());
+							tc.debug ( "......CO002.sqlj insert into event  SQL SQLState " + e.getSQLState());
+							tc.debug ( "......CO002.sqlj insert into event  SQL Message " + e.getMessage());
+							e.printStackTrace();
+							throw e;
+						}
+		
+			 //provjerava da li vec postoji isti vlasnik
+			
+    		
+            //generator id-a za modul Collateral
+        	YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+			java.math.BigDecimal collaterall_id = id_generator.getNewId();
+	
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n......CO243.sqlj code " + decl.collcourtinsertm.CollCourtDialog_txtCoCode);
+			tc.debug ( "\n......CO243.sqlj desc " + decl.collcourtinsertm.CollCourtDialog_txtCoName);
+			tc.debug ( "\n......CO243.sqlj status " + decl.collcourtinsertm.CollCourtDialog_txtCodeCnt);
+			tc.debug ( "\n......CO243.sqlj use_id " + decl.collcourtinsertm.CollCourtDialog_txtNameCnt);			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			
+			//INSERT INTO coll_court
+			try{	
+				
+			    	#sql [ctx]{  insert into COLL_COURT (
+														CO_ID, 
+														CO_CODE, 
+														CO_NAME, 
+														CO_POL_MAP_ID_CNT, 
+														CO_DATE_FROM,  
+			    										CO_DATE_UNTIL,
+														CO_STATUS,
+														USE_OPEN_ID, 
+														USE_ID, 
+														OPENING_TS, 
+														USER_LOCK,
+														EVE_ID,
+														bank_sign)
+			    					values (:collaterall_id, 
+									:(decl.collcourtinsertm.CollCourtDialog_txtCoCode), 
+									:(decl.collcourtinsertm.CollCourtDialog_txtCoName),
+									:(decl.collcourtinsertm.CollCourtDialog_POL_MAP_ID),
+									current date, 
+									'9999-12-31',
+									:(decl.collcourtinsertm.CollCourtDialog_txtCoStatus),
+									:(decl.collcourtinsertm.use_id),
+									:(decl.collcourtinsertm.use_id),
+									current timestamp,
+									current_timestamp,
+									:(eve_id), 
+									:(tc.getBankSign())
+							)
+         		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO202.sqlj insert into inserting re_sub_type SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO202.sqlj insert into inserting re_sub_type SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO202.sqlj insert into inserting re_sub_type SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO202: Error inserting re_sub_type! ","err411a", null);
+				}
+		}
+}	
+			

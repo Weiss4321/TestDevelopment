@@ -1,0 +1,324 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+ 
+public class CO216 extends RemoteTransaction {
+// akcija slanja na arhivsku listu s referentske liste kod inicijalnog unosa 
+// update aktivnog sloga za radnu listu s koje se nalog salje:
+// 		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = INICIJALNI UNOS	
+// insert u tbl. COLL_LIST_Q sloga za arhivsku listu 
+// 		status=0
+//		income_time = current timestamp
+//		use_id = null
+//		org_uni_id = null	
+// update statusa collaterala, statusa osnovnih podataka, statusa hipoteke, statusa povezanosti,
+// 		statusa podataka collateral officera, org_uni_id, use_id_aut, autorization_ts 
+	  
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO216.sqlj,v 1.6 2011/12/02 14:10:40 hramkr Exp $";
+	  
+	private DeclCO21 d = null;
+
+	private Date CURR_DATE = null;
+	private Timestamp CREATE_DATE_TIME = null;
+	
+	public CO216(DeclCO21 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		
+		String mortgage_status = "";
+		String collateral_status = "";
+		String workflow_indic= "";
+		String cover_indic= "";
+		String basic_data_status= "";
+		String coll_data_status= "";
+
+		String mortgage_flag = "";
+		String cover_flag = "";
+		String coll_data_flag ="";
+		
+		String sub_category = "";
+		boolean reply = true;
+		
+		d.collsndarhiva.poruka = ""; 
+		tc.info("pocela CO216 ...COLL_HEA_ID:...." + d.collsndarhiva.col_hea_id);	
+		
+		
+
+		
+		
+//	uvjet da collateral ode na arhivsku listu kod inicijalnog unosa je da je na radnoj listi i da su upisani i potvrdjeni svi podaci	
+// 		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+
+		try {
+		
+			#sql[ctx]{
+					SELECT
+							a.mortgage_status,
+							a.collateral_status,
+							a.workflow_indic,
+							a.cover_indic, 
+							a.basic_data_status,
+							a.coll_data_status,
+							b.mortgage_flag,
+							b.cover_flag,
+							b.coll_data_flag
+					INTO
+							:(mortgage_status),
+							:(collateral_status),
+							:(workflow_indic),
+							:(cover_indic),
+							:(basic_data_status),
+							:(coll_data_status),
+							:(mortgage_flag),
+							:(cover_flag),
+							:(coll_data_flag)
+					FROM
+							coll_head a, collateral_type b
+					WHERE
+							a.col_hea_id=:(d.collsndarhiva.col_hea_id)
+					AND	
+							collateral_status = '0'
+					AND
+							a.col_type_id = b.coll_type_id
+
+			};   
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				// poslati poruku na klijenta da collateral nije vise na radnoj listi
+				throw new VestigoTMException(1, "Transaction CO216: Error-collateral nije na referentskoj listi! ","wrn474", null);				
+//				d.collsndarhiva.poruka = "wrn472";
+			}
+		}		
+ 
+		
+		tc.info("COLL_HEA_ID:...." + d.collsndarhiva.col_hea_id);
+
+// Milka, 10.08.2006 - provjeravam da li su upisani i potvrdjeni potrebni podaci prema parametricaciji
+
+
+		
+//		 Milka, 18.08.2006 
+//		 najprije provjeriti da li su upisani plasmani, hipoteka, vlasnici .... 	
+//		onda provjeriti da li su upisani podaci i potvrdjeni, da li su statusi ispravni		
+
+//		 Milka, 09.08.2006			
+		YOY45 YOY45=new YOY45(tc);
+		
+		CollCheckData chkObj=new CollCheckData();   
+		chkObj.col_hea_id = d.collsndarhiva.col_hea_id;
+///			chkObj.code = chd.COLL_CATEGORY; 
+		 
+		reply = true;
+		tc.info ( "...PROVJERA OSTALIH PODATAKA.....)" + reply);	
+		
+		 
+//		reply = YOY45.checkInputData(chkObj);
+		YOY45.checkInputData(chkObj);
+		tc.info ( "...ZAVRSILA PROVJERA  OSTALIH PODATAKA.....)" + chkObj.ind);		
+
+		
+		if ((chkObj.ind).equals("1")) {
+// nisu upisani podaci za pokrice 			
+//			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr005", null);	
+			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr007", null);				
+		} else if ((chkObj.ind).equals("2")) {
+// nisu upisani vlasnici (spada u osnovne podatke)			
+//			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr002", null);	
+			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr006", null);		
+		} else if ((chkObj.ind).equals("3")) {
+// hipoteka			
+//			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr004", null);	
+			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr008", null);
+		}
+			
+ 
+		
+/*		if (!(reply)) {
+			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr001", null);
+			 
+		} */   	
+		 
+		
+//		 da li su potvrdjeni osnovni podaci
+		if (basic_data_status.equals("0")) {
+			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr002", null);			
+		}
+		
+// da li su potvrdjeni podaci collateral officera
+		if (coll_data_status.equals("0")) {
+			throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr003", null);			
+		}
+
+		
+// da li su potvrdjeni podaci za hipoteku, pravo
+		if (mortgage_flag.equalsIgnoreCase("X")) {
+			
+		} else {
+			if (mortgage_status.equals("0")) {   // nije potvrdjena hipoteka
+				throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr004", null);				
+			}
+		} 
+// da li su potvrdjeni podaci za pokrice
+		
+		if (cover_flag.equalsIgnoreCase("X")) {
+			
+		} else {
+			if (cover_indic.equals("0")) {   // nije  potvrdjeno pokrice
+				throw new VestigoTMException(1, "Transaction CO216: Error-nisu upisani svi podaci! ","colErr005", null);				
+			}
+		} 		 		
+		
+		
+		
+		tc.info("WORKFLOW_INDIC:...." + workflow_indic);				
+		tc.info("COLLATERAL_STATUS:...." + collateral_status);		
+		tc.info("BASIC_DATA_STATUS:...." + basic_data_status);
+		tc.info("MORTGAGE_STATUS...." + mortgage_status);
+		tc.info("COVER_INDIC:...." + cover_indic);
+		tc.info("COLL_DATA_STATUS:...." + coll_data_status);
+		
+		tc.info("MORTGAGE_FLAG...." + mortgage_flag);
+		tc.info("COVER_FLAG:...." + cover_flag);
+		tc.info("COLL_DATA_FLAG:...." + coll_data_flag);
+		
+		tc.info("PORUKA .....:" + d.collsndarhiva.poruka);		
+
+		if (basic_data_status.equalsIgnoreCase("1")) 
+			basic_data_status = "3";			
+
+		tc.info("BASIC_DATA_STATUS_NEW:...." + basic_data_status);
+
+		if (coll_data_status.equalsIgnoreCase("X")) 
+			coll_data_status = "X";			
+		else if (coll_data_status.equalsIgnoreCase("1"))
+		    coll_data_status = "2";
+		
+		tc.info("COLL_DATA_STATUS_NEW:...." + coll_data_status);
+		
+		
+		if (mortgage_status.equalsIgnoreCase("X")) 
+			mortgage_status = "X";			
+	    else if (mortgage_status.equalsIgnoreCase("1"))
+		 	mortgage_status = "2";
+		 
+		tc.info("MORTGAGE_STATUS_NEW...." + mortgage_status);		 
+
+		if (cover_indic.equalsIgnoreCase("X")) 
+			cover_indic = "X";			
+		else if (cover_indic.equalsIgnoreCase("1"))
+		 	cover_indic = "2";	
+		 
+		tc.info("COVER_INDIC_NEW:...." + cover_indic);		
+		
+		
+		#sql[ctx] { 
+			SELECT current date, current timestamp 
+			INTO :(CURR_DATE), :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};		
+		
+		YOY60 YOY60=new YOY60(tc);
+		
+		CollListQData plq=new CollListQData();   
+  
+ 
+		plq.col_hea_id=d.collsndarhiva.col_hea_id;	
+		plq.status="1";
+		plq.income_time = CREATE_DATE_TIME;
+		plq.use_id=d.collsndarhiva.use_id;	
+		plq.release_time = CREATE_DATE_TIME;
+		plq.cmnt=null;
+
+		plq.action_type=d.collsndarhiva.action_type;		 
+		plq.org_uni_id = d.collsndarhiva.org_uni_id;
+		plq.source_list = d.collsndarhiva.source_list;
+		plq.status_source_list = "1";
+		plq.target_list = d.collsndarhiva.target_list;
+		plq.status_target_list = "0";
+		
+		plq.target_list_use_id = null;
+		plq.target_list_org_uni_id = null;
+
+		tc.info("COL_HEA_ID .....:" + plq.col_hea_id);
+		tc.info("STATUS......:"+plq.status);
+		tc.info("INCOME_TIME ....."+plq.income_time);
+		tc.info("USE_ID....."+plq.use_id);
+		tc.info("RELEASE TIME .....:" + plq.release_time);
+		tc.info("CMNT......:"+plq.cmnt);
+		tc.info("ACTION_TYPE ....."+plq.action_type);
+		tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+		tc.info("SOURCE_LIST .....:" + plq.source_list);
+		tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		tc.info("TARGET_LIST ....."+plq.target_list);
+		tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+		tc.info("PROC_STATUS....."+d.collsndarhiva.proc_status);				
+		 
+		YOY60.update_insert_CollListQ(plq); 
+		
+//		YOY60.updateCollListQ(plq);
+   
+		
+// napraviti update statusa,use_id,org_uni_id,VER_SEND_TS		
+
+// 1 - collateral je poslan na verifikacjsku listu
+//USE_ID_VER_SND
+		try {
+			#sql[ctx]{ 
+					UPDATE
+							coll_head 
+					SET
+							org_uni_id = :(d.collsndarhiva.org_uni_id),
+							use_id = :(d.collsndarhiva.use_id), 
+							ver_send_ts = :(CREATE_DATE_TIME),
+							use_id_ver_snd = :(d.collsndarhiva.use_id),
+							verification_ts  = :(CREATE_DATE_TIME),
+							use_id_ver = :(d.collsndarhiva.use_id),
+							autorization_ts  = :(CREATE_DATE_TIME),
+							use_id_aut = :(d.collsndarhiva.use_id),
+							collateral_status = :(d.collsndarhiva.proc_status),
+							basic_data_status = :(basic_data_status),
+							coll_data_status = :(coll_data_status),
+							mortgage_status = :(mortgage_status),
+                            cover_indic = :(cover_indic),
+		                    user_lock = current timestamp
+					WHERE
+							col_hea_id=:(d.collsndarhiva.col_hea_id)
+					AND	
+							collateral_status = '0'
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+//				 poslati poruku na klijenta da collateral nije vise na radnoj listi
+				throw new VestigoTMException(1, "Transaction CO216: Error-collateral nije na referentskoj listi! ","wrn474", null);		
+//				d.collsndarhiva.poruka = "wrn474"; 
+			} 
+		}  
+		
+		tc.info("PORUKA .....:" + d.collsndarhiva.poruka);
+	}
+	 
+
+} 
+
+		

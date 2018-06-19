@@ -1,0 +1,45 @@
+package hr.vestigo.modules.collateral.jcics.co19;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+public class CO193 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co19/CO193.sqlj,v 1.1 2006/05/30 14:10:26 hrajkl Exp $";
+	public DeclCO19 decl = null;
+	
+	public CO193 (DeclCO19 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();		
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			try{	
+				
+				#sql [ctx, exCtx]{ 
+			    	DELETE FROM 
+					INSU_POLICY_TYPE
+			    	WHERE 
+					INT_POL_TYPE_ID=:(decl.insupolicytypedeletem.INT_POL_TYPE_ID) AND
+					user_lock=:(decl.insupolicytypedeletem.USER_LOCK)
+			    	};
+			    	if (exCtx.getUpdateCount() == 0) {//ako ni jedan ne postoji, tj. ako je USER_LOCK promijenjen nece nista obrisati
+			    	    
+						throw new Exception("Nothing was deleted! REAL_ES_TYPE_ID : "+ decl.insupolicytypedeletem.INT_POL_TYPE_ID + " and user_lock is: " + decl.insupolicytypedeletem.USER_LOCK);
+					}
+				}catch(java.sql.SQLException se){
+
+						tc.debug ( "......CO193.sqlj delete from political_map SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO193.sqlj delete from political_map SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO193.sqlj delete from political_map SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO193: Error deleting row in real_estate_type! ","err411a", null);
+				}
+		}//execute
+	
+
+}	
+			

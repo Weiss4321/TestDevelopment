@@ -1,0 +1,60 @@
+package hr.vestigo.modules.collateral.jcics.coA4;
+
+import java.sql.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+
+public class COA42 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA4/COA42.sqlj,v 1.1 2014/09/18 10:37:41 hrakis Exp $";
+    
+    private DeclCOA4 decl;
+    
+    public COA42(DeclCOA4 decl)
+    {
+        this.decl = decl;
+    }
+    
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+
+        try
+        {
+            Date coef_date;
+            #sql [ctx] {
+                SELECT MAX(datum) 
+                INTO :(coef_date)
+                FROM dwh_status
+                WHERE obrada = 'bo91'
+                AND status = '1'
+                WITH UR
+            };
+            decl.collrevadatesmapping.CollReva_txtCoefDate = coef_date;
+        } 
+        catch (SQLException ex)
+        {
+            tc.error("Dogodila se nepredvidjena greska kod dohvata datuma zadnjeg ucitavanja koeficijenata za revalorizaciju!", ex);
+            throw ex;
+        }
+        
+        try
+        {
+            Date calc_date;
+            #sql [ctx] {
+                SELECT MAX(datum) 
+                INTO :(calc_date)
+                FROM dwh_status
+                WHERE obrada = 'bo92'
+                AND status = '1'
+                WITH UR
+            };
+            decl.collrevadatesmapping.CollReva_txtCalcDate = calc_date;
+        } 
+        catch (SQLException ex)
+        {
+            tc.error("Dogodila se nepredvidjena greska kod dohvata zadnjeg izracuna revalorizacije!", ex);
+            throw ex;
+        }
+   }  
+}

@@ -1,0 +1,822 @@
+package hr.vestigo.modules.collateral.batch.bo08;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.batch.bo05.BO05Data;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*;  
+import java.sql.Timestamp;
+import java.util.Vector;
+import hr.vestigo.modules.collateral.common.yoy0.*;
+
+public class BO081 {
+			
+			#sql public iterator Iter1 (
+							BigDecimal col_hea_id,
+							BigDecimal real_est_nomi_valu, 
+							BigDecimal real_est_nm_cur_id,
+							Date real_est_nomi_date,
+							String reva_date_am,
+							String reva_flag,
+							String accounting_indic
+		);
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo08/BO081.sqlj,v 1.14 2007/05/24 09:27:24 hratar Exp $";
+
+	private ConnCtx connCtx;
+    private BigDecimal eve_id = null;
+    private hr.vestigo.framework.remote.batch.BatchContext bc;
+    private BigDecimal colProId=null;
+    public Iter1 coliditer = null;
+    private Vector result = null;
+    
+    public BO081(hr.vestigo.framework.remote.batch.BatchContext bc){
+		this.bc = bc;
+		try{
+			this.connCtx = bc.getContext();
+		} catch(SQLException e){
+			//System.out.println("Nema connCtx u podtransakciji!");
+		}
+	}	
+    
+    
+    public BigDecimal getEveId(){
+    	return this.eve_id;
+    }
+	public BigDecimal insertIntoEvent(){
+		//System.out.println("sqlj insertIntoEvent");		
+	 	eve_id = null;
+	  	
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(connCtx);			
+		  	eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+   	
+			event.put("eve_id", eve_id);
+			event.put("eve_typ_id", new BigDecimal("1702365003"));
+			event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+			event.put("cmnt", "Revalorizacija kolaterala");
+			event.put("use_id", bc.getUserID());
+			event.put("ext_event_code", null);
+			event.put("ext_event_num", null);
+			event.put("org_uni_id", new BigDecimal("53253"));
+			event.put("bank_sign", bc.getBankSign());
+		  	eve1.insertEvent(event);
+		  	bc.updateEveID(eve_id);		
+	  
+	  } catch(Exception e){
+		  e.printStackTrace();
+		  return null;
+	  }
+	  
+	  return eve_id;
+	}
+	
+//	Evidentirati izvoğenje obrade, t.d. se insertira slog u tabelu COL_PROC
+	public void insertColProc(HashMap map) throws Exception{
+        bc.debug("sqlj insertColProc");		
+        
+        BigDecimal column1=getColProId();
+        colProId = column1;
+    	Date column2=(Date) map.get("proc_date");
+    	Date column3=(Date) map.get("value_date");
+    	String column4= (String)map.get("proc_type");
+    	String column5= (String)map.get("proc_way");
+    	String column6= (String)map.get("proc_status");
+    	BigDecimal column7=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal column9= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal column10= (BigDecimal)map.get("use_id");
+    	//Timestamp user_lock=new Timestamp(System.currentTimeMillis());
+    	bc.debug("\n col_pro_id: "+column1);
+    	bc.debug("\n proc_date: "+column2);
+    	bc.debug("\n value_date: "+column3);
+    	bc.debug("\n proc_type: "+column4);
+    	bc.debug("\n proc_way: "+column5);
+    	bc.debug("\n proc_status: "+column6);
+    	bc.debug("\n col_number: "+column7);
+    	bc.debug("\n org_uni_id: "+column9);
+    	bc.debug("\n use_id: "+column10);
+//    	bc.debug("\n user_lock: "+user_lock);
+    	
+    	try{
+        	#sql [connCtx]{
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+					)
+				VALUES
+				(
+					:(column1),
+					:(column2),
+					:(column3),
+					:(column4),
+					:(column5),
+					:(column6),
+					:(column7),
+					current timestamp,
+					:(column9),
+					:(column10),
+        			current timestamp
+					)
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO081.sqlj insertColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO081.sqlj insertColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO081.sqlj insertColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}  
+		
+	}
+	
+
+	
+	public void setColProId(BigDecimal colProId) {
+		this.colProId = colProId;
+	}
+	
+	public BigDecimal getColProId() throws Exception{
+		if(this.colProId==null){
+			YOY00 yoy00=new YOY00(this.connCtx);
+			this.colProId=yoy00.getNewId();
+		}
+		return this.colProId;
+	}
+	
+	//Odabire se sve kolterale koji ulaze u izraèun revalorizacije i stavlja ih se u jedan vector
+	public Vector selectColId(BO08Data p_data) throws Exception{
+		System.out.println("SQLJ selectColId()");
+		try{
+			
+			System.out.println("SQLJ selectCol getCategory() " + p_data.getCategory());
+			System.out.println("SQLJ selectCol getColl_type() " + p_data.getColl_type());
+			System.out.println("SQLJ selectCol getColl_subtype() " + p_data.getColl_subtype());
+			System.out.println("SQLJ selectCol getDateFromEval()" + p_data.getDateFromEval());
+			System.out.println("SQLJ selectCol getDateUntilEval() " + p_data.getDateUntilEval());
+			
+			if (p_data.getColl_type() == null)
+			{
+//vozila				
+				if ((p_data.getCategory()).equals(new BigDecimal("624223"))) {
+					System.out.println("Vozila, nije zadan tip ni podtip...... " );								
+					
+					#sql [connCtx] coliditer  = {
+			
+							select   
+								a.COL_HEA_ID as col_hea_id,
+								a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+								a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+								a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+								a.REVA_DATE_AM as reva_date_am,
+								b.REVA_FLAG as reva_flag,
+								d.accounting_indic as accounting_indic
+							from 
+								COLL_HEAD a, 
+								COLL_VEHICLE c,
+								COLL_ATR b, 
+								COLL_CATEGORY d
+							where
+								a.col_cat_id = :(p_data.getCategory()) and
+								a.COLLATERAL_STATUS = '3' and
+								a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+								a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+								a.col_hea_id = c.col_hea_id and
+
+								a.col_cat_id = b.col_cat_id and
+								a.col_type_id = b.coll_type_id and
+								c.veh_group_id = b.col_sub_id and
+								b.reva_flag = '0' and
+								b.status='A' and
+								b.date_from <= current date and
+								b.date_until = '9999-12-31' and
+								a.col_cat_id = d.col_cat_id
+						};					
+				} else if (p_data.getCategory().equals(new BigDecimal("620223"))) {
+//					 plovila	
+					System.out.println("Plovila nema tipa ni podtipa ....." );		
+					#sql [connCtx] coliditer  = {
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_VESSEL c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												c.ves_typ_id = b.col_sub_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+										};									
+					
+				} else if (p_data.getCategory().equals(new BigDecimal("621223"))) {
+//					 pokretnine		
+					System.out.println("Pokretnine nema tipa ni podtipa ....." );		
+					#sql [connCtx] coliditer  = {
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_MOVABLE c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												c.mov_typ_id = b.col_sub_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+
+										union
+
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_MOVABLE c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+												c.mov_typ_id is null and
+
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+
+										};										
+					
+				} else {
+					
+//ostali				
+					System.out.println("Ostali nema tipa ni podtipa ....." );				
+					#sql [connCtx] coliditer  = {
+						
+										select  
+											a.COL_HEA_ID as col_hea_id,
+											a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+											a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+											a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+											a.REVA_DATE_AM as reva_date_am,
+											b.REVA_FLAG as reva_flag,
+											d.accounting_indic as accounting_indic
+										from 
+											COLL_HEAD a, 
+											COLL_ATR b, 
+											COLL_CATEGORY d
+										where
+											a.col_cat_id = :(p_data.getCategory()) and
+											a.COLLATERAL_STATUS = '3' and
+											a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+											a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+											a.col_cat_id = b.col_cat_id and
+											a.col_type_id = b.coll_type_id and
+											b.reva_flag = '0' and
+											b.status='A' and
+											b.date_from <= current date and
+											b.date_until = '9999-12-31' and
+											a.col_cat_id = d.col_cat_id
+				};
+				}
+			}
+			else  // zadan je tip
+// podtip imaju vozila,plovila,pokretnine			
+			if ( (p_data.getCategory()).equals(new BigDecimal("624223")))//za vozila:
+			{
+				if (p_data.getColl_subtype() == null)
+		
+				{
+					System.out.println("Vozila, nije zadan podtip " );								
+					
+					#sql [connCtx] coliditer  = {
+			
+							select   
+								a.COL_HEA_ID as col_hea_id,
+								a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+								a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+								a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+								a.REVA_DATE_AM as reva_date_am,
+								b.REVA_FLAG as reva_flag,
+								d.accounting_indic as accounting_indic
+							from 
+								COLL_HEAD a, 
+								COLL_VEHICLE c,
+								COLL_ATR b, 
+								COLL_CATEGORY d
+							where
+								a.col_cat_id = :(p_data.getCategory()) and
+								a.col_type_id = :(p_data.getColl_type()) and
+								a.COLLATERAL_STATUS = '3' and
+								a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+								a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+								a.col_hea_id = c.col_hea_id and
+
+								a.col_cat_id = b.col_cat_id and
+								a.col_type_id = b.coll_type_id and
+								c.veh_group_id = b.col_sub_id and
+								b.reva_flag = '0' and
+								b.status='A' and
+								b.date_from <= current date and
+								b.date_until = '9999-12-31' and
+								a.col_cat_id = d.col_cat_id
+						};
+				}	
+				else  
+				{
+					System.out.println("Vozila, zadan podtip " );								
+					#sql [connCtx] coliditer  = {
+						
+						select   
+								a.COL_HEA_ID as col_hea_id,
+								a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+								a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+								a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+								a.REVA_DATE_AM as reva_date_am,
+								b.REVA_FLAG as reva_flag,
+								d.accounting_indic as accounting_indic
+						from 
+								COLL_HEAD a, 
+								COLL_VEHICLE c,
+								COLL_ATR b, 
+								COLL_CATEGORY d
+						where
+							a.col_cat_id = :(p_data.getCategory()) and
+							a.col_type_id = :(p_data.getColl_type()) and
+							a.COLLATERAL_STATUS = '3' and
+							a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+							a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+							a.col_hea_id = c.col_hea_id and
+							c.VEH_GROUP_ID = :(p_data.getColl_subtype()) and
+							
+							a.col_cat_id = b.col_cat_id and
+							a.COL_TYPE_ID = b.COLL_TYPE_ID and
+							c.veh_group_id = b.col_sub_id and
+							b.reva_flag = '0' and
+							b.status='A' and
+							b.date_from <= current date and
+							b.date_until = '9999-12-31' and 
+							d.col_cat_id = a.col_cat_id
+					};
+				}//and c.VEH_SUBGR_ID = :(col_sub_sub_id)
+			}else if (p_data.getCategory().equals(new BigDecimal("620223"))) {
+					
+				//plovila
+// ako nije zadan podtip
+				if (p_data.getColl_subtype() == null) {
+					System.out.println("Plovila nema podtipa ....." );		
+					#sql [connCtx] coliditer  = {
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_VESSEL c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.col_type_id = :(p_data.getColl_type()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												c.ves_typ_id = b.col_sub_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+										};					
+					
+				} else {
+//					 ako je zadan podtip
+					
+					System.out.println("Plovila ima podtipa ....." );		
+
+					#sql [connCtx] coliditer  = {
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_VESSEL c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.col_type_id = :(p_data.getColl_type()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+												c.ves_typ_id = :(p_data.getColl_subtype()) and
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												c.ves_typ_id = b.col_sub_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+										};					
+					
+				}
+
+				
+				
+			} else if (p_data.getCategory().equals(new BigDecimal("621223"))) {
+// pokretnine	
+//				 ako nije zadan podtip
+				if (p_data.getColl_subtype() == null) {
+					System.out.println("Pokretnine nema podtipa ....." );		
+					#sql [connCtx] coliditer  = {
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_MOVABLE c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.col_type_id = :(p_data.getColl_type()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												c.mov_typ_id = b.col_sub_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+
+										union
+
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_MOVABLE c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.col_type_id = :(p_data.getColl_type()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+												c.mov_typ_id is null and
+
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+
+
+										};									
+					
+				} else {
+//					 ako je zadan podtip
+					
+					System.out.println("Pokretnine ima podtipa ....." );		
+					#sql [connCtx] coliditer  = {
+							
+											select   
+												a.COL_HEA_ID as col_hea_id,
+												a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+												a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+												a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+												a.REVA_DATE_AM as reva_date_am,
+												b.REVA_FLAG as reva_flag,
+												d.accounting_indic as accounting_indic
+											from 
+												COLL_HEAD a, 
+												COLL_MOVABLE c,
+												COLL_ATR b, 
+												COLL_CATEGORY d
+											where
+												a.col_cat_id = :(p_data.getCategory()) and
+												a.col_type_id = :(p_data.getColl_type()) and
+												a.COLLATERAL_STATUS = '3' and
+												a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+												a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+												a.col_hea_id = c.col_hea_id and
+												c.mov_typ_id = :(p_data.getColl_subtype()) and
+												a.col_cat_id = b.col_cat_id and
+												a.col_type_id = b.coll_type_id and
+												c.mov_typ_id = b.col_sub_id and
+												b.reva_flag = '0' and
+												b.status='A' and
+												b.date_from <= current date and
+												b.date_until = '9999-12-31' and
+												a.col_cat_id = d.col_cat_id
+										};							
+					
+				}			
+				
+			} else {
+// ostali (nisu plovila,vozila,pokretnine, ni nekretnine)
+// nema podtipa
+				System.out.println("Nisu vozila,plovila,pokretnine,nekretnine, nema podtipa " );					
+				
+				#sql [connCtx] coliditer  = {
+
+						select   
+								a.COL_HEA_ID as col_hea_id,
+								a.REAL_EST_NOMI_VALU as real_est_nomi_valu, 
+								a.REAL_EST_NM_CUR_ID as real_est_nm_cur_id,
+								a.REAL_EST_NOMI_DATE as real_est_nomi_date,
+								a.REVA_DATE_AM as reva_date_am,
+								b.REVA_FLAG as reva_flag,
+								d.accounting_indic as accounting_indic
+						FROM 
+							COLL_HEAD a, 
+							COLL_ATR b,
+							COLL_CATEGORY d
+						where
+							a.col_cat_id = :(p_data.getCategory()) and
+							a.col_type_id = :(p_data.getColl_type()) and
+							a.COLLATERAL_STATUS = '3' and
+							a.real_est_nomi_date >= :(p_data.getDateFromEval()) and
+							a.real_est_nomi_date <= :(p_data.getDateUntilEval()) and
+
+							a.col_cat_id = b.col_cat_id and
+							a.col_type_id = b.coll_type_id and
+							b.reva_flag = '0' and							
+							b.status='A' and
+							b.date_from <= current date and
+							b.date_until = '9999-12-31' and
+							d.col_cat_id = a.col_cat_id 
+				};				
+				
+			}	
+	
+			 	
+		
+		}catch(SQLException e){
+			System.out.println("SQLException za select coliditer ");
+			
+			if(e.getErrorCode()!=100){
+				try {
+					
+					throw e;
+				} catch (Exception ignored) {
+				}
+			}
+		}
+		
+		//staviti u jedan vektor rezultate select-a
+		result = new Vector();
+		
+		try {
+				
+				while(coliditer.next()){
+					Vector redak = new Vector();
+					System.out.println("SQLJ SelectColId");
+					System.out.println("Iteration " + coliditer.col_hea_id());
+					System.out.println("-" + coliditer.real_est_nomi_valu());
+					System.out.println("-" + coliditer.real_est_nm_cur_id());
+					System.out.println("-" + coliditer.real_est_nomi_date());
+					System.out.println("-" + coliditer.reva_date_am());
+					System.out.println("-" + coliditer.reva_flag());
+					redak.add(coliditer.col_hea_id());
+					redak.add(coliditer.real_est_nomi_valu());
+					redak.add(coliditer.real_est_nm_cur_id());
+					redak.add(coliditer.real_est_nomi_date());
+					redak.add(coliditer.reva_date_am());
+					redak.add(coliditer.reva_flag());
+					redak.add(coliditer.accounting_indic());
+					result.add(redak);
+				}
+		} catch (Exception ignored) {
+		}
+		return result;
+	}
+	
+	/** Izraèun revalorizacije za pojedini selektirani kolateral, uvecava vrijednost kolaterala za izracunati iznos revalorizacije,
+	 * update-a se podatak za taj kolateral u tabeli COLL_HEAD
+	 * (nominalnu vrijednost kolateral managera uveæati za izraèunati iznos revalorizacije - 
+	 * datum zadnje promjene nominalne vrijednosti postaviti na datum obrade)
+	 * */
+	public void revaluation(BO08Data p_data) throws SQLException {
+    	System.out.println("revaluation sqlj");
+    	BigDecimal iznos_revalorizacije = p_data.getRevalPercentage().divide(new BigDecimal(100),  2, BigDecimal.ROUND_HALF_UP).multiply(p_data.getReal_est_nomi_valu());
+    	p_data.setIznos_revalorizacije(iznos_revalorizacije);
+    	BigDecimal koeficijent = p_data.getRevalPercentage().divide(new BigDecimal(100),  2, BigDecimal.ROUND_HALF_UP);
+    	try{
+    	#sql [connCtx] {
+    			UPDATE COLL_HEAD
+				SET REAL_EST_NOMI_VALU  = REAL_EST_NOMI_VALU + :(iznos_revalorizacije),
+					REAL_EST_NOMI_DATE = :(p_data.getDateOfReval()),
+					REVA_COEF = :(koeficijent),
+					REVA_DATE = :(p_data.getDateOfReval()),
+    				REVA_BDATE_AM = REVA_DATE_AM,
+					REVA_DATE_AM = 'A',
+					REVA_BVALUE = :(p_data.getReal_est_nomi_valu()),
+					REVA_BDATE = REAL_EST_NOMI_DATE
+					
+				WHERE 
+    				col_hea_id = :(p_data.getCol_hea_id())	
+							
+    	};
+    	} catch (SQLException e) {
+			System.out.println("sql pogreska u updateCol_Proc");
+			e.printStackTrace();
+	 	}
+    }
+    
+	
+		/** insertiranje u tablicu TURNOVER, tj.izraèun za svaki kolateral spremiti u prometnu 
+		 * evidenciju  obraèuna
+		 * Treba spremiti slijedeæe podatke:
+		 * - kolateral za koji se radi izraèun
+		 * - vrijednost kolaterala u trenutku izraèuna
+		 * - stopa revalorizacije primjenjena u obraèunu
+		 * - iznos revalorizacije
+		 * - status u obradi
+		*/
+	public void insertIntoTrafficEvidence(BO08Data p_data,String bookingState) throws Exception {
+			
+			try {
+				
+				YOY00 idgen = new YOY00(connCtx);
+				BigDecimal col_tur_id = idgen.getNewId();
+	 		
+			 
+				#sql [connCtx] {
+					
+					insert into 
+							COL_TURNOVER 
+								(COL_TUR_ID,
+								COL_PRO_ID,
+								COL_HEA_ID,
+								COLL_TYPE_ID,
+								COL_SUB_ID,
+								AMOUNT,
+								AMOUNT_PROC,
+								PROC_PERC,
+								PROC_STATUS
+								)
+					values 
+						(
+						:(col_tur_id),
+						:(colProId),
+						:(p_data.getCol_hea_id()),
+						:(p_data.getColl_type()),
+						:(p_data.getColl_subtype()),
+						:(p_data.getReal_est_nomi_valu()),
+						:(p_data.getIznos_revalorizacije()),
+						:(p_data.getRevalPercentage()),
+						:(bookingState))
+				};
+			} catch (Exception e) {
+				System.out.println("sql pogreska u insertCol_Turnover");
+			
+				e.printStackTrace();
+		 	}
+	}
+		
+	
+// 	update tablice COL_PROC (t.j. sprema se informacija o izvedenoj obradi)
+	/**spremiti informaciju o izvedenoj obradi
+	 * Napraviti update sloga o obradi u tabeli za evidenciju obraèuna. Spremaju se slijedeæi podaci:
+	 * - broj obrağenih slogova
+	 * - datum i vrijeme završetka obrade
+	 * - promjena statusa na 1 - obrada uspješno završena
+	*/
+    public void updateCol_Proc(int colNumber) throws SQLException {
+    	String status_is_one = new String("1");//obrada uspjesno zasvrsila
+    	System.out.println("sqlj updateCol_Proc =");
+    	
+		try{
+			 	 	#sql [connCtx] {UPDATE col_proc 
+			 						SET proc_status = :(status_is_one), 
+			 						col_number = :(new BigDecimal(colNumber)), 
+			 						proc_ts = CURRENT TIMESTAMP
+			 						WHERE 
+			 						col_pro_id = :(colProId) 
+									
+			 			};
+			 		   
+		} catch (SQLException e) {
+					System.out.println("sql pogreska u updateCol_Proc");
+					e.printStackTrace();
+		}
+		System.out.println("sqlj updateCol_Proca =");
+			 	
+	} 
+}

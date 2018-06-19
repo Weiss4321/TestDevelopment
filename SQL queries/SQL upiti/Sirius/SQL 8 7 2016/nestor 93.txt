@@ -1,0 +1,36 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+		
+	select * from 	CUST_BILL_EXCH order by user_lock desc;
+
+	select * from customer where cus_id = 3874760;  -- GOOGLE DOO
+
+	update customer set name = 'GOOGLE DOO'  where cus_id = 3874760;
+
+	commit;
+
+	select ben_reg_no, payer_reg_no from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 	select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status,chg_stat_reason, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 	update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 1538756;
+
+ 	update CUST_BILL_EXCH set chg_stat_reason = '00' where cus_bil_exc_id = 673934326;
+
+ 	update CUST_BILL_EXCH set maturity_date = '14.01.2016' where cus_bil_exc_id = 673459326;
+
+ 	update CUST_BILL_EXCH set issue_date = '14.01.2016' where cus_bil_exc_id = 673459326;
+
+ 	
+
+ 	update CUST_BILL_EXCH set paid_amount = null where cus_bil_exc_id = 674153326;
+
+	commit;
+
+
+	select * from customer_account where cus_acc_id = 1169870522;
+
+	select  * from CUSACC_BALANCE_LAST  where cus_acc_id = 1169870522;
+ 
+	

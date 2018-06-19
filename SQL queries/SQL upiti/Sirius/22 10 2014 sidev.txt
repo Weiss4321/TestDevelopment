@@ -1,0 +1,149 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from payment_order;
+
+select * from CUST_BILL_EXCH;
+
+-- MJ-07/10/2014
+
+update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-07/10/2014-0' where cus_bil_exc_id in (3093938823);
+
+--commit;
+------------------------------------------------
+
+--  3093977823
+
+ 				SELECT 
+                        cus_bill_exch_no,
+                        issue_date,
+                        maturity_date,
+                        cus_bill_exch_no,
+                        amount,
+                        payer_reg_no,
+                        payer_tax_number,
+                        payer_address,
+                        ben_iban,
+                        ben_name,
+                        ben_tax_number,
+                        ben_address,
+                        status,
+                        paid_amount,
+                        payer_acc_no,
+                        payment_method
+                   FROM
+                        cust_bill_exch
+                    WHERE cus_bil_exc_id = 3093977823;       
+
+------------------------------------------------------------
+select *  from CUST_BILL_EXCH where cus_bil_exc_id in (3093811823);
+
+
+select status  from CUST_BILL_EXCH where cus_bil_exc_id in (3093937823, 3093938823);
+
+update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id in (3093937823, 3093938823);
+
+commit;
+
+select * from system_code_value where sys_cod_id = 'bill_change_stat'; -- upisati ove vrijednosti OK
+
+  				SELECT
+                      sys_code_value                                       
+                      FROM
+                      system_code_value
+                      WHERE 
+                       sys_cod_id = 'bill_change_stat' 
+
+
+
+                          SELECT
+                      sys_code_value                                       
+                      FROM
+                      system_code_value
+                      WHERE 
+                       sys_cod_id = 'bill_change_stat' 
+					 
+					 
+					 
+select * from CUST_BILL_EXCH where cus_bill_exch_no = 'MJ-13/10/20141';
+
+
+----------------------------------------------------------------------- 27.10 2014
+
+
+			SELECT
+                    cr.cus_ris_id,
+                    cr.cus_acc_id,
+                    cr.ris_ind_typ_id,
+                    cr.risk_indic_value,
+                    cr.risk_reason,
+                    cr.risk_date,  
+                    cr.loan_acc_no,
+                    cr.loan_cus_id,
+                    cr.date_from,
+                    cr.date_until,
+                    cr.eve_id,
+                    cr.use_id,
+                    cr.bank_sign,
+                    cr.user_lock,
+                    cr.limit_date_from,
+                    cr.limit_date_until
+                FROM 
+                    cusacc_risk cr                   
+                WHERE
+                    cr.cus_acc_id = 111938973
+                    AND cr.date_from >= '27.10.2014';
+
+--------------------------------------------   
+
+
+select * from system_code_value; -- bill_change_stat
+
+select * from system_code_value where sys_cod_id = 'bill_change_stat';
+
+                   select * from system_code_value where sys_cod_id = 'pay_method'; -- sys_code_value 1 ili 2 
+                   
+                     select * from system_code_value where sys_cod_id = 'pay_method' and sys_code_value = '1'; -- sys_code_value 1 ili 2 
+
+
+                      SELECT
+                      sys_code_desc                
+                  FROM
+                    system_code_value                
+                  WHERE
+                    sys_cod_id = 'pay_method'
+                  AND sys_code_value = '1';
+
+    ---------------------------------------------------------------------------------------
+
+                  select * from CUST_BILL_EXCH where payment_method = '1'; 
+
+
+
+---------------------------------------------------------------
+
+
+
+   					 SELECT
+                          cbe.cus_bil_exc_id,
+                          cbe.cus_bill_exch_no,
+                          cbe.cus_bill_ext_no,
+                          cbe.payer_reg_no,
+                          cbe.payer_name,
+                          cbe.payer_tax_number,
+                          cbe.ben_iban,
+                          cbe.ben_name,
+                          cbe.ben_address,
+                          cbe.amount,                   
+                          cbe.maturity_date, 
+                          cbe.status, 
+                          cbe.paid_amount,
+                          cbe.order_trn, 
+                          cbe.payment_date,
+                          cbe.order_trn_last,
+                          cbe.payment_date_last,
+                          cbe.cur_id,
+                          cur.code_num
+                      FROM
+                          CUST_BILL_EXCH cbe
+                          LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id                              
+                     AND   (cbe.STATUS = 'N')     

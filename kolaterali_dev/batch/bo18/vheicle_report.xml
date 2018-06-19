@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+		<Data><Parameter Name="naslov"/></Data>
+	</Row>
+	<Row>
+		<Data><Parameter Name="datum"/></Data>
+	</Row>
+	<Row>
+		<Data><Parameter Name="orgUnit"/></Data>
+	</Row>
+	<Row>
+	</Row>
+	<Row>
+		<Data><Text>Redni broj </Text></Data>
+		<Data><Text>Sifra kolaterala</Text></Data>
+		<Data><Text>Broj sasije</Text></Data>
+		<Data><Text>datum do kojeg treba upisati pravo banke</Text></Data>
+		<Data><Text>broj partije plasmana</Text></Data>
+		<Data><Text>interni MB vlasnika kolaterala</Text></Data>
+		<Data><Text>ime i prezime vlasnika kolaterala</Text></Data>
+		
+	</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="nr"/></Data>
+			<Data><Field Name="col_num"/></Data>
+			<Data><Field Name="veh_vin_num"/></Data>
+			<Data><Field Name="date_to_lop"/></Data>
+			<Data><Field Name="acc_no"/></Data>
+			<Data><Field Name="register_no"/></Data>
+			<Data><Field Name="name"/></Data>
+			
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>

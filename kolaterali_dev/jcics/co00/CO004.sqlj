@@ -1,0 +1,912 @@
+package hr.vestigo.modules.collateral.jcics.co00;
+
+//import java.sql.SQLData;
+  
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.YOY64;
+import hr.vestigo.modules.collateral.common.yoy6.GCTCData;
+import hr.vestigo.modules.collateral.common.yoyD.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+/**
+ * CO004 class update data into table REAL_ESTATE	
+ *  	
+ */
+        
+#sql iterator Iter8 (BigDecimal coll_hf_prior_id, String frame);
+
+public class CO004 extends RemoteTransaction {
+	 	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co00/CO004.sqlj,v 1.63 2017/06/01 12:03:44 hrazst Exp $";
+	  
+	public DeclCO00 decl = null;
+	private int basicDataStatusNoOw = 0;
+	private int mortgageStatusNo = 0;
+	private int coverIndicNo = 0;
+	private String financial_flag = "X";
+	private Iter8 iter=null;
+		
+	public CO004 (DeclCO00 decl) {
+		this.decl = decl;
+	}
+	  
+	// obj za update valute kolaterala u hipotekama
+	YOYDData mortgage = new YOYDData();
+	
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+		
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+	    
+        //REAL_EST_ID i COL_RES_ID su iste stvari, druga je novija nakon promjena tablica
+        //REAL_EST_ID je stari id nekretnine. Novi je COL_RES_ID
+        //COLL_ACCOUNTING_ID je iz collateral_type
+		
+		tc.debug("\n.............ISPIS DECL MAPPINGA redupdmap POCETAK............."); 
+        Field[] fields=decl.redupdmap.getClass().getDeclaredFields();
+        StringBuffer var=new StringBuffer();
+        for (int i=0;i<fields.length;i++) {
+            try {               
+                var.append("\n" + fields[i].getName() + "=" + fields[i].get(decl.redupdmap) + ",");
+              } catch ( IllegalAccessException ex ) {
+                tc.debug("Greska pri ispisu decl varijable...");
+              }
+        }
+        tc.debug("DECL redinsmap VARIJABLE=" + var.toString());
+        tc.debug("\n.............ISPIS DECL MAPPINGA redupdmap KRAJ.............");
+						
+		String coll_data_statusCoh = null;	
+		String basic_data_statusCoh = null;
+		String mortgage_statusCoh = null;
+		String cover_indicCoh = null; 
+		String codeUnused = null;   	//	Ivan 28.09.2006  Milki treba code jer u commonu gleda o cemu je rijec je li nekretnina ili cash ili ....
+										//  Ivan 28.09.2006  Meni ne treba jer ovo je insert samo za nekretninu
+
+		String ver_indUnused = null;	//  Ivan 28.09.2006  Milka ga dohvaca ali ga dalje ne koristi
+		String aut_ind  = null;			//	Ivan 28.09.2006  Ide li predmet na autorizaciju 
+										//  Ivan 28.09.2006  0 - ne ide
+										//	Ivan 28.09.2006  1 - ide
+	
+		//NOVO Ivan 29.09.2006 pocetak
+					
+		//Slicno vrijedi i za ova tri statusa koji se svaki put kod update trebaju nanovo provjeriti
+		//Dohvat statusa prema collateral type
+		//RealEstate_lblMortgageSt    Hipoteka:				RealEstate_MortgageStatus 	 RealEstate_txtMortgageSt  
+		//RealEstate_lblCoverIn       Povezanost:				RealEstate_CoverIndic        RealEstate_txtCoverIn     
+		//RealEstate_lblCollDataSt    Podaci coll.off.:		RealEstate_CollDataStatus    RealEstate_txtCollDataSt  
+										
+		try {
+			#sql [ctx]{
+				SELECT  d.coll_data_status,
+						d.basic_data_status,
+						d.mortgage_status,
+						d.cover_indic,
+						a.mortgage_flag,
+						a.cover_flag,
+						a.coll_data_flag,
+						b.code,
+						b.accounting_indic,
+						c.ver_ind,
+						c.aut_ind
+				INTO	:coll_data_statusCoh,
+						:basic_data_statusCoh,
+						:mortgage_statusCoh,
+						:cover_indicCoh,
+						:(decl.redupdmap.RealEstate_MortgageStatus),
+						:(decl.redupdmap.RealEstate_CoverIndic),
+						:(decl.redupdmap.RealEstate_CollDataStatus),
+						:codeUnused,
+						:financial_flag,
+						:ver_indUnused,
+						:aut_ind
+				FROM	coll_head d, collateral_type a, coll_category b, coll_category_prm c
+				WHERE	d.col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+				AND
+						d.col_type_id = a.coll_type_id
+				AND
+						a.coll_type_id = :(decl.redupdmap.RealEstate_COL_TYPE_ID)
+				AND	
+						a.col_cat_id = b.col_cat_id 
+				AND
+						b.col_cat_id = c.col_cat_id 
+				AND
+						c.org_uni_id = :(decl.redupdmap.RealEstate_ORG_UNI_ID)
+			};				
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO004.sqlj select from collateral_type SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO004.sqlj select from collateral_type SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO004.sqlj select from collateral_type SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO004.sqlj: Error select from collateral_type! ","err411a", null);
+		}		
+					
+		tc.debug ( ".........PRIJE           " );
+		tc.debug ( ".........BASIC_DATA_STATUS)" + decl.redupdmap.RealEstate_BasicDataStatus);
+		tc.debug ( ".........MORTGAGE_STATUS)  " + decl.redupdmap.RealEstate_MortgageStatus);
+		tc.debug ( ".........COVER_INDIC)      " + decl.redupdmap.RealEstate_CoverIndic);
+		tc.debug ( ".........COLL_DATA_STATUS) " + decl.redupdmap.RealEstate_CollDataStatus);
+		
+		tc.debug ( "..........................." );
+		tc.debug ( ".........aut_ind           "  + aut_ind);
+		tc.debug ( "..........................." );
+		tc.debug ( ".........BASIC_DATA_STATUS      COLL_HEAD) " + basic_data_statusCoh);
+		tc.debug ( ".........MORTGAGE_STATUS        COLL_HEAD) " + mortgage_statusCoh);
+		tc.debug ( ".........COVER_INDIC            COLL_HEAD) " + cover_indicCoh);
+		tc.debug ( ".........COLL_DATA_STATUS       COLL_HEAD) " + coll_data_statusCoh);
+				
+					
+		if (aut_ind.equalsIgnoreCase("1")) {  
+		    // Ivan 28.09.2006 Slucaj kada predmet ide  na autorizaciju
+		    //nije prvi unos, trebam provjeriti da li su upisani podaci coll off (to znaci da se predmet vratio sa autorizacije)
+			if ((coll_data_statusCoh).equalsIgnoreCase("0")) {
+			    // predmet jos nije bio na autorizaciji: trebam provjeriti samo osnovne podatke					
+			    // provjera da li su upisani svi osnovni podaci 
+			    // provjeriti i vlasnike za nekretninu											
+				tc.debug ( "....TU SAM.... NEKRETNINE ..provjera osnovnih podataka...coll_data_statusCoh = 0"); 					
+				try{			                                                                                                                                         
+					#sql [ctx]  { SELECT count(*)                                                                                                        
+								  INTO :(basicDataStatusNoOw)                                                                                                  
+								  FROM	coll_owner                                                                                                             
+								  WHERE	col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)};                                                                 
+				}catch(java.sql.SQLException sqle){                                                                                                    
+	 			}                                                                                                                                      
+	 			if(basicDataStatusNoOw > 0){                                                                                                           
+	 				if ((basic_data_statusCoh).equalsIgnoreCase("0"))
+	 					decl.redupdmap.RealEstate_BasicDataStatus = "1";
+					else 
+						decl.redupdmap.RealEstate_BasicDataStatus = basic_data_statusCoh;
+	 				
+ 					tc.debug ( "....NAKON SELECTA IZ COLL_OWNER .....BASIC_DATA_STATUS)" + decl.redupdmap.RealEstate_BasicDataStatus);
+	 			}	
+                // predmet je kod coll.off i treba promijeniti status podataka coll.off.
+                // samo ako je status osnovnih podataka na 2 (znaci da su VERIFICIRANI i da je predmet kod coll.off.					
+				if ((basic_data_statusCoh).equalsIgnoreCase("2"))
+					decl.redupdmap.RealEstate_CollDataStatus = "1";					
+										
+			} else if ((coll_data_statusCoh).equalsIgnoreCase("1")) {
+                // predmet se vratio s autorizacije: trebam provjeriti i sve ostale podatke
+                // mijenjam statuse na 1 samo ako su 0					
+                // chkAllData();
+                // status podataka coll.off. se ne mijenja					
+				decl.redupdmap.RealEstate_CollDataStatus = coll_data_statusCoh;						
+                // provjera da li su upisani svi osnovni podaci 								
+                // provjeriti i vlasnike za nekretninu
+				tc.debug ( "....TU SAM....NEKRETNINE ..provjera osnovnih podataka...coll_data_statusCoh = 1"); 					
+											
+				try{			                                                                                                                                         
+					#sql [ctx]  { SELECT count(*)                                                                                                        
+								  INTO :(basicDataStatusNoOw)                                                                                                  
+								  FROM	coll_owner                                                                                                             
+								  WHERE	col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+								  AND date_from <= current date AND date_until = '9999-12-31' };                                                                 
+				}catch(java.sql.SQLException sqle){                                                                                                    
+								                                                                                                                                             
+				}                                                                                                                                      
+				if(basicDataStatusNoOw > 0){                                                                                                           
+								 				
+	 				if ((basic_data_statusCoh).equalsIgnoreCase("0"))
+	 					decl.redupdmap.RealEstate_BasicDataStatus = "1";
+					else 
+						decl.redupdmap.RealEstate_BasicDataStatus = basic_data_statusCoh;	
+ 					tc.debug ( "....NAKON SELECTA IZ COLL_OWNER .....BASIC_DATA_STATUS)" + decl.redupdmap.RealEstate_BasicDataStatus);
+				}					
+                // provjera da li su upisani podaci collateral officera, pretpostavka je da jesu
+                // status podataka koje upisuje col.off. mijenja se autorizacijom a ne ovdje
+                // provjeriti hipoteku, treba biti upisana barem jedna hipoteka u korist RBA
+				if ((decl.redupdmap.RealEstate_MortgageStatus).equalsIgnoreCase("X")) {
+					decl.redupdmap.RealEstate_MortgageStatus = "X";
+				} else {
+					decl.redupdmap.RealEstate_MortgageStatus = "0";
+					tc.debug ( "....TU SAM....NEKRETNINE ..provjera HIPOTEKE...");
+												
+                    //		MORTGAGE_STATUS
+                    //select from coll_hf_prior
+			 		try{			
+			 			#sql [ctx]  { SELECT count(*)
+		 						  INTO :(mortgageStatusNo)
+	 							  FROM	coll_hf_prior
+	 							  WHERE	hf_coll_head_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+			 					  AND 		hf_status = 'A'
+								  AND 	((hf_date_hfc_until is null) or  (hf_date_hfc_until >= current date))
+			 					  AND 		hf_own_cus_id = 8218251
+
+			 					};
+			 		}catch(java.sql.SQLException sqle){
+									 
+					}
+					if(mortgageStatusNo > 0){
+						if ((mortgage_statusCoh).equalsIgnoreCase("0"))
+							decl.redupdmap.RealEstate_MortgageStatus = "1";
+						else 
+							decl.redupdmap.RealEstate_MortgageStatus = mortgage_statusCoh;
+					
+						tc.debug ( "....provjera hipoteke...NEKR.. decl.redupdmap.RealEstate_MortgageStatus + mortgageStatusNo" + decl.redupdmap.RealEstate_MortgageStatus + "  " + mortgageStatusNo);
+					}
+				}			 											
+			    // provjeriti pokrice
+				if ((decl.redupdmap.RealEstate_CoverIndic).equalsIgnoreCase("X")) {
+					decl.redupdmap.RealEstate_CoverIndic = "X";
+				} else {
+					decl.redupdmap.RealEstate_CoverIndic = "0";
+                    //											
+                    //COVER_INDIC POCETAK
+                    //select from loan_beneficiary
+                    //Najprije u iterator dohvati sve RBA hipoteke
+				
+				 	try{			
+						#sql [ctx] iter = {SELECT	chp.coll_hf_prior_id as coll_hf_prior_id,
+				 									chp.agreement as frame
+											FROM	coll_hf_prior chp,
+				 									coll_head ch
+											WHERE	ch.col_hea_id = chp.hf_coll_head_id
+				 							AND     ch.col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+				 							AND 	chp.hf_own_cus_id  = 8218251
+				 							AND     chp.hf_status = 'A'
+				 							AND    ( (chp.hf_date_hfc_until >= current date)  or (chp.hf_date_hfc_until is null))
+									 									
+							 				};
+					}catch(java.sql.SQLException sqle){
+									 
+					}
+					java.math.BigDecimal collHfPriorId = null;
+					String agreement = "N";
+					String pokrice = "0";
+					boolean imaHipoteka = false;
+				    //Sada za svaku RBA hipoteku treba biti bar jedna partija iz loan_beneficiary, osim ako je hipoteka vezana za sporazum
+					while (iter.next()) {
+						imaHipoteka = true;
+						collHfPriorId = iter.coll_hf_prior_id();
+						agreement = iter.frame();
+						if (agreement != null && agreement.equalsIgnoreCase("D")) {
+						    // ako je hipoteka dio okvirnog sporazuma povezuje se okvir s plasmanom, flag ide na 1							
+							pokrice = "1";							
+						} else {
+							try{			
+								#sql [ctx]  { SELECT count(*)
+												INTO :(coverIndicNo)
+										  		FROM	 loan_beneficiary
+										  		WHERE	coll_hf_prior_id = :(collHfPriorId)
+							 				};
+							}catch(java.sql.SQLException sqle){
+										 
+							}
+												 	
+							tc.debug ( "  ITERACIJA HIPOTEKA ...........coverIndicNo  " + coverIndicNo);				 	
+							if((coverIndicNo > 0) || (pokrice.compareTo("1")== 0)){
+								pokrice = "1";
+							}else{
+								pokrice = "0";
+							}
+							tc.debug ( "  ITERACIJA HIPOTEKA ...........POKRICE POKRICE  " + pokrice);
+							coverIndicNo = 0;
+						}			 				
+					}
+					if(imaHipoteka){
+									 				
+						if ((cover_indicCoh).equalsIgnoreCase("0"))								
+							decl.redupdmap.RealEstate_CoverIndic = pokrice;	
+						else 
+							decl.redupdmap.RealEstate_CoverIndic = cover_indicCoh;		
+													
+									 				
+					}else{
+						decl.redupdmap.RealEstate_CoverIndic = "0";
+									 			
+					}
+									 			//COVER INDIC KRAJ
+				}
+			} else if ((coll_data_statusCoh).equalsIgnoreCase("2")) { 
+                //	ako je status podata coll.of. 2
+                //	predmet se vratio s autorizacije: trebam provjeriti i sve ostale podatke
+                //	mijenjam statuse na 1 samo ako su 0					
+                
+                //	status podataka coll.off. se ne mijenja					
+				decl.redupdmap.RealEstate_CollDataStatus = coll_data_statusCoh;	
+                //	provjera da li su upisani svi osnovni podaci
+                // provjeriti i vlasnike za NEKR
+				tc.debug ( "....TU SAM....NEKR ..provjera osnovnih podataka...coll_data_statusCoh = 2 ");
+				try{			                                                                                                                                         
+					#sql [ctx]  { SELECT count(*)                                                                                                        
+								  INTO :(basicDataStatusNoOw)                                                                                                  
+								  FROM	coll_owner                                                                                                             
+								  WHERE	col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+								  AND date_from <= current date AND date_until = '9999-12-31' };                                                                 
+				}catch(java.sql.SQLException sqle){                                                                                                    
+								                                                                                                                                             
+				}                                                                                                                                      
+				if(basicDataStatusNoOw > 0){                                                                                                           
+					if ((basic_data_statusCoh).equalsIgnoreCase("0"))
+						decl.redupdmap.RealEstate_BasicDataStatus = "1";
+					else 
+						decl.redupdmap.RealEstate_BasicDataStatus = basic_data_statusCoh;	
+					tc.debug ( "....NAKON SELECTA IZ COLL_OWNER coll_data_statusCoh = 2.....BASIC_DATA_STATUS)" + decl.redupdmap.RealEstate_BasicDataStatus);
+				}                                  
+                // status podataka koje upisuje col.off. mijenja se autorizacijom a ne ovdje
+                // provjeriti hipoteku, treba biti upisana barem jedna hipoteka u korist RBA
+				if ((decl.redupdmap.RealEstate_MortgageStatus).equalsIgnoreCase("X")) {
+					decl.redupdmap.RealEstate_MortgageStatus = "X";
+				} else {
+					decl.redupdmap.RealEstate_MortgageStatus = "0";
+                    //MORTGAGE_STATUS
+                    //select from coll_hf_prior
+				 	try{			
+		 				#sql [ctx]  { SELECT count(*)
+			 						  INTO :(mortgageStatusNo)
+		 							  FROM	coll_hf_prior
+		 							  WHERE	hf_coll_head_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+				 					  AND 		hf_status = 'A'
+									  AND 	((hf_date_hfc_until is null) or  (hf_date_hfc_until >= current date))
+				 					  AND 		hf_own_cus_id = 8218251
+						 			};
+				 	}catch(java.sql.SQLException sqle){
+								 
+				 	}
+				 	if(mortgageStatusNo > 0){
+				 		if ((mortgage_statusCoh).equalsIgnoreCase("0"))
+				 			decl.redupdmap.RealEstate_MortgageStatus = "1";
+						else 
+							decl.redupdmap.RealEstate_MortgageStatus = mortgage_statusCoh;								
+						tc.debug ( "....provjera hipoteke...NEKR.. decl.redupdmap.RealEstate_MortgageStatus + mortgageStatusNo" + decl.redupdmap.RealEstate_MortgageStatus + "  " + mortgageStatusNo);
+				 	}
+				}								
+				//provjeriti pokrice
+				if ((decl.redupdmap.RealEstate_CoverIndic).equalsIgnoreCase("X")) {
+					decl.redupdmap.RealEstate_CoverIndic = "X";
+				} else {
+					decl.redupdmap.RealEstate_CoverIndic = "0";
+                    //COVER_INDIC POCETAK
+                    //select from loan_beneficiary
+                    //Najprije u iterator dohvati sve RBA hipoteke
+				 	try{			
+		 				#sql [ctx] iter = {SELECT	chp.coll_hf_prior_id as coll_hf_prior_id,
+				 									chp.agreement as frame
+				 							FROM	coll_hf_prior chp,
+													coll_head ch
+										 	WHERE	ch.col_hea_id = chp.hf_coll_head_id
+											AND     ch.col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+											AND 	chp.hf_own_cus_id  = 8218251
+											AND     chp.hf_status = 'A'
+											AND    ( (chp.hf_date_hfc_until >= current date)  or (chp.hf_date_hfc_until is null))
+						 				};
+		 			}catch(java.sql.SQLException sqle){
+										 
+		 			}
+		 			
+		 			java.math.BigDecimal collHfPriorId = null;
+					String agreement = "N";
+					String pokrice = "0";
+					boolean imaHipoteka = false;
+					//Sada za svaku RBA hipoteku treba biti bar jedna partija iz loan_beneficiary, osim ako je hipoteka dio okvirnog sporazuma
+					while (iter.next()) {
+						imaHipoteka = true;
+						collHfPriorId = iter.coll_hf_prior_id();
+						agreement = iter.frame();
+						if (agreement != null && agreement.equalsIgnoreCase("D")) {
+						    //ako je hipoteka dio okvirnog sporazuma povezuje se okvir s plasmanom, flag ide na 1							
+							pokrice = "1";								
+						} else {						
+							try{			
+								#sql [ctx]  { SELECT count(*)
+												INTO :(coverIndicNo)
+										  		FROM	 loan_beneficiary
+					 					  		WHERE	coll_hf_prior_id = :(collHfPriorId)
+							 				};
+							}catch(java.sql.SQLException sqle){
+											 
+							}
+													 	
+							tc.debug ( "  ITERACIJA HIPOTEKA ...........coverIndicNo  " + coverIndicNo);				 	
+							if((coverIndicNo > 0) || (pokrice.compareTo("1")== 0)){
+								pokrice = "1";
+							}else{
+								pokrice = "0";
+							}
+					 	
+							tc.debug ( "  ITERACIJA HIPOTEKA ...........POKRICE POKRICE  " + pokrice);
+							coverIndicNo = 0;
+						}				 				
+		 			}
+					
+		 			if(imaHipoteka){
+		 				if ((cover_indicCoh).equalsIgnoreCase("0"))								
+		 					decl.redupdmap.RealEstate_CoverIndic = pokrice;	
+						else 
+							decl.redupdmap.RealEstate_CoverIndic = cover_indicCoh;		
+		 			}else{
+		 				decl.redupdmap.RealEstate_CoverIndic = "0";
+		 			}
+										 			//COVER INDIC KRAJ
+				}										
+			} 
+		}
+		if (aut_ind.equalsIgnoreCase("0")) {  
+		    // Ivan 28.09.2006 Slucaj kada predmet ne ide na autorizaciju
+		    //provjera da li su upisani svi podaci prema parametrizaciji				
+		    //provjera da li su upisani svi osnovni podaci 
+		    //provjeriti i vlasnike za NEKR
+		    
+			basicDataStatusNoOw = 0;
+			try{			                                                                                                                                         
+				#sql [ctx]  { SELECT count(*)                                                                                                        
+							  INTO :(basicDataStatusNoOw)                                                                                                  
+							  FROM	coll_owner                                                                                                             
+							  WHERE	col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+							  AND date_from <= current date AND date_until = '9999-12-31' };                                                                 
+			}catch(java.sql.SQLException sqle){                                                                                                    
+			                                                                                                                                             
+			}                                                                                                                                      
+			if(basicDataStatusNoOw > 0){                                                                                                           
+				decl.redupdmap.RealEstate_BasicDataStatus = "1";
+				tc.debug ( "....NAKON SELECTA IZ COLL_OWNER .....BASIC_DATA_STATUS)" + decl.redupdmap.RealEstate_BasicDataStatus);
+			}  
+			// provjera da li su upisani podaci collateral officera, pretpostavka je da jesu
+						
+			if ((decl.redupdmap.RealEstate_CollDataStatus).equalsIgnoreCase("X")) {
+				decl.redupdmap.RealEstate_CollDataStatus = "X";
+			} else 
+				decl.redupdmap.RealEstate_CollDataStatus = "1";			
+						
+						
+			if ((decl.redupdmap.RealEstate_MortgageStatus).equalsIgnoreCase("X")) {
+				decl.redupdmap.RealEstate_MortgageStatus = "X";
+			} else {
+				decl.redupdmap.RealEstate_MortgageStatus = "0";
+                //							
+                //MORTGAGE_STATUS
+                //select from coll_hf_prior
+				try{			
+					#sql [ctx]  { SELECT count(*)
+								  INTO :(mortgageStatusNo)
+								  FROM	coll_hf_prior
+	 							  WHERE	hf_coll_head_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+			 					  AND 	hf_status = 'A'
+								  AND 	((hf_date_hfc_until is null) or  (hf_date_hfc_until >= current date))
+			 					  AND 	hf_own_cus_id = 8218251
+					 			};
+			 	}catch(java.sql.SQLException sqle){
+				 
+			 	}
+			 	if(mortgageStatusNo > 0){
+			 		decl.redupdmap.RealEstate_MortgageStatus = "1";
+					tc.debug ( "....provjera hipoteke..DDDDD.NEKR.. decl.redupdmap.RealEstate_MortgageStatus + mortgageStatusNo" + decl.redupdmap.RealEstate_MortgageStatus + "  " + mortgageStatusNo);
+			 	}
+			}
+						
+			//	provjeriti pokrice
+			if ((decl.redupdmap.RealEstate_CoverIndic).equalsIgnoreCase("X")) {
+				decl.redupdmap.RealEstate_CoverIndic = "X";
+			} else {
+				decl.redupdmap.RealEstate_CoverIndic = "0";													
+				//COVER_INDIC POCETAK
+				//select from loan_beneficiary
+				//Najprije u iterator dohvati sve RBA hipoteke
+			 	try{			
+					#sql [ctx] iter = {SELECT	chp.coll_hf_prior_id as coll_hf_prior_id,
+				 								chp.agreement as frame
+										FROM	coll_hf_prior chp,
+			 									coll_head ch
+										WHERE	ch.col_hea_id = chp.hf_coll_head_id
+			 							AND     ch.col_hea_id = :(decl.redupdmap.RealEstate_COL_HEA_ID)
+			 							AND 	chp.hf_own_cus_id  = 8218251
+			 							AND     chp.hf_status = 'A'
+			 							AND    ( (chp.hf_date_hfc_until >= current date)  or (chp.hf_date_hfc_until is null))
+					 									
+					};
+				}catch(java.sql.SQLException sqle){
+					 
+				}
+				java.math.BigDecimal collHfPriorId = null;
+				String agreement = "N";
+				String pokrice = "0";
+				boolean imaHipoteka = false;
+				//Sada za svaku RBA hipoteku treba biti bar jedna partija iz loan_beneficiary
+	 			while (iter.next()) {
+	 				imaHipoteka = true;
+	 				coverIndicNo = 0;
+	 				collHfPriorId = iter.coll_hf_prior_id();
+					agreement = iter.frame();
+					if (agreement != null && agreement.equalsIgnoreCase("D")) {
+					    //ako je hipoteka dio okvirnog sporazuma povezuje se okvir s plasmanom, flag ide na 1							
+						pokrice = "1";							
+					} else {			
+						try{			
+							#sql [ctx]  { SELECT count(*)
+										INTO :(coverIndicNo)
+	 							  		FROM	 loan_beneficiary
+	 							  		WHERE	coll_hf_prior_id = :(collHfPriorId)
+					 					};
+				 		}catch(java.sql.SQLException sqle){
+						 
+				 		}
+				 		tc.debug ( "  ITERACIJA HIPOTEKA ...........coverIndicNo  " + coverIndicNo);				 	
+				 		if((coverIndicNo > 0) || (pokrice.compareTo("1")== 0)){
+				 			pokrice = "1";
+				 		}else{
+				 			pokrice = "0";
+				 		}
+				 		tc.debug ( "  ITERACIJA HIPOTEKA ...........POKRICE POKRICE  " + pokrice);
+				 		coverIndicNo = 0;
+					} 				
+	 			}
+	 			
+	 			if(imaHipoteka){
+					decl.redupdmap.RealEstate_CoverIndic = pokrice;	
+	 			}else{
+	 				decl.redupdmap.RealEstate_CoverIndic = "0";
+	 			}
+				//COVER INDIC KRAJ
+			}
+		}			
+		//NOVO Ivan 29.09.2006 kraj
+		//STARO do 25.09.2006 pocetak
+				 	
+		 			
+		tc.debug ( ".........POSLIJE           " );
+		tc.debug ( ".........BASIC_DATA_STATUS)" + decl.redupdmap.RealEstate_BasicDataStatus);
+		tc.debug ( ".........MORTGAGE_STATUS)  " + decl.redupdmap.RealEstate_MortgageStatus);
+		tc.debug ( ".........COVER_INDIC)      " + decl.redupdmap.RealEstate_CoverIndic);
+		tc.debug ( ".........COLL_DATA_STATUS) " + decl.redupdmap.RealEstate_CollDataStatus);
+				
+        //BASIC_DATA_STATUS
+        //status unesenosti osnovnih podataka
+        //0 - u unosu
+        //1 - uneseni
+        //2 - verificirani 
+        //3 - autorizirani
+        				
+        //MORTGAGE_STATUS
+        //status hipoteke:
+        //	X - nije unesena ili se ne unosi
+        //	0 - u unosu
+        //	1 - unesena (ceka verifikaciju)
+        //	2 - verificirana
+        				
+        //COVER_INDIC
+        //0 - nije povezan ni sa jednim plasmanom u smislu pokrica izlozenosti
+        //1- povezan sa barem jednim plasmanom u smislu pokriæa izlozenosti
+        //2 - verificirano povezivanje
+        				
+        //COLL_DATA_STATUS
+        //status unesenosti podataka koje unosi collateral officer
+        //X - ne unosi se
+        //0 - u unosu
+        //1 - uneseni
+        //3 - autorizirani 
+		tc.debug ( ".........POSLIJE 2          " );
+		tc.debug ( ".........BASIC_DATA_STATUS)" + decl.redupdmap.RealEstate_BasicDataStatus);
+		tc.debug ( ".........MORTGAGE_STATUS)  " + decl.redupdmap.RealEstate_MortgageStatus);
+		tc.debug ( ".........COVER_INDIC)      " + decl.redupdmap.RealEstate_CoverIndic);
+		tc.debug ( ".........COLL_DATA_STATUS) " + decl.redupdmap.RealEstate_CollDataStatus);
+				
+		//STARO do 25.09.2006 kraj
+		
+		try{ 
+			#sql[ctx] { 
+				SELECT current timestamp 
+				INTO :(decl.redupdmap.RealEstate_USER_LOCK)
+				FROM sysibm.sysdummy1
+			};	
+					
+
+		} catch(java.sql.SQLException e){
+			tc.debug (".......CO004.sqlj ..... Select from  sysibm.sysdummy1 unsuccessful.");
+			tc.debug ( "......CO004.sqlj Select from  sysibm.sysdummy1  SQL ErrorCode " + e.getErrorCode());
+			tc.debug ( "......CO004.sqlj Select from  sysibm.sysdummy1  SQL SQLState " + e.getSQLState());
+			tc.debug ( "......CO004.sqlj Select from  sysibm.sysdummy1 event  SQL Message " + e.getMessage());
+			e.printStackTrace();
+			throw e;
+		}
+				
+		updateCollRestate_A(ctx,tc);
+		updateCollHead_A(ctx,tc,exCtx);
+		
+		// FBPr200017059 - ako postoji kvaèica colateral officera i ako je izmijenjen jedan od podataka iz bloka Procijenitelj - potrebno ju je obrisati
+		if((decl.redupdmap.RealEstate_txtCoConfirm).compareTo("D")==0 && decl.redupdmap.EstimateDataChg.equals("D") ){
+		    updateCoChgHistory(ctx,tc);
+		}
+		decl.redupdmap.RealEstate_txtUserLock = decl.redupdmap.RealEstate_USER_LOCK;
+		// ako se promijenila valuta kolaterala promijeniti i na svim vezanim hipotekama
+		
+		tc.debug("radim update hipoteka: "+mortgage.col_hea_id);	
+		
+		YOYD0 YOYD0 = new YOYD0(tc);
+		YOYDData mortgage = new YOYDData();   	
+		
+		mortgage.col_hea_id = decl.redupdmap.RealEstate_COL_HEA_ID;
+		mortgage.cur_id = decl.redupdmap.RealEstate_REAL_EST_NM_CUR_ID;;
+		
+		YOYD0.chgMortgageCurrencyAmount(mortgage); 
+		
+		tc.debug("gotov update hipoteka: "+mortgage.col_hea_id);				
+
+        BigDecimal col_hea_id = decl.redupdmap.RealEstate_COL_HEA_ID;
+          
+        // poziv common-a za update CRM HNB prihvatljivosti
+
+        tc.debug ( "poziv common-a za update CRM HNB prihvatljivosti za col_hea_id = " + col_hea_id);
+ 
+     // samo za stambene nekretnine   col_typ_id = 8777  
+/*        if (decl.redupdmap.RealEstate_COL_TYPE_ID.compareTo(new BigDecimal("8777")) == 0 && 
+            decl.redupdmap.RealEstate_REAL_EST_TYPE.compareTo(new BigDecimal("1156953223")) != 0) {
+            YOYH0 yoyh0 = new YOYH0(tc, col_hea_id);            
+            yoyh0.azurirajCRM_HNBPrihvatljivost();
+            tc.debug ( "......odredjena crm hnb prihvatljivost ");
+            decl.redupdmap.Kol_txtCRM_Hnb_pom = yoyh0.getCRM_HNBPrihvatljivost();          
+        } */  
+         
+        // poziv common-a za update prihvatljivosti        
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.redupdmap.Coll_txtNDEligibility_Re = yoyg0.getNDPrihvatljivost();
+        decl.redupdmap.RealEstate_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.redupdmap.Coll_txtB1Eligibility1 = yoyg0.getHNBPrihvatljivost();
+        decl.redupdmap.Coll_txtB2IRBEligibility1 = yoyg0.getB2IRBPrihvatljivost();    
+
+        decl.redupdmap.Coll_txtNDEligDesc_Re = yoyg0.getOpisNDPrihvatljivosti();
+        decl.redupdmap.RealEstate_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.redupdmap.Coll_txtB1EligDesc1 = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.redupdmap.Coll_txtB2IRBEligDesc1 = yoyg0.getOpisB2IRBPrihvatljivosti();  
+                     
+        decl.redupdmap.Kol_txtCRM_Hnb_pom = yoyg0.getCRMHNBMisljenje();
+        
+        //dohvat GCTC kodova
+        BigDecimal col_cat_id = decl.redupdmap.RealEstate_COL_CAT_ID;
+        BigDecimal col_typ_id = decl.redupdmap.RealEstate_COL_TYPE_ID;
+        BigDecimal col_sub_typ_id = decl.redupdmap.RealEstate_REAL_EST_TYPE;
+        BigDecimal col_gro_id = decl.redupdmap.RealEstate_RE_SUB_TYPE_ID;
+        
+        YOY64 yoy64=new YOY64(tc);
+        GCTCData data=yoy64.getGCTCData(col_cat_id, col_typ_id, col_sub_typ_id,col_gro_id);
+ 
+        decl.redupdmap.Coll_txtCollateralGCTCCode = data.gctc_code;
+        decl.redupdmap.Coll_txtCollateralGCTCDesc = data.gctc_desc;
+        decl.redupdmap.Coll_txtObjectTypeGCTCCode = data.object_type_code;
+        decl.redupdmap.Coll_txtObjectTypeGCTCDesc = data.object_type_desc;
+        decl.redupdmap.Coll_txtPropertyTypeGCTCCode = data.property_type_code;
+        decl.redupdmap.Coll_txtPropertyTypeGCTCDesc = data.property_type_desc;
+        decl.redupdmap.Coll_txtEndorsementTypeGCTCCode = data.endorsement_type_code;
+        decl.redupdmap.Coll_txtEndorsementTypeGCTCDesc = data.endorsement_type_desc;
+       
+        yoy64.updateGCTCDataIDs(col_hea_id, data.gctc_id, data.object_type_id, data.property_type_id, data.endorsement_type_id); 
+	}//execute
+	 
+	public void updateCollHead_A(ConnCtx argCtx,TransactionContext tc,sqlj.runtime.ExecutionContext argExCtx){
+		//UPDATE coll_head	for status A	
+		try{
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO004.sqlj Poceo update coll_head ");
+			tc.debug ( "......CO004.sqlj Poceo update coll_head " + decl.redupdmap.RealEstate_USER_LOCK);
+			tc.debug ( "......CO004.sqlj Poceo update coll_head " + decl.redupdmap.Reb_COL_HEA_ID);
+
+			#sql [argCtx,argExCtx]{
+				UPDATE coll_head
+				SET   													                    
+						 col_type_id                = :(decl.redupdmap.RealEstate_COL_TYPE_ID),                      
+						 col_desc                   = :(decl.redupdmap.RealEstate_txtDesc),                
+						 real_est_euse_id           = :(decl.redupdmap.RealEstate_REAL_EST_EUSE_ID),                  
+						 real_est_estn_valu         = :(decl.redupdmap.RealEstate_txtEstnValu),           
+						 real_est_estn_date         = :(decl.redupdmap.RealEstate_txtEstnDate),           
+						 real_est_datn_from         = :(decl.redupdmap.RealEstate_txtDatnFrom),           
+						 real_est_datn_unti         = :(decl.redupdmap.RealEstate_txtDatnUnti),           
+						 real_est_nomi_desc         = :(decl.redupdmap.RealEstate_txtEstnMarkDesc),           
+						 real_est_nomi_valu         = :(decl.redupdmap.RealEstate_txtNomiValu),           
+						 real_est_nomi_date         = :(decl.redupdmap.RealEstate_txtNomiDate),           
+						 real_est_liqu_valu         = :(decl.redupdmap.RealEstate_txtLiquValu),          
+						 real_est_liqu_date         = :(decl.redupdmap.RealEstate_txtLiquDate),           
+						 real_est_bptc_valu         = :(decl.redupdmap.RealEstate_txtBptcValu),           
+						 real_est_bptc_date         = :(decl.redupdmap.RealEstate_txtBptcDate),           
+						 real_est_nm_cur_id         = :(decl.redupdmap.RealEstate_REAL_EST_NM_CUR_ID),               
+						 cus_id                     = :(decl.redupdmap.RealEstate_CUS_ID),                           
+						 coll_cus_id                = :(decl.redupdmap.RealEstate_COLL_CUS_ID),                      
+						 date_to_lop                = :(decl.redupdmap.RealEstate_txtDateToLop),          
+						 date_rec_lop               = :(decl.redupdmap.RealEstate_txtDateRecLop),         
+						 rec_lop                    = :(decl.redupdmap.RealEstate_txtRecLop),            
+						 com_doc                    = :(decl.redupdmap.RealEstate_txtComDoc),            
+						 missing_doc                = :(decl.redupdmap.RealEstate_txtMissingDoc),         
+						 date_to_doc                = :(decl.redupdmap.RealEstate_txtDateToDoc) ,         
+						 date_rec_doc               = :(decl.redupdmap.RealEstate_txtDateRecDoc),         
+						 amort_age                  = :(decl.redupdmap.RealEstate_txtAmortAge),         
+						 amort_per_cal_id           = :(decl.redupdmap.RealEstate_AMORT_PER_CAL_ID),         
+						 amort_val_cal              = :(decl.redupdmap.RealEstate_txtAmortValCal),         
+						 nepo_value                 = :(decl.redupdmap.RealEstate_txtNepoValue),         
+						 nepo_date  	              = :(decl.redupdmap.RealEstate_txtNepoDate),           
+						 nepo_per_cal               = :(decl.redupdmap.RealEstate_txtNepoPerCal),         
+						 weigh_value                = :(decl.redupdmap.RealEstate_txtWeighValue),   
+						 weigh_date                 = :(decl.redupdmap.RealEstate_txtWeighDate),   
+						 weigh_bvalue               = :(decl.redupdmap.Reb_txtWeighValue),   
+						 weigh_bdate                = :(decl.redupdmap.Reb_txtWeighDate),   
+						 avail_value                = :(decl.redupdmap.RealEstate_txtAvailValue),   
+						 avail_per_cal              = :(decl.redupdmap.RealEstate_txtAvailPerCal),   
+						 avail_date                 = :(decl.redupdmap.RealEstate_txtAvailDate),   
+						 inspol_ind                 = :(decl.redupdmap.RealEstate_txtInspolInd),   
+						 col_place                  = :(decl.redupdmap.RealEstate_COL_PLACE),   
+						 col_county                 = :(decl.redupdmap.RealEstate_COL_COUNTY),   
+						 col_district               = :(decl.redupdmap.RealEstate_COL_DISTRICT),   
+						 col_resi_quar              = :(decl.redupdmap.RealEstate_COL_RESI_QUAR) ,   
+						 coll_mvp_ponder            = :(decl.redupdmap.RealEstate_txtCollMvpPonder),   
+						 coll_hnb_ponder 	        = :(decl.redupdmap.RealEstate_txtCollHnbPonder),   
+						 coll_rzb_ponder 	 	    = :(decl.redupdmap.RealEstate_txtCollRzbPonder),   
+						 real_est_date_from         = :(decl.redupdmap.RealEstate_txtRealEsDateFrom),    
+						 real_est_date_unti         = :(decl.redupdmap.RealEstate_txtRealEsDateUnti),   
+						 real_est_add_data          = :(decl.redupdmap.RealEstate_txtAddData),
+			             real_est_spec_stat         = :(decl.redupdmap.RealEstate_txtRealEstSpecStat),
+						 use_id                     = :( decl.redupdmap.RealEstate_USE_ID),  
+						 user_lock                  = :(decl.redupdmap.RealEstate_USER_LOCK),
+						 org_uni_id                 = :(decl.redupdmap.RealEstate_ORG_UNI_ID),                                                                                            
+						 basic_data_status          = :(decl.redupdmap.RealEstate_BasicDataStatus),      
+						 mortgage_status 	        = :(decl.redupdmap.RealEstate_MortgageStatus),                    							                                                                                                                                                                
+						 cover_indic                = :(decl.redupdmap.RealEstate_CoverIndic),         							                                                                                                    
+						 coll_data_status           = :(decl.redupdmap.RealEstate_CollDataStatus),
+						 rba_eligibility			= :(decl.redupdmap.ColRba_txtEligibility1),
+						 law_eligibility			= :(decl.redupdmap.ColLow_txtEligibility),
+						 rba_elig_dsc				= :(decl.redupdmap.Kol_txtRbaEligDsc1),
+			             crm_hnb                    = :(decl.redupdmap.Kol_txtCRMHnb_REstate), 
+
+			             used_in_recovery           =:(decl.redupdmap.Coll_txtUsedInRecovery),
+			             part_of_complex            =:(decl.redupdmap.Coll_txtPartOfComplex),  
+			             recovery_proc_stat         =:(decl.redupdmap.Coll_txtRecoveryProcStat),
+			             kind_of_recovery           =:(decl.redupdmap.Coll_txtKindOfRecoveryCode),
+			             full_amount                =:(decl.redupdmap.Coll_txtFullAmountRecovery),
+			             full_amount_cur_id         =:(decl.redupdmap.CUR_ID_FULL_AMOUNT),
+			             recovery_amount            =:(decl.redupdmap.Coll_txtRecoveryAmount),
+			             recovery_cur_id            =:(decl.redupdmap.CUR_ID_RECOVERY_AMOUNT),
+			             recovery_comment           =:(decl.redupdmap.Coll_txtRecoveryComment),
+			             recovery_date              =:(decl.redupdmap.Coll_txtRecoveryDate),
+			             recovery_rate              =:(decl.redupdmap.Coll_txtRecoveryRate), 
+
+                         b2_irb_insag_elig          =:(decl.redupdmap.RealEstate_txtB2IRB),
+                         b2_hnb_insag_elig          =:(decl.redupdmap.RealEstate_txtB2HNB),
+                         use_id_co                  =:(decl.redupdmap.USE_ID_CO),
+                         real_est_nom_type          =:(decl.redupdmap.RealEstate_txtTypeTVCode),
+                         prec_exec_est              =:(decl.redupdmap.RealEstate_txtAccuracyEstimatesCode), 
+                         correct_value              =:(decl.redupdmap.RealEstate_txtFairnessValuesCode), 
+                         respect_deadline           =:(decl.redupdmap.RealEstate_txtDeadLinesCode),
+                         prof_to_rba                =:(decl.redupdmap.RealEstate_txtProfByRBACode),
+                         prof_to_client             =:(decl.redupdmap.RealEstate_txtProfByClientCode),
+                         col_eco_life               =:(decl.redupdmap.Coll_txtEconomicLife),
+                         real_est_estn_int          =:(decl.redupdmap.RealEstate_txtInternalValuer),
+                         est_type                   =:(decl.redupdmap.EST_TYPE_CODE),
+                         met_est_1                  =:(decl.redupdmap.RealEstate_txtAssessmentMethod1Code), 
+                         met_est_2                  =:(decl.redupdmap.RealEstate_txtAssessmentMethod2Code), 
+                         coll_risk                  =:(decl.redupdmap.RealEstate_txtRiskCode),
+                         non_ins_reason             =:(decl.redupdmap.RealEstate_txtNonInsReasoneCode),
+                         ins_cov_coll               =:(decl.redupdmap.RealEstate_txtInsTotalCoverCode),
+			             contract_type              =:(decl.redupdmap.RealEstate_txtContractTypeCode),
+			             realization_amount         =:(decl.redupdmap.Coll_txtRealizationAmount),
+                         realization_cur_id         =:(decl.redupdmap.CUR_ID_REALIZATION_AMOUNT),
+                         realization_date           =:(decl.redupdmap.Coll_txtRealizationDate),
+                         realization_kind           =:(decl.redupdmap.Coll_txtKindOfRealization),
+                         realization_cost           =:(decl.redupdmap.Coll_txtCostRealization),
+                         realization_cost_cur_id    =:(decl.redupdmap.REALIZATION_COST_CUR_ID), 
+                         for_sale                   =:(decl.redupdmap.Coll_txtForSale),
+                         for_sale_date              =:(decl.redupdmap.Coll_txtForSaleDate), 
+			             takeover_from_bank         =:(decl.redupdmap.Coll_txtTakeOverBank)
+					WHERE col_hea_id 				=:( decl.redupdmap.RealEstate_COL_HEA_ID)
+			    }; 
+			                
+		}catch(java.sql.SQLException se){
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO004.sqlj update coll_head ERROR");
+			tc.debug ( "......CO004.sqlj update coll_head SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO004.sqlj update coll_head SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO004.sqlj update coll_head SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO004: Error updating coll_head! ","err411a", null);
+
+		}
+			
+		if (argExCtx.getUpdateCount() == 0) {
+			throw new VestigoTMException(1, "Cannot change, user_lock!", "errclt7", null);
+		}
+			
+	}//updateCollHeadA
+	  
+	public void updateCollRestate_A(ConnCtx argCtx,TransactionContext tc){
+		//UPDATE coll_restate			
+		try{	
+			tc.debug ( "......CO004.sqlj Poceo update coll_restate ");
+			
+			//FBPr200014054 - Površina èestice  (land_sqrm2)			
+			#sql [argCtx]{
+					UPDATE coll_restate
+					SET		 real_est_type       = :(decl.redupdmap.RealEstate_REAL_EST_TYPE),                      
+							 rb_est_nom_val      = :(decl.redupdmap.RealEstate_txtRbEstNomVal),          
+							 rb_est_nom_dat      = :(decl.redupdmap.RealEstate_txtRbEstNomDat),          
+							 rl_est_nom_val      = :(decl.redupdmap.RealEstate_txtRlEstNomVal),          
+							 rl_est_nom_dat      = :(decl.redupdmap.RealEstate_txtRlEstNomDat),          
+							 real_est_sqrm2      = :(decl.redupdmap.RealEstate_txtSqrm2),                
+							 real_est_pricm2     = :(decl.redupdmap.RealEstate_txtPricem2),              
+							 real_est_court_id   = :(decl.redupdmap.RealEstate_REAL_EST_COURT_ID),                  
+							 real_est_cada_munc  = :(decl.redupdmap.RealEstate_REAL_EST_CADA_MUNC),                 
+							 real_est_land_regn  = :(decl.redupdmap.RealEstate_txtRealEstLandRegn),      
+							 real_est_land_part  = :(decl.redupdmap.RealEstate_txtRealEstLandPart),      
+							                   
+							 real_est_pdesc      = :(decl.redupdmap.RealEstate_txtRealEstPdesc),         
+							 byear               = :(decl.redupdmap.RealEstate_txtByear ),               
+							 ryear               = :(decl.redupdmap.RealEstate_txtRyear ),               
+							 street              = :(decl.redupdmap.RealEstate_txtStreet ) ,             
+							 housenr             = :(decl.redupdmap.RealEstate_txtHousenr),              
+							                  
+							 reva_re_coef_id     = :(decl.redupdmap.RealEstate_REVA_RE_COEF_ID),                    
+							 original_val        = :(decl.redupdmap.RealEstate_txtOriginalVal),          
+							 orig_val_date       = :(decl.redupdmap.RealEstate_txtOrigValDate),          
+							 building_val        = :(decl.redupdmap.RealEstate_txtBuildingVal),          
+							 build_val_date	     = :(decl.redupdmap.RealEstate_txtBuildValDate) ,
+							 pol_map_id_ad		 = :(decl.redupdmap.RealEstate_POL_MAP_ID_AD),
+							 pos_off_id_ad		 = :(decl.redupdmap.RealEstate_POS_OFF_ID_AD),
+							 coown				 = :(decl.redupdmap.RealEstate_txtCoown),
+							 real_est_land_sub   = :(decl.redupdmap.RealEstate_txtRealEstLandSub),
+							 re_cada_munc_st     = :(decl.redupdmap.RealEstate_RE_CADA_MUNC_ST),
+							 re_land_part_st     = :(decl.redupdmap.RealEstate_txtReLandPartST),
+							 build_perm_ind		 = :(decl.redupdmap.RealEstate_txtBuildPermInd),
+							 new_build_val       = :(decl.redupdmap.RealEstate_txtNewBuildVal),
+							 re_sub_type_id      = :(decl.redupdmap.RealEstate_RE_SUB_TYPE_ID),
+							 purpose 			 = :(decl.redupdmap.purpose_id),
+			                 build_perm          = :(decl.redupdmap.Kol_txtBuildPerm),
+			                 legality            = :(decl.redupdmap.Kol_txtLegality),
+			                 estimate_cus_id     = :(decl.redupdmap.RealEstate_RCEstimateId),
+			                 buy_sell_value      = :(decl.redupdmap.RealEstate_txtBuySelValue),
+			                 land_sqrm2          = :(decl.redupdmap.RealEstate_txtSqrLand),
+			                 real_est_rate       = :(decl.redupdmap.RealEstate_txtOcjenaNekretnineCode),
+			                 
+			                 constr_right        = :(decl.redupdmap.RealEstate_txtConstructionRight),                                                           
+			                 con_rig_land_regn   = :(decl.redupdmap.RealEstate_txtZKConstructionRight), 
+			                 con_rig_date_to     = :(decl.redupdmap.RealEstate_txtConstructionRightDateTo),
+			                 real_est_reg        = :(decl.redupdmap.RealEstate_txtRegionCode),
+			                 real_est_comment    = :(decl.redupdmap.RealEstate_txtRealEstateRemark),
+			                 proj_fin            = :(decl.redupdmap.RealEstate_txtBuildProjectFinanc),
+			                 real_est_fut_value  = :(decl.redupdmap.RealEstate_txtFutureValueAmount),  
+			                 contract_date       = :(decl.redupdmap.RealEstate_txtBuySelValueDate),
+                             floor               = :(decl.redupdmap.RealEstate_txtFloor),
+                             total_floors        = :(decl.redupdmap.RealEstate_txtTotalFloors),
+                             lift                = :(decl.redupdmap.RealEstate_txtLift)
+					WHERE  col_res_id  = :( decl.redupdmap.Reb_COL_RES_ID)	
+					AND    col_hea_id  = :( decl.redupdmap.Reb_COL_HEA_ID)
+			    };
+		}catch(java.sql.SQLException se){
+		    
+			tc.debug ( "......CO004.sqlj update coll_restate SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO004.sqlj update coll_restate SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO004.sqlj update coll_restate SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO004: Error updating coll_restate! ","err411a", null);
+		}
+	}//updateCollRestate_A
+
+	
+	// FBPr200017059 - potrebno je postaviti u co_chg_history  flag na N - neaktivno
+	public void updateCoChgHistory(ConnCtx argCtx,TransactionContext tc){
+	    try{    
+            tc.debug ( "......CO004.sqlj Poceo update co_chg_history ");
+            
+            #sql [argCtx]{
+                    UPDATE co_chg_history
+                    SET    co_ind = 'N',
+                           co_chg_ts     = :(decl.redupdmap.RealEstate_USER_LOCK),
+                           co_chg_use_id = :( decl.redupdmap.RealEstate_USE_ID) 
+                    WHERE  col_hea_id  = :( decl.redupdmap.Reb_COL_HEA_ID) 
+                    AND    co_ind = 'D'};
+            
+        }catch(java.sql.SQLException se){
+        
+            tc.debug ( "......CO004.sqlj update co_chg_history SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO004.sqlj update co_chg_history SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO004.sqlj update co_chg_history SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO004: Error updating co_chg_history! ","err411a", null);
+        }
+        
+        // obrisati vrijednosti na ekranu 
+        decl.redupdmap.RealEstate_txtCoConfirm = "";
+        decl.redupdmap.RealEstate_txtCoConfirmTime = null;
+        decl.redupdmap.RealEstate_txtCoConfirmUserId = "";
+        decl.redupdmap.RealEstate_txtCoConfirmUserName = "";
+	}	
+}	
+			

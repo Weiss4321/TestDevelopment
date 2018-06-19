@@ -1,0 +1,244 @@
+package hr.vestigo.modules.collateral.jcics.co14;
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO143 class update data about regional-location mark in table REV_REG_COEF_RE
+ *  	
+ */
+public class CO143 extends RemoteTransaction {
+		
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co14/CO143.sqlj,v 1.6 2006/05/24 11:25:41 hrazst Exp $";
+    public DeclCO14 decl = null;
+	
+	public CO143 (DeclCO14 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+			int broj=0;
+			boolean chg_flag=false;
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCode,decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCodeB))
+				chg_flag=true;
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtName,decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtNameB))
+				chg_flag=true;
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.REV_RE_PLACE,decl.revregcoefredialogupdatem.REV_RE_PLACE_B))
+				chg_flag=true;
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.REV_RE_COUNTY,decl.revregcoefredialogupdatem.REV_RE_COUNTY_B))
+				chg_flag=true;	
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.REV_RE_DISTRICT,decl.revregcoefredialogupdatem.REV_RE_DISTRICT_B))
+				chg_flag=true;				
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.REV_RE_RESI_QUAR,decl.revregcoefredialogupdatem.REV_RE_RESI_QUAR_B))
+				chg_flag=true;			
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCoef,decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCoefB))
+				chg_flag=true;				
+			if (!provjeraJednakosti(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCoef,decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCoefB))
+				chg_flag=true;					
+			if(!provjeraJednakosti(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtAct,decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtActB))
+				chg_flag=true;	
+			if(!provjeraJednakosti(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtSpecStat,decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtSpecStatB))
+				chg_flag=true;
+			if (!decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateFrom.equals(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateFromB))
+				chg_flag=true;	
+			if (!decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateUntil.equals(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateUntilB))
+				chg_flag=true;				
+			if (chg_flag==true){
+				try {
+				    #sql [ctx] {SELECT COUNT(*) INTO :broj 
+				    			FROM REV_REG_COEF_RE 
+				    			WHERE 
+									 rev_re_code=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCode) 
+								AND  rev_re_name=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtName)
+								AND  rev_re_id <>:(decl.revregcoefredialogupdatem.REV_RE_ID)
+				    	};			    	
+				    	tc.debug ( " /n/n/n/n/n/n/n");
+				    	tc.debug ( "...broj: " + broj);
+				    	tc.debug ( " /n/n/n/n/n/n/n");
+			    } catch (java.sql.SQLException  sqle) {
+	                tc.debug ( "......CO132.sqlj insert into coll_owners SQL ErrorCode " + sqle.getErrorCode());
+					tc.debug ( "......CO132.sqlj insert into coll_owners SQL SQLState " + sqle.getSQLState());
+					tc.debug ( "......CO132.sqlj insert into coll_owners SQL Message " + sqle.getMessage());
+					throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","err411a", null);
+	            }
+	            if(broj > 0){
+				    throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","errclt8", null);
+				}	
+	            
+				try {
+				    #sql [ctx] {SELECT COUNT(*) INTO :broj 
+				    			FROM REV_REG_COEF_RE 
+				    			WHERE 
+									rev_re_place = :(decl.revregcoefredialogupdatem.REV_RE_PLACE)
+								AND	rev_re_county = :(decl.revregcoefredialogupdatem.REV_RE_COUNTY)
+	                			AND rev_re_district = :(decl.revregcoefredialogupdatem.REV_RE_DISTRICT)
+				    			AND rev_re_resi_quar = :(decl.revregcoefredialogupdatem.REV_RE_RESI_QUAR)
+								AND  rev_re_id <>:(decl.revregcoefredialogupdatem.REV_RE_ID)
+				    	};			    	
+				    	tc.debug ( " /n/n/n/n/n/n/n");
+				    	tc.debug ( "...broj: " + broj);
+				    	tc.debug ( " /n/n/n/n/n/n/n");
+			    } catch (java.sql.SQLException  sqle) {
+	                tc.debug ( "......CO132.sqlj insert into coll_owners SQL ErrorCode " + sqle.getErrorCode());
+					tc.debug ( "......CO132.sqlj insert into coll_owners SQL SQLState " + sqle.getSQLState());
+					tc.debug ( "......CO132.sqlj insert into coll_owners SQL Message " + sqle.getMessage());
+					throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","err411a", null);
+	            }
+	            if(broj > 0){
+				    throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","errclt8", null);
+				}
+	            
+	       //UPDATE REV_REG_COEF_RE
+				try{	
+					#sql [ctx, exCtx]{ 
+			    	UPDATE REV_REG_COEF_RE 
+			    	SET 
+			    		rev_re_code=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCode),
+			    		rev_re_name=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtName),
+			    		rev_re_place=:(decl.revregcoefredialogupdatem.REV_RE_PLACE),
+			    		rev_re_county=:(decl.revregcoefredialogupdatem.REV_RE_COUNTY),
+			    		rev_re_district=:(decl.revregcoefredialogupdatem.REV_RE_DISTRICT),
+			    		rev_re_resi_quar=:(decl.revregcoefredialogupdatem.REV_RE_RESI_QUAR),
+			    		rev_re_coef=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCoef),
+			    		rev_date_from=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateFrom),
+			    		rev_date_unti=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateUntil),
+			    		rev_act_noact=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtAct),
+			    		rev_spec_stat=:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtSpecStat),
+			    		use_id=:(decl.revregcoefredialogupdatem.use_id),
+						user_lock = current timestamp
+			    	WHERE 
+			    		rev_re_id =:(decl.revregcoefredialogupdatem.REV_RE_ID)
+			    		AND user_lock =:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_UserLockNF)  
+			    	};
+						
+						if(exCtx.getUpdateCount()==0){
+							throw new VestigoTMException(1,"Transaction CO143: Error updating regional-location mark in table REV_REG_COEF_RE becouse of user_lock","erruptzst2", null);
+						}
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				    	tc.debug ( " rev_re_code=: " + decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCode);
+				    	tc.debug ( " rev_re_name=: " + decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtName);
+		    			tc.debug ( "rev_re_place=: " + decl.revregcoefredialogupdatem.REV_RE_PLACE);
+						tc.debug ( "rev_re_county=: " + decl.revregcoefredialogupdatem.REV_RE_COUNTY);
+						tc.debug ( "rev_re_district=: " + decl.revregcoefredialogupdatem.REV_RE_DISTRICT);
+						tc.debug ( "rev_re_resi_quar=: " + decl.revregcoefredialogupdatem.REV_RE_RESI_QUAR);
+						tc.debug ( "rev_re_coef=: " + decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCoef);
+						tc.debug ( "rev_date_from=: " + decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateFrom);
+						tc.debug ( "rev_date_unti=: " + decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateUntil);
+						tc.debug ( "rev_act_noact=: " + decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtAct);
+						tc.debug ( "rev_spec_stat=: " + decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtSpecStat);
+						tc.debug ( "use_id=:" + decl.revregcoefredialogupdatem.use_id);
+						tc.debug ( "rev_re_id =:" + decl.revregcoefredialogupdatem.REV_RE_ID);
+						tc.debug ( "AND user_lock =:" + decl.revregcoefredialogupdatem.RevRegCoefReDialog_UserLockNF);  
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				}catch(java.sql.SQLException se){
+	
+							tc.debug ( "......CO129.sqlj update resident quarter in political_map SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO129.sqlj update resident quarter inpolitical_map SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO129.sqlj update resident quarter in political_map SQL Message " + se.getMessage());
+							throw new VestigoTMException(1, "Transaction CO143: Error updating regional-location mark in table REV_REG_COEF_RE! ","err411a", null);
+				}
+				
+				//INSERT INTO REV_REG_COEF_RE_A starog podatka koji se mijenjo
+				try{	
+				    	#sql [ctx]{	INSERT INTO REV_REG_COEF_RE_A
+				    					          	(rev_re_id,
+				    						  	 	rev_re_code,
+				    						 	 	rev_re_name,
+				    								rev_re_place,
+				    								rev_re_county,
+				    								rev_re_district,
+				    								rev_re_resi_quar,
+				    								rev_re_coef,
+				    								rev_date_from,
+				    								rev_date_unti,
+				    								rev_act_noact,
+				    								rev_spec_stat,
+				    								use_open_id,
+				    								use_id,
+													opening_ts,
+													user_lock,
+													eve_id,
+													bank_sign
+				    								) 
+				    			VALUES( :(decl.revregcoefredialogupdatem.REV_RE_ID),
+	                					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCodeB),
+	                					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtNameB),
+	                					:(decl.revregcoefredialogupdatem.REV_RE_PLACE_B),
+	                					:(decl.revregcoefredialogupdatem.REV_RE_COUNTY_B),
+	                					:(decl.revregcoefredialogupdatem.REV_RE_DISTRICT_B),
+				    					:(decl.revregcoefredialogupdatem.REV_RE_RESI_QUAR_B),
+				    					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtCoefB),
+				    					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateFromB),
+				    					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtDateUntilB),
+				    					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtActB),
+				    					'0U',
+				    					:(decl.revregcoefredialogupdatem.USE_OPEN_ID_B),
+										:(decl.revregcoefredialogupdatem.USE_ID_B),
+				    					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_txtOpeningTsNF),
+				    					:(decl.revregcoefredialogupdatem.RevRegCoefReDialog_UserLockNF),
+				    					:(decl.revregcoefredialogupdatem.EVE_ID_B),
+				    					:(tc.getBankSign())
+				    					)
+	         		        	};
+	         		        		
+				}catch(java.sql.SQLException se){
+							tc.debug ( "......CO142.sqlj insert into coll_owners SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO142.sqlj insert into coll_owners SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO142.sqlj insert into coll_owners SQL Message " + se.getMessage());
+							throw new VestigoTMException(1, "Transaction CO142: Error inserting coll_owners! ","err411a", null);
+				}			
+				
+			}
+		}
+	public boolean provjeraJednakosti(String prvi, String prviB){
+		String a=null, b=null;
+		
+		if (prvi!=null && prviB!=null){
+			a=prvi.trim();
+			b=prviB.trim();
+			return a.equals(b);
+		}else if(prvi==null && prviB==null){ 
+			return true;
+		}else{
+			return false;
+		}
+	}
+	
+	public boolean provjeraJednakosti(BigDecimal prvi, BigDecimal prviB){
+		int rez=0;
+		BigDecimal a=null, b=null;
+		a=prvi;
+		b=prviB;
+		
+		if (a!=null && b!=null){ 
+			rez=a.compareTo(b);
+		}else if(a==null && b==null){ 
+			rez=0;
+		}else{
+			rez=1;
+		}
+		
+		if (rez!=0){
+			return false;
+		}else{
+			return true;
+		}
+	}
+	
+}	
+			
+

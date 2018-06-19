@@ -1,0 +1,108 @@
+package hr.vestigo.modules.collateral.jcics.co24;
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.*;	
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+/**
+ * CO203 class update data  into table COLL_COURT
+ *  
+ */
+public class CO244 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co24/CO244.sqlj,v 1.2 2006/07/12 09:02:23 hraaks Exp $";
+    public DeclCO24 decl = null;
+	
+	public CO244 (DeclCO24 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+		
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			 		
+			//insertira cijeli slog u arhivsku tablicu
+			
+			try{	
+		    	#sql [ctx]{
+						insert into coll_court_a(
+		    					CO_ID,
+		    					CO_CODE,
+		    					CO_NAME,
+		    					CO_POL_MAP_ID_CNT,
+		    					CO_DATE_FROM,
+		    					CO_DATE_UNTIL,
+		    					CO_STATUS,
+		    					USE_OPEN_ID,
+		    					USE_ID,
+		    					OPENING_TS,
+		    					USER_LOCK,
+								EVE_ID,
+								BANK_SIGN
+		    					)
+		    				VALUES (
+			    				:(decl.collcourtupdatem.CollCourtDialog_CO_ID_a), 
+								:(decl.collcourtupdatem.CollCourtDialog_txCoCode_a), 
+								:(decl.collcourtupdatem.CollCourtDialog_txCoName_a),
+								:(decl.collcourtupdatem.CollCourtDialog_POL_MAP_ID_a),
+								current date,
+		    					current date,
+								:(decl.collcourtupdatem.CollCourtDialog_txtCoStatus_a),
+								:(decl.collcourtupdatem.CollCourtDialog_USE_OPEN_ID_a),
+								:(decl.collcourtupdatem.CollCourtDialog_USE_ID_a),
+								:(decl.collcourtupdatem.CollCourtDialog_OPENING_TS_a),
+								:(decl.collcourtupdatem.CollCourtDialog_USER_LOCK_a),
+								5714145003,
+								:(tc.getBankSign()))
+		    						
+     		        	};
+     		        	
+		}catch(java.sql.SQLException se){
+					tc.debug ( "......CO203.sqlj insert into inserting coll_court_a SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO203.sqlj insert into inserting coll_court_a SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO203.sqlj insert iinserting coll_court_a SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO203: Error inserting  coll_court_a! ","err411a", null);
+		}
+			
+			
+	
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n......CO203.sqlj co_code " + decl.collcourtupdatem.CollCourtDialog_txtCoCode);
+			tc.debug ( "\n......CO203.sqlj co_name " + decl.collcourtupdatem.CollCourtDialog_txtCoCode);
+			tc.debug ( "\n......CO203.sqlj status " + decl.collcourtupdatem.CollCourtDialog_txtCoStatus);
+			tc.debug ( "\n......CO203.sqlj use_id " + decl.collcourtupdatem.use_id);
+			tc.debug ( "\n......CO203.sqlj coll_court_id " + decl.collcourtupdatem.CollCourtDialog_CO_ID);
+			tc.debug ( "\n......CO203.sqlj user_lock " + decl.collcourtupdatem.CollCourtDialog_USER_LOCK_a);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			
+			//UPDATE coll_court
+			try
+			{	
+			    #sql [ctx]{ UPDATE coll_court
+					SET
+					co_code	= 				:(decl.collcourtupdatem.CollCourtDialog_txtCoCode),
+					co_name	= 				:(decl.collcourtupdatem.CollCourtDialog_txtCoName),
+					co_pol_map_id_cnt= 		:(decl.collcourtupdatem.CollCourtDialog_POL_MAP_ID),
+					co_status=				:(decl.collcourtupdatem.CollCourtDialog_txtCoStatus),
+					use_id= 				:(decl.collcourtupdatem.use_id),		
+    				user_lock= 				current timestamp
+					WHERE
+					co_id= 					:(decl.collcourtupdatem.CollCourtDialog_CO_ID) 
+					AND
+					user_lock= 				:(decl.collcourtupdatem.CollCourtDialog_USER_LOCK_a)
+		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO203.sqlj update re_sub_type SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO203.sqlj update re_sub_type SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO203.sqlj update re_sub_type SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO203: Error updating re_sub_type! ","err411a", null);
+				}
+		}
+}	
+			

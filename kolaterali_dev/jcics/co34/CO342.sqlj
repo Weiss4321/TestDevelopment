@@ -1,0 +1,242 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+//DIALOG COLL_HF_PRIOR on screen CollHfPriorDialog
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.sql.SQLException;
+
+
+public class CO342 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co34/CO342.sqlj,v 1.1 2007/04/11 08:34:49 hramkr Exp $";
+	private DeclCO34 d = null;
+		
+	
+	public CO342(DeclCO34 d) {
+		this.d = d;
+	}
+
+	  
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO034.sqlj     d.kolmortgagesel.COLL_HF_PRIOR_ID " + d.kolmortgagesel.COLL_HF_PRIOR_ID);
+			
+		ConnCtx ctx = tc.getContext();
+		
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		try{			
+			#sql [ctx] {SELECT     
+								    chp.hf_table_id, scv1.sys_code_value,	scv1.sys_code_desc,									
+								    chp.hf_ref_id, chp.hf_coll_head_id, coh.col_num,
+								    chp.hf_own_cus_id, chp.hf_register_no , chp.hf_own_code, chp.hf_own_fname	, chp.hf_own_lname,	
+								    chp.hf_hfc_id,	scv3.sys_code_value,	scv3.sys_code_desc,	
+								    chp.hf_priority,		
+									chp.hf_notary_agr, chp.hf_notary_place_id, plac.name, chp.hf_notary_date, 
+									chp.hf_notary, custn.register_no , chp.hf_not_fname, chp.hf_not_lname	,	
+									chp.hf_date_reciv, chp.hf_court_decis,							
+									chp.hf_date_extract	, 
+									chp.land_regn, chp.land_regn_new,
+									chp.judge_id, cusj.register_no, chp.judge_fname, chp.judge_lname,
+									chp.court_id,court.co_code, court.co_name,
+									chp.hf_offi_lrd,  custo.register_no , chp.hf_offilrd_fname, chp.hf_offilrd_lname,
+									chp.hf_rec_lop_id, scv2.sys_code_value,	scv2.sys_code_desc,	
+									chp.hf_add_data,									             
+									chp.hf_amount, chp.hf_cur_id,	curr.code_char,   
+									chp.amount_ref, chp.cur_id_ref	,	curf.code_char, 
+									chp.exc_rat_ref	, chp.exc_rat_ref_date,						
+									chp.hf_draw_amo	, chp.hf_avail_amo,
+									chp.hf_draw_amo_ref,chp.avail_amo_ref,chp.hf_avail_dat,chp.draw_bamo,
+									chp.avail_bamo,
+									chp.draw_bamo_ref, chp.avail_bamo_ref, 							
+									chp.avail_bdat,
+									chp.val_date_turn, chp.val_date_proc,
+									chp.hf_date_hfc_from, chp.hf_date_hfc_until,
+									chp.hf_status, chp.hf_spec_stat,
+									chp.hf_date_from, chp.hf_date_until,
+									chp.use_open_id, opeus.login, opeus.user_name,
+									chp.use_id, chaus.login, chaus.user_name,
+									chp.opening_ts, chp.user_lock, chp.user_lock, coh.user_lock,chp.how_cover,chp.is_part_agreem,
+									chp.rec_lop,
+									chp.date_to_lop,
+									chp.date_rec_lop,
+									chp.veh_con_num,
+									chp.agreement,
+									chp.fra_agr_id,
+									chp.reg_ins        
+								    	  			 				                                                                                                                
+		      	 				INTO      
+						  					
+						  					:(d.kolmortgagesel.HF_TABLE_ID),
+						  					:(d.kolmortgagesel.CollHfPriorDialog_txtHfTableSysCodeValue),
+						  					:(d.kolmortgagesel.CollHfPriorDialog_txtHfTableSysCodeDesc),
+						  					:(d.kolmortgagesel.HF_REF_ID),
+						  					:(d.kolmortgagesel.HF_COLL_HEAD_ID),
+						  					:(d.kolmortgagesel.CollHfPriorDialog_txtColNum),	                            
+						                    :(d.kolmortgagesel.HF_OWN_CUS_ID),	  
+						                    :(d.kolmortgagesel.CollHfPriorDialog_txtHfRegisterNo),	                                                                                               
+						                    :(d.kolmortgagesel.CollHfPriorDialog_txtHfOwnCode),	  
+						                    :(d.kolmortgagesel.CollHfPriorDialog_txtHfOwnFname),	  
+						     	          	:(d.kolmortgagesel.CollHfPriorDialog_txtHfOwnLname),
+						     	          	:(d.kolmortgagesel.HF_HFC_ID),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfHfcSysCodeValue),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfHfcSysCodeDesc),
+						     	          	:(d.kolmortgagesel.CollHfPriorDialog_txtHfPriority),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfNotaryAgr),
+											:(d.kolmortgagesel.HF_NOTARY_PLACE_ID),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfNotaryPlace),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfNotaryDate),
+											:(d.kolmortgagesel.HF_NOTARY),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfNotaryRegisterNo),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfNotFname),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfNotLname),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDateReciv),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfCourtDecis),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDateExtract),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtLandRegn),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtLandRegnNew),
+											:(d.kolmortgagesel.CollHfPriorDialog_JUDGE_ID),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtJudgeRegisterNo),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtJudgeFname),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtJudgeLname),
+											:(d.kolmortgagesel.CollHfPriorDialog_COURT_ID),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtCoCode),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtCoName),
+											:(d.kolmortgagesel.HF_OFFI_LRD),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfOffildRegisterNo),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfOffildFname),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfOffildLname),
+											:(d.kolmortgagesel.HF_REC_LOP_ID),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfRecLopSysCodeValue),		
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfRecLopSysCodeDesc),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfAddData),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfAmount),            
+						     	         	:(d.kolmortgagesel.HF_CUR_ID),                                   
+						     	         	:(d.kolmortgagesel.CollHfPriorDialog_txtHfCurIdCodeChar),     
+						     	            :(d.kolmortgagesel.CollHfPriorDialog_txtAmountRef),          
+											:(d.kolmortgagesel.CUR_ID_REF),		                            
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfCurIdRefCodeChar),	
+		                            		:(d.kolmortgagesel.CollHfPriorDialog_txtExcRatRef),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtExcRatRefDate),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDrawAmo),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfAvailAmo),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDrawAmoRef),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfAvailAmoRef),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfAvailDat),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDrawBAmo),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfAvailBAmo), 
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDrawBAmoRef),    
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfAvailBAmoRef),  
+		  									:(d.kolmortgagesel.CollHfPriorDialog_txtHfAvailBDat),  
+		  									:(d.kolmortgagesel.CollHfPriorDialog_txtValDateTurn),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtValDateProc),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDateHfcFrom),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDateHfcUntil),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfStatus),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfSpecStat),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDateFrom),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtHfDateUntil),
+											:(d.kolmortgagesel.USE_OPEN_ID), 
+											:(d.kolmortgagesel.CollHfPriorDialog_txtUseOpenIdLogin),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtUseOpenIdName),
+											:(d.kolmortgagesel.USE_ID),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtUseIdLogin),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtUseIdName),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtOpeningTs),
+											:(d.kolmortgagesel.CollHfPriorDialog_txtUserLock ),
+											:(d.kolmortgagesel.USER_LOCKCollHfPrior),
+											:(d.kolmortgagesel.USER_LOCKCollHead),
+											:(d.kolmortgagesel.CollHfPrior_HOW_COWER),
+											:(d.kolmortgagesel.CollHfPrior_txtIsPartAgreem),
+											:(d.kolmortgagesel.CollHFP_txtRecLop),
+											:(d.kolmortgagesel.CollHFP_txtDateToLop),
+											:(d.kolmortgagesel.CollHFP_txtDateRecLop),
+											:(d.kolmortgagesel.CollHFP_txtVehConNum),
+											:(d.kolmortgagesel.Kol_txtFrameAgr),
+											:(d.kolmortgagesel.fra_agr_id),
+											:(d.kolmortgagesel.REG_INS)
+															     	                                                                                                            
+								FROM 	coll_hf_prior   chp                                                                                              
+								INNER JOIN system_code_value scv1 ON chp.hf_table_id = scv1.sys_cod_val_id 
+								INNER JOIN coll_head coh ON chp.hf_coll_head_id = coh.col_hea_id
+								INNER JOIN system_code_value scv2 ON chp.hf_rec_lop_id = scv2.sys_cod_val_id 
+								INNER JOIN currency curr ON chp.hf_cur_id = curr.cur_id
+								INNER JOIN app_user opeus ON chp.use_open_id = opeus.use_id
+								INNER JOIN app_user chaus ON chp.use_id = chaus.use_id
+								LEFT OUTER JOIN system_code_value scv3 ON chp.hf_hfc_id = scv3.sys_cod_val_id    
+								LEFT OUTER JOIN political_map plac ON chp.hf_notary_place_id = plac.pol_map_id
+								LEFT OUTER JOIN customer custn ON chp.hf_notary = custn.cus_id
+								LEFT OUTER JOIN customer custo ON chp.hf_offi_lrd = custo.cus_id
+			    				LEFT OUTER JOIN currency curf ON chp.cur_id_ref = curf.cur_id
+								LEFT OUTER JOIN customer cusj ON chp.judge_id = cusj.cus_id
+								LEFT OUTER JOIN coll_court court ON chp.court_id = court.co_id
+			    				WHERE  	chp.coll_hf_prior_id = :(d.kolmortgagesel.COLL_HF_PRIOR_ID)                                                 
+								 
+				};                                                          
+		                                                                                                                           
+		}catch(SQLException se){
+			
+ 
+		}
+		
+		
+		if(d.kolmortgagesel.CollHfPrior_HOW_COWER != null){
+			//vrsta pokrica CollHfPrior_HOW_COWER
+			try{
+				#sql [ctx]  {SELECT
+								sys_code_value, 
+								sys_code_desc
+							INTO
+								:(d.kolmortgagesel.CollHfPrior_txtHowCowerSCV),
+								:(d.kolmortgagesel.CollHfPrior_txtHowCowerSCD)
+							FROM  system_code_value
+	 					   	WHERE sys_cod_val_id =:(d.kolmortgagesel.CollHfPrior_HOW_COWER)
+				}; 
+			}catch(SQLException se) {
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//CollHfPrior_HOW_COWER
+		}
+			
+//select iz USER_CODE_VALUE
+		
+//		 dohvat iz tabele USER_CODE_VALUE
+	    
+  
+		try{    
+			if (d.kolmortgagesel.REG_INS != null ){
+
+				#sql [ctx] {SELECT use_code_value
+       			INTO	:(d.kolmortgagesel.Hf_txtRegIns)
+       			FROM 	USER_CODE_VALUE
+	       			WHERE 	use_cod_val_id = :(d.kolmortgagesel.REG_INS)}; 
+										
+			
+			}
+		}catch(SQLException e){
+			if (e.getErrorCode()!=100) throw e;
+		}	    	 			
+		  
+//dohvat okvirnog sporazuma 
+		try{    
+			if (d.kolmortgagesel.fra_agr_id != null ){
+
+				#sql [ctx] {SELECT agreement_no
+       			INTO	:(d.kolmortgagesel.Agr_txtAgrNo1)
+       			FROM 	FRAME_AGREEMENT
+	       			WHERE 	fra_agr_id = :(d.kolmortgagesel.fra_agr_id)}; 
+			}
+		}catch(SQLException e){
+			if (e.getErrorCode()!=100) throw e;
+		}	    						
+		
+		
+		d.kolmortgagesel.CollHfPriorDialog_txtHfAvailDatRef = d.kolmortgagesel.CollHfPriorDialog_txtExcRatRefDate;
+		d.kolmortgagesel.CollHfPriorDialog_txtHfAvailDat = d.kolmortgagesel.CollHfPriorDialog_txtExcRatRefDate;
+
+	}
+	
+}
+

@@ -1,0 +1,328 @@
+package hr.vestigo.modules.collateral.batch.bo31;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.*;
+import java.util.HashMap;
+
+ 
+/**
+ * SQLJ za nekretnine.
+ * @author hrakis
+ */
+public class BO312 extends ReportData
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo31/BO312.sqlj,v 1.22 2016/07/27 08:23:41 hrakis Exp $";
+    
+    #sql iterator NekretnineIterator with (holdability = true) (
+        BigDecimal COL_SUB_ID,
+        String zk_ul,
+        String katastarska_cestica,
+        String podulozak,
+        String ulica,
+        String kucni_broj,
+        BigDecimal neto_korisna_povrsina,
+        String uporabna_dozvola,
+        String legalnost_gradjevinska_dozvola,
+        String gradjevinska,
+        String opis_iz_zk_izvatka,
+        Integer godina_izgradnje,
+        BigDecimal nova_gradjevinska,
+        BigDecimal cijena_kupopr_ugovora_u_eur,
+        String vrsta,
+        String katastarska_opcina,
+        String mjesto, 
+        String namjena,
+        String pravo_gradjenja,
+        String zk_prava_gradj,
+        Date datum_isteka_prava_gradj,
+        String opis_regije_nekretnine,
+        String napomena_o_nekretnini,
+        String projektno_financ,
+        BigDecimal buduca_vrijednost_nekretnine,
+        Date datum_kupoprodaje,
+        String za_tvrtku_proc,
+        String ocjena_nekretnine,
+        String kat,
+        Integer broj_katova,
+        String lift
+    );
+    
+    #sql iterator InsPolIterator (
+        BigDecimal ip_secu_val,
+        BigDecimal ip_cur_id
+    );
+
+    
+    public boolean hasMortgage()
+    {
+        return true;
+    }
+    
+    public String getFileName()
+    {
+        return "Nekretnine";
+    }
+    
+    public void setColumns()
+    {
+        // IZVJEŠTAJ 1
+        int idx = 0;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.trzisna_vrijednost);
+        columns.get(idx).add(OutputData.valuta_procijenjene_vrijednosti);
+        columns.get(idx).add(OutputData.red_hipoteke);
+        columns.get(idx).add(OutputData.omega_id_procjenitelja);
+        columns.get(idx).add(OutputData.naziv_procjenitelja);
+        columns.get(idx).add(OutputData.procijenjena_vrijednost);
+        columns.get(idx).add(OutputData.datum_procjene);
+        columns.get(idx).add(OutputData.datum_trzisne_vrijednosti_datum_nom_vrijed_c_o);
+        columns.get(idx).add(OutputData.id_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.naziv_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.status_vlasnika_u_zbk);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.upisano_pravo_banke);
+        columns.get(idx).add(OutputData.vrsta_trzisne_vrijednosti);
+        columns.get(idx).add(OutputData.ces_ponder_prijedlog);
+        columns.get(idx).add(OutputData.coll_officer);
+        columns.get(idx).add(OutputData.recovery_process_status);
+        columns.get(idx).add(OutputData.za_tvrtku_proc);
+        columns.get(idx).add(OutputData.tip_procjenitelja);
+        columns.get(idx).add(OutputData.ekonomski_vijek_kolaterala);
+        columns.get(idx).add(OutputData.razlog_neosiguranja);
+        columns.get(idx).add(OutputData.metoda_procjene_1);
+        columns.get(idx).add(OutputData.metoda_procjene_2);
+        columns.get(idx).add(OutputData.omjer_ngv_i_iznosa_os_sa_police);
+        columns.get(idx).add(OutputData.osiguranje_pokriva_kolateral_u_potpunosti);
+        columns.get(idx).add(OutputData.tocnost_provedbe_procjene);
+        columns.get(idx).add(OutputData.korektnost_vrijednosti);
+        columns.get(idx).add(OutputData.postivanje_rokova);
+        columns.get(idx).add(OutputData.profesionalnost);
+        columns.get(idx).add(OutputData.ocjena_procjene);
+        columns.get(idx).add(OutputData.interni_procjenitelj);
+        columns.get(idx).add(OutputData.ocjena_nekretnine);
+        columns.get(idx).add(OutputData.broj_nekretnina_u_vlasnistvu);
+        columns.get(idx).add(OutputData.glavni_vlasnik);
+        columns.get(idx).add(OutputData.davatelj_izjave);
+        columns.get(idx).add(OutputData.tip);
+        columns.get(idx).add(OutputData.vrsta);
+        columns.get(idx).add(OutputData.zk_ul);
+        columns.get(idx).add(OutputData.katastarska_cestica);
+        columns.get(idx).add(OutputData.podulozak);
+        columns.get(idx).add(OutputData.katastarska_opcina);
+        columns.get(idx).add(OutputData.mjesto);
+        columns.get(idx).add(OutputData.ulica);
+        columns.get(idx).add(OutputData.kucni_broj);
+        columns.get(idx).add(OutputData.neto_korisna_povrsina);
+        columns.get(idx).add(OutputData.cijena_kupopr_ugovora_u_eur);
+        columns.get(idx).add(OutputData.datum_kupoprodaje);
+        columns.get(idx).add(OutputData.vrsta_procjene);
+        columns.get(idx).add(OutputData.legalnost_gradjevinska_dozvola);
+        columns.get(idx).add(OutputData.namjena);
+        columns.get(idx).add(OutputData.godina_izgradnje);
+        columns.get(idx).add(OutputData.nova_gradjevinska);
+        columns.get(idx).add(OutputData.uporabna_dozvola);
+        columns.get(idx).add(OutputData.predana_sva_dokumentacija);
+        columns.get(idx).add(OutputData.predati_dokumentaciju_do);
+        columns.get(idx).add(OutputData.osigurano);
+        columns.get(idx).add(OutputData.pravo_gradjenja);
+        columns.get(idx).add(OutputData.zk_prava_gradj);
+        columns.get(idx).add(OutputData.datum_isteka_prava_gradj);
+        columns.get(idx).add(OutputData.kat);
+        columns.get(idx).add(OutputData.broj_katova);
+        columns.get(idx).add(OutputData.lift);
+        columns.get(idx).add(OutputData.opis_regije_nekretnine);
+        columns.get(idx).add(OutputData.projektno_financ);
+        columns.get(idx).add(OutputData.buduca_vrijednost_nekretnine);
+        columns.get(idx).add(OutputData.pristup_jpp);
+        columns.get(idx).add(OutputData.raspoloziva_ponderirana_vrijednost);
+        columns.get(idx).add(OutputData.napomena_o_nekretnini);
+        columns.get(idx).add(OutputData.b2_irb_prihvatljivost);
+        columns.get(idx).add(OutputData.premija_placena_do);
+        columns.get(idx).add(OutputData.sifra_oj_referenta);
+        columns.get(idx).add(OutputData.ime_referenta);
+        columns.get(idx).add(OutputData.omega_id_korisnika_plasmana);
+        columns.get(idx).add(OutputData.naziv_korisnika_plasmana);
+        columns.get(idx).add(OutputData.ekonomska_neovisnost);
+        
+        // IZVJEŠTAJ 2
+        idx = 1;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.trzisna_vrijednost);
+        columns.get(idx).add(OutputData.valuta_procijenjene_vrijednosti);
+        columns.get(idx).add(OutputData.misljenje_pravne_sluzbe);
+        columns.get(idx).add(OutputData.ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.hnb_ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.prihv_za_rezervacije);
+        columns.get(idx).add(OutputData.b2_hnb_stand_prihvatljivost);
+        columns.get(idx).add(OutputData.b2_irb_prihvatljivost);
+        columns.get(idx).add(OutputData.rba_prihvatljivost);
+        columns.get(idx).add(OutputData.nd_prihvatljivost);
+        columns.get(idx).add(OutputData.omega_id_korisnika_plasmana);
+        columns.get(idx).add(OutputData.zbk_status_korisnika_plasmana);
+        columns.get(idx).add(OutputData.naziv_korisnika_plasmana);
+        columns.get(idx).add(OutputData.partija_plasmana);
+        columns.get(idx).add(OutputData.plasman_osiguran);
+        columns.get(idx).add(OutputData.osiguravatelj);
+        columns.get(idx).add(OutputData.broj_zahtjeva);
+        columns.get(idx).add(OutputData.broj_zahtjeva_aps);
+        columns.get(idx).add(OutputData.broj_ugovora);
+        columns.get(idx).add(OutputData.valuta_izlozenosti);
+        columns.get(idx).add(OutputData.izlozenost_po_plasmanu);
+        columns.get(idx).add(OutputData.datum_izlozenosti);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_plasmana);
+        columns.get(idx).add(OutputData.dwh_status_plasmana);
+        columns.get(idx).add(OutputData.originalni_status_plasmana);
+        columns.get(idx).add(OutputData.potvrda_co);
+        columns.get(idx).add(OutputData.datum_co);
+        columns.get(idx).add(OutputData.login_referenta_co);
+        columns.get(idx).add(OutputData.ime_referenta_co);
+        columns.get(idx).add(OutputData.datum_dospijeca_plasmana);
+        columns.get(idx).add(OutputData.sifra_liste_na_kojoj_se_nalazi_kolateral);
+        columns.get(idx).add(OutputData.login_referenta);
+        columns.get(idx).add(OutputData.ime_referenta);
+        columns.get(idx).add(OutputData.sifra_oj_referenta);
+        columns.get(idx).add(OutputData.naziv_oj_referenta);
+        columns.get(idx).add(OutputData.datum_unosa);
+        columns.get(idx).add(OutputData.datum_zadnje_promjene);
+        columns.get(idx).add(OutputData.unos_plasmana);
+        columns.get(idx).add(OutputData.im_suduznika);
+        columns.get(idx).add(OutputData.naziv_suduznika);
+        columns.get(idx).add(OutputData.uloga_suduznika);
+        columns.get(idx).add(OutputData.wcov_orig_valuta);
+        columns.get(idx).add(OutputData.kol_ponder_dfl);
+        columns.get(idx).add(OutputData.kolateral_ponder_co);
+        columns.get(idx).add(OutputData.realan_ponder);
+        columns.get(idx).add(OutputData.wcov);
+        columns.get(idx).add(OutputData.iskoristenost_kolaterala_wca);
+        columns.get(idx).add(OutputData.vrsta_ugovora);
+        columns.get(idx).add(OutputData.collateral_code_gctc_kolaterala);
+        columns.get(idx).add(OutputData.endorsement_type_gctc);
+        columns.get(idx).add(OutputData.object_type_gctc);
+        columns.get(idx).add(OutputData.property_type_gctc);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_local_level);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_group_level);
+        columns.get(idx).add(OutputData.suma_hipoteka_viseg_reda_do_prve_rba);
+        columns.get(idx).add(OutputData.raspoloziva_neponderirana_vrijednost);
+        columns.get(idx).add(OutputData.datum_izracuna_raspolozive_vrijednosti);
+        columns.get(idx).add(OutputData.b2_irb_prihv_sporazuma_o_osiguranju);
+        columns.get(idx).add(OutputData.b2_hnb_prihv_sporazuma_o_osiguranju);
+    }
+
+
+    public void selectAdditionalData(HashMap data, Date value_date, YRXX0 yrxx0) throws Exception
+    {
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        
+        try
+        {
+            bc.startStopWatch("BO312.selectAdditionalData#basic");
+            
+            NekretnineIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    e.real_est_type         AS COL_SUB_ID,
+                    e.real_est_land_regn    AS zk_ul,
+                    e.real_est_land_part    AS katastarska_cestica,
+                    e.real_est_land_sub     AS podulozak,
+                    e.street                AS ulica,
+                    e.housenr               AS kucni_broj,
+                    e.real_est_sqrm2        AS neto_korisna_povrsina,
+                    e.build_perm_ind        AS uporabna_dozvola,
+                    e.legality              AS legalnost_gradjevinska_dozvola,
+                    e.build_perm            AS gradjevinska,
+                    e.real_est_pdesc        AS opis_iz_zk_izvatka,
+                    e.byear                 AS godina_izgradnje,
+                    e.new_build_val         AS nova_gradjevinska,
+                    e.buy_sell_value        AS cijena_kupopr_ugovora_u_eur,
+                    g.real_es_type_desc     AS vrsta,
+                    h.name                  AS katastarska_opcina,
+                    i.name                  AS mjesto, 
+                    u.use_code_desc         AS namjena,
+                    e.constr_right          AS pravo_gradjenja,
+                    e.con_rig_land_regn     AS zk_prava_gradj,
+                    e.con_rig_date_to       AS datum_isteka_prava_gradj,
+                    s.sys_code_desc         AS opis_regije_nekretnine,
+                    e.real_est_comment      AS napomena_o_nekretnini,
+                    e.proj_fin              AS projektno_financ,
+                    e.real_est_fut_value    AS buduca_vrijednost_nekretnine,
+                    e.contract_date         AS datum_kupoprodaje,
+                    c.name                  AS za_tvrtku_proc,
+                    r.sys_code_desc         AS ocjena_nekretnine,
+                    e.floor                 AS kat,
+                    e.total_floors          AS broj_katova,
+                    e.lift                  AS lift
+                FROM coll_restate e
+                LEFT OUTER JOIN real_estate_type g      ON e.real_est_type = g.real_es_type_id
+                LEFT OUTER JOIN cadastre_map h          ON e.real_est_cada_munc = h.cad_map_id
+                LEFT OUTER JOIN political_map i         ON e.pol_map_id_ad = i.pol_map_id
+                LEFT OUTER JOIN pol_region_map j        ON (e.pol_map_id_ad = j.pol_map_id AND :(value_date) BETWEEN j.date_from AND j.date_until)
+                LEFT OUTER JOIN user_code_value u       ON e.purpose = u.use_cod_val_id
+                LEFT OUTER JOIN system_code_value s     ON (s.sys_cod_id = 'coll_region' AND j.region_id = s.sys_cod_val_id)
+                LEFT OUTER JOIN system_code_value r     ON (r.sys_cod_id = 'coll_grade' AND e.real_est_rate = r.sys_code_value)
+                LEFT OUTER JOIN customer c              ON e.estimate_cus_id = c.cus_id
+                WHERE e.col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                fillDataFromIterator(iter, data, OutputData.class);
+            }
+            
+            // za zemljišta u polje Legalnost se stavlja polje Graðevinska dozvola
+            if (data.get(OutputData.COL_TYP_ID).equals(new BigDecimal("7777"))) data.put(OutputData.legalnost_gradjevinska_dozvola, data.get("gradjevinska"));
+            
+            bc.stopStopWatch("BO312.selectAdditionalData#basic");
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o nekretnini! " + data.toString(), ex);
+            throw ex;
+        }
+        
+        
+        // omjer NGV i iznosa osiguranja
+        BigDecimal ngv = (BigDecimal)data.get(OutputData.nova_gradjevinska);
+        BigDecimal cur_id = (BigDecimal)data.get(OutputData.CUR_ID);
+        final BigDecimal zero = new BigDecimal("0.00");
+        BigDecimal ratio = null;
+        if (ngv != null && cur_id != null)
+        {
+            bc.startStopWatch("BO312.selectAdditionalData#ratio");
+            try
+            {
+                InsPolIterator iter = null;
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.ip_secu_val   AS ip_secu_val,
+                        a.ip_cur_id     AS ip_cur_id
+                    FROM insurance_policy a
+                    WHERE a.col_hea_id = :(col_hea_id)
+                    AND a.ip_act_noact = 'A'
+                    WITH UR
+                };
+                BigDecimal insured_amount_sum = zero;
+                while (iter.next())
+                {
+                    BigDecimal insured_amount = yrxx0.exchange(iter.ip_secu_val(), iter.ip_cur_id(), cur_id, value_date);
+                    insured_amount_sum = insured_amount_sum.add(insured_amount);
+                }
+                if (insured_amount_sum.compareTo(zero) > 0) ratio = ngv.divide(insured_amount_sum, 2, RoundingMode.HALF_UP);
+            }
+            catch (SQLException ex)
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata omjera NGV i iznosa polica osiguranja (COL_HEA_ID=" + col_hea_id + ",VALUE_DATE=" + value_date + ")! " + data.toString(), ex);
+                throw ex;
+            }
+            bc.stopStopWatch("BO312.selectAdditionalData#ratio");
+        }
+        
+        data.put(OutputData.omjer_ngv_i_iznosa_os_sa_police, ratio);
+    }
+}

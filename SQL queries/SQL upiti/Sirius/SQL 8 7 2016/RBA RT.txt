@@ -1,0 +1,90 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+select * from batch_log where bat_deF_ID = '1617844003' and exec_status = 'P' ORDER BY recording_time desc;
+
+select * from batch_log where bat_deF_ID = '1617844003' ORDER BY recording_time desc;
+
+select * from batch_def where bat_Def_id = 1617844003;
+
+
+select * from batch_log where bat_log_id = 4001401291803  and bat_def_id = 1617844003;
+
+update batch_log set exec_status = 'D' where bat_log_id = 4001401291803  and bat_def_id = 1617844003;
+
+commit;
+
+select * from customer_account where cus_acc_no = '1103710055'
+
+select * from turn_customer where cus_acc_id = 11336272522 order by process_timestamp desc;
+
+select * from turnover where tur_id = 20008454267821;
+
+ 
+                SELECT
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id ,
+                       t.tur_id,
+                       t.pay_ord_id
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc                      
+                    WHERE
+                    tc.tur_id = t.tur_id                   
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = 11336272522
+				 AND tc.process_timestamp >= '2016-07-05 07:01:21.33836'
+                    AND t.process_timestamp >= '2016-07-05 07:01:21.33836'
+                                                             
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+
+                      SELECT 
+                   recording_time
+              
+                FROM 
+                     batch_log 
+                WHERE
+                    bat_def_id = 1617844003
+                    AND param_value like 'RB#PAY;cp1250;P%'  
+                    AND exec_return_code in ('100', '104')
+                    order by recording_time desc 
+                    fetch first 1 rows only 
+                    with ur
+
+
+                        SELECT
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id ,
+                       t.tur_id,
+                       t.pay_ord_id
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc                      
+                    WHERE
+                    tc.tur_id = t.tur_id                   
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = 11336272522
+                    AND tc.process_timestamp >= '2016-07-05 15:30:26.394138'
+                    AND t.process_timestamp >= '2016-07-05 15:30:26.394138'                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 		
+
+
+
+				
+                                select count_big(*) from interface_coll_tbl 
+				where orig_trx_date = '15.06.2016' with ur;
+
+				IF EXISTS(  select count_big(*) from interface_coll_tbl where orig_trx_date = '15.06.2016') with ur;
+				

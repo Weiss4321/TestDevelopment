@@ -1,0 +1,60 @@
+package hr.vestigo.modules.collateral.jcics.co03;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+
+//COLL_HF_PRIOR_LIST
+
+/**
+ * CO036 class selects user_lock from table coll_head
+ * into 	 CollHfPriorDialogLDB
+ * 	
+ */
+
+public class CO036 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co03/CO036.sqlj,v 1.1 2006/05/30 09:40:28 hrasia Exp $";
+
+	private DeclCO03 decl = null;
+		
+	public CO036(DeclCO03 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO036.sqlj     " );
+		tc.debug ( "......CO036.sqlj     TRANSAKCIJA ZA DOHVAT USER_LOCK-a NA OSNOVU HF_COLL_HEAD_ID" );
+		tc.debug ( "......CO036.sqlj     ChpDUserLock  " );
+		tc.debug ( "......CO036.sqlj     decl.chpduserlockm.HF_COLL_HEAD_ID " +  decl.chpduserlockm.HF_COLL_HEAD_ID);
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+	
+		
+		
+		try{			
+			#sql [ctx] {SELECT  user_lock
+						INTO    :(decl.chpduserlockm.USER_LOCKCollHead)
+					    FROM 	coll_head
+						WHERE  	col_hea_id = :(decl.chpduserlockm.HF_COLL_HEAD_ID)                                                
+								
+				};                                                         
+		                                                                                                                          
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO036.sqlj  SQLException   decl.chpduserlockm.HF_COLL_HEAD_ID     " + decl.chpduserlockm.HF_COLL_HEAD_ID );
+			tc.debug ( "......CO036.sqlj select  from coll_head SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO036.sqlj select  from coll_head SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO036.sqlj select  from coll_head SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO036: Error selecting user_lock from coll_head ! ","errclt1", null);
+		}
+		tc.debug("......CO036.sqlj  HF_COLL_HEAD_ID     " + decl.chpduserlockm.HF_COLL_HEAD_ID );
+		tc.debug("......CO036.sqlj  USER_LOCKCollHead   " + decl.chpduserlockm.USER_LOCKCollHead );
+			                    
+
+	}
+	
+}
+

@@ -1,0 +1,321 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+  
+public class CO064 extends RemoteTransaction {
+ 	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO064.sqlj,v 1.18 2017/12/21 14:04:04 hrazst Exp $";
+	private DeclCO06 decl = null;
+
+	public CO064(DeclCO06 decl) { 
+		this.decl = decl;
+	}
+	  
+	CollHeadSelectData chs = new CollHeadSelectData();
+	
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......COL_HEA_ID " + decl.collprecselectmapping.COL_HEA_ID);
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();      		 
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+//		 select iz COLL_HEAD		
+		YOY42 headSel = new YOY42(tc, chs);
+
+		chs.COL_HEA_ID = decl.collprecselectmapping.COL_HEA_ID;
+		
+		headSel.selectFromCollHead();
+	 	
+		tc.debug ( "......PUNIM DECL  ");		
+// punjenje decla iz objekta chs		
+		fillDeclFromCHSObj();		
+        
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);   	
+        
+		tc.debug ( "......COL_HEA_ID " + decl.collprecselectmapping.Coll_txtCode);
+   		
+		
+
+		try{
+
+			#sql [ctx] {SELECT 
+				pre_id , 
+				col_hea_id , 
+				prt_typ_id , 
+				pre_unit_mes , 
+				pre_num_of_unit ,
+				pre_art_year ,
+				pre_condition , 
+				pre_cond_date  
+		INTO
+				:(decl.collprecselectmapping.COL_SEC_ID),    													                                                
+				:(decl.collprecselectmapping.COL_HEA_ID),  	
+				:(decl.collprecselectmapping.SEC_TYP_ID ),                   
+				:(decl.collprecselectmapping.Coll_txtMovUnitMes ), 
+				:(decl.collprecselectmapping.Coll_txtMovNumOfUnit ),
+      			:(decl.collprecselectmapping.Coll_txtArtYear) ,
+				:(decl.collprecselectmapping.Coll_txtMovCondition ),        
+				:(decl.collprecselectmapping.Coll_txtMovCondDate )
+		FROM coll_precious
+		WHERE COL_HEA_ID = :(decl.collprecselectmapping.COL_HEA_ID) };		
+	
+		}catch(java.sql.SQLException se){
+			
+			tc.debug ( "......CO064.sqlj select from coll_precious SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO064.sqlj select from coll_precious SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO064.sqlj select from coll_precious SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO064: Error selecting coll_precious ","err411a", null);
+		}
+				                    
+        
+// dohvat iz tabele PRECIOUS_TYPE
+      
+		try{    
+			if (decl.collprecselectmapping.SEC_TYP_ID != null){
+	
+					#sql [ctx] {SELECT	prt_type_code, prt_type_desc
+             			INTO	:(decl.collprecselectmapping.Coll_txtSecTypeCode), :(decl.collprecselectmapping.Coll_txtSecTypeName)
+             			FROM 	PRECIOUS_TYPE 
+     	       			WHERE 	prt_typ_id = :(decl.collprecselectmapping.SEC_TYP_ID) };					
+				
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }
+
+//      dohvat MVP pondera       
+        
+/*        try{ 
+
+            #sql [ctx] {
+                            SELECT min_value, dfl_value, max_value
+                                INTO :(decl.collprecselectmapping.Coll_txtCollMvpPonderMin),
+                                     :(decl.collprecselectmapping.Coll_txtCollMvpPonder),
+                                     :(decl.collprecselectmapping.Coll_txtCollMvpPonderMax)
+                                FROM dfl_col_ponder
+                                WHERE 
+                                    col_cat_id = :(decl.collprecselectmapping.COL_CAT_ID)
+                                AND
+                                    col_typ_id = :(decl.collprecselectmapping.COL_TYPE_ID)
+                                AND
+                                    status = 'A'
+                                AND
+                                    date_from <= current date
+                                AND
+                                    date_until >= current date
+                                AND
+                                    add_request = 'N'
+                            };
+            
+        }catch(SQLException e){
+            if (e.getErrorCode()!=100) throw e;
+        }   */                                   
+//      kada je dohvacen ponder treba izracunati ponderiranu i raspolozivu vrijednost
+        
+        kolData.colHeaId = decl.collprecselectmapping.COL_HEA_ID;
+        kolData.colCurId = decl.collprecselectmapping.REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.collprecselectmapping.Coll_txtNomiValu;
+        
+        kolData.colCatId = decl.collprecselectmapping.COL_CAT_ID;
+        kolData.colTypId = decl.collprecselectmapping.COL_TYPE_ID;
+        kolData.colSubTypId = decl.collprecselectmapping.SEC_TYP_ID;
+        kolData.addRequest = "N";
+        
+//        kolData.ponder = decl.collprecselectmapping.Coll_txtCollMvpPonder;
+
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+//      yoye0.getPonderAndRestAmount(kolData);
+      
+      decl.collprecselectmapping.Coll_txtAcouValue = kolData.ponderAmount;
+      decl.collprecselectmapping.Coll_txtAcouDate = todaySQLDate;
+
+//      decl.vesselselectmapping.Coll_txtAvailDate = todaySQLDate;
+      decl.collprecselectmapping.Coll_txtSumPartVal = kolData.exposureAmount;
+      decl.collprecselectmapping.Coll_txtSumPartDat = kolData.exposureDate;   
+      
+      decl.collprecselectmapping.Coll_txtCollMvpPonderMin = kolData.minPonder;
+      decl.collprecselectmapping.Coll_txtCollMvpPonder = kolData.dflPonder;
+      decl.collprecselectmapping.Coll_txtCollMvpPonderMax = kolData.maxPonder;
+      
+      decl.collprecselectmapping.Coll_txtAvailValue = kolData.restAmount;
+      decl.collprecselectmapping.Coll_txtAvailDate = kolData.coverDate;
+      
+      decl.collprecselectmapping.Coll_txtAvailPonValue = kolData.restPonAmount;
+      decl.collprecselectmapping.Coll_txtNDAvailDate = kolData.NDCoverDate;
+	}
+	 
+	private void fillDeclFromCHSObj () {
+		
+		decl.collprecselectmapping.COL_HEA_ID = chs.COL_HEA_ID;    													                                                
+		decl.collprecselectmapping.COL_TYPE_ID = chs.COL_TYPE_ID;  
+		decl.collprecselectmapping.Coll_txtCode = chs.Coll_txtCode; 
+		decl.collprecselectmapping.Coll_txtDesc = chs.Coll_txtDesc;  
+		decl.collprecselectmapping.REAL_EST_EUSE_ID = chs.REAL_EST_EUSE_ID;
+		decl.collprecselectmapping.Coll_txtEstnValu = chs.Coll_txtEstnValu;                   
+		decl.collprecselectmapping.Coll_txtEstnDate = chs.Coll_txtEstnDate;                   
+		decl.collprecselectmapping.Coll_txtDatnFrom = chs.Coll_txtDatnFrom;                   
+		decl.collprecselectmapping.Coll_txtDatnUnti = chs.Coll_txtDatnUnti;                   
+		decl.collprecselectmapping.Coll_txtNomiDesc = chs.Coll_txtNomiDesc; 
+		decl.collprecselectmapping.Coll_txtNomiValu = chs.Coll_txtNomiValu;                   		
+		decl.collprecselectmapping.Coll_txtNomiDate = chs.Coll_txtNomiDate; 
+		decl.collprecselectmapping.Coll_txtLiquValu = chs.Coll_txtLiquValu;                  		
+		decl.collprecselectmapping.Coll_txtLiquDate = chs.Coll_txtLiquDate;                   		
+		decl.collprecselectmapping.Coll_txtBptcValu = chs.Coll_txtBptcValu;                   		
+		decl.collprecselectmapping.Coll_txtBptcDate = chs.Coll_txtBptcDate; 
+		decl.collprecselectmapping.REAL_EST_NM_CUR_ID = chs.REAL_EST_NM_CUR_ID; 
+		decl.collprecselectmapping.CUS_ID = chs.CUS_ID;   
+		decl.collprecselectmapping.COLL_CUS_ID = chs.COLL_CUS_ID;   
+		decl.collprecselectmapping.Coll_txtDateToLop = chs.Coll_txtDateToLop;   
+		decl.collprecselectmapping.Coll_txtDateRecLop = chs.Coll_txtDateRecLop; 
+		decl.collprecselectmapping.Coll_txtRecLop = chs.Coll_txtRecLop; 
+		decl.collprecselectmapping.Coll_txtComDoc = chs.Coll_txtComDoc;                              		                                      
+		decl.collprecselectmapping.Coll_txtMissingDoc = chs.Coll_txtMissingDoc;                          		                                      
+		decl.collprecselectmapping.Coll_txtDateToDoc = chs.Coll_txtDateToDoc;                          		                                      
+		decl.collprecselectmapping.Coll_txtDateRecDoc = chs.Coll_txtDateRecDoc; 
+//		decl.collprecselectmapping.Coll_txtRevaAutMan = chs.Coll_txtRevaAutMan;                         		                                    
+//		decl.collprecselectmapping.Coll_txtRevaDateMan = chs.Coll_txtRevaDateMan;                        		                                    
+		decl.collprecselectmapping.Coll_txtRevaCoefMan = chs.Coll_txtRevaCoefMan;                        		                                   
+//		decl.collprecselectmapping.Coll_txtRevaValue = chs.Coll_txtRevaValue;                           		                                         
+		decl.collprecselectmapping.Coll_txtRevaDate = chs.Coll_txtRevaDate;                            		                                           
+		decl.collprecselectmapping.Coll_txtRevaDateAM = chs.Coll_txtRevaDateAM;                         		                                         
+		decl.collprecselectmapping.Coll_txtRevaBValue = chs.Coll_txtRevaBValue;                          		                                          
+		decl.collprecselectmapping.Coll_txtRevaBDate = chs.Coll_txtRevaBDate;                           		
+		decl.collprecselectmapping.Coll_txtRevaBDateAM = chs.Coll_txtRevaBDateAM;                       	     
+		decl.collprecselectmapping.Coll_txtAmortAge = chs.Coll_txtAmortAge;                            	    
+		decl.collprecselectmapping.AMORT_PER_CAL_ID = chs.AMORT_PER_CAL_ID;                        	                            
+		decl.collprecselectmapping.Coll_txtAmortValCal = chs.Coll_txtAmortValCal;
+		decl.collprecselectmapping.Coll_txtNepoValue = chs.Coll_txtNepoValue;                           	                            
+		decl.collprecselectmapping.Coll_txtNepoDate = chs.Coll_txtNepoDate;                            	                            
+		decl.collprecselectmapping.Coll_txtNepoPerCal = chs.Coll_txtNepoPerCal; 
+		decl.collprecselectmapping.Coll_txtThirdRight = chs.Coll_txtThirdRight;                          	                            
+		decl.collprecselectmapping.THIRD_RIGHT_CUR_ID = chs.THIRD_RIGHT_CUR_ID;                   	                            
+		decl.collprecselectmapping.Coll_txtThirdRightInNom = chs.Coll_txtThirdRightInNom;                      		                                         
+		decl.collprecselectmapping.Coll_txtThirdRightDate = chs.Coll_txtThirdRightDate;                    	                                                        		                                         
+		decl.collprecselectmapping.Coll_txtHfsValue = chs.Coll_txtHfsValue;                           	                                                        		                                         
+		decl.collprecselectmapping.Coll_txtHfsValueDate = chs.Coll_txtHfsValueDate;                         		                                         
+		decl.collprecselectmapping.Coll_txtHfsValueLastOne = chs.Coll_txtHfsValueLastOne;                      		                                         
+		decl.collprecselectmapping.Coll_txtHfsDateLastOne = chs.Coll_txtHfsDateLastOne;     
+		decl.collprecselectmapping.Coll_txtAcouValue = chs.Coll_txtAcouValue;                            		                                         
+//		decl.collprecselectmapping.Coll_txtAcouPerCal = chs.Coll_txtAcouPerCal;                        	                                     
+//		decl.collprecselectmapping.Coll_txtAcouPerAco = chs.Coll_txtAcouPerAco;                        
+		decl.collprecselectmapping.Coll_txtAcouDate = chs.Coll_txtAcouDate;                          
+		decl.collprecselectmapping.Coll_txtAcouBValue = chs.Coll_txtAcouBValue;                        
+		decl.collprecselectmapping.Coll_txtAcouBDate = chs.Coll_txtAcouBDate;  
+		decl.collprecselectmapping.Coll_txtSumLimitVal = chs.Coll_txtSumLimitVal;                                                     
+		decl.collprecselectmapping.Coll_txtSumLimitDat = chs.Coll_txtSumLimitDat;                                                       
+		decl.collprecselectmapping.Coll_txtSumPartVal = chs.Coll_txtSumPartVal;                                                         
+		decl.collprecselectmapping.Coll_txtSumPartDat = chs.Coll_txtSumPartDat;
+		decl.collprecselectmapping.Coll_txtAvailValue = chs.Coll_txtAvailValue;                                                       
+		decl.collprecselectmapping.Coll_txtAvailPerCal = chs.Coll_txtAvailPerCal;                                                       
+		decl.collprecselectmapping.Coll_txtAvailDate = chs.Coll_txtAvailDate;  
+		decl.collprecselectmapping.INSPOL_IND = chs.INSPOL_IND;  
+		decl.collprecselectmapping.COL_PLACE = chs.COL_PLACE; 
+		decl.collprecselectmapping.COL_COUNTY = chs.COL_COUNTY; 
+		decl.collprecselectmapping.COL_DISTRICT = chs.COL_DISTRICT; 
+		decl.collprecselectmapping.COL_RESI_QUAR = chs.COL_RESI_QUAR; 
+		decl.collprecselectmapping.Coll_txtCollMvpPonder = chs.Coll_txtCollMvpPonder;
+		decl.collprecselectmapping.Coll_txtCollHnbPonder = chs.Coll_txtCollHnbPonder; 
+		decl.collprecselectmapping.Coll_txtCollRzbPonder = chs.Coll_txtCollRzbPonder;
+		decl.collprecselectmapping.Coll_txtDateFrom = chs.Coll_txtDateFrom;                   	                         
+		decl.collprecselectmapping.Coll_txtDateUnti = chs.Coll_txtDateUnti;                   	 
+		decl.collprecselectmapping.Coll_txtAddData = chs.Coll_txtAddData;  
+		decl.collprecselectmapping.STATUS = chs.STATUS;                      		                          
+		decl.collprecselectmapping.SPEC_STATUS = chs.SPEC_STATUS;  
+		decl.collprecselectmapping.USE_OPEN_ID = chs.USE_OPEN_ID;
+		decl.collprecselectmapping.USE_ID = chs.USE_ID;
+		decl.collprecselectmapping.Coll_txtOpeningTs = chs.Coll_txtOpeningTs;
+		decl.collprecselectmapping.Coll_txtUserLock = chs.Coll_txtUserLock;
+ 				
+		decl.collprecselectmapping.Coll_txtEUseIdLogin = chs.Coll_txtEUseIdLogin;
+		decl.collprecselectmapping.Coll_txtEUseIdName = chs.Coll_txtEUseIdName;
+
+		decl.collprecselectmapping.Coll_txtEstnCurr = chs.Coll_txtEstnCurr;
+		decl.collprecselectmapping.Coll_txtCarrierRegisterNo = chs.Coll_txtCarrierRegisterNo;
+		decl.collprecselectmapping.Coll_txtCarrierName = chs.Coll_txtCarrierName;
+		decl.collprecselectmapping.Coll_txtOwnerRegisterNo = chs.Coll_txtOwnerRegisterNo;
+		decl.collprecselectmapping.Coll_txtOwnerName = chs.Coll_txtOwnerName;
+		decl.collprecselectmapping.Coll_txtThirdRightCurCodeChar = chs.Coll_txtThirdRightCurCodeChar;	
+		decl.collprecselectmapping.Coll_txtUseOpenIdLogin = chs.Coll_txtUseOpenIdLogin;
+		decl.collprecselectmapping.Coll_txtUseOpenIdName = chs.Coll_txtUseOpenIdName;
+		decl.collprecselectmapping.Coll_txtUseIdLogin = chs.Coll_txtUseIdLogin;
+		decl.collprecselectmapping.Coll_txtUseIdName = chs.Coll_txtUseIdName; 					
+		decl.collprecselectmapping.Coll_txtAmortPerCal = chs.Coll_txtAmortPerCal;				
+
+		decl.collprecselectmapping.Coll_txtCollTypeCode = chs.Coll_txtCollTypeCode;
+		decl.collprecselectmapping.Coll_txtCollTypeName  = chs.Coll_txtCollTypeName;
+ 	 	
+		decl.collprecselectmapping.USER_LOCK = chs.USER_LOCK;
+		
+		decl.collprecselectmapping.Coll_txtNmValCurr = chs.Coll_txtNmValCurr;
+		decl.collprecselectmapping.Coll_txtEligibility = chs.Coll_txtEligibility;
+		decl.collprecselectmapping.Coll_txtEligDesc = chs.Coll_txtEligDesc;
+		decl.collprecselectmapping.Coll_txtAcumBuyValue = chs.Coll_txtAcumBuyValue;
+		
+//		dodano 10.06.2006
+		
+		decl.collprecselectmapping.ORIGIN_ORG_UNI_ID = chs.ORIGIN_ORG_UNI_ID;
+		decl.collprecselectmapping.ORG_UNI_ID = chs.ORG_UNI_ID;
+		decl.collprecselectmapping.USE_ID_VER = chs.USE_ID_VER;
+		decl.collprecselectmapping.USE_ID_AUT = chs.USE_ID_AUT;
+		decl.collprecselectmapping.VERIFICATION_TS = chs.VERIFICATION_TS;
+		decl.collprecselectmapping.AUTORIZATION_TS = chs.AUTORIZATION_TS;
+		decl.collprecselectmapping.MORTGAGE_STATUS = chs.MORTGAGE_STATUS;
+		decl.collprecselectmapping.COLLATERAL_STATUS = chs.COLLATERAL_STATUS;
+		decl.collprecselectmapping.WORKFLOW_INDIC = chs.WORKFLOW_INDIC;
+		decl.collprecselectmapping.COVER_INDIC = chs.COVER_INDIC;
+		decl.collprecselectmapping.VER_SEND_TS = chs.VER_SEND_TS;
+		decl.collprecselectmapping.BASIC_DATA_STATUS = chs.BASIC_DATA_STATUS;
+		decl.collprecselectmapping.COLL_DATA_STATUS = chs.COLL_DATA_STATUS;
+		decl.collprecselectmapping.COL_CAT_ID = chs.COL_CAT_ID;		
+		
+//		 dodano 19.06.2006		
+		decl.collprecselectmapping.USE_ID_VER_SND = chs.USE_ID_VER_SND;
+		decl.collprecselectmapping.C_FINANCIAL_FLAG = chs.FINANCIAL_FLAG;		
+		
+//		 dodano 21.06.2006
+		decl.collprecselectmapping.C_txtUseIdSndVerLogin = chs.C_txtUseIdSndVerLogin;
+		decl.collprecselectmapping.C_txtUseIdSndVerName = chs.C_txtUseIdSndVerName;
+		decl.collprecselectmapping.C_txtUseIdVerLogin = chs.C_txtUseIdVerLogin;
+		decl.collprecselectmapping.C_txtUseIdVerName = chs.C_txtUseIdVerName;
+		decl.collprecselectmapping.C_txtUseIdAutLogin = chs.C_txtUseIdAutLogin;
+		decl.collprecselectmapping.C_txtUseIdAutName = chs.C_txtUseIdAutName;	
+		
+		decl.collprecselectmapping.Coll_txtBasicDataSt = chs.Coll_txtBasicDataSt;
+		decl.collprecselectmapping.Coll_txtCollDataSt = chs.Coll_txtCollDataSt;
+		decl.collprecselectmapping.Coll_txtCoverIndic = chs.Coll_txtCoverIndic;
+		decl.collprecselectmapping.Coll_txtFinFlag = chs.Coll_txtFinFlag;
+		decl.collprecselectmapping.Coll_txtMortgageSt = chs.Coll_txtMortgageSt;
+		
+//		 dodano 27.10.2006
+		decl.collprecselectmapping.ColRba_txtEligibility = chs.ColRba_txtEligibility;
+		decl.collprecselectmapping.ColRba_txtEligDesc = chs.ColRba_txtEligDesc;
+		decl.collprecselectmapping.KolLow_txtEligibility = chs.KolLow_txtEligibility;
+		decl.collprecselectmapping.KolLow_txtEligDesc = chs.KolLow_txtEligDesc;		
+		
+//		 dodano 27.12.2006 
+		decl.collprecselectmapping.Kol_txtRbaEligDsc = chs.Kol_txtRbaEligDsc; 
+		
+//		 dodano 19.12.2007
+		decl.collprecselectmapping.Coll_txtB1Eligibility = chs.Coll_txtB1Eligibility;
+		decl.collprecselectmapping.Coll_txtB1EligDesc = chs.Coll_txtB1EligDesc;
+		decl.collprecselectmapping.Coll_txtB2IRBEligibility = chs.Coll_txtB2IRBEligibility;
+		decl.collprecselectmapping.Coll_txtB2IRBEligDesc = chs.Coll_txtB2IRBEligDesc;	
+		
+//		 dodano 20.03.2008.		
+		decl.collprecselectmapping.Kol_txtPonderMVP = chs.Kol_txtPonderMVP;		
+		
+        decl.collprecselectmapping.Coll_txtProccessing="";
+        decl.collprecselectmapping.Coll_txtProccessingTimestamp=chs.chg_nom_val_proc_ts;		
+	}		 
+	 
+}
+  

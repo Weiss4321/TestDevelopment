@@ -1,0 +1,249 @@
+package hr.vestigo.modules.collateral.jcics.co05;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *      
+ */   
+   
+    
+public class CO05B extends RemoteTransaction {
+        
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co05/CO05B.sqlj,v 1.3 2015/01/12 11:54:44 hrazst Exp $";
+    
+    public DeclCO05 decl = null;
+    private YOY63 SQLhelper = null;
+    CollHeadInsertData chd = new CollHeadInsertData();  
+    
+    public CO05B (DeclCO05 decl) {
+        this.decl = decl;
+    }       
+   
+    public void execute(TransactionContext tc) throws Exception {
+        ConnCtx ctx = tc.getContext();     
+        SQLhelper = new YOY63(tc);
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+// insert u COLL_HEAD       
+        YOY40 headIns = new YOY40(tc, chd);
+        
+// punjenje objekta chd     
+        fillCHDobj();
+        
+        tc.debug("zovem insert u Head : " + chd.recept);
+        
+        headIns.insertIntoCollHead();
+
+        fillDeclFromCHDObj();       
+
+        YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id = id_generator.getNewId();
+
+        tc.debug("dohvat collateral_id : "+collaterall_id);         
+        
+        decl.collcesijainsertmapping.COL_SEC_ID = collaterall_id;              
+
+ 
+ 
+        try{    
+
+                    #sql [ctx]{
+                            INSERT INTO coll_cesija 
+                                       (col_ces_id, 
+                                        col_hea_id, 
+                                        ces_typ_id,
+                                        ces_con_date,
+                                        ces_nap_pls,
+                                        ces_limit,
+                                        ces_regres,
+                                        ces_add_data,
+                                        ces_exp_date,
+                                        ces_amount,
+                                        ces_cur_id,
+                                        ces_mat_date,
+                                        ces_amount_all,
+                                        ces_lista,
+                                        ces_lista_date,
+                                        ces_lista_din,
+                                        cec_lista_next,
+                                        cedent_id,
+                                        ced_rzb_rating,
+                                        ced_out_rating,
+                                        cesus_id,
+                                        ces_rzb_rating,
+                                        ces_out_rating)
+                            VALUES( :(decl.collcesijainsertmapping.COL_SEC_ID),                                                                                                        
+                                    :(decl.collcesijainsertmapping.COL_HEA_ID),
+                                    :(decl.collcesijainsertmapping.cesija_vrsta_id),       
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaDate),
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaNaplata),
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaLimit),   
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaRegres), 
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaAddData), 
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaDateExp), 
+                                    :(decl.collcesijainsertmapping.Coll_txtNomiValu), 
+                                    :(decl.collcesijainsertmapping.REAL_EST_NM_CUR_ID), 
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaMatDate), 
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaAllAmount), 
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaLista), 
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaListaDatum), 
+                                    :(decl.collcesijainsertmapping.cesija_dinamika_id),
+                                    :(decl.collcesijainsertmapping.Kol_txtCesijaNextLista),
+                                    :(decl.collcesijainsertmapping.cedent_id),                   
+                                    :(decl.collcesijainsertmapping.Kol_txtCedentRzbRating),
+                                    :(decl.collcesijainsertmapping.Kol_txtCedentOutRating),
+                                    :(decl.collcesijainsertmapping.cesus_id),
+                                    :(decl.collcesijainsertmapping.Kol_txtCesusRzbRating),
+                                    :(decl.collcesijainsertmapping.Kol_txtCesusOutRating)) 
+                    };
+                
+             
+        }catch(SQLException se){
+                
+                tc.debug ( "......CO05B.sqlj insert into coll_cesija SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO05B.sqlj insert into coll_cesija SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO05B.sqlj insert into coll_cesija SQL Message " + se.getMessage());
+                se.printStackTrace();
+                throw new VestigoTMException(1, "Transaction CO05B: Error inserting coll_cesija! ","err411a", null);
+        }
+        
+        chd.action = "I";       
+        
+     // poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collcesijainsertmapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collcesijainsertmapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.collcesijainsertmapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collcesijainsertmapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.collcesijainsertmapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();   
+        
+        decl.collcesijainsertmapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collcesijainsertmapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collcesijainsertmapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collcesijainsertmapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();               
+          
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.collcesijainsertmapping.COL_HEA_ID); 
+        decl.collcesijainsertmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip;  
+    }//execute
+ 
+    private void fillCHDobj () {
+
+        chd.Coll_txtAcouBDate = decl.collcesijainsertmapping.Coll_txtAcouBDate;
+        chd.Coll_txtAcouBValue = decl.collcesijainsertmapping.Coll_txtAcouBValue;
+        chd.Coll_txtAcouDate = decl.collcesijainsertmapping.Coll_txtAcouDate;
+        chd.Coll_txtAcouValue = decl.collcesijainsertmapping.Coll_txtAcouValue;
+        chd.Coll_txtAddData = decl.collcesijainsertmapping.Coll_txtAddData;
+        chd.Coll_txtAmortAge = decl.collcesijainsertmapping.Coll_txtAmortAge;
+        chd.Coll_txtAmortValCal = decl.collcesijainsertmapping.Coll_txtAmortValCal;
+        chd.Coll_txtAvailDate = decl.collcesijainsertmapping.Coll_txtAvailDate;
+        chd.Coll_txtAvailPerCal = decl.collcesijainsertmapping.Coll_txtAvailPerCal;
+        chd.Coll_txtAvailValue = decl.collcesijainsertmapping.Coll_txtAvailValue;
+        chd.Coll_txtBptcDate = decl.collcesijainsertmapping.Coll_txtBptcDate;
+        chd.Coll_txtBptcValu = decl.collcesijainsertmapping.Coll_txtBptcValu;
+        chd.Coll_txtCollHnbPonder = decl.collcesijainsertmapping.Coll_txtCollHnbPonder;
+        chd.Coll_txtCollMvpPonder = decl.collcesijainsertmapping.Coll_txtCollMvpPonder;
+        chd.Coll_txtCollRzbPonder = decl.collcesijainsertmapping.Coll_txtCollRzbPonder;
+        chd.Coll_txtCollTypeCode = decl.collcesijainsertmapping.Coll_txtCollTypeCode;
+        chd.Coll_txtComDoc = decl.collcesijainsertmapping.Coll_txtComDoc;
+        chd.Coll_txtDateFrom = decl.collcesijainsertmapping.Coll_txtDateFrom;
+        chd.Coll_txtDateRecDoc = decl.collcesijainsertmapping.Coll_txtDateRecDoc;
+        chd.Coll_txtDateToDoc = decl.collcesijainsertmapping.Coll_txtDateToDoc;
+        chd.Coll_txtDateToLop = decl.collcesijainsertmapping.Coll_txtDateToLop;
+        chd.Coll_txtDateRecLop = decl.collcesijainsertmapping.Coll_txtDateRecLop; 
+        chd.Coll_txtRecLop = decl.collcesijainsertmapping.Coll_txtRecLop;          
+        chd.Coll_txtDateUnti = decl.collcesijainsertmapping.Coll_txtDateUnti; 
+        chd.Coll_txtDatnFrom = decl.collcesijainsertmapping.Coll_txtDatnFrom;
+        chd.Coll_txtDatnUnti = decl.collcesijainsertmapping.Coll_txtDatnUnti;
+        chd.Coll_txtEstnDate = decl.collcesijainsertmapping.Coll_txtEstnDate;
+        chd.Coll_txtEstnValu = decl.collcesijainsertmapping.Coll_txtEstnValu;
+        chd.Coll_txtHfsValue = decl.collcesijainsertmapping.Coll_txtHfsValue;
+        chd.Coll_txtHfsValueDate = decl.collcesijainsertmapping.Coll_txtHfsValueDate;
+        chd.Coll_txtHfsDateLastOne = decl.collcesijainsertmapping.Coll_txtHfsDateLastOne;
+        chd.Coll_txtHfsValueLastOne = decl.collcesijainsertmapping.Coll_txtHfsValueLastOne;
+        chd.Coll_txtLiquDate = decl.collcesijainsertmapping.Coll_txtLiquDate;
+        chd.Coll_txtLiquValu = decl.collcesijainsertmapping.Coll_txtLiquValu;
+        chd.Coll_txtMissingDoc = decl.collcesijainsertmapping.Coll_txtMissingDoc;
+        chd.Coll_txtNepoDate = decl.collcesijainsertmapping.Coll_txtNepoDate;
+        chd.Coll_txtNepoPerCal = decl.collcesijainsertmapping.Coll_txtNepoPerCal;
+        chd.Coll_txtNepoValue = decl.collcesijainsertmapping.Coll_txtNepoValue;
+        chd.Coll_txtNomiDate = decl.collcesijainsertmapping.Coll_txtNomiDate;
+        chd.Coll_txtNomiDesc = decl.collcesijainsertmapping.Coll_txtNomiDesc;
+        chd.Coll_txtNomiValu = decl.collcesijainsertmapping.Coll_txtNomiValu;
+        chd.Coll_txtRevaBDate = decl.collcesijainsertmapping.Coll_txtRevaBDate;
+        chd.Coll_txtRevaBDateAM = decl.collcesijainsertmapping.Coll_txtRevaBDateAM; 
+        chd.Coll_txtRevaBValue = decl.collcesijainsertmapping.Coll_txtRevaBValue ;
+        chd.Coll_txtRevaCoefMan = decl.collcesijainsertmapping.Coll_txtRevaCoefMan;
+        chd.Coll_txtRevaDate = decl.collcesijainsertmapping.Coll_txtRevaDate;
+        chd.Coll_txtRevaDateAM = decl.collcesijainsertmapping.Coll_txtRevaDateAM;
+        chd.Coll_txtSumLimitDat = decl.collcesijainsertmapping.Coll_txtSumLimitDat;
+        chd.Coll_txtSumLimitVal = decl.collcesijainsertmapping.Coll_txtSumLimitVal;
+        chd.Coll_txtSumPartDat = decl.collcesijainsertmapping.Coll_txtSumPartDat;
+        chd.Coll_txtSumPartVal = decl.collcesijainsertmapping.Coll_txtSumPartVal;
+        chd.Coll_txtThirdRight = decl.collcesijainsertmapping.Coll_txtThirdRight;
+        chd.Coll_txtThirdRightDate = decl.collcesijainsertmapping.Coll_txtThirdRightDate;
+        chd.Coll_txtThirdRightInNom = decl.collcesijainsertmapping.Coll_txtThirdRightInNom;
+        chd.COL_TYPE_ID = decl.collcesijainsertmapping.COL_TYPE_ID;
+        chd.REAL_EST_EUSE_ID = decl.collcesijainsertmapping.REAL_EST_EUSE_ID;
+        chd.REAL_EST_NM_CUR_ID = decl.collcesijainsertmapping.REAL_EST_NM_CUR_ID;
+        chd.CUS_ID = decl.collcesijainsertmapping.CUS_ID;
+        chd.COLL_CUS_ID = decl.collcesijainsertmapping.COLL_CUS_ID;
+        chd.AMORT_PER_CAL_ID = decl.collcesijainsertmapping.AMORT_PER_CAL_ID;
+        chd.THIRD_RIGHT_CUR_ID = decl.collcesijainsertmapping.THIRD_RIGHT_CUR_ID;
+        chd.COL_PLACE = decl.collcesijainsertmapping.COL_PLACE;
+        chd.COL_COUNTY = decl.collcesijainsertmapping.COL_COUNTY;
+        chd.COL_DISTRICT = decl.collcesijainsertmapping.COL_DISTRICT;
+        chd.COL_RESI_QUAR = decl.collcesijainsertmapping.COL_RESI_QUAR;
+        chd.USE_OPEN_ID = decl.collcesijainsertmapping.USE_OPEN_ID;
+        chd.USE_ID = decl.collcesijainsertmapping.USE_ID;
+        chd.INSPOL_IND = decl.collcesijainsertmapping.INSPOL_IND;
+        chd.Coll_txtDesc = decl.collcesijainsertmapping.Coll_txtDesc;  
+        chd.recept = "CLT_CE";  
+        chd.eve_typ_id =  new java.math.BigDecimal("1609373003.0");
+        chd.Coll_txtAcumBuyValue = decl.collcesijainsertmapping.Coll_txtAcumBuyValue;
+        chd.ORIGIN_ORG_UNI_ID = decl.collcesijainsertmapping.ORIGIN_ORG_UNI_ID;
+        chd.ORG_UNI_ID = decl.collcesijainsertmapping.ORG_UNI_ID;
+        chd.COL_CAT_ID = decl.collcesijainsertmapping.col_cat_id;
+        chd.save_ver_aut_flag = decl.collcesijainsertmapping.save_ver_aut_flag;
+        chd.KolLow_txtEligibility = decl.collcesijainsertmapping.KolLow_txtEligibility;
+        chd.ColRba_txtEligibility = decl.collcesijainsertmapping.ColRba_txtEligibility;
+        chd.Kol_txtRbaEligDsc = decl.collcesijainsertmapping.Kol_txtRbaEligDsc; 
+        chd.SPEC_STATUS = decl.collcesijainsertmapping.SPEC_STATUS;   
+        chd.Kol_txtCRMHnb = decl.collcesijainsertmapping.Kol_txtCRMHnb; 
+        
+        chd.use_id_co = decl.collcesijainsertmapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.collcesijainsertmapping.Coll_txtTypeTVCode;
+        chd.contract_type=decl.collcesijainsertmapping.Coll_txtContractTypeCode;   
+    }
+
+    private void fillDeclFromCHDObj () {
+        decl.collcesijainsertmapping.COL_HEA_ID = chd.COL_HEA_ID;
+        decl.collcesijainsertmapping.Coll_txtUserLock = chd.Coll_txtUserLock;
+        decl.collcesijainsertmapping.Coll_txtCode = chd.Coll_txtCode;
+        decl.collcesijainsertmapping.STATUS = chd.STATUS;
+        decl.collcesijainsertmapping.Coll_txtOpeningTs = chd.Coll_txtOpeningTs;
+        decl.collcesijainsertmapping.EVE_ID = chd.EVE_ID;
+        decl.collcesijainsertmapping.USER_LOCK = chd.USER_LOCK;
+        
+        decl.collcesijainsertmapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.collcesijainsertmapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.collcesijainsertmapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.collcesijainsertmapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.collcesijainsertmapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.collcesijainsertmapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.collcesijainsertmapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.collcesijainsertmapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+    }
+  
+    
+}    
+            

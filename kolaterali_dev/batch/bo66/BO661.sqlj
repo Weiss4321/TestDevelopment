@@ -1,0 +1,185 @@
+package hr.vestigo.modules.collateral.batch.bo66;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO661
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo66/BO661.sqlj,v 1.3 2014/06/11 08:20:19 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+
+    private BigDecimal eve_id;
+   
+    #sql iterator Iter1 with(holdability = true) (
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        String frame_cus_acc_no,
+        String module_code,
+        String register_no,
+        String name,
+        BigDecimal ukupnaIzlozenost,
+        BigDecimal ukupnaPokrivenost
+    );
+
+
+    public BO661(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa.
+     */
+    public BigDecimal insertIntoEvent() throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            this.eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4768254704"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Eksport podataka za SOM RI rezervacije");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.debug("Ubacen event.");
+            batchContext.stopStopWatch("insertIntoEvent");
+            return this.eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            throw ex;
+        }
+    }
+    
+    /**
+     * Metoda koja vraæa datum zadnjeg izraèuna pokrivenosti za ponderiranu RBA prihvatljivost.
+     */
+    public Date selectMaxValueDate() throws SQLException
+    {
+        batchContext.startStopWatch("selectMaxValueDate");
+        Date value_date = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT MAX(value_date)
+                INTO :(value_date)
+                FROM col_proc
+                WHERE proc_type = 'P'
+                AND proc_status = '1'
+            };
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() == 100)
+            {
+                batchContext.error("Nije izvrsen izracun pokrivenosti za ponderiranu RBA prihvatljivost sto je preduvjet za ovu obradu!", ex);
+                return null;
+            }
+            batchContext.error("Greska kod dohvacanja maksimalnog datuma iz tablice COL_PROC!", ex);
+            throw ex;
+        }
+        batchContext.info("MAX VALUE_DATE = " + value_date);
+        batchContext.stopStopWatch("selectMaxValueDate");
+        return value_date;
+    }
+    
+    /**
+     * Metoda koja vraæa ID obrade za izraèun pokrivenosti za ponderiranu RBA prihvatljivost za zadani datum.
+     * @param value_date Datum izraèuna pokrivenosti
+     */
+    public BigDecimal selectColProId(Date value_date) throws SQLException
+    {
+        batchContext.startStopWatch("selectColProId");
+        BigDecimal col_pro_id = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT col_pro_id
+                INTO :(col_pro_id)
+                FROM col_proc
+                WHERE value_date = :(value_date)
+                AND proc_type = 'P'
+                AND proc_status = '1'
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja ID obrade iz tablice COL_PROC!", ex);
+            throw ex;
+        }
+        batchContext.info("COL_PRO_ID = " + col_pro_id);
+        batchContext.stopStopWatch("selectColProId");
+        return col_pro_id;
+    }
+    
+    /**
+     * Metoda koja dohvaæa potrebne podatke za obradu.
+     * @col_pro_id ID obrade za izraèun pokrivenosti za ponderiranu RBA prihvatljivost
+     */
+    public Iter1 selectData(BigDecimal col_pro_id) throws SQLException
+    {
+        batchContext.startStopWatch("selectData");
+        Iter1 iter = null;
+        
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT 
+                    b.cus_acc_id            AS cus_acc_id,
+                    b.cus_acc_no            AS cus_acc_no,
+                    b.frame_cus_acc_no      AS frame_cus_acc_no,
+                    b.module_code           AS module_code,
+                    c.register_no           AS register_no,
+                    c.name                  AS name,
+                    a.exp_balance_hrk       AS ukupnaIzlozenost,
+                    SUM(a.exp_coll_amount)  AS ukupnaPokrivenost
+                FROM
+                    cusacc_exp_coll a
+                    INNER JOIN cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                    INNER JOIN customer c ON a.cus_id = c.cus_id
+                    LEFT OUTER JOIN coll_head d ON (a.col_hea_id = d.col_hea_id AND a.cov_priority IS NOT NULL)
+                WHERE 
+                    a.col_pro_id = :(col_pro_id) AND
+                    c.cus_typ_id IN (2999,2998,999)
+                GROUP BY b.cus_acc_id, b.cus_acc_no, b.frame_cus_acc_no, b.module_code, c.register_no, c.name, a.exp_balance_hrk
+                ORDER BY 1
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja podataka za obradu (COL_PRO_ID=" + col_pro_id + ")!", ex);
+            throw ex;
+        }
+
+        batchContext.debug("Dohvaceni podaci za obradu.");
+        batchContext.stopStopWatch("selectData");
+        return iter;
+    }
+}

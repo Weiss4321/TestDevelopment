@@ -1,0 +1,1795 @@
+package hr.vestigo.modules.collateral.jcics.co39;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
+
+import hr.vestigo.framework.common.TableData;
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+#sql iterator CollHeadDetailsIter(
+		BigDecimal col_hea_id,
+		String col_num,
+		BigDecimal col_cat_id,
+		String code,
+		String name,
+		BigDecimal col_type_id,
+		String coll_type_code,
+		String coll_type_name,
+		BigDecimal real_est_nomi_valu,
+		BigDecimal real_est_nm_cur_id,
+		String eligibility,
+		String rba_eligibility,
+		BigDecimal third_right_nom,
+		String law_eligibility,
+		BigDecimal coll_mvp_ponder,
+		String inspol_ind,
+		String mortgage_status,
+		BigDecimal real_est_estn_valu, 
+		Date real_est_estn_date, 
+		Date real_est_nomi_date, 
+		BigDecimal real_est_euse_id, 
+		BigDecimal use_id_aut, 
+		String reva_date_am, 
+		String real_est_nomi_desc,
+		String real_est_add_data
+	);
+
+#sql iterator FraAgrIter(
+		BigDecimal fra_agr_id,   
+		String agreement_no, 
+		BigDecimal amount,       
+		String code_char,    
+		Date date_until,   
+		String num_of_bill,  
+		String add_data 
+	);
+
+#sql iterator CollOwnerIter( 
+		String register_no,
+		String name_leg,   
+		java.lang.Integer part_id,    
+		java.lang.Integer part_id2,   
+		java.lang.Integer own_num     
+	);  
+
+#sql iterator CollHfPriorIter( 
+		BigDecimal coll_hf_prior_id,
+		String hf_priority,
+		BigDecimal hf_rec_lop_id,
+		String agreement,
+		BigDecimal fra_agr_id,
+		String agreement_no,
+		BigDecimal hf_amount,
+		String code_char,
+		String sys_code_desc,
+		String veh_con_num,
+		String use_code_desc,
+		Date hf_date_hfc_from,
+		Date hf_date_hfc_until
+	);
+
+
+#sql iterator CollHeaIdIter( 
+	BigDecimal col_hea_id
+
+	);
+
+#sql iterator FacilityIter( 
+		String cus_acc_no,
+		String register_no
+		);
+
+
+/**
+ * 
+ * Bivsi LoxonCollateralMethods. implementira svu logiku za popunjavanje povratnih objekata, dohvat podataka itd.
+ * 
+ * 
+ * 
+ * @author hraamh
+ *
+ */
+
+public class CO398 implements LoxonCommonInterfaceData{
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co39/CO398.sqlj,v 1.9 2010/01/05 09:05:19 hraamh Exp $";
+	
+	private RemoteContext tc=null;
+	private ConnCtx connCtx;
+	private final String TRUE_S="Y";
+	private final String FALSE_S="N";
+	
+	private int mainDetailsLength=13;
+	private int billOfExchangeLength=5;
+	private int cashDepositLength=8;
+	private int longtermCollateralContractLength=6;
+	private int debentureLength=7;
+	private int evaluationLength=9;
+	private int guaranteeLength=9;
+	private int lifeInsuranceLength=8;
+	private int otherCollLength=1;
+	private int ownerLength=6;
+	private int planeLength=8;
+	private int realEstateLength=10;
+	private int securityLength=8;
+	private int shareInCompanyLength=6;
+	private int vehiclesLength=9;
+	private int vesselsLength=6;
+	private int pledgeListLength=12;
+	private int facilityLength=3;
+	private int insurancePolicyLength=8;
+	
+	private BigDecimal real_estate_id=new BigDecimal(618223);
+	
+	private BigDecimal machinery_id= new BigDecimal(61777);
+	
+	private BigDecimal rba_rec_lood_id=null;
+	
+	private CacheMemoryData cache=null;
+	
+	private CollateralCategoryData caller=CollateralCategoryData.NONE;
+	
+	//VEKTORI
+	
+	private Vector CollateralMainDetails= null;
+	private Vector CollateralBillOfExchange=null;
+	private Vector CollateralCashDeposit=null;
+	private Vector LongtermCollateralContract=null;
+	private Vector CollateralDebenture=null;
+	private Vector CollateralEvaluation=null;
+	private Vector CollateralGuarantee=null;
+	private Vector CollateralLifeInsurance=null;
+	private Vector CollateralOwner=null;
+	private Vector CollateralPlane=null;
+	private Vector CollateralRealEstate=null;
+	private Vector CollateralSecurity=null;
+	private Vector CollateralShareInCompany=null;
+	private Vector CollateralVehicles=null;
+	private Vector CollateralVessels=null;
+	private Vector CollPledgeList=null;
+	private Vector Facility=null;
+	private Vector CollateralOther=null;
+	private Vector InsurancePolicy=null;
+	
+	
+	public void reset(){
+		CollateralMainDetails= new Vector();
+		CollateralBillOfExchange=new Vector();
+		CollateralCashDeposit=new Vector();
+		LongtermCollateralContract=new Vector();
+		CollateralDebenture=new Vector();
+		CollateralEvaluation=new Vector();
+		CollateralGuarantee=new Vector();
+		CollateralLifeInsurance=new Vector();
+		CollateralOwner=new Vector();
+		CollateralPlane=new Vector();
+		CollateralRealEstate=new Vector();
+		CollateralSecurity=new Vector();
+		CollateralShareInCompany=new Vector();
+		CollateralVehicles=new Vector();
+		CollateralVessels=new Vector();
+		CollPledgeList=new Vector();
+		Facility=new Vector();
+		CollateralOther=new Vector();
+		InsurancePolicy=new Vector();
+		
+		cache= new CacheMemoryData();
+	}
+	
+	public CO398(){
+		rba_rec_lood_id= new BigDecimal(1602772003);		
+		reset();
+	}
+	
+	public void setContext(RemoteContext context) throws SQLException{
+		this.tc=context;
+		this.connCtx=tc.getContext();
+	}
+	
+	public CO398(RemoteContext tc) throws SQLException{
+		this.tc=tc;
+		this.connCtx=tc.getContext();
+		rba_rec_lood_id= new BigDecimal(1602772003);		
+		reset();
+	}
+	
+	/**
+	* Provjerava da li je ulazni string dozvoljene duljine. ako prelazi dozvoljenu duljinu reze ostatak.
+	* 
+	* @param input ulazni string
+	* @param max_size maksimalna duljina string
+	* @return trimani ulazni string 
+	*/
+	private String checkAndCut(String input, int max_size){
+		String result=null;
+		if(input!=null){
+			result=input.trim();
+			if(result.length()>max_size){
+				result=result.substring(0, max_size);
+			}
+		}
+		return result;
+	}
+	/**
+	 * Vraca Vektor koji sadrzi elemente ulaznog u istom poretku
+	 * 
+	 * @param field ulazno polje objekata
+	 * @return Vector s ulaznim objektima
+	 */
+	private Vector getVector(Object[] field){
+		StringBuffer row= new StringBuffer();
+		if (field!=null) {
+			Vector result = new Vector(field.length);
+			for (int i = 0; i < field.length; i++) {
+				if((field[i]!=null) && (field[i] instanceof Boolean)) {	
+					System.out.println(" BOOLEAN TO STRING");
+					field[i]=booleanToString((Boolean)field[i]);
+				}
+				
+				result.add(field[i]);
+				row.append(field[i]).append(";");
+			}
+			tc.debug("\nVector: "+row);
+			return result;
+		}else{
+			return new Vector();
+		}
+	}
+		
+	private String vectorToString(Vector vector){
+		StringBuffer row= new StringBuffer();
+		if(vector==null) return row.toString();
+		for (int i = 0; i < vector.size(); i++) {
+			row.append(vector.get(i)).append(";");
+		}
+		return row.toString();
+	}
+	
+	
+	/**
+	* Dohvat oznake valute preko id-a
+	* 
+	* @param cur_id id valute
+	* @return oznaka valute
+	*/
+	public String getCurrencyChar(BigDecimal cur_id) throws SQLException{
+		if (cur_id==null) return null;
+		String result=null;
+		#sql[connCtx]{
+			select code_char
+			into :(result)
+			from currency 
+			where cur_id=:(cur_id)
+		};
+		return result;
+	}
+	
+	public String getUserCodeDesc(BigDecimal use_cod_val_id) throws SQLException{
+		if (use_cod_val_id==null) return null;
+		String result=null;
+		#sql[connCtx]{
+			select use_code_desc
+			into :(result)
+			from user_code_value
+			where use_cod_val_id=:(use_cod_val_id)
+		};
+		return result;
+	}
+	
+	/**
+	 * Vraca register_no i name u mapi (pod istoimenim kljucevima) iz talice customer
+	 * 
+	 * @param cus_id
+	 * @return register_no i name u mapi
+	 * @throws SQLException
+	 */
+	public Map getCustomerById(BigDecimal cus_id) throws SQLException{
+		Map result=new HashMap();
+		if (cus_id==null) return result;
+		String name=null;
+		String register_no=null;
+		
+		#sql[connCtx]{
+			select 
+				register_no, name 
+			into 
+				:(register_no), :(name)
+			from customer 
+			where cus_id=:(cus_id)
+		};
+		result.put("name", name);
+		result.put("register_no", register_no);
+		return result;
+	}
+	
+	
+	/**
+	 * Vraca register_no i name u mapi (pod istoimenim kljucevima) iz talice customer preko app_user tablice i use_id-a
+	 * 
+	 * @param use_id
+	 * @return register_no i name u mapi
+	 * @throws SQLException
+	 */
+	
+	public Map getCustomerByUseId(BigDecimal use_id) throws SQLException{
+		System.out.println("getCustomerByUseId... use_id:"+use_id);
+		Map result=new HashMap();
+		if (use_id==null) return result;
+		String name=null;
+		String register_no=null;
+		
+		#sql[connCtx]{
+
+			select 
+				b.register_no, b.name 
+			into 
+				:(register_no), :(name)
+			from app_user a, customer b
+			where a.use_id=:(use_id) and a.cus_id=b.cus_id
+		};
+		result.put("name", name);
+		result.put("register_no", register_no);
+		return result;
+	}
+	
+	
+	/**
+	 * Vraca register_no i name u mapi (pod istoimenim kljucevima) iz talice customer preko app_user tablice i use_id-a
+	 * 
+	 * @param use_id
+	 * @return register_no i name u mapi
+	 * @throws SQLException
+	 */
+	public Map getUserByUseId(BigDecimal use_id) throws SQLException{
+		Map result=new HashMap();
+		if (use_id==null) return result;
+		String name=null;
+		String register_no=null;
+		
+		#sql[connCtx]{
+
+			select 
+				login, user_name
+			into 
+				:(register_no), :(name)
+			from app_user 
+			where use_id=:(use_id)
+		};
+		result.put("name", name);
+		result.put("register_no", register_no);
+		return result;
+	}
+	
+	public CollHeadDetailsIter getCollHeadDetailsIterById(BigDecimal col_hea_id) throws SQLException{
+		CollHeadDetailsIter result=null;
+		#sql [connCtx] result={
+			select 
+				a.col_hea_id,
+				a.col_num,
+				a.col_cat_id,
+				b.code,
+				b.name,
+				a.col_type_id,
+				c.coll_type_code,
+				c.coll_type_name,
+				a.real_est_nomi_valu,
+				a.real_est_nm_cur_id,
+				a.eligibility,
+				a.rba_eligibility,
+				a.third_right_nom,
+				a.law_eligibility,
+				a.coll_mvp_ponder,
+				a.inspol_ind,
+				a.mortgage_status,
+				a.real_est_estn_valu, 
+				a.real_est_estn_date, 
+				a.real_est_nomi_date, 
+				a.real_est_euse_id, 
+				a.use_id_aut, 
+				a.reva_date_am, 
+				a.real_est_nomi_desc,
+				a.real_est_add_data
+			from
+				coll_head a,
+				coll_category b,
+				collateral_type c
+			where
+				a.col_hea_id=:(col_hea_id) and
+				a.col_cat_id=b.col_cat_id and
+				a.col_type_id=c.coll_type_id
+		        };
+		return result;
+	}
+	
+	public CollHeadDetailsIter getCollHeadDetailsIterByColNum(String col_num) throws SQLException{
+		CollHeadDetailsIter result=null;
+		#sql [connCtx] result={
+			select 
+				a.col_hea_id,
+				a.col_num,
+				a.col_cat_id,
+				b.code,
+				b.name,
+				a.col_type_id,
+				c.coll_type_code,
+				c.coll_type_name,
+				a.real_est_nomi_valu,
+				a.real_est_nm_cur_id,
+				a.eligibility,
+				a.rba_eligibility,
+				a.third_right_nom,
+				a.law_eligibility,
+				a.coll_mvp_ponder,
+				a.inspol_ind,
+				a.mortgage_status,
+				a.real_est_estn_valu, 
+				a.real_est_estn_date, 
+				a.real_est_nomi_date, 
+				a.real_est_euse_id, 
+				a.use_id_aut, 
+				a.reva_date_am, 
+				a.real_est_nomi_desc,
+				a.real_est_add_data
+			from
+				coll_head a,
+				coll_category b,
+				collateral_type c
+			where
+				a.col_num=:(col_num) and
+				a.col_cat_id=b.col_cat_id and
+				a.col_type_id=c.coll_type_id
+		        };
+		return result;
+	}
+	
+	private MainCollateralData makeMainCollateralData(CollHeadDetailsIter iter) throws SQLException{
+		MainCollateralData result= new MainCollateralData();
+		
+		result.collateralCMID=iter.col_num();
+		result.collateralGroupCode=iter.code();
+		result.collateralGroupName=iter.name();
+		result.collateralTypeCode=iter.coll_type_code();
+		result.collateralTypeName=iter.coll_type_name();
+		result.nominalValue=iter.real_est_nomi_valu();
+		result.currency=getCurrencyChar(iter.real_est_nm_cur_id());
+		result.eligibilityIndicator=iter.eligibility();
+		result.localEligInd=iter.rba_eligibility();
+		result.priorClaimsAmount=iter.third_right_nom();
+		result.legalOpinionYN=iter.law_eligibility();
+		result.discount=iter.coll_mvp_ponder();
+		result.insuranceYN=iter.inspol_ind();
+		
+		
+		result.mortgage_status=iter.mortgage_status();
+		result.col_hea_id= iter.col_hea_id(); 
+		result.col_cat_id= iter.col_cat_id();
+		result.col_typ_id= iter.col_type_id();
+		
+		result.evaluationAmountExternal=iter.real_est_estn_valu();
+		result.evaluationAmountInternal=iter.real_est_nomi_valu();
+		result.evaluationDateExternal=iter.real_est_estn_date(); 
+		result.evaluationDateInternal=iter.real_est_nomi_date(); 
+		
+		Map customer=getCustomerById(iter.real_est_euse_id());		
+	
+		result.evaluationAppraiserIDExternal=(String) customer.get("register_no"); 
+		result.evaluationAppraiserNameExternal=(String) customer.get("name"); 		
+		
+		Map user=getUserByUseId(iter.use_id_aut());
+			
+		result.evaluationAppraiserIDInternal=(String) user.get("register_no"); 		
+		result.evaluationAppraiserNameInternal=(String) user.get("name"); 
+		
+		result.evaluationRevaluationYN=iter.reva_date_am(); 
+		result.evaluationCommentExternal=iter.real_est_nomi_desc(); 
+		result.evaluationCommentInternal =iter.real_est_add_data();
+		
+		return result;
+	}
+	
+	private FraAgrIter getFraAgrIter(BigDecimal fra_agr_id) throws SQLException{
+		FraAgrIter result=null;
+		#sql [connCtx] result={
+			select
+				a.fra_agr_id,
+				a.agreement_no,
+				a.amount,
+				b.code_char,
+				a.date_until,
+				a.num_of_bill,
+				a.add_data
+			from
+				frame_agreement a, currency b
+			where
+				a.cur_id=b.cur_id and
+				a.fra_agr_id = :(fra_agr_id)
+		};
+		return result;
+	}
+	
+	private Vector getLongtermCollateralContract(BigDecimal fra_agr_id) throws SQLException{
+		tc.debug("getLongtermCollateralContract... "+fra_agr_id);
+		Object[] field= new Object[longtermCollateralContractLength];		
+		#sql [connCtx]{
+			select
+				a.agreement_no,
+				a.amount,
+				b.code_char,
+				a.date_until,
+				a.num_of_bill,
+				a.add_data
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5])
+			from
+				frame_agreement a, 
+				currency b
+			where
+				a.cur_id=b.cur_id and
+				a.fra_agr_id = :(fra_agr_id)
+		        };		
+		field[0]=checkAndCut((String)field[0], 20);
+		field[2]=checkAndCut((String)field[2], 3);
+		field[4]=checkAndCut((String)field[4], 2);
+		field[5]=checkAndCut((String)field[5], 1024);				
+		return getVector(field);
+	}
+	
+	private Vector getCollateralBillOfExchange(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[billOfExchangeLength];		
+		#sql [connCtx]{
+			select 
+				a.ser_let, 
+				a.ser_no, 
+				a.issue_date,
+				b.name,
+		        c.number
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+		        :(field[4])
+			from 
+				coll_bill_exch a left outer join
+				political_map b
+				on a.isu_place_id=b.pol_map_id
+		        inner join coll_head c on (a.col_hea_id=c.col_hea_id) 
+			where
+				a.col_hea_id=:(col_hea_id)
+	
+			};		
+		field[0]=checkAndCut((String)field[0], 2);
+		field[1]=checkAndCut((String)field[1], 20);	
+		field[3]=checkAndCut((String)field[3], 64);	
+		return getVector(field);
+	}
+	
+	private Vector getCollateralCashDeposit(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[cashDepositLength];		
+		#sql [connCtx]{
+			select
+				a.cde_reg_no,
+				a.cde_bank,
+				a.cde_account,
+				a.cde_amount,
+				b.code_char,
+				a.cde_dep_from,
+				a.cde_dep_unti
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5]),
+				:(field[6])
+			from
+				coll_cashdep a,
+				currency b
+			where
+				a.cde_cur_id=b.cur_id and
+				a.col_hea_id = :(col_hea_id)
+			};		
+		field[0]=checkAndCut((String)field[0], 10);
+		field[1]=checkAndCut((String)field[1], 30);
+		field[2]=checkAndCut((String)field[2], 24);		
+		field[4]=checkAndCut((String)field[4], 3);	
+		return getVector(field);
+	}
+	
+	
+	private Vector getCollateralDebenture(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[debentureLength];		
+		#sql [connCtx]{
+			select
+				b.use_code_desc,
+				a.payee_reg_no,
+				a.payee_data,
+				c.use_code_desc,
+				a.issue_date,
+				d.name  
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5])
+			from
+				coll_loanstock a 
+				left outer join user_code_value b on a.sto_typ_id =b.use_cod_val_id
+				left outer join user_code_value c on a.role_id =c.use_cod_val_id 
+				left outer join political_map d on a.isu_place_id=d.pol_map_id
+			where
+				a.col_hea_id=:(col_hea_id)
+			};		
+		field[0]=checkAndCut((String)field[0], 16);
+		field[1]=checkAndCut((String)field[1], 20);
+		field[2]=checkAndCut((String)field[2], 160);		
+		field[3]=checkAndCut((String)field[3], 30);	
+		field[5]=checkAndCut((String)field[5], 30);	
+		return getVector(field);
+	}
+	
+	private Vector getCollateralGuarantee(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[guaranteeLength];		
+		#sql [connCtx]{
+			select 
+				a.guar_iss_regno, 
+				a.cocunut, 
+				a.guar_issuer,
+				b.shortcut_char,
+				a.respiro,
+				a.guar_datn_from,
+				a.guar_datn_unti,
+				a.guar_add_data 
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5]),
+				:(field[6]),
+				:(field[7])
+			from 
+				coll_guarantee a left outer join
+				country b
+				on a.guar_cou_id=b.cou_id
+			where
+				a.col_hea_id=:(col_hea_id)
+			};		
+		field[0]=checkAndCut((String)field[0], 10);
+		field[1]=checkAndCut((String)field[1], 16);
+		field[2]=checkAndCut((String)field[2], 140);		
+		field[3]=checkAndCut((String)field[3], 3);	
+		
+		/*
+		if("D".equals(field[4])){
+			//field[4]= new Boolean(true);
+			field[4]=TRUE_S;
+		}else if("N".equals(field[4])){
+			//field[4]= new Boolean(false);
+			field[4]=FALSE_S;
+		}else{
+			
+			field[4]= null;
+		}
+		*/		
+		field[7]=checkAndCut((String)field[7], 400);	
+		return getVector(field);
+	}
+	
+	private Vector getCollateralLifeInsurance(BigDecimal col_hea_id) throws SQLException{
+			Object[] field= new Object[lifeInsuranceLength];		
+			#sql [connCtx]{
+				select 
+					b.ic_code,
+					b.ic_name,
+					a.ip_code,
+					c.int_pol_type_name,
+					a.ip_amount,
+					a.ip_paid_until,
+					a.ip_valid_until
+				into
+					:(field[0]),
+					:(field[1]),
+					:(field[2]),
+					:(field[3]),
+					:(field[4]),
+					:(field[5]),
+					:(field[6])
+				from 
+					coll_inspolicy a left outer join insu_company b on (a.ip_cus_id = b.ic_id),
+					insu_policy_type c
+				where
+					a.col_hea_id=:(col_hea_id) and
+					a.ip_type_id=c.int_pol_type_id
+				};	
+			
+			field[0]=checkAndCut((String)field[0], 10);
+			field[1]=checkAndCut((String)field[1], 30);
+			field[2]=checkAndCut((String)field[2], 24);		
+			field[3]=checkAndCut((String)field[3], 64);				
+			return getVector(field);
+	}
+	
+	private Vector getCollateralOther(BigDecimal col_hea_id, BigDecimal col_cat_id) throws SQLException{
+		Object[] field= new Object[otherCollLength];	
+        try{
+		#sql [connCtx]{
+			select 
+				b.ic_code,
+				b.ic_name,
+				a.ip_code,
+				c.int_pol_type_name,
+				a.ip_amount,
+				a.ip_paid_until,
+				a.ip_valid_until
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5]),
+				:(field[6])
+			from 
+				coll_inspolicy a left outer join insu_company b on (a.ip_cus_id = b.ic_id),
+				insu_policy_type c
+			where
+				a.col_hea_id=:(col_hea_id) and
+				a.ip_type_id=c.int_pol_type_id
+			};	
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()!=100){
+                throw sqle;
+            }else{
+                return getVector(null);
+            }
+        }
+		
+		field[0]=checkAndCut((String)field[0], 100);
+		return getVector(field);
+	}
+	
+	
+	
+	/**
+	* Dohvaca valsnika kolaterala i vraca prvog vlasnika s podacima u Vectoru.
+	* Ako ne nade nikoga vraca null;
+	* 
+	* @param col_hea_id id kolaterala
+	* @return prvog vlasnika s podacima u Vectoru; ako ne nade nikoga vraca null
+	*/
+	private Vector getCollateralOwner(BigDecimal col_hea_id) throws SQLException{
+		CollOwnerIter owner=null;
+		Vector result=null;
+		#sql [connCtx] owner={
+			select
+				a.register_no,
+				a.name_leg,
+				a.part_id,
+				a.part_id2,
+				a.own_num
+			from
+				coll_owner a,
+				customer b
+			where 
+				a.col_hea_id = :(col_hea_id) and
+				a.cus_id = b.cus_id and
+				b.status = '0' 
+				order by ser_num	
+			FETCH FIRST ROW ONLY
+		};		
+		if(owner!=null){
+			while(owner.next()){
+				result=new Vector();
+				result.add(checkAndCut(owner.register_no(),10));
+				result.add(checkAndCut(owner.name_leg(),30));
+				result.add(owner.part_id());
+				result.add(owner.part_id2());
+				result.add(owner.own_num());
+			}
+		}					
+		return result;
+	}
+
+	private Vector getCollateralPlane(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[planeLength];		
+		#sql [connCtx]{
+			select
+				mov_typ_code,
+				mov_model,
+				mov_ser_num,
+				mov_made_year,
+				mov_reg_sign,
+				mov_hr_reg,
+				mov_dsc
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5]),
+				:(field[6])
+			from
+				coll_movable a, movable_type b
+			where
+				a.col_hea_id = :(col_hea_id) and
+				a.mov_typ_id=b.mov_typ_id
+		};		
+		field[0]=checkAndCut((String)field[0], 64);
+		field[1]=checkAndCut((String)field[1], 64);
+		field[2]=checkAndCut((String)field[2], 64);	
+		field[3]=new Integer((String)field[3]);	
+		field[4]=checkAndCut((String)field[4], 25);	
+		field[5]=checkAndCut((String)field[5], 25);	
+		field[6]=checkAndCut((String)field[6], 1024);	
+		return getVector(field);
+	}
+  
+	private Vector getCollateralRealEstate(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[realEstateLength];	
+		String re_sub_type_desc=null;
+		#sql [connCtx]{
+			select
+				b.real_es_type_desc,
+				c.re_sub_type_code,
+				a.real_est_land_regn,
+				a.real_est_land_sub,
+				a.real_est_pdesc,
+				a.real_est_sqrm2,
+				d.co_code,
+				e.name,
+				a.real_est_land_part,
+				a.coown
+			into 
+				:(field[0]),
+				:(re_sub_type_desc),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5]),
+				:(field[6]),
+				:(field[7]),
+				:(field[8])
+			from 
+				coll_restate a left outer join re_sub_type c on (a.re_sub_type_id=c.re_sub_type_id),
+				real_estate_type b,
+				coll_court d,
+				cadastre_map e
+			where
+				a.col_hea_id=:(col_hea_id) and
+				a.real_est_type= b.real_es_type_id and
+				a.real_est_court_id=d.co_id  and
+				a.real_est_cada_munc=e.cad_map_id
+			};	
+		
+		
+		field[0]=checkAndCut((String)field[0], 128);
+		//field[1]=checkAndCut((String)field[1], 128);
+		field[1]=checkAndCut((String)field[1], 100);	
+		field[2]=checkAndCut((String)field[2], 25);	
+		field[3]=checkAndCut((String)field[3], 2048);		
+		field[5]=checkAndCut((String)field[5], 50);
+		field[6]=checkAndCut((String)field[6], 64);	
+		field[7]=checkAndCut((String)field[7], 30);	
+		field[8]=checkAndCut((String)field[8], 25);	
+		return getVector(field);
+	}
+	
+	/**
+	*
+	* 
+	**/
+	private Vector getCollateralSecurity(BigDecimal col_hea_id) throws SQLException{
+        Object[] field= new Object[securityLength]; 
+        BigDecimal cus_id=null;
+        try{
+        #sql [connCtx]{         
+            select 
+                a.isin,
+                c.code,
+                a.stock_ind,
+                b.num_of_sec,
+                a.maturity_date,
+                d.register_no,
+                d.add_data_table,
+                d.cus_id
+            into
+                :(field[0]),
+                :(field[1]),
+                :(field[2]),
+                :(field[3]),
+                :(field[4]),
+                :(field[5]),
+                :(field[6]),
+                :(cus_id)
+            from 
+                coll_in2 a,
+                coll_vrp b,
+                stock_exchange c,
+                customer d
+            where 
+                b.col_hea_id=:(col_hea_id) and
+                a.col_in2_id =b.col_in2_id and
+                a.sto_mar_id=c.sto_exc_id and
+                a.iss_cus_id=d.cus_id
+            };
+            
+            if(field[6]!=null){
+                field[6]=getAdditionalCustomerData((String)field[6], cus_id);
+            }
+            
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                return getVector(null);
+            }else{
+                throw sqle;
+            }
+        }
+        
+        field[0]=checkAndCut((String)field[0], 20);
+        field[1]=checkAndCut((String)field[1], 10);
+        field[2]=checkAndCut((String)field[2], 1);  
+ 
+
+        field[5]=checkAndCut((String)field[5], 10);    
+        field[6]=checkAndCut((String)field[6], 128); 
+   
+        return getVector(field);
+	}
+	/**
+	*
+	* 
+	**/
+	private Vector getCollateralShareInCompany(BigDecimal col_hea_id) throws SQLException{
+        Object[] field= new Object[shareInCompanyLength]; 
+        BigDecimal cus_id=null;
+        try{
+        #sql [connCtx]{         
+            select 
+                b.register_no,
+                b.add_data_table,
+                a.market_amount,
+                c.code_char,
+                a.tem_kap_per,
+                b.cus_id
+            into
+                :(field[0]),
+                :(field[1]),
+                :(field[2]),
+                :(field[3]),
+                :(field[4]),
+                :(cus_id)
+            from 
+                coll_vrp a,
+                customer b,
+                currency c
+            where
+                a.col_hea_id=:(col_hea_id) and
+                a.iss_cus_id =b.cus_id and 
+                a.nom_cur_id= c.cur_id
+            };
+            
+            if(field[1]!=null){
+                field[1]=getAdditionalCustomerData((String)field[1], cus_id);
+            }
+            
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                return getVector(null);
+            }else{
+                throw sqle;
+            }
+        }
+        
+        field[0]=checkAndCut((String)field[0], 10);
+        field[1]=checkAndCut((String)field[1], 128);
+            
+        field[2]=checkAndCut((String)field[3], 3);  
+        return getVector(field);
+	}
+    
+    /**
+     * dohvat dodatnih podataka za komitenta, ovisno o dodatnoj tablici
+     * 
+     * @param add_data_table dodatna tablica
+     * @param cus_id id komitenta
+     * @return name atribut iz dodatne tablice
+     * @throws SQLException
+     */
+    private String getAdditionalCustomerData(String add_data_table, BigDecimal cus_id) throws SQLException{
+        String result=null;
+        if(add_data_table!=null){
+            if(add_data_table.equalsIgnoreCase("CITIZEN")){
+                #sql [connCtx]{
+                    select name into :(result) from citizen where cus_id=:(cus_id)
+                };
+            }else if(add_data_table.equalsIgnoreCase("CRAFTSMAN")){
+                #sql [connCtx]{
+                    select name into :(result) from craftsman where cus_id=:(cus_id)
+                };
+            }else if(add_data_table.equalsIgnoreCase("LEGAL_ENTITY")){
+                #sql [connCtx]{
+                    select name into :(result) from legal_entity where cus_id=:(cus_id)
+                };
+            }
+        }
+        return result;
+        
+    }
+	
+	private Vector getCollateralVehicles(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[vehiclesLength];		
+		#sql [connCtx]{			
+			select
+				b.veh_gro_code,
+				a.veh_vin_num,
+				a.veh_made_year,
+				a.veh_made,
+				a.veh_type,
+				a.veh_model,
+				a.veh_colour,
+				a.veh_lic_reamark
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5]),
+				:(field[6]),
+				:(field[7])
+			from
+				coll_vehicle a, vehicle_group b
+			where
+				a.col_hea_id = :(col_hea_id) and
+				a.veh_group_id=b.veh_gro_id 
+			};		
+		field[0]=checkAndCut((String)field[0], 128);
+		field[1]=checkAndCut((String)field[1], 18);
+		field[2]=checkAndCut((String)field[2], 4);	
+		field[3]=checkAndCut((String)field[3], 38);	
+		field[4]=checkAndCut((String)field[4], 25);	
+		field[5]=checkAndCut((String)field[5], 100);	
+		field[6]=checkAndCut((String)field[6], 38);	
+		field[7]=checkAndCut((String)field[7], 512);	
+		return getVector(field);
+	}
+	
+	private Vector getCollateralVessels(BigDecimal col_hea_id) throws SQLException{
+		Object[] field= new Object[vesselsLength];		
+		#sql [connCtx]{			
+			select 
+				b.ves_dsc as type,
+				a.ves_name,
+				c.hao_office,
+				a.ves_made_year,
+				a.ves_dsc
+			into 
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4])
+			from
+				coll_vessel a left outer join harbour_office c on (a.har_off_id=c.har_off_id),
+				vessel_type b
+			where
+				a.col_hea_id=:(col_hea_id) and
+				a.ves_typ_id=b.ves_typ_id
+			};	
+		
+		field[0]=checkAndCut((String)field[0], 64);
+		field[1]=checkAndCut((String)field[1], 25);
+		field[2]=checkAndCut((String)field[2], 18);	
+		field[3]= new Integer((String)field[3]); 
+		field[4]=checkAndCut((String)field[4], 1024);			
+		return getVector(field);
+	}
+	
+	/**
+	 * Vraca vektor s podacima o hipoteci. Prvi element u vektoru je coll_hf_prior_id a drugi fra_agr_id. ta dva elementa je potrebno maknuti 
+	 * prije prosljedivanja u konacan odgovor
+	 * 
+	 * @param col_hea_id
+	 * @return
+	 * @throws SQLException
+	 */
+	private Vector getCollPledgeList(BigDecimal col_hea_id) throws SQLException{
+		Vector result= new Vector();
+		CollHfPriorIter iter= null;
+		#sql [connCtx] iter={			
+			select
+				a.coll_hf_prior_id,
+				a.hf_priority,
+				a.hf_rec_lop_id,
+				a.agreement,
+				a.fra_agr_id,
+				b.agreement_no,
+				a.amount_ref as hf_amount,
+				c.code_char,
+				d.sys_code_desc,
+				a.veh_con_num,
+				e.use_code_desc,
+				a.hf_date_reciv,
+				a.hf_date_hfc_until
+			from 
+				coll_hf_prior a 
+				left outer join frame_agreement b on (a.fra_agr_id=b.fra_agr_id)
+				left outer join system_code_value d on (a.hf_hfc_id =d.sys_cod_val_id) 
+				left outer join user_code_value e on (a.reg_ins =e.use_cod_val_id) ,
+				currency c	
+			where
+				a.hf_coll_head_id=:(col_hea_id) and
+				a.cur_id_ref=c.cur_id
+			};	
+		if(iter!=null){
+			while(iter.next()){
+				
+				Vector tmp= new Vector();
+				tmp.add(iter.coll_hf_prior_id());
+				tmp.add(iter.fra_agr_id());
+				tmp.add(checkAndCut((String)iter.hf_priority(),2));
+				
+				if(rba_rec_lood_id.equals(iter.hf_rec_lop_id())){
+					//tmp.add(new Boolean(true));
+					tmp.add(TRUE_S);
+				}else {
+					//tmp.add( new Boolean(false));
+					tmp.add(FALSE_S);
+				}
+				
+				tmp.add(iter.agreement());
+				/*
+				if("D".equals(iter.agreement())){
+					//tmp.add(new Boolean(true));
+					tmp.add(TRUE_S);
+				}else {
+					//tmp.add( new Boolean(false));
+					tmp.add(FALSE_S);
+				}
+				*/
+				tmp.add(checkAndCut((String)iter.agreement_no(),11));
+				tmp.add(iter.hf_amount());
+				tmp.add(checkAndCut((String)iter.code_char(),3));
+				
+				tmp.add(checkAndCut((String)iter.sys_code_desc(),64));
+				tmp.add(checkAndCut((String)iter.veh_con_num(),20));
+				tmp.add(checkAndCut((String)iter.use_code_desc(),64));
+				tmp.add(iter.hf_date_hfc_from());
+				tmp.add(iter.hf_date_hfc_until());
+				result.add(tmp);
+			}
+		}			
+		return result;
+	}
+	
+	/**
+	 * Vraca listu Facility vektora.
+	 * 
+	 * @param col_hea_id
+	 * @return lista facility vektora; 
+	 * @throws SQLException
+	 */
+	private Vector getFacilityList(BigDecimal col_hea_id) throws SQLException{
+		Vector result= new Vector();
+		FacilityIter iter=null;
+		#sql [connCtx] iter={
+			select 
+				b.cus_acc_no, a.register_no
+			from 
+				loan_beneficiary a, cusacc_exposure b
+			where 
+				a.col_hea_id=:(col_hea_id) and
+				(a.la_acc_id = b.cus_acc_id or a.acc_no = b.cus_acc_no or a.request_no = b.request_no) and
+				a.status='A'
+				
+			union
+			
+			select 
+				b.cus_acc_no, a.register_no
+			from 
+				loan_beneficiary a, cusacc_exposure b, coll_hf_prior c
+			where 
+				c.hf_coll_head_id=:(col_hea_id) and
+				(a.la_acc_id = b.cus_acc_id or a.acc_no = b.cus_acc_no or a.request_no = b.request_no) and
+				a.coll_hf_prior_id=c.coll_hf_prior_id and
+				a.status='A'
+		};
+		
+		if (iter!=null) {
+			while(iter.next()){
+				Vector tmp= new Vector();
+				tmp.add(checkAndCut(iter.cus_acc_no(),20));
+				tmp.add(checkAndCut(iter.register_no(),10));
+				result.add(tmp);
+			}			
+		}	
+		return result;
+	}
+	
+	private Vector getInsurancePolicy(BigDecimal col_hea_id) throws SQLException{
+		try{
+			Object[] field= new Object[insurancePolicyLength];		
+			#sql [connCtx]{			
+			select
+				a.ip_code,
+				b.int_pol_type_name,
+				c.register_no,
+				d.ic_name,
+				a.ip_secu_val,
+				e.code_char,
+				a.ip_vali_until,
+				a.ip_act_noact
+			into
+				:(field[0]),
+				:(field[1]),
+				:(field[2]),
+				:(field[3]),
+				:(field[4]),
+				:(field[5]),
+				:(field[6]),
+				:(field[7])
+			from
+				insurance_policy a,
+				insu_policy_type b,
+				customer c,
+				insu_company d,
+				currency e
+			where
+				a.ip_type_id= b.int_pol_type_id and
+				a.ip_ic_id=d.ic_id and
+				d.ic_cus_id=c.cus_id and
+				a.ip_cur_id=e.cur_id
+			};	
+			
+			field[0]=checkAndCut((String)field[0], 16);
+			field[1]=checkAndCut((String)field[1], 64);
+			field[2]=checkAndCut((String)field[2], 10);	
+			field[3]=checkAndCut((String)field[3], 64);
+			
+			field[5]=checkAndCut((String)field[5], 3);
+			field[7]=checkAndCut((String)field[7], 1);
+			return getVector(field);
+		}catch (SQLException sqle){
+			if(sqle.getErrorCode()==100){
+				return null;
+			}else{
+				throw sqle;
+			}
+		}
+	}
+	
+	/*
+	public Vector getColHeaIdByExposureUserId(String register_no) throws SQLException{
+		Vector result= new Vector();
+		CollHeaIdIter iter=null;
+		#sql [connCtx] iter={
+			select distinct(a.col_hea_id) as col_hea_id
+			from loan_beneficiary a 
+			where a.register_no=:(register_no) and 
+			col_hea_id is not null
+			
+			union
+			
+			select distinct(b.hf_coll_head_id) as col_hea_id
+			from loan_beneficiary a, coll_hf_prior b 
+			where a.register_no=:(register_no) and 
+			a.coll_hf_prior_id=b.coll_hf_prior_id
+		};
+		
+		if (iter!=null) {
+			while(iter.next()){
+				result.add(iter.col_hea_id());
+			}			
+		}	
+		return result;
+	}
+	*/
+	
+	public void gatherByColNum(String col_num) throws SQLException{
+		makeDomain(getCollHeadDetailsIterByColNum(col_num));
+	}
+	
+	public void gatherByColHeaId(BigDecimal col_hea_id) throws SQLException{
+		makeDomain(getCollHeadDetailsIterById(col_hea_id));
+	}
+	
+	public void gatherByExposureUserId(String register_no) throws SQLException{
+		CollHeadDetailsIter iter=null;
+		
+		Date three_years_old= DateUtils.addOrDeductYearsFromDate(new Date(System.currentTimeMillis()), -3);
+		
+		#sql [connCtx] iter={
+			select 
+				distinct(a.col_hea_id),
+				a.col_num,
+				a.col_cat_id,
+				b.code,
+				b.name,
+				a.col_type_id,
+				c.coll_type_code,
+				c.coll_type_name,
+				a.real_est_nomi_valu,
+				a.real_est_nm_cur_id,
+				a.eligibility,
+				a.rba_eligibility,
+				a.third_right_nom,
+				a.law_eligibility,
+				a.coll_mvp_ponder,
+				a.inspol_ind,
+				a.mortgage_status,
+				a.real_est_estn_valu, 
+				a.real_est_estn_date, 
+				a.real_est_nomi_date, 
+				a.real_est_euse_id, 
+				a.use_id_aut, 
+				a.reva_date_am, 
+				a.real_est_nomi_desc,
+				a.real_est_add_data
+			from
+				coll_head a,
+				coll_category b,
+				collateral_type c,
+				loan_beneficiary d
+			where
+				d.register_no=:(register_no) and 
+				d.col_hea_id is not null and
+				d.col_hea_id=a.col_hea_id and
+				a.collateral_status in ('0','1','2','3') and
+				a.col_cat_id=b.col_cat_id and
+				a.col_type_id=c.coll_type_id
+			
+			union
+
+			select 
+				distinct (a.col_hea_id),
+				a.col_num,
+				a.col_cat_id,
+				b.code,
+				b.name,
+				a.col_type_id,
+				c.coll_type_code,
+				c.coll_type_name,
+				a.real_est_nomi_valu,
+				a.real_est_nm_cur_id,
+				a.eligibility,
+				a.rba_eligibility,
+				a.third_right_nom,
+				a.law_eligibility,
+				a.coll_mvp_ponder,
+				a.inspol_ind,
+				a.mortgage_status,
+				a.real_est_estn_valu, 
+				a.real_est_estn_date, 
+				a.real_est_nomi_date, 
+				a.real_est_euse_id, 
+				a.use_id_aut, 
+				a.reva_date_am, 
+				a.real_est_nomi_desc,
+				a.real_est_add_data
+			from
+				coll_head a,
+				coll_category b,
+				collateral_type c,
+				loan_beneficiary d,
+				coll_hf_prior e
+			where
+				d.register_no=:(register_no) and
+				d.coll_hf_prior_id=e.coll_hf_prior_id and
+				e.hf_coll_head_id=a.col_hea_id and
+				a.collateral_status in ('0','1','2','3') and
+				a.col_cat_id=b.col_cat_id and
+				a.col_type_id=c.coll_type_id
+
+			union
+
+			select 
+				distinct (a.col_hea_id),
+				a.col_num,
+				a.col_cat_id,
+				b.code,
+				b.name,
+				a.col_type_id,
+				c.coll_type_code,
+				c.coll_type_name,
+				a.real_est_nomi_valu,
+				a.real_est_nm_cur_id,
+				a.eligibility,
+				a.rba_eligibility,
+				a.third_right_nom,
+				a.law_eligibility,
+				a.coll_mvp_ponder,
+				a.inspol_ind,
+				a.mortgage_status,
+				a.real_est_estn_valu, 
+				a.real_est_estn_date, 
+				a.real_est_nomi_date, 
+				a.real_est_euse_id, 
+				a.use_id_aut, 
+				a.reva_date_am, 
+				a.real_est_nomi_desc,
+				a.real_est_add_data
+			from
+				coll_head a,
+				coll_category b,
+				collateral_type c,
+				loan_beneficiary d,
+				coll_hf_prior e
+			where
+				d.register_no=:(register_no) and
+				d.coll_hf_prior_id=e.coll_hf_prior_id and
+				e.hf_coll_head_id=a.col_hea_id and
+				a.col_cat_id=:(real_estate_id) and
+				a.collateral_status in ('N','F') and
+				date(a.user_lock)>= :(three_years_old) and
+				a.col_cat_id=b.col_cat_id and
+				a.col_type_id=c.coll_type_id
+			
+			};
+		
+		makeDomain(iter);	
+	}
+	
+	private void makeDomain(CollHeadDetailsIter iter) throws SQLException{
+		if(iter!=null){
+			while(iter.next()){	
+				System.out.println("Naden col_hea_id:"+iter.col_hea_id());
+				if(!cache.hasCollateral(iter.col_hea_id().longValue())){
+					MainCollateralData mcd= makeMainCollateralData(iter);
+					mcd.prepare();
+					getAllExtraData(mcd);
+					CollateralMainDetails.add(mcd.toMainVector());
+					CollateralEvaluation.addAll(mcd.toEvaluationVectors());
+					cache.putCollateral(iter.col_hea_id().longValue());
+					System.out.println("Stavljen col_hea_id:"+iter.col_hea_id());
+				}				
+			}			
+		}		
+	}
+	
+	
+	private void getAllExtraData(MainCollateralData mainColData) throws SQLException{
+		tc.debug("getAllExtraData ... col_hea_id:"+mainColData.col_hea_id);
+		
+		if (!mainColData.mortgage_status.equalsIgnoreCase("X")) {
+			Vector pledges= getCollPledgeList(mainColData.col_hea_id);
+			for (int i = 0; i < pledges.size(); i++) {
+				Vector tmp=(Vector) pledges.get(i);
+				
+				BigDecimal hf_prior_id=(BigDecimal) tmp.remove(0);
+				BigDecimal fra_agr_id=(BigDecimal) tmp.remove(0);				
+				tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+				CollPledgeList.add(tmp);
+				
+				if((fra_agr_id!=null)&&(!cache.hasFrameAgreement(fra_agr_id.longValue()))){
+					Vector frame_agreement=getLongtermCollateralContract(fra_agr_id);
+					LongtermCollateralContract.add(frame_agreement);
+					cache.putFrameAgreement(fra_agr_id.longValue());
+				}
+				
+			}		
+		}
+		
+		Vector owner= getCollateralOwner(mainColData.col_hea_id);
+		if(owner!=null){
+			owner.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralOwner.add(owner);
+		}
+        
+        Vector security= getCollateralSecurity();
+        if(security!=null){
+            security.insertElementAt(mainColData.collateralCMID.trim(), 0);
+            CollateralSecurity.add(security);
+        }
+        
+        Vector share= getCollateralShareInCompany();
+        if(security!=null){
+            share.insertElementAt(mainColData.collateralCMID.trim(), 0);
+            CollateralShareInCompany.add(share);
+        }
+		
+		Vector facilityList= getFacilityList(mainColData.col_hea_id);
+		for (int i = 0; i < facilityList.size(); i++) {
+			Vector facility= (Vector)facilityList.get(i);
+			facility.add(mainColData.collateralCMID.trim());
+			Facility.add(facility);
+		}
+		
+		if(machinery_id.equals(mainColData.col_typ_id)){
+			//ako je stroj popunjava se OTHER blok
+			Vector tmp=getCollateralOther(mainColData.col_hea_id, mainColData.col_cat_id);
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralOther.add(tmp);
+		}
+		
+		int col_cat_id=mainColData.col_cat_id.intValue();
+		tc.debug("col_cat_id:"+col_cat_id);
+		if (CollateralCategoryData.BILLS.equals(col_cat_id)) {
+			//
+			Vector tmp= getCollateralBillOfExchange(mainColData.col_hea_id);
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralBillOfExchange.add(tmp);
+		}else if (CollateralCategoryData.CASH_DEPOSIT.equals(col_cat_id)) {
+			Vector tmp= getCollateralCashDeposit(mainColData.col_hea_id);	
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralCashDeposit.add(tmp);
+		}else if (CollateralCategoryData.DEBENTURE.equals(col_cat_id)) {
+			Vector tmp= getCollateralDebenture(mainColData.col_hea_id);	
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralDebenture.add(tmp);
+		}else if (CollateralCategoryData.GUARANTEE.equals(col_cat_id)) {
+			Vector tmp= getCollateralGuarantee(mainColData.col_hea_id);	
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralGuarantee.add(tmp);
+		}else if (CollateralCategoryData.INSURANCE.equals(col_cat_id)) {
+			Vector tmp= getCollateralLifeInsurance(mainColData.col_hea_id);	
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralLifeInsurance.add(tmp);
+		}else if (CollateralCategoryData.REAL_ESTATE.equals(col_cat_id)) {
+			Vector tmp= getCollateralRealEstate(mainColData.col_hea_id);	
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralRealEstate.add(tmp);
+		}else if (CollateralCategoryData.VEHICLE.equals(col_cat_id)) {
+			Vector tmp= getCollateralVehicles(mainColData.col_hea_id);	
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralVehicles.add(tmp);
+		}else if (CollateralCategoryData.VESSEL.equals(col_cat_id)) {
+			Vector tmp= getCollateralVessels(mainColData.col_hea_id);	
+			tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+			CollateralVessels.add(tmp);
+		}else if (CollateralCategoryData.MOVABLE.equals(col_cat_id)) {
+			if(mainColData.col_typ_id.intValue()==60777){
+				//zrakoplovi
+				Vector tmp= getCollateralPlane(mainColData.col_hea_id);	
+				tmp.insertElementAt(mainColData.collateralCMID.trim(), 0);
+				CollateralVessels.add(tmp);
+			}
+			
+		}    
+		
+		
+	}
+	
+	public String finalResult(){
+		String result="final result: \n\n";
+		result+="\n"+iterateList(CollateralMainDetails, "CollateralMainDetails");
+		result+="\n"+iterateList(CollateralBillOfExchange, "CollateralBillOfExchange");
+		result+="\n"+iterateList(CollateralCashDeposit, "CollateralCashDeposit");
+		result+="\n"+iterateList(LongtermCollateralContract, "LongtermCollateralContract");
+		result+="\n"+iterateList(CollateralDebenture, "CollateralDebenture");
+		result+="\n"+iterateList(CollateralEvaluation, "CollateralEvaluation");
+		result+="\n"+iterateList(CollateralGuarantee, "CollateralGuarantee");
+		result+="\n"+iterateList(CollateralLifeInsurance, "CollateralLifeInsurance");
+		result+="\n"+iterateList(CollateralOwner, "CollateralOwner");
+		result+="\n"+iterateList(CollateralPlane, "CollateralPlane");
+		result+="\n"+iterateList(CollateralRealEstate, "CollateralRealEstate");
+		result+="\n"+iterateList(CollateralSecurity, "CollateralSecurity");
+		result+="\n"+iterateList(CollateralShareInCompany, "CollateralShareInCompany");
+		result+="\n"+iterateList(CollateralVehicles, "CollateralVehicles");
+		result+="\n"+iterateList(CollateralVessels, "CollateralVessels");
+		result+="\n"+iterateList(CollPledgeList, "CollPledgeList");
+		result+="\n"+iterateList(Facility, "Facility");
+		return result;
+	}
+	
+	public Map getFinalResultMap(){
+		Map result= new HashMap();
+		result.put("CollateralMainDetails",CollateralMainDetails); 
+		result.put("CollateralBillOfExchange",CollateralBillOfExchange);
+		result.put("CollateralCashDeposit",CollateralCashDeposit); 
+		result.put("LongtermCollateralContract",LongtermCollateralContract);
+		result.put("CollateralDebenture",CollateralDebenture);   
+		result.put("CollateralEvaluation",CollateralEvaluation);  
+		result.put("CollateralGuarantee",CollateralGuarantee);   
+		result.put("CollateralLifeInsurance",CollateralLifeInsurance);  
+		result.put("CollateralOwner",CollateralOwner);       
+		result.put("CollateralPlane",CollateralPlane);       
+		result.put("CollateralRealEstate",CollateralRealEstate);  
+		result.put("CollateralSecurity",CollateralSecurity);    
+		result.put("CollateralShareInCompany",CollateralShareInCompany);
+		result.put("CollateralVehicles",CollateralVehicles);
+		result.put("CollateralVessels",CollateralVessels);
+		result.put("CollPledgeList",CollPledgeList);
+		result.put("Facility",Facility);	
+		result.put("InsurancePolicy",InsurancePolicy);
+		result.put("CollateralOther",CollateralOther);
+		return result;
+	}
+	
+	private String iterateList(Vector list, String header){
+		String result=header;
+		for (int i = 0; i < list.size(); i++) {
+			result+="\n\t"+vectorToString((Vector)list.get(i));
+		}
+		return result;
+	}
+
+	/**
+	 * @param caller the caller to set
+	 */
+	public void setCaller(CollateralCategoryData caller) {
+		this.caller = caller;
+	}
+	
+	private boolean twins(BigDecimal first, BigDecimal second){
+		if(((first==null)&&(second!=null))||((first!=null)&&(second==null))){
+			return false;
+		}else if((first==null)&&(second==null)){
+			return true;
+		}else{
+			return (first.compareTo(second)==0);
+		}
+	}
+	
+	public TableData transfortToTableData(Vector input){
+		TableData td= new TableData();
+		if(input!=null){
+			System.out.println("transfortToTableData ...");
+			for (int i = 0; i < input.size(); i++) {
+				System.out.println("\t\t\t"+input.get(i));
+				td.addRow((Vector)input.get(i), null);
+			}
+		}
+		return td;
+	}
+
+	/**
+	 * @return the collateralBillOfExchange
+	 */
+	public Vector getCollateralBillOfExchange() {
+		return CollateralBillOfExchange;
+	}
+
+	/**
+	 * @return the collateralCashDeposit
+	 */
+	public Vector getCollateralCashDeposit() {
+		return CollateralCashDeposit;
+	}
+
+	/**
+	 * @return the collateralDebenture
+	 */
+	public Vector getCollateralDebenture() {
+		return CollateralDebenture;
+	}
+
+	/**
+	 * @return the collateralEvaluation
+	 */
+	public Vector getCollateralEvaluation() {
+		return CollateralEvaluation;
+	}
+
+	/**
+	 * @return the collateralGuarantee
+	 */
+	public Vector getCollateralGuarantee() {
+		return CollateralGuarantee;
+	}
+
+	/**
+	 * @return the collateralLifeInsurance
+	 */
+	public Vector getCollateralLifeInsurance() {
+		return CollateralLifeInsurance;
+	}
+
+	/**
+	 * @return the collateralMainDetails
+	 */
+	public Vector getCollateralMainDetails() {
+		return CollateralMainDetails;
+	}
+
+	/**
+	 * @return the collateralOwner
+	 */
+	public Vector getCollateralOwner() {
+		return CollateralOwner;
+	}
+
+	/**
+	 * @return the collateralPlane
+	 */
+	public Vector getCollateralPlane() {
+		return CollateralPlane;
+	}
+
+	/**
+	 * @return the collateralRealEstate
+	 */
+	public Vector getCollateralRealEstate() {
+		return CollateralRealEstate;
+	}
+
+	/**
+	 * @return the collateralSecurity
+	 */
+	public Vector getCollateralSecurity() {
+		return CollateralSecurity;
+	}
+
+	/**
+	 * @return the collateralShareInCompany
+	 */
+	public Vector getCollateralShareInCompany() {
+		return CollateralShareInCompany;
+	}
+
+	/**
+	 * @return the collateralVehicles
+	 */
+	public Vector getCollateralVehicles() {
+		return CollateralVehicles;
+	}
+
+	/**
+	 * @return the collateralVessels
+	 */
+	public Vector getCollateralVessels() {
+		return CollateralVessels;
+	}
+
+	/**
+	 * @return the collPledgeList
+	 */
+	public Vector getCollPledgeList() {
+		return CollPledgeList;
+	}
+
+	/**
+	 * @return the facility
+	 */
+	public Vector getFacility() {
+		return Facility;
+	}
+
+	/**
+	 * @return the longtermCollateralContract
+	 */
+	public Vector getLongtermCollateralContract() {
+		return LongtermCollateralContract;
+	}
+
+	/**
+	 * @return the collateralOther
+	 */
+	public Vector getCollateralOther() {
+		return CollateralOther;
+	}
+
+	/**
+	 * @return the insurancePolicy
+	 */
+	public Vector getInsurancePolicy() {
+		return InsurancePolicy;
+	}
+	
+	public String booleanToString(Boolean value){
+		if((value!=null)&&(value.booleanValue())){
+			return TRUE_S;
+		}else{
+			return FALSE_S;
+		}
+	}
+	
+}

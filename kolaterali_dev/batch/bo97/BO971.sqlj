@@ -1,0 +1,99 @@
+package hr.vestigo.modules.collateral.batch.bo97;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.batch.BatchContext;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za Izvješæe o dospijeæu hipoteka i dugoroènih sporazuma
+* @author hrakis
+*/
+public class BO971
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo97/BO971.sqlj,v 1.2 2015/03/24 08:40:33 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql iterator DataIterator (
+        String col_num,
+        String hf_priority, 
+        Date hf_date_hfc_until,
+        String cus_acc_no, 
+        Date due_date,
+        String cus_acc_status,
+        String cus_acc_orig_st,
+        String register_no, 
+        String name, 
+        BigDecimal cus_typ_id,
+        String agreement_no,
+        Date date_until
+    );
+
+    
+    public BO971(BatchContext batchContext) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+    
+    /**
+     * Metoda dohvaæa podatke za izvještaj.
+     * @return iterator s podacima
+     */
+    public DataIterator selectData() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO971.selectData");
+            
+            DataIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT 
+                    a.col_num           AS col_num,
+                    b.hf_priority       AS hf_priority, 
+                    b.hf_date_hfc_until AS hf_date_hfc_until,
+                    d.cus_acc_no        AS cus_acc_no, 
+                    d.due_date          AS due_date,
+                    d.cus_acc_status    AS cus_acc_status,
+                    d.cus_acc_orig_st   AS cus_acc_orig_st,
+                    e.register_no       AS register_no, 
+                    e.name              AS name, 
+                    e.cus_typ_id        AS cus_typ_id,
+                    f.agreement_no      AS agreement_no,
+                    f.date_until        AS date_until
+                FROM coll_head a
+                INNER JOIN coll_hf_prior b ON a.col_hea_id = b.hf_coll_head_id
+                INNER JOIN loan_beneficiary c ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                INNER JOIN cusacc_exposure d ON (c.la_acc_id = d.cus_acc_id OR c.acc_no = d.cus_acc_no OR c.request_no = d.request_no)
+                INNER JOIN customer e ON d.cus_id = e.cus_id
+                LEFT OUTER JOIN frame_agreement f ON (b.fra_agr_id = f.fra_agr_id AND f.status = 'A')
+                WHERE a.collateral_status IN ('0','1','2','3')
+                AND b.hf_status = 'A'
+                AND c.status = 'A'
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka za izvjestaj!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO971.selectData");
+        }
+    }
+
+
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

@@ -1,0 +1,107 @@
+package hr.vestigo.modules.collateral.jcics.co31;
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.framework.util.scramble.Scramble;
+
+/**  
+ * CO312 class insert data about colaterall  table CADASTRE_MAP
+ *  
+ */
+public class CO312 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co31/CO312.sqlj,v 1.2 2006/11/08 12:37:31 hrazst Exp $";
+    public DeclCO31 decl = null;
+	
+	public CO312 (DeclCO31 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext(); 
+			 int broj = 0;	
+
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n CO312 \n\n\n\n\n\n\n\n");
+			try {
+			    #sql [ctx] {SELECT COUNT(*) INTO :broj 
+			    			FROM CADASTRE_MAP 
+			    			WHERE 
+								code=:(decl.cadastremapdialoginsertm.CadastreMapDialog_txtCode) 
+							AND cad_map_typ_id=:(decl.cadastremapdialoginsertm.CAD_MAP_TYP_ID)
+							AND cou_id=:(decl.cadastremapdialoginsertm.COU_ID)
+							AND co_id=:(decl.cadastremapdialoginsertm.CO_ID)
+			    	};
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+			    	tc.debug ( "...broj: " + broj);
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+		    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO312.sqlj insert into cadastre_map SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO312.sqlj insert into cadastre_map SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO312.sqlj insert into cadastre_map SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO312: Error inserting into cadastre_map! ","err411a", null);
+            }
+            if(broj > 0){
+			    throw new VestigoTMException(1, "Transaction CO312: Error inserting into cadastre_map! ","errclt8", null);
+			}	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n CO312 \n\n\n\n\n\n\n\n");
+			
+			//INSERT INTO CADASTRE_MAP
+			try{	
+		            //generator id-a za modul Collateral
+		        	YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+					BigDecimal collaterall_id = id_generator.getNewId();
+					
+					Scramble scram = new Scramble();
+					String scramblano = scram.doScramble(decl.cadastremapdialoginsertm.CadastreMapDialog_txtName);
+				
+			    	 #sql [ctx]{	INSERT INTO CADASTRE_MAP 
+			    					          	(CAD_MAP_ID, 
+												CODE,
+												CODE_CAD_REG,
+												PARENT_CAD_MAP_ID,
+												CAD_MAP_TYP_ID,
+												NAME, 
+												NAME_SC, 
+												POL_MAP_ID, 		
+												CO_ID, 
+												COU_ID,
+												BANK_SIGN,		
+												USER_LOCK, 
+												USE_OPEN_ID,
+												USE_ID, 
+												OPEN_TS 
+			    								) 
+			    			VALUES( :collaterall_id,
+                					:(decl.cadastremapdialoginsertm.CadastreMapDialog_txtCode),
+                					:(decl.cadastremapdialoginsertm.CODE_CAD_REG),
+                					:(decl.cadastremapdialoginsertm.PARENT_CAD_MAP_ID),
+                					:(decl.cadastremapdialoginsertm.CAD_MAP_TYP_ID),
+                					:(decl.cadastremapdialoginsertm.CadastreMapDialog_txtName),
+			    					:scramblano,
+			    					:(decl.cadastremapdialoginsertm.POL_MAP_ID),
+			    					:(decl.cadastremapdialoginsertm.CO_ID),
+			    					:(decl.cadastremapdialoginsertm.COU_ID),
+			    					:(tc.getBankSign()),
+			    					current timestamp,
+									:(decl.cadastremapdialoginsertm.use_id),
+									:(decl.cadastremapdialoginsertm.use_id),
+									current timestamp
+			    					)
+         		        	}; 
+					
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n......CO312.sqlj insert into cadastre_map  SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "\n......CO312.sqlj insert into cadastre_map  SQL SQLState " + se.getSQLState());
+						tc.debug ( "\n......CO312.sqlj insert into cadastre_map  SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO312: Error inserting cadastre_map! ","err411a", null);
+			}
+			tc.debug ( "\n\n\nZavrsenon\n\n\n\n");
+		}//execute
+}	
+

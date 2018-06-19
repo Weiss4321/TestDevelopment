@@ -1,0 +1,196 @@
+package hr.vestigo.modules.collateral.jcics.coA3;
+
+import java.math.*;
+import java.util.Vector;
+import java.sql.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+#sql iterator Iter1(
+    BigDecimal col_cat_id,
+    String category_code,
+    String category_name,
+    BigDecimal col_typ_id,
+    String type_code,
+    String type_name,
+    BigDecimal col_sub_id,
+    String add_request,
+    String ponder_type,
+    BigDecimal min_value,
+    BigDecimal dfl_value,
+    BigDecimal max_value,
+    String status,
+    Date date_from,
+    Date date_until,
+    String org_uni_code_add,
+    String user_name_add,
+    Timestamp ts_add,
+    String org_uni_code_chg,
+    String user_name_chg,
+    Timestamp ts_chg
+);
+
+
+public class COA31 extends SQLJScrollableRemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA3/COA31.sqlj,v 1.2 2017/06/30 13:39:26 hrazst Exp $";
+
+    private DeclCOA3 decl;
+    private ConnCtx ctx;
+    private Iter1 iter;
+    
+    public COA31(DeclCOA3 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void executeScrollable(TransactionContext tc) throws Exception
+    {
+        setLevel(decl.ActionListLevel);
+        ctx = tc.getContext();
+        
+        #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+        
+        #sql [ctx] iter = {
+            SELECT
+                a.col_cat_id        AS col_cat_id,
+                b.code              AS category_code,
+                b.name              AS category_name,
+                a.col_typ_id        AS col_typ_id,
+                c.coll_type_code    AS type_code,
+                c.coll_type_name    AS type_name,
+                a.col_sub_id        AS col_sub_id,
+                a.add_request       AS add_request,
+                a.ponder_type       AS ponder_type,
+                a.min_value         AS min_value,
+                a.dfl_value         AS dfl_value,
+                a.max_value         AS max_value,
+                a.status            AS status,
+                a.date_from         AS date_from,
+                a.date_until        AS date_until,
+                da.code             AS org_uni_code_add,
+                ea.user_name        AS user_name_add,
+                a.create_ts         AS ts_add,
+                dc.code             AS org_uni_code_chg,
+                ec.user_name        AS user_name_chg,
+                a.user_lock         AS ts_chg
+            FROM
+                dfl_col_ponder a
+                LEFT OUTER JOIN organization_unit dc ON a.org_uni_id_chg = dc.org_uni_id
+                LEFT OUTER JOIN app_user ec ON a.use_id_chg = ec.use_id
+                LEFT OUTER JOIN organization_unit da ON a.org_uni_id = da.org_uni_id ,
+                coll_category b,
+                collateral_type c,
+                app_user ea
+            WHERE 
+                a.status = 'A' AND
+                a.col_cat_id = b.col_cat_id AND
+                a.col_typ_id = c.coll_type_id AND                
+                a.use_id = ea.use_id
+            ORDER BY 2, 3
+        };
+    }
+
+    public boolean next() throws Exception
+    {
+        return iter.next();
+    }
+
+    public void close()
+    {
+        if (iter != null)
+        {
+            try {iter.close(); }
+            catch (Exception ignored) { }
+        }
+    }
+
+    public void populateRowData() throws Exception
+    {
+        Vector row = new Vector();
+        Vector row1 = new Vector();
+        
+        row1.add(iter.category_code());
+        row.add(iter.category_name());
+        row1.add(iter.type_code());
+        row.add(iter.type_name());
+        fillDataFromCollSubtype(row, row1, iter.col_cat_id(), iter.col_typ_id(), iter.col_sub_id());
+        row.add(iter.add_request());
+        row.add(iter.ponder_type());
+        row.add(iter.min_value());
+        row.add(iter.dfl_value());
+        row.add(iter.max_value());
+        row.add(iter.status());
+        row.add(iter.date_from());
+        row.add(iter.date_until());
+        row.add(iter.org_uni_code_add());
+        row.add(iter.user_name_add());
+        row.add(iter.ts_add());
+        
+        row1.add(iter.org_uni_code_chg());
+        row1.add(iter.user_name_chg());
+        row1.add(iter.ts_chg());
+
+        decl.tblCollPonder.addRow(row, row1);
+    }
+
+    
+    private void fillDataFromCollSubtype(Vector row, Vector rowHidden, BigDecimal col_cat_id, BigDecimal col_typ_id, BigDecimal col_sub_id) throws SQLException
+    {
+        String desc = null, code = null;
+
+        if(col_sub_id!=null){         
+            try{            
+                if(new BigDecimal("618223").equals(col_cat_id))  // Nekretnine
+                {
+                    #sql [ctx]
+                    { 
+                        SELECT real_es_type_desc, real_es_type_code
+                        INTO :desc, :code
+                        FROM real_estate_type
+                        WHERE real_es_type_id = :col_sub_id
+                    };
+                }
+                else if(new BigDecimal("624223").equals(col_cat_id))  // Vozila
+                {
+                    #sql [ctx]
+                    { 
+                        SELECT veh_gro_desc, veh_gro_code
+                        INTO :desc, :code
+                        FROM vehicle_group
+                        WHERE veh_gro_id = :col_sub_id 
+                    };
+                }
+                else if(new BigDecimal("620223").equals(col_cat_id))  // Plovila
+                {
+                    #sql [ctx]
+                    { 
+                        SELECT ves_dsc, ves_code
+                        INTO :desc, :code
+                        FROM vessel_type
+                        WHERE ves_typ_id = :col_sub_id
+                    };
+                }
+                else if( ( new BigDecimal("621223").equals(col_cat_id) && new BigDecimal("60777").equals(col_typ_id) )     // Zrakoplovi
+                      || ( new BigDecimal("621223").equals(col_cat_id) && new BigDecimal("61777").equals(col_typ_id) ) )   // Strojevi
+                {
+                    #sql [ctx]
+                    { 
+                        SELECT mov_typ_dsc, mov_typ_code
+                        INTO :desc, :code
+                        FROM movable_type
+                        WHERE mov_typ_id = :col_sub_id
+                    };
+                }
+            }catch (Exception e) {
+                desc="GREŠKA U PARAMETRIZACIJI (col_sub_id=" + col_sub_id + " ne postoji).";
+                code="";
+            }      
+        }
+        
+        if(desc == null) desc = "";
+        if(code == null) code = "";
+        
+        row.add(desc);
+        rowHidden.add(code);
+    }
+}

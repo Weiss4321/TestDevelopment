@@ -1,0 +1,436 @@
+package hr.vestigo.modules.collateral.jcics.co26;
+
+import java.math.*;
+import java.sql.Date;
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO181 class selects data for ColControlListing 
+ * into list screen and puts this data into vectors LDB.
+ */
+
+
+public class CO261 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co26/CO261.sqlj,v 1.3 2006/10/18 12:46:43 hrazst Exp $";
+	
+	public DeclCO26 decl = null;
+	
+	#sql iterator Iter1 (	String login,
+			String acc_no,
+			String request_no,
+			String register_no,
+			String name,
+			java.sql.Timestamp opening_ts,
+			String coll_type_code,
+			String coll_type_name, 
+			String col_num,
+			BigDecimal real_est_nomi_valu, 
+			String code_char,
+			BigDecimal col_hea_id
+			);	
+
+	
+	private Iter1 iter1 = null;   
+			
+	public CO261 (DeclCO26 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		tc.debug ( "*************************************SQLJ 260******************************************************");
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		tc.debug ( "......CO261.sqlj DOSO DO SQL-a");
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		
+		setLevel(decl.ActionListLevel);
+		ConnCtx ctx = tc.getContext();
+		
+		String collStatus = (String) decl.COLL_STATUS;
+		if (collStatus.compareTo("M")==0){
+			collStatus="0";
+		}else if(collStatus.compareTo("A")==0){
+			collStatus="3";
+		}
+		
+		String accNo = "%";
+		if (decl.ColControlListing_txtAccNo!=null && !decl.ColControlListing_txtAccNo.equals("")){
+			accNo = decl.ColControlListing_txtAccNo.replace('*','%');
+		}
+		
+		String requestNo = "%";
+		if ( decl.ColControlListing_txtNoRequest!=null && !decl.ColControlListing_txtNoRequest.equals("")){
+			requestNo = decl.ColControlListing_txtNoRequest.replace('*','%');
+		}	
+		
+		BigDecimal refId = null;
+		if (decl.REF_ID!=null) refId = decl.REF_ID;
+
+		BigDecimal ownerId = null;
+		if(decl.OWNER_ID!=null) ownerId=decl.OWNER_ID;
+
+		
+		Date dateFrom = null;
+		if(decl.ColControlListing_txtDateFrom!=null) dateFrom = decl.ColControlListing_txtDateFrom;
+				
+		Date dateUntil = null;
+		if(decl.ColControlListing_txtDateUntil!=null){ 
+			dateUntil = decl.ColControlListing_txtDateUntil;
+		}else{ 
+			dateUntil=Date.valueOf("9999-12-31");
+		}
+		
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		tc.debug ( "*************************************SQLJ 260******************************************************");
+		tc.debug ( "......CO261.sqlj DOSO DO SQL-a");
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		if (refId!=null){
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO261.sqlj select JEDAN JEDAN");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			//sa referentom i datumom
+			if (ownerId!=null){
+				//sa vlasnikom 
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO261.sqlj select PRVI");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				#sql [ctx] iter1 = {
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE 	a.collateral_status=:collStatus
+						AND		b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.use_open_id = :refId
+						AND		b.cus_id = :ownerId
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+						UNION
+
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND 	g.hf_status='A' 
+						AND		g.hf_own_cus_id = 8218251
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.use_open_id = :refId
+						AND		b.cus_id = :ownerId
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+						ORDER BY opening_ts
+				};
+			}else{
+				//bez vlasnika
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO261.sqlj select DRUGI");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				#sql [ctx] iter1 = {
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char, a.col_hea_id
+						FROM coll_head a
+						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.use_open_id = :refId
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+						UNION
+
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char, a.col_hea_id
+						FROM coll_head a
+						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND		g.hf_status='A' 
+						AND		g.hf_own_cus_id = 8218251
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.use_open_id = :refId
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+				
+						ORDER BY opening_ts
+				};
+			}
+		}else if (ownerId!=null){
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO261.sqlj select DVA DVA");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			//referent nije unesen sigurno jel je provjereno ranije, al vlasnik je unesen
+			//sad se provjerava dal je mozda interval datuma unesen
+			if (dateFrom!=null){
+				//datum unesen
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO261.sqlj select TRECI");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				#sql [ctx] iter1 = {
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.cus_id = :ownerId
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+						UNION
+
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND		g.hf_status='A' 
+						AND		g.hf_own_cus_id = 8218251
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.cus_id = :ownerId
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+						
+						ORDER BY opening_ts
+				};
+			}else{
+				//bez datuma
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO261.sqlj select CETVRTI");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				#sql [ctx] iter1 = {
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.cus_id = :ownerId
+
+						UNION
+
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND		g.hf_status='A' 
+						AND		g.hf_own_cus_id = 8218251
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		b.cus_id = :ownerId
+						
+						ORDER BY opening_ts
+				};
+			}
+		}else{
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO261.sqlj select TRI TRI");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			//nije ni vlasnik ni referent unesen, ali mozda je datum
+			if(dateFrom!=null){
+				//datum je unesen
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO261.sqlj select PETI");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				#sql [ctx] iter1 = {
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+						UNION
+
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND		g.hf_status='A' 
+						AND		g.hf_own_cus_id = 8218251
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo	
+						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+						
+						ORDER BY opening_ts
+				};
+			}else{
+				//datum nije unesen
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO261.sqlj select SESTI");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				#sql [ctx] iter1 = {
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+
+						UNION
+
+						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, b.opening_ts, e.coll_type_code, 
+								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+						FROM coll_head a
+						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+						INNER JOIN app_user c ON b.use_open_id = c.use_id
+						INNER JOIN customer d ON b.cus_id = d.cus_id
+						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+						WHERE	a.collateral_status=:collStatus
+						AND		g.hf_status='A' 
+						AND		g.hf_own_cus_id = 8218251
+						AND 	b.acc_no LIKE :accNo
+						AND		b.request_no LIKE :requestNo
+						
+						ORDER BY opening_ts
+				};
+			}
+			
+		}
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO261.sqlj select uspješno izvršen");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		}
+
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector hidden = new Vector();
+
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		row.add(iter1.login());	
+		row.add(iter1.acc_no());
+		row.add(iter1.request_no());
+		row.add(iter1.register_no());	
+		row.add(iter1.name());
+		row.add(iter1.opening_ts());
+		row.add(iter1.coll_type_code());
+		row.add(iter1.coll_type_name());
+		row.add(iter1.col_num());
+		row.add(iter1.real_est_nomi_valu());
+		row.add(iter1.code_char());
+		
+		hidden.add(iter1.col_hea_id());
+		
+		decl.tblColControlListing.addRow(row,hidden);
+	}
+}

@@ -1,0 +1,55 @@
+package hr.vestigo.modules.collateral.jcics.co12;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO126 class selects data about DISTRICT or ResiQuar for one DISTRICT or
+ * RESIQUAR id from table POLITICAL_MAP and puts this data into
+ * vectors LDB.
+ *  
+ */
+public class CO126 extends RemoteTransaction {
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co12/CO126.sqlj,v 1.3 2006/04/13 07:38:27 hrarmv Exp $";
+
+    public DeclCO12 decl = null;
+
+    public CO126(DeclCO12 decl) {
+        this.decl = decl;
+    }
+    public void execute(TransactionContext tc) throws Exception {
+        ConnCtx ctx = tc.getContext();
+        #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        try{
+        if (decl.polmapselecttypemapping.POL_MAP_IDD_DISTRICT != null) {
+            #sql [ctx] { 
+            		SELECT polm.user_lock,
+            			   polm.code as code ,
+            			   polm.name as name 
+            		INTO   :(decl.polmapselecttypemapping.District_USER_LOCK), 
+            			   :(decl.polmapselecttypemapping.PolMapDistrictDialog_txtDistrictCode),
+            			   :(decl.polmapselecttypemapping.PolMapDistrictDialog_txtDistrictName)
+            		FROM   political_map polm 
+            		WHERE  polm.pol_map_id =:(decl.polmapselecttypemapping.POL_MAP_IDD_DISTRICT) 
+            		};
+        }
+        else {
+            #sql [ctx]  { 
+            		SELECT polm.user_lock,
+            			   polm.code as code ,
+            			   polm.name as name 
+            		INTO   :(decl.polmapselecttypemapping.District_USER_LOCK), 
+            			   :(decl.polmapselecttypemapping.PolMapResiQuarDialog_txtResiQuarCode),
+            			   :(decl.polmapselecttypemapping.PolMapResiQuarDialog_txtResiQuarName)
+            		FROM   political_map polm 
+            		WHERE  polm.pol_map_id =:(decl.polmapselecttypemapping.ResiQuar_USER_LOCK) 
+            	    };
+        }
+        }catch (java.sql.SQLException se) {
+            throw new VestigoTMException(1, "Transaction CO126: Error fetching district or resiquar from political_map! ","err411a", null);
+        }
+    }
+
+}

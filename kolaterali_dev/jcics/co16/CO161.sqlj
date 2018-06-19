@@ -1,0 +1,773 @@
+package hr.vestigo.modules.collateral.jcics.co16;
+
+import java.util.*;
+import java.math.BigDecimal;
+import hr.vestigo.framework.remote.transaction.*;
+
+//LOAN_BENEFICIARY
+/**
+ * CO161 class selects all data from table LOAN_BENEFICIARY
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+#sql iterator Iter1 (	 String acc_no ,
+		 				 String register_no ,
+						 String dwh_status,
+						 String status,
+		 				 String name ,
+		 				 BigDecimal loan_ben_id ,
+		 				 BigDecimal la_acc_id ,
+		 				 BigDecimal cus_id ,
+		 				 BigDecimal coll_hf_prior_id ,
+		 				 BigDecimal col_hea_id ,
+		 				 Integer ser_num,
+						 String request_no,
+						 String aps_rqst_no
+					 );	
+
+public class CO161 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co16/CO161.sqlj,v 1.12 2014/10/07 10:54:19 hrazst Exp $";
+	
+	public DeclCO16 decl = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO161 (DeclCO16 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+	 
+		String accNo = null;
+		if(decl.LBen_txtAccNo != null){
+			accNo = decl.LBen_txtAccNo.trim();
+		 	if(accNo.compareTo("")== 0){
+		 		accNo = null;
+		 	}
+		}
+		 
+		 
+		String requestNo = null;
+		if(decl.LBen_txtRequestNo != null){
+			requestNo = decl.LBen_txtRequestNo.trim();
+		 	if(requestNo.compareTo("")== 0){
+		 		requestNo = null;
+		 	}
+		}
+		 
+		tc.debug ( "......CO161.sqlj     decl.LBen_COLL_HF_PRIOR_ID   HIPOTEKA" +  decl.LBen_COLL_HF_PRIOR_ID);
+		tc.debug ( "......CO161.sqlj     decl.LBen_COLL_HEA_ID        GLAVA   " +  decl.LBen_COLL_HEA_ID);
+		tc.debug ( "......CO161.sqlj     decl.LBen_fra_agr_id         SPORAZUM" +  decl.LBen_fra_agr_id);
+	
+//		 if(decl.LBen_COLL_HF_PRIOR_ID != null){
+		
+// hipoteke vezane na plasman (nisu dio okvirnog sporazuma)		
+		if(decl.LBen_COLL_HF_PRIOR_ID != null && decl.LBen_fra_agr_id == null){		 	
+		 	
+		 	if(requestNo == null){
+		 	
+		 	//Plasmani za hipoteku, fiduciju ili sporazum
+		 	//00
+		 		if( (decl.LBen_CUS_ID == null) && (accNo == null) ){
+		 			#sql [ctx] iter1 = { SELECT 	
+		 								loben.acc_no as acc_no,
+		 								loben.register_no as register_no ,
+		 								a.cus_acc_status as dwh_status,
+										a.cus_acc_orig_st as status,
+		 								cust.name as name ,
+		 								loben.loan_ben_id as loan_ben_id ,
+		 								loben.la_acc_id as la_acc_id ,
+		 								loben.cus_id as cus_id ,
+		 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+		 								loben.col_hea_id as col_hea_id ,
+		 								loben.ser_num as ser_num ,
+		 								loben.request_no as request_no ,
+		 								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+ 							WHERE   loben.cus_id = cust.cus_id
+		 					AND 	
+		 							loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+		 					AND
+									loben.status = 'A'
+		 					AND 
+									loben.date_from <= current date AND loben.date_until = '9999-12-31'
+		 							};          
+		 		}
+		 	//01
+		 		if( (decl.LBen_CUS_ID == null) && (accNo != null)){
+		 			#sql [ctx] iter1 = { SELECT 	
+		 								loben.acc_no as acc_no,
+		 								loben.register_no as register_no ,
+		 								a.cus_acc_status as dwh_status,
+										a.cus_acc_orig_st as status,
+		 								cust.name as name ,
+		 								loben.loan_ben_id as loan_ben_id ,
+		 								loben.la_acc_id as la_acc_id ,
+		 								loben.cus_id as cus_id ,
+		 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+		 								loben.col_hea_id as col_hea_id ,
+		 								loben.ser_num as ser_num ,
+		 								loben.request_no as request_no ,
+		 								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+ 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+		 					AND 	loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+		 					AND 	loben.acc_no = :(decl.LBen_txtAccNo)
+		 					AND
+									loben.status = 'A'
+		 					AND 
+									loben.date_from <= current date AND loben.date_until = '9999-12-31'
+		 			};          
+		 		}
+		 	
+		 	
+		 	//10
+		 		if( (decl.LBen_CUS_ID != null) && (accNo == null)){
+		 			#sql [ctx] iter1 = { SELECT 	
+		 								loben.acc_no as acc_no,
+		 								loben.register_no as register_no ,
+		 								a.cus_acc_status as dwh_status,
+										a.cus_acc_orig_st as status,
+		 								cust.name as name ,
+		 								loben.loan_ben_id as loan_ben_id ,
+		 								loben.la_acc_id as la_acc_id ,
+		 								loben.cus_id as cus_id ,
+		 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+		 								loben.col_hea_id as col_hea_id ,
+		 								loben.ser_num as ser_num ,
+		 								loben.request_no as request_no ,
+		 								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+ 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+		 					AND 	loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+		 					AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+		 					AND
+									loben.status = 'A'
+		 					AND 
+									loben.date_from <= current date AND loben.date_until = '9999-12-31'
+		 			};          
+		 		}
+		 	//11
+		 		if( (decl.LBen_CUS_ID != null)&& (accNo != null)){
+		 			#sql [ctx] iter1 = { SELECT 	
+							loben.acc_no as acc_no,
+							loben.register_no as register_no ,
+		 					a.cus_acc_status as dwh_status,
+							a.cus_acc_orig_st as status,
+							cust.name as name ,
+							loben.loan_ben_id as loan_ben_id ,
+							loben.la_acc_id as la_acc_id ,
+							loben.cus_id as cus_id ,
+							loben.coll_hf_prior_id as coll_hf_prior_id ,
+							loben.col_hea_id as col_hea_id ,
+							loben.ser_num as ser_num ,
+		 					loben.request_no as request_no ,
+		 					loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+		 			WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+		 			AND 	loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+		 			AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+		 			AND     loben.acc_no = :(decl.LBen_txtAccNo)
+					AND
+							loben.status = 'A'
+					AND 
+							loben.date_from <= current date AND loben.date_until = '9999-12-31'
+		 				};       
+		 		}
+		 
+		 	}//decl.LBen_txtRequestNo == null
+		 	
+		 	if(requestNo != null){
+			 	
+			 	//Plasmani za hipoteku, fiduciju ili sporazum
+			 	//00
+		 		if( (decl.LBen_CUS_ID == null) && (accNo == null) ){
+			 		#sql [ctx] iter1 = { SELECT 	
+			 								loben.acc_no as acc_no,
+			 								loben.register_no as register_no ,
+		 									a.cus_acc_status as dwh_status,
+											a.cus_acc_orig_st as status,
+			 								cust.name as name ,
+			 								loben.loan_ben_id as loan_ben_id ,
+			 								loben.la_acc_id as la_acc_id ,
+			 								loben.cus_id as cus_id ,
+			 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+			 								loben.col_hea_id as col_hea_id ,
+			 								loben.ser_num as ser_num ,
+		 									loben.request_no as request_no ,
+		 									loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+	 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 					AND 	loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+			 					AND     loben.request_no = :(decl.LBen_txtRequestNo)
+		 						AND
+										loben.status = 'A'
+		 						AND 
+										loben.date_from <= current date AND loben.date_until = '9999-12-31'
+	 				};          
+			 	}
+			 	//01
+			 	if( (decl.LBen_CUS_ID == null) && (accNo != null)){
+			 		#sql [ctx] iter1 = { SELECT 	
+			 								loben.acc_no as acc_no,
+			 								loben.register_no as register_no ,
+		 									a.cus_acc_status as dwh_status,
+											a.cus_acc_orig_st as status,
+			 								cust.name as name ,
+			 								loben.loan_ben_id as loan_ben_id ,
+			 								loben.la_acc_id as la_acc_id ,
+			 								loben.cus_id as cus_id ,
+			 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+			 								loben.col_hea_id as col_hea_id ,
+			 								loben.ser_num as ser_num,
+			 								loben.request_no as request_no ,
+			 								loben.aps_rqst_no as aps_rqst_no 
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+	 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 					AND 	loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+			 					AND 	loben.acc_no = :(decl.LBen_txtAccNo)
+			 					AND     loben.request_no = :(decl.LBen_txtRequestNo)
+			 					AND
+										loben.status = 'A'
+			 					AND 
+										loben.date_from <= current date AND loben.date_until = '9999-12-31'
+			 			};          
+			 	}
+			 	
+			 	
+			 	//10
+			 		if( (decl.LBen_CUS_ID != null) && (accNo == null)){
+			 			#sql [ctx] iter1 = { SELECT 	
+			 								loben.acc_no as acc_no,
+			 								loben.register_no as register_no ,
+		 									a.cus_acc_status as dwh_status,
+											a.cus_acc_orig_st as status,
+			 								cust.name as name ,
+			 								loben.loan_ben_id as loan_ben_id ,
+			 								loben.la_acc_id as la_acc_id ,
+			 								loben.cus_id as cus_id ,
+			 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+			 								loben.col_hea_id as col_hea_id ,
+			 								loben.ser_num as ser_num ,
+			 								loben.request_no as request_no ,
+			 								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+	 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 					AND 	loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+			 					AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+			 					AND     loben.request_no = :(decl.LBen_txtRequestNo)
+			 					AND
+										loben.status = 'A'
+			 					AND 
+										loben.date_from <= current date AND loben.date_until = '9999-12-31'
+			 			};          
+			 		}
+			 	//11
+			 	if( (decl.LBen_CUS_ID != null)&& (accNo != null)){
+			 			#sql [ctx] iter1 = { SELECT 	
+								loben.acc_no as acc_no,
+								loben.register_no as register_no ,
+		 						a.cus_acc_status as dwh_status,
+								a.cus_acc_orig_st as status,
+								cust.name as name ,
+								loben.loan_ben_id as loan_ben_id ,
+								loben.la_acc_id as la_acc_id ,
+								loben.cus_id as cus_id ,
+								loben.coll_hf_prior_id as coll_hf_prior_id ,
+								loben.col_hea_id as col_hea_id ,
+								loben.ser_num as ser_num ,
+			 					loben.request_no as request_no ,
+			 					loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+					WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+					AND 	loben.coll_hf_prior_id = :(decl.LBen_COLL_HF_PRIOR_ID)
+					AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+			 		AND     loben.acc_no = :(decl.LBen_txtAccNo)
+			 		AND     loben.request_no = :(decl.LBen_txtRequestNo)
+					AND
+							loben.status = 'A'
+					AND 
+							loben.date_from <= current date AND loben.date_until = '9999-12-31'
+			 		};       
+			 	}
+		 	}//decl.LBen_txtRequestNo != null
+		 }
+		
+		
+// kolateral vezan za plasman		
+		 
+		 if(decl.LBen_COLL_HEA_ID != null){
+		 		//Plasmani za mjenicu, zaduznicu ....
+		 		//00
+		 	if( (decl.LBen_CUS_ID == null) && (accNo == null) ){
+	 			#sql [ctx] iter1 = { SELECT 	
+	 								loben.acc_no as acc_no,
+	 								loben.register_no as register_no ,
+		 							a.cus_acc_status as dwh_status,
+									a.cus_acc_orig_st as status,
+	 								cust.name as name ,
+	 								loben.loan_ben_id as loan_ben_id ,
+	 								loben.la_acc_id as la_acc_id ,
+	 								loben.cus_id as cus_id ,
+	 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+	 								loben.col_hea_id as col_hea_id ,
+	 								loben.ser_num as ser_num ,
+		 							loben.request_no as request_no ,
+		 							loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+						WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+	 					AND 	loben.col_hea_id = :(decl.LBen_COLL_HEA_ID)
+						AND
+								loben.status = 'A'
+						AND 
+								loben.date_from <= current date AND loben.date_until = '9999-12-31'
+	 				};          
+	 		}
+	 			//01
+	 		if( (decl.LBen_CUS_ID == null) && (accNo != null)){
+	 			#sql [ctx] iter1 = { SELECT 	
+	 								loben.acc_no as acc_no,
+	 								loben.register_no as register_no ,
+		 							a.cus_acc_status as dwh_status,
+									a.cus_acc_orig_st as status,
+	 								cust.name as name ,
+	 								loben.loan_ben_id as loan_ben_id ,
+	 								loben.la_acc_id as la_acc_id ,
+	 								loben.cus_id as cus_id ,
+	 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+	 								loben.col_hea_id as col_hea_id ,
+	 								loben.ser_num as ser_num ,
+	 								loben.request_no as request_no ,
+	 								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+						WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+	 					AND 	loben.col_hea_id = :(decl.LBen_COLL_HEA_ID)
+	 					AND 	loben.acc_no = :(decl.LBen_txtAccNo)
+						AND
+								loben.status = 'A'
+						AND 
+								loben.date_from <= current date AND loben.date_until = '9999-12-31'
+	 				};          
+	 		}
+	 	
+	 	
+	 			//10
+	 		if( (decl.LBen_CUS_ID != null) && (accNo == null)){
+	 			#sql [ctx] iter1 = { SELECT 	
+	 								loben.acc_no as acc_no,
+	 								loben.register_no as register_no ,
+		 							a.cus_acc_status as dwh_status,
+									a.cus_acc_orig_st as status,
+	 								cust.name as name ,
+	 								loben.loan_ben_id as loan_ben_id ,
+	 								loben.la_acc_id as la_acc_id ,
+	 								loben.cus_id as cus_id ,
+	 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+	 								loben.col_hea_id as col_hea_id ,
+	 								loben.ser_num as ser_num,
+	 								loben.request_no as request_no ,
+	 								loben.aps_rqst_no as aps_rqst_no 
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+						WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+	 					AND 	loben.col_hea_id = :(decl.LBen_COLL_HEA_ID)
+	 					AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+						AND
+								loben.status = 'A'
+						AND 
+								loben.date_from <= current date AND loben.date_until = '9999-12-31'
+	 				};          
+	 		}
+	 			//11
+	 		if( (decl.LBen_CUS_ID != null)&& (accNo != null)){
+	 			#sql [ctx] iter1 = { SELECT 	
+						loben.acc_no as acc_no,
+						loben.register_no as register_no ,
+		 				a.cus_acc_status as dwh_status,
+						a.cus_acc_orig_st as status,
+						cust.name as name ,
+						loben.loan_ben_id as loan_ben_id ,
+						loben.la_acc_id as la_acc_id ,
+						loben.cus_id as cus_id ,
+						loben.coll_hf_prior_id as coll_hf_prior_id ,
+						loben.col_hea_id as col_hea_id ,
+						loben.ser_num as ser_num ,
+	 					loben.request_no as request_no ,
+	 					loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+	 				WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+	 				AND 	loben.col_hea_id = :(decl.LBen_COLL_HEA_ID)
+	 				AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+	 				AND     loben.acc_no = :(decl.LBen_txtAccNo)
+					AND
+							loben.status = 'A'
+					AND 
+							loben.date_from <= current date AND loben.date_until = '9999-12-31'
+	 				};       
+	 		}
+	 			//Plasmani za mjenicu
+		 }
+	 
+// Milka. 05.03.2007, plasmani vezani za okvirni sporazum	
+		if(decl.LBen_fra_agr_id != null){	
+// Milka, 28.03.2007, prikazati samo aktivne slogove			 	
+			if(requestNo == null){
+			 	
+			 	//Plasmani za hipoteku, fiduciju ili sporazum
+			 	//00
+				if( (decl.LBen_CUS_ID == null) && (accNo == null) ){
+					
+		 			#sql [ctx] iter1 = { SELECT distinct	
+								loben.acc_no as acc_no,
+								loben.register_no as register_no ,
+		 						a.cus_acc_status as dwh_status,
+								a.cus_acc_orig_st as status,
+								cust.name as name ,
+								0 as loan_ben_id ,
+								loben.la_acc_id as la_acc_id ,
+								loben.cus_id as cus_id ,
+								0 as coll_hf_prior_id ,
+								0 as col_hea_id ,
+								loben.ser_num as ser_num ,
+								loben.request_no as request_no ,
+								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+					WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+					AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+					AND
+							loben.status = 'A'
+					AND 
+							loben.date_from <= current date AND loben.date_until = '9999-12-31'
+							};          					
+					
+	/*		 			#sql [ctx] iter1 = { SELECT 	
+			 								loben.acc_no as acc_no,
+			 								loben.register_no as register_no ,
+			 								cust.name as name ,
+			 								loben.loan_ben_id as loan_ben_id ,
+			 								loben.la_acc_id as la_acc_id ,
+			 								loben.cus_id as cus_id ,
+			 								loben.coll_hf_prior_id as coll_hf_prior_id ,
+			 								loben.col_hea_id as col_hea_id ,
+			 								loben.ser_num as ser_num ,loben.request_no as request_no
+			 					FROM  	loan_beneficiary loben , customer cust
+	 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 					AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+			 							};          */
+			 	}
+			 	//01
+			 	if( (decl.LBen_CUS_ID == null) && (accNo != null)){
+			 			#sql [ctx] iter1 = { SELECT distinct	
+			 								loben.acc_no as acc_no,
+			 								loben.register_no as register_no ,
+		 									a.cus_acc_status as dwh_status,
+											a.cus_acc_orig_st as status,
+			 								cust.name as name ,
+			 								0 as loan_ben_id ,
+			 								loben.la_acc_id as la_acc_id ,
+			 								loben.cus_id as cus_id ,
+			 								0 as coll_hf_prior_id ,
+			 								0 as col_hea_id ,
+			 								loben.ser_num as ser_num ,
+			 								loben.request_no as request_no ,
+			 								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+	 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 					AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+			 					AND 	loben.acc_no = :(decl.LBen_txtAccNo)
+			 					AND
+										loben.status = 'A'
+			 					AND 
+										loben.date_from <= current date AND loben.date_until = '9999-12-31'
+			 			};          
+			 	}
+			 	
+			 	
+			 	//10
+			 	if( (decl.LBen_CUS_ID != null) && (accNo == null)){
+			 			#sql [ctx] iter1 = { SELECT distinct	
+			 								loben.acc_no as acc_no,
+			 								loben.register_no as register_no ,
+		 									a.cus_acc_status as dwh_status,
+											a.cus_acc_orig_st as status,
+			 								cust.name as name ,
+			 								0 as loan_ben_id ,
+			 								loben.la_acc_id as la_acc_id ,
+			 								loben.cus_id as cus_id ,
+			 								0 as coll_hf_prior_id ,
+			 								0 as col_hea_id ,
+			 								loben.ser_num as ser_num ,
+			 								loben.request_no as request_no ,
+			 								loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+	 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 					AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+			 					AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+			 					AND
+										loben.status = 'A'
+			 					AND 
+										loben.date_from <= current date AND loben.date_until = '9999-12-31'
+			 			};          
+			 	}
+			 	//11
+			 	if( (decl.LBen_CUS_ID != null)&& (accNo != null)){
+			 			#sql [ctx] iter1 = { SELECT distinct	
+								loben.acc_no as acc_no,
+								loben.register_no as register_no ,
+		 						a.cus_acc_status as dwh_status,
+								a.cus_acc_orig_st as status,
+								cust.name as name ,
+								0 as loan_ben_id ,
+								loben.la_acc_id as la_acc_id ,
+								loben.cus_id as cus_id ,
+								0 as coll_hf_prior_id ,
+								0 as col_hea_id ,
+								loben.ser_num as ser_num ,
+			 					loben.request_no as request_no ,
+			 					loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+			 			WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 			AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+			 			AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+			 			AND     loben.acc_no = :(decl.LBen_txtAccNo)
+			 			AND
+								loben.status = 'A'
+			 			AND 
+								loben.date_from <= current date AND loben.date_until = '9999-12-31'
+			 				};       
+			 	}
+			 
+			 }//decl.LBen_txtRequestNo == null
+			 	
+			 if(requestNo != null){
+				 	
+				 	//Plasmani za hipoteku, fiduciju ili sporazum
+				 	//00
+			 	if( (decl.LBen_CUS_ID == null) && (accNo == null) ){
+				 		#sql [ctx] iter1 = { SELECT distinct	
+				 								loben.acc_no as acc_no,
+				 								loben.register_no as register_no ,
+		 										a.cus_acc_status as dwh_status,
+												a.cus_acc_orig_st as status,
+				 								cust.name as name ,
+				 								0 as loan_ben_id ,
+				 								loben.la_acc_id as la_acc_id ,
+				 								loben.cus_id as cus_id ,
+				 								0 as coll_hf_prior_id ,
+				 								0 as col_hea_id ,
+				 								loben.ser_num as ser_num ,
+			 									loben.request_no as request_no ,
+			 									loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+		 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 						AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+				 					AND     loben.request_no = :(decl.LBen_txtRequestNo)
+			 						AND
+											loben.status = 'A'
+			 						AND 
+											loben.date_from <= current date AND loben.date_until = '9999-12-31'
+		 				};          
+			 	}
+				 	//01
+			 	if( (decl.LBen_CUS_ID == null) && (accNo != null)){
+				 		#sql [ctx] iter1 = { SELECT distinct	
+				 								loben.acc_no as acc_no,
+				 								loben.register_no as register_no ,
+		 										a.cus_acc_status as dwh_status,
+												a.cus_acc_orig_st as status,
+				 								cust.name as name ,
+				 								0 as loan_ben_id ,
+				 								loben.la_acc_id as la_acc_id ,
+				 								loben.cus_id as cus_id ,
+				 								0 as coll_hf_prior_id ,
+				 								0 col_hea_id ,
+				 								loben.ser_num as ser_num,
+			 									loben.request_no as request_no ,
+			 									loben.aps_rqst_no as aps_rqst_no 
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+		 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 						AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+				 					AND 	loben.acc_no = :(decl.LBen_txtAccNo)
+				 					AND     loben.request_no = :(decl.LBen_txtRequestNo)
+			 						AND
+											loben.status = 'A'
+			 						AND 
+											loben.date_from <= current date AND loben.date_until = '9999-12-31'
+				 			};          
+			 	}
+				 	
+				 	
+				 	//10
+				if( (decl.LBen_CUS_ID != null) && (accNo == null)){
+				 			#sql [ctx] iter1 = { SELECT distinct	
+				 								loben.acc_no as acc_no,
+				 								loben.register_no as register_no ,
+		 										a.cus_acc_status as dwh_status,
+												a.cus_acc_orig_st as status,
+				 								cust.name as name ,
+				 								0 as loan_ben_id ,
+				 								loben.la_acc_id as la_acc_id ,
+				 								loben.cus_id as cus_id ,
+				 								0 as coll_hf_prior_id ,
+				 								0 as col_hea_id ,
+				 								loben.ser_num as ser_num ,
+												loben.request_no as request_no ,
+												loben.aps_rqst_no as aps_rqst_no
+		 					FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+		 							WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 						AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+				 					AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+				 					AND     loben.request_no = :(decl.LBen_txtRequestNo)
+									AND
+											loben.status = 'A'
+									AND 
+											loben.date_from <= current date AND loben.date_until = '9999-12-31'
+				 			};          
+				}
+				 	//11
+			 	if( (decl.LBen_CUS_ID != null)&& (accNo != null)){
+				 			#sql [ctx] iter1 = { SELECT distinct	
+									loben.acc_no as acc_no,
+									loben.register_no as register_no ,
+		 							a.cus_acc_status as dwh_status,
+									a.cus_acc_orig_st as status,
+									cust.name as name ,
+									0 as loan_ben_id ,
+									loben.la_acc_id as la_acc_id ,
+									loben.cus_id as cus_id ,
+									0 as coll_hf_prior_id ,
+									0 as col_hea_id ,
+									loben.ser_num as ser_num ,
+			 						loben.request_no as request_no ,
+			 						loben.aps_rqst_no as aps_rqst_no
+		 				FROM  	loan_beneficiary loben left outer join cusacc_exposure a on 
+		 							(loben.la_acc_id = a.cus_acc_id or loben.acc_no = a.cus_acc_no or loben.request_no = a.request_no),
+		 							customer cust
+						WHERE   loben.cus_id = cust.cus_id                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+			 			AND 	loben.fra_agr_id = :(decl.LBen_fra_agr_id)
+						AND 	loben.cus_id = :(decl.LBen_CUS_ID)
+				 		AND     loben.acc_no = :(decl.LBen_txtAccNo)
+				 		AND     loben.request_no = :(decl.LBen_txtRequestNo)
+			 			AND
+								loben.status = 'A'
+			 			AND 
+								loben.date_from <= current date AND loben.date_until = '9999-12-31'
+				 		};       
+			 	}
+			}//decl.LBen_txtRequestNo != null
+		}
+	 
+	}
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		//Treba paziti na redoslijed dodavanja u row da bude kao u tablici!!!
+		//tblLoanBeneficiary             
+		
+		 //Partija plasmana
+		 //Interni MB korisnika
+		 //Naziv korisnika plasmana
+
+		 
+		 
+		 
+		 //acc_no
+		 //register_no
+		 //name
+		 
+		 //loan_ben_id
+		 //la_acc_id
+		 //cus_id
+		 //coll_hf_prior_id
+		 //col_hea_id
+		 //ser_num
+		 
+
+
+		    row.add(iter1.request_no());	
+		 	row.add(iter1.acc_no());	
+		 	
+		    row.add(iter1.dwh_status());	
+		 	row.add(iter1.status());	
+		 	
+			row.add(iter1.register_no());
+			row.add(iter1.name());
+			row.add(iter1.aps_rqst_no());
+			
+		
+			//
+			row1.add(iter1.loan_ben_id());
+			row1.add(iter1.la_acc_id());
+			row1.add(iter1.cus_id());	    
+			row1.add(iter1.coll_hf_prior_id());
+			row1.add(iter1.col_hea_id());
+			row1.add(iter1.ser_num());	    
+		
+			
+		
+			//Punjenje tablice
+			decl.tblLoanBeneficiary.addRow(row,row1);
+    	
+		
+	}
+	
+}

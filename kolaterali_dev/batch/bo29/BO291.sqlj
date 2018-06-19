@@ -1,0 +1,627 @@
+package hr.vestigo.modules.collateral.batch.bo29;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.customer.common.yky0.YKY00;
+
+import hr.vestigo.modules.rba.util.TimeCounter;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+/**
+ * @author 
+          _______  _______  _______  _______ _________
+|\     /|(  ____ )(  ___  )/ ___   )(  ____ \\__   __/
+| )   ( || (    )|| (   ) |\/   )  || (    \/   ) (
+| (___) || (____)|| (___) |    /   )| (_____    | |
+|  ___  ||     __)|  ___  |   /   / (_____  )   | |
+| (   ) || (\ (   | (   ) |  /   /        ) |   | |
+| )   ( || ) \ \__| )   ( | /   (_/\/\____) |   | |
+|/     \||/   \__/|/     \|(_______/\_______)   )_(
+
+ *
+ * TODO To change the template for this generated type comment go to
+ * Window - Preferences - Java - Code Style - Code Templates
+ */
+  
+public class BO291 {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo29/BO291.sqlj,v 1.6 2008/10/01 09:32:59 hrazst Exp $";
+
+    private BatchContext bc = null;
+    private ConnCtx ctx = null;
+    private ConnCtx ctx1 = null;
+    private BigDecimal eve_id = null;    
+
+    #sql iterator IteratorFinaVehicle with (holdability = true) ( 
+            String br_sasije,
+            String ins_upisa,
+            String br_zakljucka,
+            String br_uloska,
+            String upisnicko_mjesto,
+            String upisano_pravo,
+            Date datum_upisa,
+            String status,
+            Timestamp user_lock
+        ); 
+    
+    #sql iterator IteratorReportData (
+                    String input_code,
+                    String col_num,
+                    String status,
+                    String status_desc,
+                    Timestamp proc_ts
+        );
+   
+    public BO291(BatchContext bc) {
+        this.bc = bc;
+       
+        try {            
+            this.ctx = bc.getContext();
+            this.ctx1 = new ConnCtx(bc.getNewConnection());
+       }
+        catch (SQLException e) {
+            bc.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    public void insertIntoEvent() throws Exception{  
+         
+        try{
+            
+            YXYB0 eve1 = new YXYB0(bc);
+            YXYD0 genId = new YXYD0(ctx);           
+            
+            //generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+            this.eve_id = genId.getNewId();
+        
+            HashMap event = new HashMap();
+            event.put("eve_id",this.eve_id);
+            event.put("eve_typ_id", new BigDecimal("2534657003"));
+            event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+            event.put("cmnt", "bo29: ucitavanje datoteke FINA s podacima o upisu prava banke u Upisnik."); 
+            event.put("use_id", bc.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null); 
+            event.put("bank_sign", bc.getBankSign());
+            bc.debug("eve_id " + event.get("eve_id"));
+
+            eve1.insertEvent(event);            
+            bc.updateEveID(this.eve_id);        
+      
+      } catch(Exception e){
+          throw e;
+      }
+    } 
+    
+    public BigDecimal getEveId(){
+        return this.eve_id;
+    }  
+    
+    /** Metoda dohvaca col_pro_id za dani datum, process type i status.<br>
+     * @param processDate
+     * @param procType
+     * @param status
+     * @return colProcId
+     * @throws Exception
+     */
+    public BigDecimal getColProcId(Date processDate,String procType, String status) throws Exception{
+        BigDecimal colProcId=null;
+        
+        bc.debug("getColProcId za datum:"+processDate+" i vrstu obrade=" + procType);
+        try{   
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx]{
+                    SELECT col_pro_id
+                    INTO :colProcId
+                    FROM col_proc
+                    WHERE value_date=:processDate
+                    AND   proc_type=:procType
+                    AND   proc_status=:status
+                  };
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                return null;    
+            }
+            bc.info("Greska u getColProcId za datum="+processDate+" i vrstu obrade=" + procType + " i status="+status);
+            throw sqle;  
+        } 
+        bc.info("getColProcId za datum:"+processDate+" i vrstu obrade=" + procType+ " i status="+status+" zavrsio uspjesno.");
+        return colProcId;           
+    }    
+    
+    /**Zapis pocetka obrade u COL_PROC tablicu. 
+     * @param revaDate
+     * @return
+     * @throws Exception
+     */    
+    public BigDecimal insertIntoColProc(Date processDate) throws Exception{
+        bc.debug("sqlj insertIntoColProc."); 
+        BigDecimal coll_id=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+             
+            //generator id-a za modul Collateral
+            YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+            coll_id = id_generator.getNewId();
+            
+            #sql [ctx]{ INSERT INTO COL_PROC 
+                    (
+                        COL_PRO_ID,
+                        PROC_DATE,
+                        VALUE_DATE,
+                        PROC_TYPE,
+                        PROC_WAY,
+                        PROC_STATUS,
+                        COL_NUMBER,
+                        PROC_TS,
+                        ORG_UNI_ID,
+                        USE_ID,
+                        USER_LOCK
+                    ) 
+                    VALUES( 
+                        :coll_id,
+                        current date,
+                        :processDate,
+                        '2',
+                        'A',
+                        '0',
+                        0,
+                        null,
+                        53253,
+                        1,
+                        current timestamp
+                    )
+            };  
+            
+        }catch(SQLException sqle){
+            bc.info("insertIntoColProc=" + sqle.getErrorCode());
+            bc.info("insertIntoColProc=" + sqle.getSQLState());
+            sqle.printStackTrace();
+        }catch(Exception e1){
+            bc.info("insertIntoColProc");
+            bc.info(e1.toString());
+        }        
+        bc.debug("sqlj insertIntoColProc gotov.");
+        return coll_id;        
+    } 
+    
+    /** Dohvacanje broja obradenih zapisa
+     * @param colProId - id obrade
+     * @param colNumber - broj obradenih zapisa
+     * @throws Exception
+     */
+    public BigDecimal getNumberOfRowsFromColProc(BigDecimal colProId) throws Exception{
+        bc.debug("sqlj getNumberOfRowsFromColProc."); 
+        BigDecimal colNo=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ SELECT count(*)
+                        INTO :colNo
+                        FROM in_data_dwh_item
+                        WHERE col_pro_id=:colProId                        
+            };  
+            
+        }catch(Exception e){
+            bc.info("ERROR: getNumberOfRowsFromColProc");
+            bc.info(e.toString());
+            throw e;
+        }        
+        bc.debug("sqlj getNumberOfRowsFromColProc gotov."); 
+        
+        return colNo;
+    } 
+    
+    
+    /** Update zapisa o zavrsetku kolateral obrade u tablicu col_proc.
+     * @param colProId - id obrade
+     * @param colNumber - broj obradenih zapisa
+     * @throws Exception
+     */
+    public void updateColProc(BigDecimal colProId, BigDecimal colNumber) throws Exception{
+        bc.debug("sqlj updateIntoColProc."); 
+    
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+            
+            #sql [ctx]{ UPDATE COL_PROC 
+                    SET
+                        PROC_STATUS='1',
+                        COL_NUMBER=:colNumber,
+                        PROC_TS=current timestamp
+                    WHERE
+                        col_pro_id=:colProId
+            };  
+            
+        }catch(SQLException sqle){
+            bc.info("updateIntoColProc=" + sqle.getErrorCode());
+            bc.info("updateIntoColProc=" + sqle.getSQLState());
+            sqle.printStackTrace();
+        }catch(Exception e1){
+            bc.info("updateIntoColProc");
+            bc.info(e1.toString());
+        }        
+        bc.debug("sqlj updateIntoColProc gotov.");      
+    } 
+    
+    /** Metoda dohvaca use_cod_val_id za dani use_cod_id i use_code_value .<br>
+     * @param use_cod_id
+     * @param use_code_value
+     * @return use_cod_val_id
+     * @throws Exception
+     */
+    public BigDecimal getUserCodeId(String useCodId, String useCodVal) throws Exception{
+        BigDecimal useCodValId=null;
+        
+        bc.debug("getUserCodeId za use_cod_id:"+useCodId+" i use_code_value=" + useCodVal);
+        try{   
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx]{
+                    SELECT use_cod_val_id 
+                    INTO :useCodValId
+                    FROM user_code_value 
+                    WHERE use_cod_id = :useCodId
+                    AND use_code_value = :useCodVal
+                  };
+        }catch(SQLException sqle){
+            bc.info("Greska u getUserCodeId za use_cod_id:"+useCodId+" i use_code_value=" + useCodVal);
+            throw sqle;  
+        } 
+        bc.debug("getUserCodeId za use_cod_id:"+useCodId+" i use_code_value=" + useCodVal+" zavrsio uspjesno.");
+        return useCodValId;           
+    }  
+    
+    /** Metoda dohvaca sys_cod_val_id za dani sys_cod_id i sys_code_value .<br>
+     * @param use_cod_id
+     * @param use_code_value
+     * @return use_cod_val_id
+     * @throws Exception
+     */
+    public BigDecimal getSystemCodeId(String sysCodId, String sysCodVal) throws Exception{
+        BigDecimal sysCodValId=null;
+        
+        bc.debug("getSystemCodeId za sys_cod_id:"+sysCodId+" i sys_code_value=" + sysCodVal);
+        try{   
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx]{
+                    SELECT sys_cod_val_id
+                    INTO :sysCodValId
+                    FROM system_code_value
+                    WHERE sys_cod_id = :sysCodId 
+                    AND sys_code_value= :sysCodVal
+                  };
+        }catch(SQLException sqle){
+            bc.info("Greska u getSystemCodeId za sys_cod_id:"+sysCodId+" i sys_code_value=" + sysCodVal);
+            throw sqle;  
+        } 
+        bc.debug("getSystemCodeId za sys_cod_id:"+sysCodId+" i sys_code_value=" + sysCodVal+" zavrsio uspjesno.");
+        return sysCodValId;           
+    }  
+    
+    /**Dohvaca iterator u obradenim i neobradenim slogovima<br>
+     * @param accepted - ako je true dohvacaju se preuzeti podaci, a ako je false nepreuzeti
+     * @return
+     * @throws SQLException
+     */
+    public IteratorReportData fetchDataForReport(BigDecimal colProId, boolean accepted) throws SQLException{
+        IteratorReportData iterator_pom = null;
+        int getAcceptedData=0;
+        
+        if (accepted==true){
+            getAcceptedData=1;
+        }
+        
+        try{
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx] iterator_pom={
+                    SELECT a.input_code, b.col_num, a.status, cec.err_dsc as status_desc, c.proc_ts
+                    FROM in_data_dwh_item a 
+                    INNER JOIN col_proc c ON (a.col_pro_id = c.col_pro_id)
+                    INNER JOIN col_err_code cec ON (c.proc_type=cec.proc_type AND a.status=cec.err_code)
+                    LEFT OUTER JOIN coll_head b ON (a.output_id = b.col_hea_id)
+                    WHERE  
+                        (
+                            (:getAcceptedData=1 AND a.status IN ('0','6'))
+                        OR
+                            (:getAcceptedData=0 AND a.status NOT IN ('0','6'))
+                        )
+                    AND
+                        a.col_pro_id =:(colProId) 
+                 };
+        }catch(SQLException sqle){
+            bc.info("Greska u metodi fetchDataForReport");
+            sqle.printStackTrace();
+            throw sqle;
+        }
+        return iterator_pom;        
+    } 
+    
+    
+    /**Dohvaca iterator u kojem su pohranjeni svi podaci o vozilima iz fina_vehicle tablice
+     * @return
+     * @throws SQLException
+     */
+    public IteratorFinaVehicle fetchFinaVehicle(Date processData, String procType) throws SQLException{
+        IteratorFinaVehicle iterator_pom = null;
+        
+        try{
+            #sql [ctx1] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx1] iterator_pom={
+                    SELECT  br_sasije,
+                            ins_upisa, 
+                            br_zakljucka, 
+                            br_uloska, 
+                            upisnicko_mjesto, 
+                            upisano_pravo, 
+                            datum_upisa, 
+                            status, 
+                            user_lock
+                    FROM fina_vehicle
+                    WHERE br_sasije NOT IN(
+                            SELECT input_code 
+                            FROM in_data_dwh_item iddi
+                            INNER JOIN col_proc cp ON (iddi.col_pro_id=cp.col_pro_id)
+                            WHERE   proc_type=:procType  
+                            AND     cp.value_date=:processData
+                        ) 
+                };
+        }catch(SQLException sqle){
+            bc.info("Greska u metodi fetchFinaVehicle");
+            sqle.printStackTrace();
+            throw sqle;
+        }
+        return iterator_pom;        
+    } 
+        
+    /** Dohvacanje coll head id-ja
+     * @param brSasije - broj sasije
+     * @return colHeadId - ako je uspjesno prosao select, ako je dohvatio vise od jednog vraca bigdecimal -1, i ako nije nis dohvatio vraca null
+     * @throws Exception
+     */
+    public BigDecimal getColHeaId(String brSasije) throws Exception{
+        bc.debug("sqlj getColHeaId."); 
+        BigDecimal colHeadId=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ SELECT a.col_hea_id 
+                        INTO :colHeadId
+                        FROM coll_vehicle a
+                        INNER JOIN coll_head b ON (a.col_hea_id = b.col_hea_id and b.collateral_status IN ('0','1','2','3','F')) 
+                        WHERE a.veh_vin_num = :(brSasije)                    
+            };   
+        }catch (SQLException sqle) {
+            if(sqle.getErrorCode()==-811){
+                return new BigDecimal("-1");                
+            }else if (sqle.getErrorCode()==100) {
+                return null;
+            }else{
+                bc.info("ERROR: getColHeaId");
+                bc.debug(sqle.toString());
+                throw sqle;
+            }
+        }catch(Exception e){
+            bc.info("ERROR: getColHeaId");
+            bc.info(e.toString());
+            throw e;
+        }        
+        bc.debug("sqlj getColHeaId gotov."); 
+        
+        return colHeadId;
+    } 
+    
+    /** Dohvacanje aktivne fiducije
+     * @param colHeaId - id collaterala
+     * @return collHfPriorId - id aktivne fiducije, ako je dohvatio vise od jednog vraca bigdecimal -1, ako nije nis dohvatio vraca null
+     * @throws Exception
+     */
+    public BigDecimal getCollHfPriorId(BigDecimal colHeaId) throws Exception{
+        bc.debug("sqlj getCollHfPriorId."); 
+        BigDecimal collHfPriorId=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ SELECT coll_hf_prior_id  
+                        INTO :collHfPriorId
+                        FROM coll_hf_prior 
+                        WHERE hf_own_cus_id = 8218251 
+                        AND hf_status = 'A'
+                        AND hf_coll_head_id = :(colHeaId)
+                    
+            };   
+        }catch (SQLException sqle) {
+            if(sqle.getErrorCode()==-811){
+                return new BigDecimal("-1");                
+            }else if (sqle.getErrorCode()==100) {
+                return null;
+            }else{
+                bc.info("ERROR: getCollHfPriorId");
+                bc.debug(sqle.toString());
+                throw sqle;
+            }
+        }catch(Exception e){
+            bc.info("ERROR: getCollHfPriorId");
+            bc.info(e.toString());
+            throw e;
+        }        
+        bc.debug("sqlj getCollHfPriorId gotov."); 
+        
+        return collHfPriorId;
+    }
+    
+    
+    /** Provjera da li postoji plasman
+     * @param coll_hf_prior_id -id aktivne fiducije
+     * @return ako je dohvatio vise od jednog vraca int -1, ako nije nis dohvatio vraca 0, ako je dohvatio jedan zapis vraca 1
+     * @throws Exception
+     */
+    public int checkCredit(BigDecimal collHfPriorId) throws Exception{
+        bc.debug("sqlj checkCredit."); 
+        BigDecimal laAccId=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ SELECT a.la_acc_id
+                        INTO :laAccId
+                        FROM loan_beneficiary a
+                        WHERE a.status = 'A' 
+                        AND a.coll_hf_prior_id = :(collHfPriorId)
+                    
+            };   
+        }catch (SQLException sqle) {
+            if(sqle.getErrorCode()==-811){
+                return -1;                
+            }else if (sqle.getErrorCode()==100) {
+                return 0;
+            }else{
+                bc.info("ERROR: checkCredit");
+                bc.info(sqle.toString());
+                throw sqle;
+            }
+        }catch(Exception e){
+            bc.info("ERROR: checkCredit");
+            bc.info(e.toString());
+            throw e;
+        }        
+        bc.debug("sqlj checkCredit gotov."); 
+        
+        return 1;  
+    } 
+    
+    /** Dohvacanje datuma odobrenja kredita
+     * @param coll_hf_prior_id -id aktivne fiducije
+     * @return approvalDate - ako je dohvatio vise od jednog ili ako nije nis dohvatio vraca null, inace approvalDate
+     * @throws Exception
+     */
+    public Date getApprovalDate(BigDecimal collHfPriorId) throws Exception{
+        bc.debug("sqlj getApprovalDate."); 
+        Date approvalDate=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ SELECT b.approval_date 
+                        INTO :approvalDate
+                        FROM loan_beneficiary a, cusacc_exposure b
+                        WHERE a.status = 'A' 
+                        AND (a.la_acc_id = b.cus_acc_id or a.acc_no = b.cus_acc_no or a.request_no = b.request_no)
+                        AND a.coll_hf_prior_id = :(collHfPriorId)
+                    
+            };   
+        }catch (SQLException sqle) {            
+            if (sqle.getErrorCode()==100 || sqle.getErrorCode()==-811) {
+                return null;
+            }else{
+                bc.info("ERROR: getApprovalDate");
+                bc.info(sqle.toString());
+                throw sqle;
+            }
+        }catch(Exception e){
+            bc.info("ERROR: getApprovalDate");
+            bc.info(e.toString());
+            throw e;
+        }        
+        bc.debug("sqlj getApprovalDate gotov."); 
+        
+        return approvalDate;
+    }
+    
+    /** Metoda radi update podataka u tablici coll_head.<br>
+     * @param id collateral-a (BigDecimal), objekt koji sadrzi podatke za updatanje(BO26CollHeadData.CollHeadDataProcessed)
+     * @throws Exception
+     */
+    public void updateOneCollHfPrior(BigDecimal col_hea_id, BO29Data.CollHfPriorData dataProcessed) throws Exception{
+
+
+        bc.debug("updateOneCollHfPrior za col_hea_id:"+col_hea_id);
+        try{   
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};  
+            #sql [ctx]{
+                    UPDATE coll_hf_prior
+                    SET 
+                        reg_ins=:(dataProcessed.reg_ins), 
+                        veh_con_num=:(dataProcessed.veh_con_num), 
+                        con_num=:(dataProcessed.con_num),
+                        reg_place=:(dataProcessed.reg_place),
+                        rec_lop=:(dataProcessed.rec_lop),
+                        con_date=:(dataProcessed.con_date),
+                        date_rec_lop=:(dataProcessed.date_rec_lop),
+                        hf_date_reciv=:(dataProcessed.hf_date_reciv),
+                        hf_hfc_id=:(dataProcessed.hf_hfc_id),
+                        hf_date_hfc_from=:(dataProcessed.hf_date_hfc_from)
+                    WHERE hf_coll_head_id = :(col_hea_id)
+                    };
+        }catch(SQLException sqle){  
+            bc.info("Greska u updateOneCollHfPrior za col_hea_id="+ col_hea_id + " za podatke: "+dataProcessed.toString());
+            throw sqle;  
+        } 
+        bc.debug("updateOneCollHfPrior za col_hea_id:"+col_hea_id+" zavrsio uspjesno.");
+    }
+        
+    /**Zapis obrade o jednom colateralu u COL_TURNOVER tablicu. 
+     * @param revaDate
+     * @return
+     * @throws Exception
+     */    
+    public void insertIntoInDataDwhItem(BO29Data.InDataDwnItem dataInDataDwhItem) throws Exception{
+        bc.debug("sqlj insertIntoInDataDwhItem."); 
+        BigDecimal coll_id=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+            
+            #sql [ctx]{ INSERT INTO IN_DATA_DWH_ITEM 
+                    (
+                        COL_PRO_ID,
+                        INPUT_ID,
+                        INPUT_CODE,
+                        STATUS,
+                        OUTPUT_ID
+                    ) 
+                    VALUES( 
+                        :(dataInDataDwhItem.col_pro_id),
+                        :(dataInDataDwhItem.input_id),
+                        :(dataInDataDwhItem.input_code),
+                        :(dataInDataDwhItem.status),    
+                        :(dataInDataDwhItem.output_id)
+                    )
+            }; 
+        }catch(SQLException sqle){
+            bc.info("ERROR: insertIntoInDataDwhItem errCode=" + sqle.getErrorCode());
+            bc.info("ERROR: insertIntoInDataDwhItem sqlState=" + sqle.getSQLState());
+            bc.info("ERROR: insertIntoInDataDwhItem za podatke=" + dataInDataDwhItem.toString());
+            throw sqle;
+        }catch(Exception e1){
+            bc.info("ERROR: insertIntoInDataDwhItem.");
+            bc.info("ERROR: insertIntoInDataDwhItem za podatke=" + dataInDataDwhItem.toString());
+            throw e1;
+        }        
+        bc.debug("sqlj insertIntoInDataDwhItem gotov.");     
+    }
+    
+    public String fetchRecipients() throws SQLException{
+        bc.debug("sqlj fetchRecipients."); 
+        String address = null;
+        #sql[ctx]{
+            SELECT dest_mail_address 
+            INTO :address
+            FROM report_def 
+            WHERE rpt_code = 'csv154'
+        }; 
+        bc.debug("sqlj fetchRecipients gotov."); 
+        return address;   
+    }
+    
+}

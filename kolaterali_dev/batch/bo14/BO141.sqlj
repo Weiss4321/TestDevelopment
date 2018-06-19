@@ -1,0 +1,255 @@
+package hr.vestigo.modules.collateral.batch.bo14;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*;  
+
+public class BO141 {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo14/BO141.sqlj,v 1.5 2014/05/27 14:22:02 hraaks Exp $";
+	
+	#sql public iterator Iter (
+			BigDecimal col_hea_id,
+			BigDecimal trzisna_vrijednost_valuta,
+			BigDecimal midd_rate,
+			String code_char1,
+    		Date reva_date,
+			String guar_issuer,
+			String guar_iss_regno,
+			String eco_sec,
+			String cou_iso_code,
+			Date guar_datn_unti,
+			String register_no,
+			String name,
+			String cus_acc_no,
+			BigDecimal exposure_balance,
+			String code_char2,
+			BigDecimal exp_balance_hrk
+	);
+	
+
+	private BigDecimal eve_id = null;
+	
+	private ConnCtx connCtx;
+	
+	private hr.vestigo.framework.remote.batch.BatchContext bc;
+	
+	private Iter iter = null;
+	
+	public BO141(hr.vestigo.framework.remote.batch.BatchContext bc) {
+		this.bc = bc;
+		try {
+			this.connCtx = bc.getContext();
+		}catch (SQLException e) {
+			
+		}
+	}
+	
+
+	public Iter fetchData(BO14Data p_data) throws SQLException {//dohvat podataka 
+		
+		//System.out.println("SQL USAO U fetchData(BO14Data Data) ");
+    	     
+    	try {
+    		
+    		#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    		
+    		
+    		
+    		if(p_data.getGroupOfIssuers().equals("1")){
+    			//	System.out.println("SQL USAO 1.sql ");
+    				
+   				#sql [connCtx] iter = {
+    				SELECT 
+                		d.col_hea_id, 
+    					d.real_est_estn_valu as trzisna_vrijednost_valuta,
+                		f2.midd_rate,
+            			g1.code_char as code_char1, 
+    					d.reva_date,  
+                 		e.guar_issuer, 
+                 		e.guar_iss_regno, 
+                 		c1.eco_sec, 
+                 		h.cou_iso_code,
+                 		e.guar_datn_unti,
+                 		c2.register_no,
+                 		c2.name,
+    					b.cus_acc_no,
+    					b.exposure_balance,
+    					g2.code_char as code_char2,
+    					a.exp_balance_hrk
+                  
+    				FROM 
+    					COLL_HEAD d
+    				INNER JOIN EXCHANGE_RATE f2 on  f2.cur_id = d.real_est_nm_cur_id 
+    				INNER JOIN COLL_GUARANTEE e on d.col_hea_id = e.col_hea_id
+    				LEFT OUTER JOIN CUSTOMER c1 on  c1.cus_id = e.guar_issuer_id
+    				INNER JOIN COUNTRY h on e.guar_cou_id = h.cou_id 
+    				 INNER JOIN CUSACC_EXP_COLL a on a.col_hea_id = d.col_hea_id  
+    				INNER JOIN CUSACC_EXPOSURE b on a.cus_acc_id = b.cus_acc_id  
+    				INNER JOIN CURRENCY g1 on g1.cur_id = b.contract_cur_id
+    				INNER JOIN CUSTOMER c2 on a.cus_id = c2.cus_id 
+    				INNER JOIN CURRENCY g2 on e.guar_cur_id = g2.cur_id
+    				WHERE
+                		d.collateral_status = '3' and 
+                		d.col_type_id  = :(p_data.getCollTypeCode()) and   
+                		c1.eco_sec in ('20','21','22') and
+                		c2.cus_typ_id in (2999,2998,999)
+    				
+    				};
+
+    	}else if (p_data.getGroupOfIssuers().equals("2")){
+			//	System.out.println("SQL USAO 1.sql ");
+			
+			#sql [connCtx] iter = {
+			SELECT 
+        		d.col_hea_id, 
+    			d.real_est_estn_valu as trzisna_vrijednost_valuta,
+        		f2.midd_rate,
+            	g1.code_char as code_char1, 
+    			d.reva_date,   
+         		e.guar_issuer, 
+         		e.guar_iss_regno, 
+         		c1.eco_sec, 
+         		h.cou_iso_code,
+         		e.guar_datn_unti,
+         		c2.register_no,
+         		c2.name,
+				b.cus_acc_no,
+				b.exposure_balance,
+				g2.code_char as code_char2,
+				a.exp_balance_hrk
+          
+			FROM 
+    				COLL_HEAD d
+    				INNER JOIN EXCHANGE_RATE f2 on  f2.cur_id = d.real_est_nm_cur_id 
+    				INNER JOIN COLL_GUARANTEE e on d.col_hea_id = e.col_hea_id
+    				LEFT OUTER JOIN CUSTOMER c1 on  c1.cus_id = e.guar_issuer_id
+    				INNER JOIN COUNTRY h on e.guar_cou_id = h.cou_id 
+    				 INNER JOIN CUSACC_EXP_COLL a on a.col_hea_id = d.col_hea_id  
+    				INNER JOIN CUSACC_EXPOSURE b on a.cus_acc_id = b.cus_acc_id  
+    				INNER JOIN CURRENCY g1 on g1.cur_id = b.contract_cur_id
+    				INNER JOIN CUSTOMER c2 on a.cus_id = c2.cus_id 
+    				INNER JOIN CURRENCY g2 on e.guar_cur_id = g2.cur_id
+			WHERE
+        		d.collateral_status = '3' and 
+        		d.col_type_id  = :(p_data.getCollTypeCode()) and   
+        		c1.eco_sec in ('11','92') and
+        		c2.cus_typ_id in (2999,2998,999)
+			
+			};
+    				
+    		}else if (p_data.getGroupOfIssuers().equals("3")) {
+    			//	System.out.println("SQL USAO 1.sql ");
+    			
+    			#sql [connCtx] iter = {
+    			SELECT 
+            		d.col_hea_id,
+    				d.real_est_estn_valu as trzisna_vrijednost_valuta,
+    				f2.midd_rate,
+            		g1.code_char as code_char1, 
+    				d.reva_date,  
+             		e.guar_issuer, 
+             		e.guar_iss_regno, 
+             		c1.eco_sec, 
+             		h.cou_iso_code,
+             		e.guar_datn_unti,
+             		c2.register_no,
+             		c2.name,
+    				b.cus_acc_no,
+    				b.exposure_balance,
+    				g2.code_char as code_char2,
+    				a.exp_balance_hrk
+              
+    			FROM 
+           
+    				COLL_HEAD d
+    				INNER JOIN EXCHANGE_RATE f2 on  f2.cur_id = d.real_est_nm_cur_id 
+    				INNER JOIN COLL_GUARANTEE e on d.col_hea_id = e.col_hea_id
+    				LEFT OUTER JOIN CUSTOMER c1 on  c1.cus_id = e.guar_issuer_id
+    				INNER JOIN COUNTRY h on e.guar_cou_id = h.cou_id 
+    				 INNER JOIN CUSACC_EXP_COLL a on a.col_hea_id = d.col_hea_id  
+    				INNER JOIN CUSACC_EXPOSURE b on a.cus_acc_id = b.cus_acc_id  
+    				INNER JOIN CURRENCY g1 on g1.cur_id = b.contract_cur_id
+    				INNER JOIN CUSTOMER c2 on a.cus_id = c2.cus_id 
+    				INNER JOIN CURRENCY g2 on e.guar_cur_id = g2.cur_id
+    			WHERE
+            		d.collateral_status = '3' and 
+            		d.col_type_id  = :(p_data.getCollTypeCode()) and   
+            		c1.eco_sec not in ('20','21','22','11','92') and
+            		c2.cus_typ_id in (2999,2998,999)
+    			};
+        	}	
+    			
+    	}
+    	catch (SQLException sqle) {
+    		throw sqle;
+    	}
+    	return iter;
+	} 
+
+	public BigDecimal teretiDrugih(BigDecimal col_hea_id) throws SQLException {
+	BigDecimal tereti ;
+	try {
+	#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+	#sql [connCtx]{
+		SELECT 
+			sum(i.amount_ref*f1.midd_rate) 
+		INTO
+			:(tereti)
+		FROM 
+			COLL_HF_PRIOR i       
+		    INNER  JOIN EXCHANGE_RATE f1 on  i.cur_id_ref = f1.cur_id
+		WHERE
+				i.hf_register_no = '910000' and
+		       i.hf_status = 'A' 
+		       	and i.hf_coll_head_id = :(col_hea_id)
+		};
+	
+			if (tereti == null) 
+				return new BigDecimal(0);
+			else 
+				return tereti;
+	} catch(SQLException e) {
+		if (e.getErrorCode()!=100){
+			System.out.println("SQL select  tereti drugih!!!");	
+			throw e;
+		}
+	}
+	return new BigDecimal(0);
+}
+	
+	public BigDecimal insertIntoEvent() {
+		eve_id = null;
+	
+		try {
+			YXYB0 eve1 = new YXYB0(bc); 
+			YXYD0 genId = new YXYD0(bc);
+			eve_id = genId.getNewId();
+			
+			HashMap event = new HashMap();
+			
+			event.put("eve_id",eve_id);
+			event.put("eve_typ_id",new BigDecimal("1760185003"));
+			event.put("event_date",new java.sql.Date(System.currentTimeMillis()));
+			event.put("cmnt","Izrada izvjesca - Podloga 2");
+			event.put("use_id",bc.getUserID());
+			event.put("ext_event_code",null);
+			event.put("ext_event_num",null);
+			//event.put("org_uni_id", new BigDecimal("53253"));
+			event.put("bank_sign",bc.getBankSign());
+			eve1.insertEvent(event);
+			bc.updateEveID(eve_id);
+		}
+		catch(Exception e) {
+			return null;
+		}
+		return eve_id;
+	}
+	
+}

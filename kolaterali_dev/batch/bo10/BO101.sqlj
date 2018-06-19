@@ -1,0 +1,2256 @@
+package hr.vestigo.modules.collateral.batch.bo10;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.coreapp.common.yxyG.YXYG0;
+import hr.vestigo.modules.rba.util.DecimalUtils;
+import hr.vestigo.modules.collateral.batch.bo10.InputData;
+
+#sql iterator IteratorColProcId (java.math.BigDecimal col_pro_id);
+  
+#sql iterator IteratorLoanBenId (java.math.BigDecimal loan_ben_id);
+
+#sql iterator IteratorDate(java.sql.Date deposit_date);
+
+#sql iterator IteratorDepositDWH_new with(holdability = true)(
+        String cde_typ,
+        String cde_cur,
+        java.math.BigDecimal cde_amount,
+        String cde_prolong,
+        String cde_reg_no,
+        String cde_account,
+        java.sql.Date cde_dep_from,
+        java.sql.Date cde_dep_unti,
+        String cde_owner,
+        String acc_num,
+        String loan_owner,
+        BigDecimal cas_exc_id,
+        String status
+        );
+
+#sql iterator IteratorCashDepositInModul (
+        BigDecimal col_hea_id, 
+        String col_num,
+        String cde_account,
+        String cde_cur,
+        BigDecimal cde_amount,
+        String cde_owner,
+        String cde_owner_name
+        );  
+public class BO101{
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo10/BO101.sqlj,v 1.48 2018/04/24 08:55:45 hraskd Exp $";
+		
+	public boolean debug=true;
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+	private ConnCtx conn2=null;
+	private YOY00 yoy00= null;
+	
+	private BigDecimal col_pro_id=null;
+	private HashMap hardcode=null;
+	private BigDecimal col_cat_id=null;
+	private BigDecimal org_uni_id=null;
+	private BigDecimal use_id=null;
+	private BigDecimal eve_id=null;
+	private BigDecimal col_lis_typ_id=null;
+	private BigDecimal hf_table_id=null;
+	private BigDecimal bank_cus_id=null;
+	private String bankName=null;
+	private Map exchangeRate=null;
+	
+	private String bankSign=null;
+	private Date today=null;
+	
+	private YOYM0 yoym_gctc;
+	private YOYM0 yoym_object;
+	private YOYM0 yoym_property;
+	private YOYM0 yoym_endorsement;
+	
+	
+	public BO101(BatchContext bc,BigDecimal org_uni_id, BigDecimal use_id) throws Exception{
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+		this.conn2=new ConnCtx(bc.getNewConnection());
+		this.hardcode=new HashMap();
+		this.exchangeRate= new HashMap();
+		this.bankSign=bc.getBankSign();
+		this.yoy00= new YOY00(this.bc);
+	
+		this.org_uni_id=org_uni_id;
+		this.use_id=use_id;
+		
+		col_cat_id=new BigDecimal(612223);
+		col_lis_typ_id=new BigDecimal(700223);
+		hf_table_id= new BigDecimal(1609188003);
+		bank_cus_id= new BigDecimal(8218251);	
+		bankName=selectCustomerName(bank_cus_id);
+		
+		today=new Date(System.currentTimeMillis());
+		eve_id=new BigDecimal("100000000000000");
+		hardcoding();
+		
+	    yoym_gctc = new YOYM0(bc, "gctc", today);
+	    yoym_object = new YOYM0(bc, "object_type", today);
+	    yoym_property = new YOYM0(bc, "property_type", today);
+	    yoym_endorsement = new YOYM0(bc, "endorsement_type", today);
+	}
+	
+	private void hardcoding(){
+		
+		this.hardcode.put("AKTIVNI",new BigDecimal(700223));
+		this.hardcode.put("SLOBODNI",new BigDecimal(710223));
+		this.hardcode.put("NEAKTIVNI",new BigDecimal(709223));
+		
+		this.exchangeRate.put(new BigDecimal("63999"),new BigDecimal(1));
+	}
+	 
+	/**
+	 * Dohvaca id batch obrade. ako vec postoji vraca id, ako ne (nova obrada) kreira id
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal getColProId() throws Exception{
+		if(this.col_pro_id==null){
+			YOY00 yoy00=new YOY00(this.connCtx);
+			this.col_pro_id=yoy00.getNewId();
+		}
+		return this.col_pro_id;
+	}
+	
+	public void setColProId(BigDecimal col_pro_id){
+		this.col_pro_id=col_pro_id;
+	}
+	
+	public void insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id) throws Exception{
+        bc.debug("sqlj insertIntoEvent");		
+         
+	  	try{			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(bc);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	this.eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",this.eve_id);
+		  	event.put("eve_typ_id", eve_typ_id);
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za preuzimanje podataka o vozilima iz PKR modula."); 
+		  	event.put("use_id", this.use_id);
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", bc.getBankSign());
+		   	event.put("org_uni_id", org_uni_id); 
+		  	bc.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	
+		  	/* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+		  	 * i koji se nalazi u commonu yxyA. Radi se update: 
+		  	 *    UPDATE batch_log
+		  	 *    SET eve_id = :newEveId
+			 *    WHERE bat_log_id = :batLogId 
+		  	*/
+		  	bc.updateEveID(this.eve_id);		
+	  
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}
+	
+	/**
+	 * 
+	 * @param value_date
+	 * @param proc_type
+	 * @param status
+	 * @return
+	 * @throws Exception
+	 */
+	public BigDecimal selectColProc(Date value_date,String proc_type,String status) throws Exception{
+		BigDecimal result=null;
+		IteratorColProcId iter=null;
+		try{
+			#sql [connCtx]iter={
+				SELECT  col_pro_id 
+				FROM    col_proc 
+				WHERE   value_date = :(value_date)		
+				AND     proc_status = :(status)
+				AND     proc_type = :(proc_type)
+		        WITH UR
+		    };
+			if(iter!=null){			
+				while(iter.next()){
+					result =  iter.col_pro_id();
+				    break;
+				}
+	        }       
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}
+		return result;
+	}
+	
+	/**
+	* Dohvat broja obradenih slogova (bez onih koji nisu upisani zbog gresaka)
+	* @return broj obradenih slogova
+	*/
+	public BigDecimal getRecordCount(){
+		BigDecimal result = null;
+		try{
+		    #sql [connCtx]{
+			     SELECT count(*) 
+				 INTO   :(result)
+				 FROM   in_data_dwh_item 
+				 WHERE  col_pro_id = :(col_pro_id) 
+		         AND    status<>'1'
+		         WITH UR
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj getRecordCount        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj getRecordCount      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj getRecordCount        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			return null;
+		}
+		return result;
+	}
+	
+	/**
+	 * Dohvat podataka o depozitima
+	 * @param batch_id
+	 * @return
+	 * @throws Exception
+	 */
+	public IteratorDepositDWH_new selectDepositDWH(BigDecimal batch_id) throws Exception{
+		IteratorDepositDWH_new result=null;
+		 
+		#sql [conn2] result = {
+				SELECT 
+					a.cde_typ          as cde_typ,
+					a.cde_cur          as cde_cur,
+					a.cde_amount       as cde_amount,
+					a.cde_prolong      as cde_prolong,
+					a.cde_reg_no       as cde_reg_no,
+					a.cde_account      as cde_account,
+					a.cde_dep_from     as cde_dep_from,
+					a.cde_dep_unti     as cde_dep_unti,
+					a.cde_owner        as cde_owner,
+					a.acc_num          as acc_num,
+					a.loan_owner       as loan_owner,
+		            a.dep_stat         as status,
+		            b.cas_exc_id       as cas_exc_id   
+				FROM    cashdep_dwh a 
+		        LEFT OUTER JOIN cashdep_exception b ON (a.cde_account = b.cde_account AND b.date_until = '9999-12-31')
+				WHERE  a.acc_num NOT IN
+					            (SELECT input_code
+					             FROM   in_data_dwh_item
+					             WHERE  status = '0' 
+		                         AND    col_pro_id = :(batch_id)
+					             )
+				WITH UR
+			};
+		return result; 
+	}
+	
+	/**
+	 * Gleda da li su podaci od danog datuma tj. svi podaci imaju isti datum i ako je njihov broj veci od 1
+	 * znaci da su novi podaci isporuceni
+	 * @param proc_date
+	 * @return true ako su podaci za dani datum
+	 * @throws Exception
+	 */
+	public boolean isNewDepositData(Date proc_date) throws Exception{
+		int num = 0;
+		try{
+			#sql [connCtx]{
+				SELECT count(*) 
+				INTO   :(num)
+				FROM   cashdep_dwh 
+				WHERE  date(create_ts) = :(proc_date)
+		        WITH UR
+			};
+			if(num>0){
+				return true;
+			}else{
+				return false;
+			}
+		        
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj isNewDepositData        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj isNewDepositData      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj isNewDepositData        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+	
+	/**
+	 * Dohvat datuma za koji su podaci o depozitima
+	 * @return datum podataka o depozitima
+	 */
+	public Date getDepositDate(){
+		Date result=null;
+		IteratorDate iter=null;
+		try{
+			#sql [connCtx]iter={
+				SELECT  date(create_ts) AS deposit_date 
+				FROM    cashdep_dwh
+				FETCH FIRST 1 ROWS ONLY
+		    };
+			if(iter!=null){			
+				while(iter.next()){
+					result =  iter.deposit_date();
+				    break;
+				}
+	        }
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj getDepositDate        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj getDepositDate      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj getDepositDate        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}
+		return result;
+	}
+	
+	/**
+	 * Trazi da li postoji zapis za depozit s danom sifrom
+	 * @param cde_account sifra depozita/br racuna
+	 * @param cde_reg_no Omega Id banke kod koje je depozit 
+	 * @return null ako depozit nije prethodno unesen; id ako je depozit prethodno unesen
+	 */
+	public java.math.BigDecimal SelectColCasId(String cde_account, String cde_reg_no) throws Exception{
+		java.math.BigDecimal col_cas_id = null;
+		try{
+		    #sql [connCtx]{
+			     SELECT col_cas_id
+		    	 INTO   :(col_cas_id)	
+		    	 FROM   coll_cashdep
+		    	 WHERE  cde_account = :(cde_account)
+				 AND    cde_reg_no = :(cde_reg_no)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj SelectColCasId        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj SelectColCasId      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj SelectColCasId        SQLState : " + e.getSQLState());
+			if(e.getErrorCode() == 100){
+				col_cas_id = null;
+			}else{
+				throw(e);
+			}	
+		}
+		return col_cas_id;	    
+	}
+	
+	/**
+	 * Dohvat col_cas_id i col_hea_id iz tablice coll_cashdep
+	 * @param cde_account sifra depozita/br racuna
+	 * @param cde_reg_no Omega Id banke kod koje je depozit 
+	 * @return mapu s kljucevima "col_cas_id" i "col_hea_id" te njihovim vrijednostima; null ako ne postoji z
+	 * 	zapis za dani ulaz
+	 * @throws Exception
+	 */  
+	// RTC 6438 - ukoliko se za depozit dohvati više kolaterala - sortira se po statusu kolaterala (0,1,2,3 su aktivni) i uzima se prvi (na taj naèin se uzima aktivni - ako postoji)
+	public HashMap SelectFromCollCashDeposit(String cde_account, String cde_reg_no) throws SQLException{
+		BigDecimal col_cas_id = null;
+		BigDecimal col_hea_id = null;
+		String collateral_status= null;
+		HashMap result=null;
+		 
+		#sql [connCtx]{
+		      SELECT  a.col_cas_id, a.col_hea_id, b.collateral_status
+		      INTO    :(col_cas_id), :(col_hea_id), :(collateral_status)
+		      FROM    coll_cashdep a, coll_head b
+		      WHERE   a.cde_account = :(cde_account)
+			  AND     a.cde_reg_no = :(cde_reg_no)
+			  AND     a.col_hea_id = b.col_hea_id
+		      ORDER BY b.collateral_status asc
+              FETCH FIRST ROW ONLY
+              WITH UR
+		};	
+		result= new HashMap();
+		result.put("col_cas_id",col_cas_id);
+		result.put("col_hea_id",col_hea_id);
+		result.put("collateral_status",collateral_status);
+		return result;	    
+	}
+	
+	/**
+	 * Dohvat ID za dani kod valute
+	 * @param currencyCode kod valute
+	 * @return id valute
+	 */
+	public BigDecimal selectCurrencyIdWithCodeNum(String currencyCode) throws Exception{
+		BigDecimal currencyId = null;
+		try{
+		    #sql [connCtx]{
+		        SELECT    currency.cur_id 
+		    	INTO      :(currencyId)	
+		    	FROM      currency 
+		    	WHERE     code_num = :(currencyCode)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCurrencyIdWithCodeNum        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCurrencyIdWithCodeNum      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCurrencyIdWithCodeNum        SQLState : " + e.getSQLState());
+			throw(e);
+		}
+		return currencyId;	    
+	}
+	
+	/**
+	 * Dohvat ID za danu kraticu valute
+	 * @param currencyCode kratica valute
+	 * @return id valute
+	 */
+	public BigDecimal selectCurrencyIdWithCodeChar(String codeChar) throws Exception{
+		BigDecimal currencyId = null;
+		try{
+		    #sql [connCtx]{
+					select currency.cur_id 
+		    		into :(currencyId)	
+		    		from currency 
+		    		where code_char=:(codeChar)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCurrencyIdWithCodeChar        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCurrencyIdWithCodeChar      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCurrencyIdWithCodeChar        SQLState : " + e.getSQLState());
+			throw(e);
+		}
+		return currencyId;	    
+	}
+	
+	/**
+	 * Vraca Id komitenta za dani kod komitenta. Ako ga nema ili se javi error vraca null
+	 * @param register_no Omega id komitenta
+	 * @return id komitenta, null ako ne postoji ili se javi err
+	 * @throws Exception
+	 */
+	public BigDecimal selectCustomerId(String register_no) throws Exception{
+		
+		BigDecimal customerId = null;
+		try{
+		    #sql [connCtx]{
+					SELECT  customer.cus_id 
+		    		INTO    :customerId	
+		    		FROM    customer 
+		            WHERE   register_no = :(register_no)
+		    		AND     bank_sign = :(bankSign)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCustomerId        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCustomerId      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCustomerId        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+		return customerId;
+	}
+	
+	/**
+	 * Dohvat koda korisnika preko omege id-a
+	 * @param register_no omega id
+	 * @return kod korisnika
+	 * @throws Exception
+	 */
+	public String selectCustomerCode(String register_no) throws Exception{
+		String code = null;
+		try{
+		    #sql [connCtx]{
+					SELECT  code 
+		    		INTO    :(code)	
+		    		FROM    customer 
+		            WHERE   register_no = :(register_no)
+		    		AND     bank_sign = :(bankSign)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCustomerCode        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCustomerCode      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCustomerCode        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+		return code;
+	}
+	
+	/**
+	 * Dohvaca cus_id, code i name iz tablice customer za dani register_no
+	 * @param register_no omega id
+	 * @return hash mapu s kljucevima "cus_id","name" i "code" i njihovim vrijednostima
+	 * @throws Exception
+	 */
+	public HashMap selectFromCustomer(String register_no) throws Exception{
+		
+		String code = null;
+		String name= null;
+		BigDecimal cus_id=null;
+		HashMap result=null;
+		try{
+		    #sql [connCtx]{
+			     SELECT  cus_id, code, name 
+		    	 INTO    :(cus_id), :(code), :(name)
+		    	 FROM    customer 
+		         WHERE   register_no =:(register_no)
+		    	 AND     bank_sign=:(bankSign)
+			};	
+			result=new HashMap();
+			result.put("cus_id",cus_id);
+			result.put("code",code);
+			result.put("name",name);
+		}catch(SQLException e){
+		    if (e.getErrorCode() != 100 ) {
+	    		bc.debug(".....BO101.sqlj selectFromCustomer        Message  : " + e.getMessage());
+    			bc.debug(".....BO101.sqlj selectFromCustomer      Error code : " + e.getErrorCode());
+    			bc.debug(".....BO101.sqlj selectFromCustomer        SQLState : " + e.getSQLState());
+    			e.printStackTrace();
+    			throw(e);
+		    }
+		}
+		return result;
+	}
+	
+	/**
+	 * Dohvat sifre tipa kolaterala preko pripadnog id-a
+	 * @param col_type_id id tipa kolaterala
+	 * @return sifra tipa kolaterala
+	 * @throws Exception
+    */
+	public String selectCollTypeCode(BigDecimal col_type_id) throws Exception{
+		String collTypeCode = null;
+		try{
+		    #sql [connCtx]{
+		        SELECT  coll_type_code 
+				INTO    :(collTypeCode)
+				FROM    collateral_type 
+				WHERE   coll_type_id = :(col_type_id)
+				AND     bank_sign=:(bankSign)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCollTypeCode        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCollTypeCode      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCollTypeCode        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			if(e.getErrorCode() == 100){
+				collTypeCode = null;
+			}else{
+				throw(e);
+			}
+		}
+		return collTypeCode;	   	    
+	}
+	
+	/**
+	 * Dohvat id tipa kolaterala preko pripadne sifre tipa kolaterala
+	 * @param coll_type_code sifra tipa kolaterala
+	 * @return col_type_id id tipa kolaterala; null ako ne postoji za dani kod
+	 * @throws Exception
+	 */
+	public BigDecimal selectCollTypeId(String coll_type_code) throws Exception{
+		BigDecimal coll_type_id = (BigDecimal)this.hardcode.get(coll_type_code);
+		if(coll_type_id==null){
+			try{
+			    #sql [connCtx]{
+				    SELECT  coll_type_id 
+					INTO    :(coll_type_id)
+					FROM    collateral_type 
+					WHERE   coll_type_code = :(coll_type_code)
+					AND     bank_sign = :(bankSign)
+				};		
+				this.hardcode.put(coll_type_code,coll_type_id);
+			}catch(SQLException e){
+				bc.debug(".....BO101.sqlj selectCollTypeId        Message  : " + e.getMessage());
+				bc.debug(".....BO101.sqlj selectCollTypeId      Error code : " + e.getErrorCode());
+				bc.debug(".....BO101.sqlj selectCollTypeId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				if(e.getErrorCode() == 100){
+					coll_type_id = null;
+				}else{
+					throw(e);
+				}
+			}
+		}
+		return coll_type_id;	   	    
+	}
+	
+	/**
+	 * Dohvat zapisa o vlasnistvu kolaterala
+	 * @param owner_cus_id id vlasnika kolaterala
+	 * @param col_hea_id id kolaterala
+	 * @return zapis o vlasnistvu kolaterala
+	 * @throws Exception
+	 */
+	public BigDecimal selectCollOwnerId(BigDecimal owner_cus_id, BigDecimal col_hea_id) throws Exception{
+		BigDecimal coll_own_id =null;	
+		try{
+		    #sql [connCtx]{
+				SELECT  coll_own_id
+				INTO    :(coll_own_id)
+				FROM    coll_owner 
+				WHERE   cus_id = :(owner_cus_id)
+				AND     col_hea_id=:(col_hea_id)
+			};		
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCollOwnerId        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCollOwnerId      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCollOwnerId        SQLState : " + e.getSQLState());
+			
+			if(e.getErrorCode() == 100){
+				coll_own_id = null;
+			}else{
+			    e.printStackTrace();
+				throw(e);
+			}
+		}	
+		return coll_own_id;	   	    
+	}
+	
+	/**
+	 * Dohvat id iz tablice hipoteka coll_hf_prior
+	 * @param col_cas_id id cash depozita
+	 * @param col_hea_id id kolaterala
+	 * @return id zapisa
+	 * @throws Exception
+	 */
+	public BigDecimal selectCollHfPriorId(BigDecimal col_cas_id, BigDecimal col_hea_id) throws Exception{
+		BigDecimal coll_hf_prior_id =null;	
+		BigDecimal rba_cus_id = new BigDecimal("8218251.00");
+		try{
+		    #sql [connCtx]{
+				SELECT  coll_hf_prior_id
+				INTO    :(coll_hf_prior_id)
+				FROM    coll_hf_prior
+				WHERE   hf_ref_id = :(col_cas_id)
+				AND     hf_coll_head_id = :(col_hea_id)
+		        AND     hf_status = 'A'
+		        AND     hf_own_cus_id = :(rba_cus_id)
+				AND     bank_sign = :(bankSign)
+			};		
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCollHfPriorId        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCollHfPriorId      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCollHfPriorId        SQLState : " + e.getSQLState());
+			
+			if(e.getErrorCode() == 100){
+				coll_hf_prior_id = null;
+			}else{
+			    e.printStackTrace();
+				throw(e);
+			}
+		}	
+		return coll_hf_prior_id;	   	    
+	}
+	
+	
+	/**
+	 * Dohvat id iz tablice loan_beneficiary
+	 * @param coll_hf_prior_id id hipoteke
+	 * @param acc_no broj plasmana
+	 * @return id veze iz tablice
+	 * @throws Exception
+	 */
+	public BigDecimal selectLoanBeneficiaryId(BigDecimal coll_hf_prior_id, String acc_no) throws Exception{
+		BigDecimal loan_ben_id =null;	
+		IteratorLoanBenId iter=null;
+		try{
+		    #sql [connCtx] iter={
+				SELECT  loan_ben_id
+				FROM    loan_beneficiary
+				WHERE   coll_hf_prior_id = :(coll_hf_prior_id)
+				AND     acc_no = :(acc_no)
+				FETCH FIRST ROW ONLY
+			};	
+			if(iter!=null){
+				while(iter.next()){
+					loan_ben_id=iter.loan_ben_id();
+				}
+			}
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectLoanBeneficiaryId        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectLoanBeneficiaryId      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectLoanBeneficiaryId        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}	
+		return loan_ben_id;	   	    
+	}
+	
+	/**
+	 * Vraca Id za danu sifru racuna
+	 * @param acc_no sifra racuna
+	 * @return id racuna
+	 * @throws Exception
+	 */
+	public BigDecimal selectCusAccId(String acc_no) throws Exception{
+		
+		java.math.BigDecimal cusAccId = null;
+		try{
+		    #sql [connCtx]{
+			    SELECT   cus_acc_id
+				INTO  	 :(cusAccId)
+				FROM     cusacc_exposure 
+				WHERE    cus_acc_no =:(acc_no)
+			};							  
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				cusAccId = null;
+			}else{
+				bc.debug(".....BO101.sqlj selectCusAccId        Message  : " + e.getMessage());
+				bc.debug(".....BO101.sqlj selectCusAccId      Error code : " + e.getErrorCode());
+				bc.debug(".....BO101.sqlj selectCusAccId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}		
+		}
+		return cusAccId;
+	}
+	
+	/**
+	 * Dohvat imena komitenta
+	 * @param cus_id id komitenta
+	 * @return ime komitenta
+	 * @throws Exception
+	 */
+	public String selectCustomerName(BigDecimal cus_id) throws Exception{
+		
+		String name = null;
+		try{
+		    #sql [connCtx]{
+		        SELECT  name 
+				INTO	:(name)
+				FROM    customer
+				WHERE   cus_id = :(cus_id)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectCustomerName        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectCustomerName      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectCustomerName        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+		return name;
+	}
+	
+	/**
+	 * Dohvat iznosa plasmana
+	 * @param acc_no broj plasmana/racuna
+	 * @return iznos
+	 * @throws Exception
+	 */
+	public BigDecimal selectContractAmount(String acc_no) throws Exception{
+		
+		BigDecimal amount = null;
+		try{
+		    #sql [connCtx]{
+		        SELECT   contract_amount 
+				INTO     :(amount)
+				FROM     cusacc_exp_dwh
+				WHERE    cus_acc_no = :(acc_no)
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectContractAmount        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectContractAmount      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectContractAmount        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+		return amount;
+	}
+
+	/**
+	 * Dohvat srednjeg tecaja za dani datum i id valute
+	 * @param cur_id id valute
+	 * @param date datum valute
+	 * @return srednji tecaj
+	 * @throws Exception
+	 */
+	public BigDecimal selectMiddRate(BigDecimal cur_id, Date date) throws Exception{
+		BigDecimal rate = null;
+		try{
+			#sql[connCtx]{
+				SELECT  midd_rate 
+				INTO    :(rate)
+				FROM    exchange_rate 
+				WHERE   :(date) BETWEEN date_from AND date_until 
+				AND     cur_id =:(cur_id)
+				AND     bank_sign = :(bankSign)
+			};
+			return rate;
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectMiddRate        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectMiddRate      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectMiddRate        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+
+	/**
+	 * Dohvat datuma odobrenja za dani plasman
+	 * @param acc_no broj plasmana/racuna
+	 * @return datum odobrenja
+	 * @throws Exception
+	 */
+	public Date selectApprovalDate(String acc_no) throws Exception{
+		Date date = null;
+		try{
+			#sql[connCtx]{
+				SELECT  approval_date 
+				INTO    :(date)
+				FROM    cusacc_exp_dwh
+				WHERE   cus_acc_no = :(acc_no)
+			};
+			return date;
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectApprovalDate        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectApprovalDate      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectApprovalDate        SQLState : " + e.getSQLState());
+			
+			if(e.getErrorCode()==100){
+				return null;
+			}else{
+			    e.printStackTrace();
+				throw(e);
+			}
+		}	
+	}
+	
+	/**
+	 * Dohvaca id plasmana,approval_date , valutu, iznos i broj ugovora za dani broj partije iz tablice cusacc_exposure
+	 * @param acc_no broj partije
+	 * @return mapu s "cus_acc_id", "date" , "cur_id" , "amount" i "request_no" atributima
+	 * @throws Exception
+	 */
+	public Map selectFromCusaccExposure(String acc_no) throws Exception{
+		BigDecimal cus_acc_id=null;
+		Date date=null;
+		BigDecimal cur_id=null;
+		BigDecimal amount=null;
+		String request_no=null;
+		Map result=null;
+		try{
+			#sql[connCtx]{
+				SELECT  cus_acc_id, 
+		                approval_date, 
+		                contract_cur_id, 
+		                contract_amount, 
+		                request_no
+				INTO    :(cus_acc_id),
+		                :(date),
+		                :(cur_id), 
+		                :(amount), 
+		                :(request_no)
+				FROM    cusacc_exposure
+				WHERE   cus_acc_no = :(acc_no)
+			};
+			result= new HashMap();
+			result.put("cus_acc_id",cus_acc_id);
+			result.put("date",date);
+			result.put("cur_id",cur_id);
+			result.put("amount",amount);
+			result.put("request_no",request_no);
+		}catch(SQLException e){
+			if(e.getErrorCode()!=100){
+				throw(e);
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Generiranje sifre kolaterala
+	 * @param coll_type_code
+	 * @return generirana sifre kolaterala
+	 * @throws Exception
+	 */
+	private String makeCollNum(String coll_type_code) throws Exception{
+		String result=coll_type_code;
+		
+		Date today= new Date(System.currentTimeMillis());
+		String year=(""+today.getYear()).substring(1);
+		YXYG0 yxyg0= new YXYG0(bc);
+		String s=yxyg0.getSequence("CLT_CD",today);
+		if(s!=null){
+			result=result+year+s;
+		}else{
+			throw new Exception("yxyg0.getSequence vraca null!");
+		}
+		return result;
+	}
+
+	/**
+	 * Dohvat mvp_dfl, hnb_dfl i rzb_dfl pondera u hash mapi. vrijednosti se nalaze pod kljucem naziva pondera
+	 * @param col_type_id id vrste kolaterala
+	 * @return HashMap sa podacima
+	 */
+	public HashMap selectPonders(BigDecimal col_type_id){
+		HashMap result = null;
+		BigDecimal mvp_dfl=null;
+		BigDecimal hnb_dfl=null;
+		BigDecimal rzb_dfl=null;
+		try{
+		    #sql [connCtx]{
+		        SELECT  mvp_dfl,
+						hnb_dfl,
+						rzb_dfl
+			    INTO    :(mvp_dfl),
+						:(hnb_dfl),
+						:(rzb_dfl)
+				FROM    coll_atr 
+				WHERE	col_cat_id = :(col_cat_id) 
+		        AND   	coll_type_id = :(col_type_id) 
+		        AND		bank_sign = :(bankSign)
+			};	
+			result=new HashMap();
+			result.put("mvp_dfl",mvp_dfl);
+			result.put("hnb_dfl",hnb_dfl);
+			result.put("rzb_dfl",rzb_dfl);
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj selectPonders        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj selectPonders      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj selectPonders        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			result=null;
+		}
+		return result;	   	    
+	}
+	
+	
+	/**
+	 * Unos ili update u tablicu COLL_HEAD
+	 * @param id - id koji se updata; null ako se ubacuje novi zapis
+	 * @param inputdata input objekt
+	 * @param cur_id valuta u kojoj se vodi depozit
+	 * @param loan_cus_id id komitenta vlasnika partije plasmana
+	 * @param coll_cus_id id komitenta vlasnika depozita
+	 * @param deactivate da li se kolateral deaktivira
+	 * @param RBA_eligibility
+	 * @param yesAccount
+	 * @return id unesenog/promijenjenog sloga
+	 * @throws Exception
+	 */
+	public BigDecimal putCollHead(BigDecimal id,InputData inputdata,BigDecimal cur_id, BigDecimal loan_cus_id,
+	                              BigDecimal coll_cus_id,boolean deactivate,boolean RBA_eligibility,boolean yesAccount) throws Exception{
+	    
+	    bc.debug("putCollHead("+id+",InputData,"+cur_id+","+coll_cus_id+","+deactivate+","+RBA_eligibility+","+yesAccount+")");
+	    
+		try{
+		    BigDecimal col_type_id=selectCollTypeId(inputdata.cde_typ);
+		    Map ponders= selectPonders(col_type_id);
+		    BigDecimal mvp_dfl=(BigDecimal)ponders.get("mvp_dfl") ;
+		    BigDecimal hnb_dfl=(BigDecimal)ponders.get("hnb_dfl") ;
+		    BigDecimal rzb_dfl=(BigDecimal)ponders.get("rzb_dfl") ;
+		
+		    BigDecimal weigh_value=DecimalUtils.scale(mvp_dfl.multiply(inputdata.cde_amount).movePointLeft(2),2);	
+		    BigDecimal cde_amount=inputdata.cde_amount;
+		    Date cde_dep_from=inputdata.cde_dep_from;
+		    BigDecimal cas_exc_id = inputdata.cas_exc_id;
+		    
+		    BigDecimal gctc_id = null, endorsement_type_id = null, object_type_id = null, property_type_id = null;
+		    GcmTypeData gtd;
+		    gtd = yoym_gctc.resolve(col_cat_id, col_type_id, null, null);
+		    if (gtd != null) gctc_id = gtd.col_gcm_typ_id;
+	        gtd = yoym_endorsement.resolve(col_cat_id, col_type_id, null, null);
+	        if (gtd != null) endorsement_type_id = gtd.col_gcm_typ_id;
+            gtd = yoym_object.resolve(col_cat_id, col_type_id, null, null);
+            if (gtd != null) object_type_id = gtd.col_gcm_typ_id;
+            gtd = yoym_property.resolve(col_cat_id, col_type_id, null, null);
+            if (gtd != null) property_type_id = gtd.col_gcm_typ_id;
+		
+		    String rba_elig = "";
+		    if (RBA_eligibility)
+		        rba_elig="D";
+		    else
+		        rba_elig="N";
+		  
+		    if(id==null){
+		        //novi unos u bazu-samo ako je zadana i partija plasmana
+		        if (yesAccount) {
+		            bc.debug("dodajem slog u COLL_HEAD: ");
+		            id= yoy00.getNewId();
+    			
+		            String col_num=makeCollNum(inputdata.cde_typ);
+		            if(col_num==null) throw new Exception(".....BO101.sqlj insertCollHead : couldn't get col_num");
+			
+		            #sql [connCtx]{
+		            INSERT INTO coll_head (
+				        col_hea_id,
+				        col_type_id,
+				        col_num,
+				        real_est_estn_valu,
+				        real_est_estn_date,
+				        real_est_nomi_valu,
+				        real_est_nomi_date,
+				        real_est_nm_cur_id,
+				        cus_id,
+				        coll_cus_id,
+				        date_to_lop,
+				        date_rec_lop,
+				        rec_lop,
+				        com_doc,
+				        nepo_value,
+				        nepo_date,
+				        weigh_value,
+				        weigh_date,
+				        coll_mvp_ponder,
+				        coll_hnb_ponder,
+				        coll_rzb_ponder,
+				        real_est_date_from,
+				        real_est_date_unti,
+				        real_est_status,
+				        real_est_spec_stat,
+				        use_open_id,
+				        use_id,
+				        opening_ts,
+				        user_lock,
+				        eve_id,
+				        bank_sign,
+				        eligibility,
+				        origin_org_uni_id,
+				        org_uni_id,
+				        use_id_ver,
+				        use_id_aut,
+				        verification_ts,
+				        autorization_ts,
+				        mortgage_status,
+				        collateral_status,
+				        workflow_indic,
+				        cover_indic,
+				        ver_send_ts,
+				        basic_data_status,
+				        coll_data_status,
+				        col_cat_id,
+				        use_id_ver_snd,
+				        financial_flag,
+				        rba_eligibility,
+				        law_eligibility,
+			            B1_ELIGIBILITY,
+			            B2_IRB_ELIG,
+    			        crm_hnb,
+                        gctc_id, 
+                        endorsement_type_id,
+                        object_type_id,
+                        property_type_id,
+		                contract_type
+		            )VALUES (
+				        :(id),
+				        :(col_type_id),  
+				        :(col_num),
+				        :(cde_amount),
+				        :(cde_dep_from),
+				        :(cde_amount),
+				        :(cde_dep_from),
+				        :(cur_id),
+				        :(loan_cus_id),  
+				        :(coll_cus_id),
+				        :(cde_dep_from),
+				        :(cde_dep_from),
+				        'D',
+				        'D',
+				        :(cde_amount),
+				        :(cde_dep_from),
+				        :(weigh_value),
+				        current date,
+				        :(mvp_dfl),
+				        :(hnb_dfl),
+				        :(rzb_dfl),
+				        current date,
+				        '9999-12-31',
+				        'A',
+				        'D',
+				        :(use_id),
+				        :(use_id),
+				        current timestamp,
+				        current timestamp,
+				        :(eve_id),
+				        :(bankSign),
+				        'D',
+				        :(org_uni_id),
+				        :(org_uni_id),
+				        :(use_id),
+				        :(use_id),
+				        current timestamp,
+				        current timestamp,
+				        '2',
+				        '3',
+				        '0',
+				        '2',
+				        current timestamp,
+				        '3',
+				        '2',
+				        :(col_cat_id),
+				        :(use_id),
+				        'X',
+				        :(rba_elig),
+				        'D',
+			            'D',
+		                'D',
+			            'D',
+                        :(gctc_id), 
+                        :(endorsement_type_id),
+                        :(object_type_id),
+                        :(property_type_id),
+	                    '1'
+				        )
+		            };
+		        }
+		    }else if(deactivate){
+		        //ako je datum orocenja manji od danasnjeg depozit vise nije aktivan i treba ga deaktivirati
+		        bc.debug("deaktiviram slog u COLL_HEAD:" + id);		
+		        bc.debug("update sloga u COLL_HEAD: cas_exc_id " + cas_exc_id); 
+		        //03.02.2015 16612 - izbacuje se ažuriranje iznosa real_est_nomi_valu i pripadajuæe valute real_est_nm_cur_id s tim da je ta valuta i za iznos real_est_estn_valu pa je pitanje ako se taj iznos ažurira zašto se valuta ne ažurira
+		        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+		        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+		        //use_id=:(use_id), user_lock=current timestamp
+		        if (cas_exc_id == null) {
+		            #sql[connCtx]{
+				        UPDATE coll_head 
+                        SET real_est_estn_valu=:(cde_amount),
+                            real_est_nomi_date= current date,
+					        nepo_value=:(cde_amount),
+					        weigh_value=:(weigh_value),
+					        weigh_date=current date,
+		                    CHG_NOM_VAL_PROC_TS=current timestamp,
+					        eve_id=:(eve_id),
+					        collateral_status='N',
+		                    rba_eligibility=:(rba_elig),
+                            gctc_id = :(gctc_id), 
+                            endorsement_type_id = :(endorsement_type_id),
+                            object_type_id = :(object_type_id),
+                            property_type_id = :(property_type_id)
+				        WHERE 
+					        col_hea_id=:(id) and COLLATERAL_STATUS in ('0', '1', '2', '3')
+		            };
+		        } else {
+		            #sql[connCtx]{
+                        UPDATE coll_head 
+                        SET real_est_nomi_date= current date,
+                            real_est_nm_cur_id=:(cur_id),
+                            nepo_value=:(cde_amount),
+                            weigh_value=:(weigh_value),
+                            weigh_date=current date,
+		                    CHG_NOM_VAL_PROC_TS=current timestamp,
+                            eve_id=:(eve_id),
+                            collateral_status='N',
+                            rba_eligibility=:(rba_elig),
+                            gctc_id = :(gctc_id), 
+                            endorsement_type_id = :(endorsement_type_id),
+                            object_type_id = :(object_type_id),
+                            property_type_id = :(property_type_id)
+		                WHERE 
+                            col_hea_id=:(id) and COLLATERAL_STATUS in ('0', '1', '2', '3')
+		            };                
+		        }
+   
+		    }else{
+		        //update u bazu
+		        bc.debug("radim update sloga u COLL_HEAD:" + id);
+		        bc.debug("update sloga u COLL_HEAD: cas_exc_id " + cas_exc_id); 
+                //03.02.2015 16612 - izbacuje se ažuriranje iznosa real_est_nomi_valu i pripadajuæe valute real_est_nm_cur_id s tim da je ta valuta i za iznos real_est_estn_valu pa je pitanje ako se taj iznos ažurira zašto se valuta ne ažurira
+		        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+		        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+		        //use_id=:(use_id), user_lock=current timestamp
+		        if (cas_exc_id == null) {
+		            #sql[connCtx]{
+                        UPDATE coll_head 
+                        SET real_est_estn_valu=:(cde_amount),
+                            real_est_nomi_date = current date,
+                            nepo_value=:(cde_amount),
+                            weigh_value=:(weigh_value),
+                            weigh_date=current date,                            
+		                    CHG_NOM_VAL_PROC_TS=current timestamp,
+                            eve_id=:(eve_id),
+                            rba_eligibility=:(rba_elig),
+                            gctc_id = :(gctc_id), 
+                            endorsement_type_id = :(endorsement_type_id),
+                            object_type_id = :(object_type_id),
+                            property_type_id = :(property_type_id)
+                        WHERE 
+                            col_hea_id=:(id) and COLLATERAL_STATUS in ('0', '1', '2', '3')
+		            };
+		        } 
+		        /*else { 
+		         // FBPr200021019 - ako se nalazi na listi depozita izuzetih od ažuriranja - nije potrebno mijenjati
+		            #sql[connCtx]{
+                        UPDATE coll_head 
+                        SET real_est_nomi_date= current date,
+                            real_est_nm_cur_id=:(cur_id),
+                            nepo_value=:(cde_amount),
+                            weigh_value=:(weigh_value),
+                            weigh_date=current date,
+                            user_lock=current timestamp,
+                            eve_id=:(eve_id),
+                            rba_eligibility=:(rba_elig),
+                            gctc_id = :(gctc_id), 
+                            endorsement_type_id = :(endorsement_type_id),
+                            object_type_id = :(object_type_id),
+                            property_type_id = :(property_type_id)
+                        WHERE 
+                            col_hea_id=:(id)
+		            };
+		        }*/            
+		    }
+		    return id;
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj putCollHead        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj putCollHead      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj putCollHead        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+
+	/**
+	 * Unos ili izmjena u tablici COLL_CASHDEP
+	 * @param id - id koji se updata; null ako se ubacuje novi zapis
+	 * @param inputdata input objekt
+	 * @param col_hea_id id kolaterala iz COLL_HEAD tablice
+	 * @param cur_id  id valute depozita
+	 * @param updateAmount flag da li se upisuje i iznos depozita
+	 * @param yesAccount
+	 * @return id unesenog sloga
+	 * @throws Exception
+	 */
+	public BigDecimal putCollCashdep(BigDecimal id,InputData inputdata,BigDecimal col_hea_id, BigDecimal cur_id,boolean updateAmount,boolean yesAccount) throws Exception{
+		try{	
+		    Map fromCustomer=selectFromCustomer(inputdata.cde_reg_no);
+		
+		    BigDecimal cde_cus_id=(BigDecimal)fromCustomer.get("cus_id");
+		    String cde_reg_no=inputdata.cde_reg_no;
+		    String cde_swift_add= (String)fromCustomer.get("code");
+		    String cde_bank=(String)fromCustomer.get("name");
+		    Date cde_dep_from=inputdata.cde_dep_from;
+		    Date cde_dep_unti=inputdata.cde_dep_unti;
+		    BigDecimal cde_amount=inputdata.cde_amount;
+		    String cde_prolong=inputdata.cde_prolong;
+		    String cde_account=inputdata.cde_account;
+		    BigDecimal cas_exc_id = inputdata.cas_exc_id;
+		    String status = inputdata.status;
+		    Date cde_dep_unti_final=inputdata.cde_dep_unti_final;
+		
+		    if(id==null){
+		        //novi unos u bazu-samo ako je zadana i partija plasmana
+		        if (yesAccount) {	
+		            bc.debug("dodajem slog u COLL_CASHDEP: ");                
+		            id= yoy00.getNewId();
+			
+		            #sql [connCtx]{
+				        INSERT INTO coll_cashdep(
+					        col_cas_id,
+					        col_hea_id,
+					        cde_cus_id,
+					        cde_reg_no,
+					        cde_swift_add,
+					        cde_bank,
+					        cde_dep_from,
+					        cde_dep_unti,
+					        cde_amount,
+					        cde_cur_id,
+					        cde_prolong,
+					        cde_account,
+                            cde_dep_unti_final,
+                            status
+				        )VALUES(
+					        :(id),
+					        :(col_hea_id),
+					        :(cde_cus_id),
+					        :(cde_reg_no),
+					        :(cde_swift_add),
+					        :(cde_bank),
+					        :(cde_dep_from),
+					        :(cde_dep_unti),
+					        :(cde_amount),
+					        :(cur_id),
+					        :(cde_prolong),
+					        :(cde_account),
+                            :(cde_dep_unti_final),
+                            :(status)
+					    )
+		            };
+            }
+		}else{
+            bc.debug("UPDATE slog u COLL_CASHDEP: ");	
+            bc.debug("update sloga u COLL_CASHDEP: cas_exc_id " + cas_exc_id); 
+			if(updateAmount){
+			    if (cas_exc_id == null) {
+			        // ako nema datuma dospijeca ne smije se raditi update tog atributa
+		             //03.02.2015 16612 - izbacuje se ažuriranje iznosa i pripadajuæe valute cde_amount i  cde_cur_id. ti podaci bi na ekranu trebali odgovarati bloku „Kolateral iznos i valuta“
+			        if (cde_dep_unti != null) {
+        				#sql [connCtx]{
+					        UPDATE  coll_cashdep 
+			                SET	    cde_dep_unti=:(cde_dep_unti),
+						            cde_prolong=:(cde_prolong),
+						            cde_account=:(cde_account),
+			                        status = :(status)
+			                WHERE   col_cas_id=:(id) 
+			            };	
+			        } else {
+                        #sql [connCtx]{
+                            UPDATE  coll_cashdep 
+			                SET     cde_prolong=:(cde_prolong),
+                                    cde_account=:(cde_account),
+                                    status = :(status)
+                            WHERE   col_cas_id=:(id) 
+                        };  			            
+			        }
+			    } else {
+                    #sql [connCtx]{
+                        UPDATE  coll_cashdep 
+			            SET     cde_cur_id=:(cur_id),
+                                cde_prolong=:(cde_prolong),
+                                cde_account=:(cde_account),
+			                    status = :(status)
+                        WHERE   col_cas_id=:(id)
+			        };  			        
+			    }
+			}else{
+                if (cde_dep_unti != null) {
+                    #sql [connCtx]{
+					    UPDATE  coll_cashdep 
+                        SET	    cde_dep_unti=:(cde_dep_unti),
+						        cde_cur_id=:(cur_id),
+						        cde_prolong=:(cde_prolong),
+						        cde_account=:(cde_account),
+			                    status = :(status)
+                        WHERE   col_cas_id=:(id)
+                    };	
+                } else {
+                    #sql [connCtx]{
+                        UPDATE  coll_cashdep 
+                        SET     cde_cur_id=:(cur_id),
+                                cde_prolong=:(cde_prolong),
+                                cde_account=:(cde_account),
+                                status = :(status)
+                        WHERE   col_cas_id=:(id)
+                    };                      
+                }
+			}
+		}
+		return id;
+	    }catch(SQLException e){
+			bc.debug(".....BO101.sqlj putCollCashdep        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj putCollCashdep      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj putCollCashdep        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+	
+	/**
+	 * Odredjivanje datuma krajnjeg dospijeca depozita
+	 * @param col_hea_id - id depozita za koji se odredjuje datum krajnjeg dospijeca
+	 */
+    public void setFinalMaturityDate(BigDecimal col_hea_id){
+        Date final_maturity_date=null;
+        boolean update_all=false;
+        BigDecimal col_cas_id = null;
+        Date cde_dep_unti = null;
+        Date cde_dep_unti_final = null;
+        Date cde_dep_unti_final_new = null;
+        String prolong = null;
+        String cus_acc_no= null;
+        Date due_date = null;
+        Date cde_dep_unti_loan_new = null;
+        
+        bc.debug("setFinalMaturityDate ................ odredi krajnji rok dospijeca: col_hea_id: " + col_hea_id);
+        
+        try{
+            #sql[connCtx] {
+                SELECT
+                    a.col_cas_id, 
+                    a.cde_dep_unti,
+                    a.cde_dep_unti_final,
+                    case
+                      when a.cde_dep_unti >='9997-12-01'   then a.cde_dep_unti
+                      else  a.cde_dep_unti + 2 year 
+                    end,   
+                    a.cde_prolong, 
+                    c.acc_no,
+                    d.due_date,
+                    case 
+                      when d.due_date >='9999-12-01'   then d.due_date
+                      else d.due_date + 1 month
+                    end 
+                INTO
+                    :(col_cas_id),
+                    :(cde_dep_unti),
+                    :(cde_dep_unti_final),
+                    :(cde_dep_unti_final_new),
+                    :(prolong),
+                    :(cus_acc_no),
+                    :(due_date),
+                    :(cde_dep_unti_loan_new)
+                FROM
+                    coll_cashdep a
+                    left outer join coll_hf_prior b on a.col_hea_id = b.hf_coll_head_id
+                    left outer join loan_beneficiary c on b.coll_hf_prior_id = c.coll_hf_prior_id
+                    left outer join cusacc_exposure d on c.acc_no = d.cus_acc_no
+                WHERE 
+                    a.col_hea_id = :(col_hea_id)
+                ORDER BY d.due_date DESC
+                FETCH FIRST 1 ROWS ONLY
+          };
+            bc.debug("Odredi krajnji rok dospijeca: "+cde_dep_unti+ " * " + due_date + " * " + cde_dep_unti_final + " * " + prolong + " * " + cde_dep_unti_final_new + " * " + cde_dep_unti_loan_new);   
+
+            if (prolong != null && prolong.equalsIgnoreCase("N")){
+                final_maturity_date = cde_dep_unti;
+                update_all = true;
+            } else if (prolong != null && prolong.equalsIgnoreCase("D")){
+                if (due_date != null) {
+                    if (due_date.before(cde_dep_unti)) {
+                        final_maturity_date = cde_dep_unti;
+                    } else {
+                        if (isBcmcOrAcr(cus_acc_no))
+                            final_maturity_date = cde_dep_unti_final_new;
+                        else
+                            final_maturity_date = cde_dep_unti_loan_new;
+                            update_all = true;
+                    }
+                } else {
+                    final_maturity_date = cde_dep_unti;
+                }
+            } 
+            bc.debug("Krajnji rok dospijeca: "+final_maturity_date);                       
+            if (update_all) {
+                #sql [connCtx]{
+                    UPDATE  coll_cashdep 
+                    SET     cde_dep_unti_final=:(final_maturity_date)
+                    WHERE   col_cas_id=:(col_cas_id)
+                };                          
+            } else {
+                #sql [connCtx]{
+                    UPDATE  coll_cashdep 
+                    SET     cde_dep_unti_final=:(final_maturity_date)
+                    WHERE   col_cas_id=:(col_cas_id)
+                    AND     cde_dep_unti_final IS NULL
+                };                                   
+            }
+        }catch(SQLException e){
+            if (e.getErrorCode() != 100 ) {
+                bc.debug(".....BO101.sqlj getFinalMaturityDate        Message  : " + e.getMessage());
+                bc.debug(".....BO101.sqlj getFinalMaturityDate      Error code : " + e.getErrorCode());
+                bc.debug(".....BO101.sqlj getFinalMaturityDate        SQLState : " + e.getSQLState());
+                e.printStackTrace();
+            } else {
+                bc.debug("Ne mogu odrediti krajnji rok dospijeca: SQLcode = 100 ");  
+            }
+        }
+    } 
+	
+    private boolean isBcmcOrAcr(String cus_acc_no) {
+        String bcmc_plasman = "";
+        String akreditiv = "";
+        
+        if (cus_acc_no != null && (cus_acc_no.length() > 6)) { 
+            bcmc_plasman = cus_acc_no.substring(4,6);
+            akreditiv = cus_acc_no.substring(0,2);
+        } 
+        
+        bc.debug("PROVJERA PLASMANA: "+cus_acc_no + " * " + bcmc_plasman + " * " + akreditiv);           
+        if (cus_acc_no.indexOf("-") == 3 && bcmc_plasman.equals("63")) {
+            bc.debug("PLASMAN je BCMC ili AKREDITIV");  
+            return true;
+        } else if (cus_acc_no.length() == 10 && akreditiv.equals("80")) {
+            bc.debug("PLASMAN NIJE BCMC ili AKREDITIV");
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Unos u tablicu COLL_OWNER
+     * @param id - id koji se updata; null ako se ubacuje novi zapis
+     * @param cde_owner register_no vlasnika depozita
+     * @param col_hea_id id sloga iz COLL_HEAD tablice
+     * @param owner_cus_id id vlasnika depozita
+     * @param owner_cus_code sifra vlasnika depozita
+     * @param yesAccount
+     * @return id unesenog sloga
+     * @throws Exception
+     */
+	public BigDecimal putCollOwner(BigDecimal id ,String cde_owner,BigDecimal col_hea_id, BigDecimal owner_cus_id, String owner_cus_code,boolean yesAccount) throws Exception{
+		try{		
+    		if(id==null){
+                //novi unos u bazu-samo ako je zadana i partija plasmana
+                if (yesAccount) { 
+                    bc.debug("dodajem slog u COLL_OWNER: ");                    
+                    id = yoy00.getNewId();
+    			
+                    #sql [connCtx]{
+                        INSERT INTO coll_owner (
+					        coll_own_id,
+					        register_no,
+					        cus_id,
+					        code,
+					        ser_num,
+					        part_id,
+					        col_hea_id,
+					        date_from,
+					        date_until,
+					        use_open_id,
+					        use_id,
+					        opening_ts,
+					        user_lock,
+					        part_id2,
+					        own_num,
+                            main_owner
+                        )VALUES (
+					        :(id),
+					        :(cde_owner),
+					        :(owner_cus_id),
+					        :(owner_cus_code),
+					        1,
+					        '1',
+					        :(col_hea_id),
+					        current date,
+					        '9999-12-31',
+					        :(use_id),
+					        :(use_id),
+					        current timestamp,
+					        current timestamp,
+					        '1',
+					        1,
+                            'D'
+                        )
+                    };
+                }
+    		}else{
+                bc.debug("UPDATE slog u COLL_OWNER: ");  
+                #sql [connCtx]{
+                    UPDATE  coll_owner 
+                    SET     register_no=:(cde_owner),
+                            cus_id=:(owner_cus_id),
+                            code=:(owner_cus_code), 
+                            use_id=:(use_id),
+                            user_lock=current timestamp
+                    WHERE   coll_own_id=:(id)
+                };
+                
+                #sql [connCtx]{
+                    UPDATE  coll_owner 
+                    SET     main_owner = 'D'
+                    WHERE   coll_own_id = :(id)
+                    AND     (main_owner IS NULL OR main_owner = ' ' OR main_owner = '')
+                };
+            }
+    		return id;
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj putCollOwner        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj putCollOwner      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj putCollOwner        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+
+	/**
+	 * Unos u tablicu LOAN_BENEFICIARY
+	 * @param id - id zapisa u loan beneficiary. ako je null samo se radi insert
+	 * @param loan_owner register_no vlasnika plasmana
+	 * @param acc_no partija plasmana
+	 * @param coll_hf_prior_id id sloga hipoteke iz COLL_HF_PRIOR tablice
+	 * @param cus_id id referenta koji pokrece batch
+	 * @param cus_acc_id id partije plasmana
+	 * @param request_no broj ugovora
+	 * @param yesAccount
+	 * @param insert
+	 * @return id unesenog sloga
+	 * @throws Exception
+	 */
+	public BigDecimal putLoanBeneficiary(BigDecimal id ,String loan_owner, String acc_no,BigDecimal coll_hf_prior_id, BigDecimal cus_id,BigDecimal cus_acc_id, String request_no,boolean yesAccount,boolean insert) throws Exception{
+		try{
+		    
+		    bc.debug("metoda putLoanBeneficiary" +  " id="+id + " coll_hf_prior_id="+coll_hf_prior_id + " cus_id="+cus_id+ " cus_acc_id="+cus_acc_id + " request_no="+request_no);
+    		      
+    		if(id==null){
+                //novi unos u bazu-samo ako je zadana i partija plasmana i vlasnik plasmana
+                if (coll_hf_prior_id != null && yesAccount && cus_id != null) {   
+                    bc.debug("dodajem slog u LOAN_BENEFICIARY: ");  
+                    id = yoy00.getNewId();
+                    #sql [connCtx]{
+                        INSERT INTO loan_beneficiary (
+					        loan_ben_id,
+					        register_no,
+					        cus_id,
+					        acc_no,
+					        la_acc_id,
+					        coll_hf_prior_id,
+					        ser_num,
+					        date_from,
+					        date_until,
+					        status,
+					        spec_status,
+					        use_open_id,
+					        use_id,
+					        opening_ts,
+					        user_lock,
+					        request_no
+                        )VALUES (
+					        :(id),
+					        :(loan_owner),
+					        :(cus_id),
+					        :(acc_no),
+					        :(cus_acc_id),
+					        :(coll_hf_prior_id),
+					        1,
+					        current date,
+					        '9999-12-31',
+					        'A',
+					        '00',
+					        :(use_id),
+					        :(use_id),
+					        current timestamp,
+					        current timestamp,
+					        :(request_no)
+						)
+                    };
+                }
+     		}else{ 
+                bc.debug("UPDATE slog u LOAN_BENEFICIARY: ");      		    
+                #sql [connCtx]{
+                    UPDATE  loan_beneficiary 
+                    SET     register_no=:(loan_owner),
+                            cus_id=:(cus_id),
+                            use_id=:(use_id),
+                            user_lock=current timestamp
+                    WHERE   loan_ben_id=:(id)         
+                }; 
+            }  
+    		return id;
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj putLoanBeneficiary        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj putLoanBeneficiary      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj putLoanBeneficiary        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+	
+	/**
+	 * Unos u tablicu COLL_LIST_Q
+	 * @param col_hea_id id sloga  iz COLL_HEAD tablice
+	 * @param status 3-aktivan kolateral
+	 * @param deactivate
+	 * @return id unesenog sloga
+	 * @throws Exception
+	 */
+	public BigDecimal insertCollListQ(BigDecimal col_hea_id,String status,boolean deactivate) throws Exception{
+		try{
+		    BigDecimal id= yoy00.getNewId();
+		    String action_type="";
+		    BigDecimal useId=null;
+		    BigDecimal colLisTypId=null;
+		    String cmnt ="PROGRAMSKA OBRADA";
+		
+		    if("3".equals(status)){
+		        if (deactivate) {
+		            action_type="";
+		            useId=null;
+		            colLisTypId= (BigDecimal) this.hardcode.get("NEAKTIVNI");		        
+		        } else {
+		            action_type="PREUZET IZ OBC/DPF";
+		            useId=use_id;
+		            colLisTypId=(BigDecimal) this.hardcode.get("AKTIVNI");
+		        }
+		    }else{	
+		        action_type="";
+		        useId=null;
+		        colLisTypId= (BigDecimal) this.hardcode.get("NEAKTIVNI");
+		    }
+		
+		    #sql [connCtx]{
+			    INSERT INTO coll_list_q (
+				    col_lis_q_id,
+				    col_lis_typ_id,
+				    col_hea_id,
+				    use_id,
+				    status,
+				    cmnt,
+				    income_time,
+				    bank_sign,
+				    action_type,
+				    org_uni_id
+			    )VALUES (
+				    :(id),
+				    :(colLisTypId),
+				    :(col_hea_id),
+				    :(useId),
+				    '0',
+				    :(cmnt),
+				    current timestamp,
+				    :(bankSign),
+				    :(action_type),
+				    :(org_uni_id)
+			    )
+		    };  
+		    return id;
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj insertCollListQ        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj insertCollListQ      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj insertCollListQ        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	} 
+	
+	public void deactivateCollListQ(BigDecimal col_hea_id, String status) throws SQLException{
+		try{
+			String action_type="DEAKTIVIRAJ";
+			BigDecimal useId=use_id;
+			BigDecimal colLisTypId=null;
+			String cmnt ="PROGRAMSKA OBRADA";
+			
+			if("3".equals(status)){
+				colLisTypId= (BigDecimal) this.hardcode.get("AKTIVNI");
+			}else if("F".equals(status)){
+				colLisTypId=(BigDecimal) this.hardcode.get("SLOBODNI");
+			}
+			
+			#sql [connCtx]{
+				UPDATE  coll_list_q
+				SET     status = '1',
+					    release_time = current timestamp,
+     				    use_id = :(useId),
+					    org_uni_id =:(org_uni_id),
+					    cmnt = :(cmnt),
+					    action_type = :(action_type)
+				WHERE  	col_hea_id = :(col_hea_id) 
+				AND	 	col_lis_typ_id = :(colLisTypId)
+				AND	 	status = '0'
+			};
+		}catch(SQLException e){
+		    bc.debug(".....BO101.sqlj deactivateCollListQ        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj deactivateCollListQ      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj deactivateCollListQ        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+		
+    public void azurirajCollListQ(BigDecimal col_hea_id, String status) throws  Exception {
+        try{
+            String action_type="AZURIRAJ";
+            String cmnt ="AZURIRANJE PODATAKA - bo10";
+            BigDecimal useId=use_id;
+            BigDecimal useIdOld=null;
+            BigDecimal orgUniIdOld=null;
+            BigDecimal colLisTypIdOld=null;
+            Timestamp  incomeTimeOld = null;
+            BigDecimal colLisQIdOld = null;
+ 
+            #sql [connCtx]{
+                SELECT  col_lis_q_id, 
+                        col_lis_typ_id, 
+                        income_time, 
+                        use_id, 
+                        org_uni_id
+                INTO    :colLisQIdOld, 
+                        :colLisTypIdOld, 
+                        :incomeTimeOld, 
+                        :useIdOld, 
+                        :orgUniIdOld
+                FROM    coll_list_q
+                WHERE   col_hea_id = :(col_hea_id)
+                AND     status = '0'
+            };
+            
+            #sql [connCtx]{
+                UPDATE  coll_list_q
+                SET     status = '1',
+                        release_time = current timestamp,
+                        use_id = :(useId),
+                        org_uni_id =:(org_uni_id) ,
+                        cmnt = :(cmnt),
+                        action_type = :(action_type)
+                WHERE   col_lis_q_id = :colLisQIdOld
+            };
+            
+            BigDecimal id= yoy00.getNewId();
+            
+            #sql [connCtx]{
+                INSERT INTO coll_list_q (
+                    col_lis_q_id,
+                    col_lis_typ_id,
+                    col_hea_id,
+                    use_id,
+                    status,
+                    cmnt,
+                    income_time,
+                    bank_sign,
+                    action_type,
+                    org_uni_id
+                )VALUES (
+                    :(id),
+                    :(colLisTypIdOld),
+                    :(col_hea_id),
+                    :(useIdOld),
+                    '0',
+                    :(cmnt),
+                    :(incomeTimeOld),
+                    :(bankSign),
+                    :(action_type),
+                    :orgUniIdOld
+                )
+            };              
+        } catch (SQLException e) {
+            bc.debug(".....BO101.sqlj azurirajCollListQ_select Message  : " + e.getMessage());
+            bc.debug(".....BO101.sqlj azurirajCollListQ_select Error code : " + e.getErrorCode());
+            bc.debug(".....BO101.sqlj azurirajCollListQ_select SQLState : " + e.getSQLState());
+            e.printStackTrace();
+            throw(e);
+        }    
+    }	
+	     
+    /**
+     * Unos u tablicu COLL_HF_PRIOR
+     * @param id
+     * @param inputdata input objekt
+     * @param col_hea_id id sloga  iz COLL_HEAD tablice
+     * @param col_cas_id
+     * @param cur_id id valute u kojoj se vodi vozilo/hipoteka
+     * @param approvalDate datum odobrenja
+     * @param deactivate da li se hipoteka deaktivira
+     * @param yesAccount
+     * @param insert
+     * @return id unesenog sloga
+     * @throws Exception
+     */
+	public BigDecimal putCollHfPrior(BigDecimal id,InputData inputdata,BigDecimal col_hea_id, BigDecimal col_cas_id, 
+	                                 BigDecimal cur_id,Date approvalDate,boolean deactivate,boolean yesAccount,boolean insert) throws Exception{
+		try{
+		
+		    BigDecimal hf_amount= inputdata.cde_amount;
+    		BigDecimal exc_rat_ref=getMidRate(cur_id);
+    		BigDecimal zero=new BigDecimal("0.00");
+		
+    		if(id==null && insert){
+    		    //novi unos u bazu-samo ako je zadana i partija plasmana
+    		    if (yesAccount) {
+    		        bc.debug("dodajem slog u HIPOTEKU: ");                  
+    		        id = yoy00.getNewId();
+    		        #sql [connCtx]{
+				        INSERT INTO coll_hf_prior (
+					        coll_hf_prior_id,
+					        hf_table_id,
+					        hf_ref_id,
+					        hf_coll_head_id,
+					        hf_own_cus_id,
+					        hf_register_no,
+					        hf_own_code,
+					        hf_own_lname,
+					        hf_hfc_id,
+					        hf_priority,
+					        hf_rec_lop_id,
+    		                hf_amount,
+					        hf_cur_id,
+					        amount_ref,
+					        cur_id_ref,
+					        exc_rat_ref,
+					        exc_rat_ref_date,
+					        hf_draw_amo,
+					        hf_avail_amo,
+					        hf_draw_amo_ref,
+					        avail_amo_ref,
+					        draw_bamo,
+					        draw_bamo_ref,
+					        avail_bamo_ref,
+					        hf_date_hfc_until,
+					        hf_status,
+					        hf_spec_stat,
+					        hf_date_from,
+					        hf_date_until,
+					        use_open_id,
+					        use_id,
+					        opening_ts,
+					        user_lock,
+					        eve_id,
+					        bank_sign,
+					        how_cover,
+					        rem_re_nomi_valu,
+					        rec_lop,
+					        date_rec_lop,
+					        status,
+					        agreement,
+					        hf_date_reciv
+				        )VALUES (
+					        :(id),
+					        :(hf_table_id),
+					        :(col_cas_id),
+					        :(col_hea_id),
+					        :(bank_cus_id),
+					        '910000',
+					        '00901717',
+					        :(bankName),
+					        1603446003,
+					        '01',
+					        1602772003,
+					        :(hf_amount),
+					        :(cur_id),
+					        :(hf_amount),
+					        :(cur_id),
+					        :(exc_rat_ref),
+					        :(today),
+					        :(zero),
+					        :(hf_amount),
+					        :(zero),
+					        :(hf_amount),
+					        :(zero),
+					        :(zero),
+					        :(hf_amount),
+					        :(inputdata.cde_dep_unti),
+					        'A',
+					        '00',
+					        current date,
+					        '9999-12-31',
+					        :(use_id),
+					        :(use_id),
+					        current timestamp,
+					        current timestamp,
+					        :(eve_id),
+					        :(bankSign),
+					        1629486003,
+					        :(hf_amount),
+					        'D',
+					        :(approvalDate),
+					        'A',
+					        'N',
+					        :(approvalDate)
+						    )
+				        };
+    		    }
+    		}else if(deactivate){	
+    		    bc.debug("DEAKTIVIRAM slog u HIPOTEKU: ");  		    
+    		    #sql [connCtx]{
+				    UPDATE  coll_hf_prior 
+    		        SET		use_id=:(use_id),
+					        user_lock=current timestamp,
+					        eve_id=:(eve_id),
+					        hf_date_hfc_until= current date,
+					        hf_status='N',
+                            hf_priority = 'NA'
+				    WHERE   coll_hf_prior_id=:(id)
+    		    };
+    		}else{
+    		    bc.debug("UPDATE slog u HIPOTEKU: ");  
+    		    #sql [connCtx]{
+                    UPDATE  coll_hf_prior 
+    		        SET     hf_amount=:(hf_amount),
+                            hf_cur_id=:(cur_id),
+                            amount_ref=:(hf_amount),
+                            cur_id_ref=:(cur_id),
+                            exc_rat_ref=:(exc_rat_ref),
+                            exc_rat_ref_date=:(today),
+                            hf_avail_amo=:(hf_amount),
+                            avail_amo_ref=:(hf_amount),
+                            avail_bamo_ref=:(hf_amount),
+                            use_id=:(use_id),
+                            user_lock=current timestamp,
+                            eve_id=:(eve_id),
+                            rem_re_nomi_valu=:(hf_amount),
+		                    hf_date_hfc_until= :(inputdata.cde_dep_unti)
+    		        WHERE   coll_hf_prior_id=:(id)
+    		    };		    
+    		}
+    		return id;
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj putCollHfPrior        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj putCollHfPrior      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj putCollHfPrior        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+	
+	/**
+	 * Insert u tablicu IN_DATA_DWH_ITEM
+	 * @param col_pro_id id batcha
+	 * @param input_id id ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param input_code kod ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param status status zapisa
+	 * @param output_id id unesenog sloga
+	 * @throws Exception
+	 */
+	public void insertInDataDwhItem(BigDecimal col_pro_id,BigDecimal input_id, String input_code, String status, BigDecimal output_id) throws Exception{
+		try{
+		    #sql [connCtx]{
+			    INSERT INTO in_data_dwh_item (
+				    col_pro_id,
+				    input_id,
+				    input_code,
+				    status,
+				    output_id
+			    )VALUES (
+				    :(col_pro_id),
+				    :(input_id),
+				    :(input_code),
+				    :(status),
+				    :(output_id)
+			    )
+		    };
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj insertInDataDwhItem        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj insertInDataDwhItem      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj insertInDataDwhItem        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+
+	/**
+	 * Preracunava vrijednosti u drugu valutu
+	 * @param cur_id id valute
+	 * @param value iznos
+	 * @param toKn da li mijenja u kune ili iz kuna u cur_id valutu
+	 * @return preracunata vrijednost
+	 * @throws Exception
+	 */
+	private BigDecimal exchange(BigDecimal cur_id,BigDecimal value, boolean toKn) throws Exception{
+		if((value==null)||(cur_id==null)) return null;
+		BigDecimal result=null;		
+		BigDecimal rate=(BigDecimal)this.exchangeRate.get(cur_id);
+		if(rate==null){
+			rate=selectMiddRate(cur_id,this.today);
+			this.exchangeRate.put(cur_id,rate);
+		}
+		
+		if(toKn){
+			result=value.multiply(rate);
+		}else{
+			result=value.divide(rate,BigDecimal.ROUND_HALF_EVEN);
+		}
+		return result;	
+	}
+	
+	/**
+	* Dohvat srednjeg tecaja
+	* @param cur_id id valute
+	*/
+	private BigDecimal getMidRate(BigDecimal cur_id) throws Exception{
+		BigDecimal rate=(BigDecimal)this.exchangeRate.get(cur_id);
+		if(rate==null){
+			rate=selectMiddRate(cur_id,this.today);
+			this.exchangeRate.put(cur_id,rate);
+		}
+		return rate;
+	}
+	
+	public Timestamp insertColProc(Map map) throws Exception{
+        bc.debug("sqlj insertColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=new Timestamp(System.currentTimeMillis());
+    	bc.debug("\n col_pro_id: "+col_pro_id);
+    	bc.debug("\n proc_date: "+proc_date);
+    	bc.debug("\n value_date: "+value_date);
+    	bc.debug("\n proc_type: "+proc_type);
+    	bc.debug("\n proc_way: "+proc_way);
+    	bc.debug("\n proc_status: "+proc_status);
+    	bc.debug("\n col_number: "+col_number);
+    	bc.debug("\n org_uni_id: "+org_uni_id);
+    	bc.debug("\n use_id: "+use_id);
+    	bc.debug("\n user_lock: "+user_lock);
+    	
+        try{
+        	#sql [connCtx]{
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(proc_date),
+					:(value_date),
+					:(proc_type),
+					:(proc_way),
+					:(proc_status),
+					:(col_number),
+					current timestamp,
+					:(org_uni_id),
+					:(use_id),
+        			:(user_lock)
+					)
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj insertColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj insertColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj insertColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}  
+		return user_lock;
+	}
+	
+	public Timestamp updateColProc(Map map) throws Exception{
+        bc.debug("sqlj updateColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=(Timestamp) map.get("user_lock");
+    	
+        try{
+        	#sql [connCtx]{
+				UPDATE  col_proc 
+                SET     proc_date= :(proc_date),
+					    value_date= :(value_date),
+					    proc_type= :(proc_type),
+					    proc_way= :(proc_way),
+					    proc_status=:(proc_status),
+					    col_number=:(col_number),
+					    org_uni_id=:(org_uni_id),
+					    use_id=:(use_id),
+					    user_lock=current timestamp
+				WHERE   col_pro_id=:(col_pro_id)
+        	};
+		}catch(SQLException e){
+			bc.debug(".....BO101.sqlj updateColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO101.sqlj updateColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO101.sqlj updateColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		} 
+		return user_lock;
+	}
+	
+	/**
+	 * Stvaranje objekta sa podacima koji su proslijeðeni metodi
+	 * @param iter Iterator sa podacima za objekt
+	 * @return InputData objekt sa podacima
+	 * @throws Exception
+	 */
+	public InputData getInputData(IteratorDepositDWH_new iter) throws Exception{
+		int index=-1;
+		InputData inputData=new InputData();
+		inputData.cde_typ=iter.cde_typ();
+		inputData.cde_cur=iter.cde_cur();
+		inputData.cde_amount=iter.cde_amount();
+		inputData.cde_prolong=iter.cde_prolong();
+		inputData.cde_reg_no=iter.cde_reg_no();
+		inputData.cde_account=iter.cde_account();
+		inputData.cde_dep_from=iter.cde_dep_from();
+		inputData.cde_dep_unti=iter.cde_dep_unti();
+		inputData.cde_owner=iter.cde_owner(); 
+		inputData.acc_num=iter.acc_num();
+		inputData.loan_owner=iter.loan_owner();
+		inputData.cas_exc_id=iter.cas_exc_id();
+		inputData.status = iter.status();
+		inputData.trim();
+		return inputData;
+	}
+	
+	public void closeExtraConnection() throws Exception{
+		if(conn2!=null){
+			this.conn2.close();
+		}	
+	}
+	
+    public String fetchRecipients(String csv) throws SQLException{
+        bc.debug("sqlj fetchRecipients."); 
+        String address = null;
+        #sql[connCtx]{
+            SELECT  dest_mail_address 
+            INTO    :address
+            FROM    report_def 
+            WHERE   rpt_code = :csv
+        }; 
+        bc.debug("sqlj fetchRecipients gotov."); 
+        return address;   
+    }	
+	 
+    /**
+     * Dohvat podataka o depozitima u modulu za koje nema ulaznih podataka
+     * @return
+     * @throws Exception
+     */
+    public IteratorCashDepositInModul selectModulInDeposit() throws Exception{
+        IteratorCashDepositInModul result=null;
+         
+        #sql [conn2] result = {
+            SELECT 
+                c.col_hea_id       as col_hea_id, 
+                c.col_num          as col_num, 
+                a.cde_account      as cde_account,
+                a.cde_amount       as cde_amount,  
+                e.register_no      as cde_owner,
+                e.name             as cde_owner_name,
+                f.code_char        as cde_cur  
+            FROM coll_cashdep a 
+            LEFT OUTER JOIN cashdep_dwh b ON (a.cde_account = b.cde_account),
+                coll_head c,
+                coll_owner d,
+                customer e,
+                currency f
+            WHERE   a.cde_cus_id = 8218251
+            AND     a.col_hea_id = c.col_hea_id
+            AND     c.collateral_status in ('0','1','2','3')
+            AND     b.cde_account is null
+            AND     a.col_hea_id = d.col_hea_id
+            AND     d.cus_id = e.cus_id
+            AND     a.cde_cur_id = f.cur_id
+            WITH UR
+        };
+        return result; 
+    }
+    
+    /**
+     * Metoda provjerava da li je namjena matematièka prièuva (038) ili tehnièka prièuva (039) 
+     * @param cusAccNo broj partije depozita
+     * @return false ako je namjena 038 ili 039; true inaèe
+     * @throws SQLException
+     */
+    public Boolean acceptedPurpose(String cusAccNo) throws SQLException{
+        
+        int count = 0;
+        #sql[connCtx]{
+            SELECT  count(*)
+            INTO    :(count)
+            FROM    customer_account ca
+            LEFT OUTER JOIN purpose_subtype p ON (ca.pur_sub_id = p.pur_sub_id)
+            WHERE   ca.cus_acc_no = :(cusAccNo)
+            AND     p.pur_sub_code IN ('038', '039')
+            WITH UR
+        }; 
+        
+        if(count>0) return false;
+        return true;
+    }
+}

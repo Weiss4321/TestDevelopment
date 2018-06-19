@@ -1,0 +1,731 @@
+package hr.vestigo.modules.collateral.common.yoyH;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+
+#sql iterator CollHistoryIterator (
+    BigDecimal co_chg_his_id,
+    BigDecimal col_hea_id,
+    String col_num,
+    BigDecimal col_cat_id,
+    BigDecimal col_typ_id,
+    BigDecimal col_sub_id,
+    BigDecimal real_est_nomi_valu,
+    BigDecimal real_est_nm_cur_id,
+    String real_est_nm_cur_code_char,
+    Date real_est_nomi_date,
+    BigDecimal use_id_co,
+    String use_name_co,
+    String real_est_nom_type,
+    String real_est_nom_type_name,
+    BigDecimal real_est_estn_valu,
+    Date real_est_estn_date,
+    String real_est_nomi_desc,
+    BigDecimal real_est_euse_id,
+    String real_est_euse_name,
+    BigDecimal estimate_cus_id,
+    String estimate_cus_register_no,
+    String estimate_cus_name,
+    String est_type,
+    String est_type_name,
+    String met_est_1,
+    String met_est_1_name,
+    String met_est_2,
+    String met_est_2_name,
+    BigDecimal buy_sell_value,
+    BigDecimal new_build_val,
+    String real_est_comment,
+    String cmnt,
+    String co_ind,
+    BigDecimal co_use_id,
+    String co_use_name,
+    Timestamp co_ts,
+    Timestamp co_chg_ts,
+    BigDecimal co_chg_use_id,
+    String co_chg_use_name,
+    BigDecimal use_id,
+    String use_name,
+    Timestamp user_lock,
+    Timestamp recording_time
+);
+
+
+#sql iterator CollPonderIterator (
+    BigDecimal ponder_value,
+    Date date_from,
+    Date date_until,
+    String add_request
+);
+
+#sql iterator CollInsPolIndIterator (
+    String inspol_ind,
+    Date date_from,
+    Date date_until
+);
+
+
+
+/**
+ * SQLJ za common za historizaciju kolaterala.
+ * @author hrakis
+ */
+public class YOYH1
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyH/YOYH1.sqlj,v 1.4 2014/12/16 12:26:13 hrakis Exp $";
+
+    private RemoteContext rc;
+    private ConnCtx ctx;
+    
+ 
+    public YOYH1(RemoteContext rc) throws SQLException
+    {
+        this.rc = rc;
+        this.ctx = rc.getContext();
+    }
+    
+    
+    /**
+     * Metoda dohvaæa "stare" podatke, tj. zadnje podatke o zadanom kolateralu iz povijesti promjena.
+     * @param col_hea_id ID kolaterala
+     * @return objekt s napunjenim podacima o kolateralu
+     */
+    public YOYHData getOldCollateralData(BigDecimal col_hea_id) throws Exception
+    {
+        YOYHData data = new YOYHData(col_hea_id);
+        getLatestCollateralDataFromHistory(data);
+        return data;
+    }
+    
+    
+    /**
+     * Metoda dohvaæa "nove", tj. trenutne podatke o zadanom kolateralu.
+     * @param col_hea_id ID kolaterala
+     * @return objekt s napunjenim podacima o kolateralu
+     */
+    public YOYHData getNewCollateralData(BigDecimal col_hea_id) throws Exception
+    {
+        YOYHData data = new YOYHData(col_hea_id);
+        getBasicCollateralData(data);
+        getRealEstateData(data);
+        getEstimatorPersonData(data);
+        getComment(data);
+        return data;
+    }
+    
+    
+    /**
+     * Metoda dohvaæa zadnje zapisane podatke iz povijesti promjena za zadani kolateral. 
+     * @param data objekt s podacima o kolateralu
+     */
+    private void getLatestCollateralDataFromHistory(YOYHData data) throws Exception
+    {
+        try
+        {
+            #sql[ctx] {
+                SELECT
+                    a.co_chg_his_id,
+                    a.col_num,
+                    a.co_ind,
+                    a.co_use_id,
+                    a.co_ts,
+                    a.co_chg_ts,
+                    a.co_chg_use_id,
+                    a.real_est_euse_id,
+                    a.estimate_cus_id,
+                    a.real_est_estn_valu,
+                    a.real_est_nm_cur_id,
+                    a.new_build_val,
+                    a.real_est_nomi_desc,
+                    a.real_est_estn_date,
+                    a.est_type,
+                    a.met_est_1,
+                    a.met_est_2,
+                    a.real_est_nomi_valu,
+                    a.real_est_nomi_date,
+                    a.use_id_co,
+                    a.real_est_nom_type,
+                    a.buy_sell_value,
+                    a.real_est_comment,
+                    a.cmnt,
+                    a.use_id,
+                    a.user_lock,
+                    a.recording_time
+                INTO
+                    :(data.co_chg_his_id),
+                    :(data.col_num),
+                    :(data.co_ind),
+                    :(data.co_use_id),
+                    :(data.co_ts),
+                    :(data.co_chg_ts),
+                    :(data.co_chg_use_id),
+                    :(data.real_est_euse_id),
+                    :(data.estimate_cus_id),
+                    :(data.real_est_estn_valu),
+                    :(data.real_est_nm_cur_id),
+                    :(data.new_build_val),
+                    :(data.real_est_nomi_desc),
+                    :(data.real_est_estn_date),
+                    :(data.est_type),
+                    :(data.met_est_1),
+                    :(data.met_est_2),
+                    :(data.real_est_nomi_valu),
+                    :(data.real_est_nomi_date),
+                    :(data.use_id_co),
+                    :(data.real_est_nom_type),
+                    :(data.buy_sell_value),
+                    :(data.real_est_comment),
+                    :(data.cmnt),
+                    :(data.use_id),
+                    :(data.user_lock),
+                    :(data.recording_time)
+                FROM co_chg_history a
+                WHERE a.col_hea_id = :(data.col_hea_id)
+                ORDER BY recording_time DESC, co_chg_his_id DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!rc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                rc.error("Dogodila se nepredvidjena greska kod dohvata zadnjih podataka iz povijesti promjena! (COL_HEA_ID=" + data.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+    }
+    
+     
+    /**
+     * Metoda dohvaæa nove osnovne podatke za zadani kolateral. 
+     * @param data objekt s podacima o kolateralu
+     */
+    private void getBasicCollateralData(YOYHData data) throws Exception
+    {
+        try
+        {
+            #sql[ctx] {
+                SELECT
+                    a.col_num,
+                    a.col_cat_id,
+                    a.real_est_nomi_valu,
+                    a.real_est_nm_cur_id,
+                    a.real_est_nomi_date,
+                    a.use_id_co,
+                    a.real_est_nom_type,
+                    a.real_est_estn_valu,
+                    a.real_est_estn_date,
+                    a.real_est_nomi_desc,
+                    a.real_est_euse_id,
+                    a.est_type,
+                    a.met_est_1,
+                    a.met_est_2,
+                    a.use_id,
+                    a.user_lock
+                INTO
+                    :(data.col_num),
+                    :(data.col_cat_id),
+                    :(data.real_est_nomi_valu),
+                    :(data.real_est_nm_cur_id),
+                    :(data.real_est_nomi_date),
+                    :(data.use_id_co),
+                    :(data.real_est_nom_type),
+                    :(data.real_est_estn_valu),
+                    :(data.real_est_estn_date),
+                    :(data.real_est_nomi_desc),
+                    :(data.real_est_euse_id),
+                    :(data.est_type),
+                    :(data.met_est_1),
+                    :(data.met_est_2),
+                    :(data.use_id),
+                    :(data.user_lock)
+                FROM coll_head a
+                WHERE a.col_hea_id = :(data.col_hea_id)
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            rc.error("Dogodila se nepredvidjena greska kod dohvata novih osnovnih podataka za kolateral! (COL_HEA_ID=" + data.col_hea_id + ")", ex);
+            throw ex;
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa nove podatke za zadanu nekretninu.
+     * @param data objekt s podacima o kolateralu
+     */
+    private void getRealEstateData(YOYHData data) throws Exception
+    {
+        try
+        {
+            if (data.isRealEstate())
+            {
+                #sql[ctx] {
+                    SELECT
+                        a.buy_sell_value,
+                        a.new_build_val,
+                        a.real_est_comment
+                    INTO
+                        :(data.buy_sell_value),
+                        :(data.new_build_val),
+                        :(data.real_est_comment)
+                    FROM coll_restate a
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+        }
+        catch (SQLException ex)
+        {
+            rc.error("Dogodila se nepredvidjena greska kod dohvata novih podataka za nekretninu! (COL_HEA_ID=" + data.col_hea_id + ")", ex);
+            throw ex;
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæe nove podatke o procjenitelju (fizièkoj osobi) za zadani kolateral.
+     * @param data objekt s podacima o kolateralu
+     */
+    private void getEstimatorPersonData(YOYHData data) throws Exception
+    {
+        try
+        {
+            if (data.isRealEstate())
+            {
+                #sql[ctx] {
+                    SELECT estimate_cus_id
+                    INTO :(data.estimate_cus_id)
+                    FROM coll_restate a
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (data.isMovable())
+            {
+                #sql[ctx] {
+                    SELECT estimate_cus_id
+                    INTO :(data.estimate_cus_id)
+                    FROM coll_movable a
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (data.isVessel())
+            {
+                #sql[ctx] {
+                    SELECT estimate_cus_id
+                    INTO :(data.estimate_cus_id)
+                    FROM coll_vessel a
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (data.isVehicle())
+            {
+                #sql[ctx] {
+                    SELECT estimate_cus_id
+                    INTO :(data.estimate_cus_id)
+                    FROM coll_vehicle a
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (data.isSupply())
+            {
+                #sql[ctx] {
+                    SELECT estimate_cus_id
+                    INTO :(data.estimate_cus_id)
+                    FROM coll_supply a
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+        }
+        catch (SQLException ex)
+        {
+            rc.error("Dogodila se nepredvidjena greska kod dohvata novih podataka o procjenitelju (fizièkoj osobi) kolaterala! (COL_HEA_ID=" + data.col_hea_id + ")", ex);
+            throw ex;
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa komentar iz workflowa obrade zadanog kolaterala za zadnju akciju vraæanja kolaterala u obradu.  
+     * @param data objekt s podacima o kolateralu
+     */
+    private void getComment(YOYHData data) throws Exception
+    {
+        try
+        {
+            #sql[ctx] {
+                SELECT cmnt
+                INTO :(data.cmnt)
+                FROM coll_list_q a
+                WHERE a.col_hea_id = :(data.col_hea_id)
+                  AND a.col_lis_typ_id = 700223
+                  AND a.action_type = 'VRATI U OBRADU'
+                ORDER BY release_time DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!rc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                rc.error("Dogodila se nepredvidjena greska kod dohvata zadnjeg komentara o vracanju kolaterala u obradu! (COL_HEA_ID=" + data.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+    }
+    
+    
+    /**
+     * Metoda koja poništava zadnju kvaèicu za zadani kolateral.
+     * @param data objekt s podacima o kolateralu
+     */
+    public void deactivateCoChgHistory(YOYHData data) throws Exception
+    {
+        try
+        {
+            #sql[ctx] {
+                UPDATE co_chg_history
+                SET co_ind = 'N'
+                WHERE col_hea_id = :(data.col_hea_id)
+                AND co_ind = 'D'
+            };
+            
+            /* alternativa:
+            if (data.co_chg_his_id == null) return;
+            #sql[ctx] {
+                UPDATE co_chg_history
+                SET co_ind = NULL
+                WHERE co_chg_his_id = :(data.co_chg_his_id)
+            };
+            */
+        }
+        catch (SQLException ex)
+        {
+            rc.error("Dogodila se nepredvidjena greska kod ponistavanja zadnje kvacice kolaterala! (COL_HEA_ID=" + data.col_hea_id + ")", ex);
+            throw ex;
+        }
+    }
+    
+    
+    /**
+     * Metoda koja upisuje novi zapis u povijest promjena kolaterala.
+     * @param data objekt s podacima o kolateralu
+     */
+    public void insertIntoCoChgHistory(YOYHData data) throws Exception
+    {
+        try
+        {
+            YOY00 yoy00 = new YOY00(ctx);
+            data.co_chg_his_id = yoy00.getNewId();
+            
+            #sql[ctx] {
+                INSERT INTO co_chg_history (
+                    co_chg_his_id,
+                    col_hea_id,
+                    col_num,
+                    co_ind,
+                    co_use_id,
+                    co_ts,
+                    co_chg_ts,
+                    co_chg_use_id,
+                    real_est_euse_id,
+                    estimate_cus_id,
+                    real_est_estn_valu,
+                    real_est_nm_cur_id,
+                    new_build_val,
+                    real_est_nomi_desc,
+                    real_est_estn_date,
+                    est_type,
+                    met_est_1,
+                    met_est_2,
+                    real_est_nomi_valu,
+                    real_est_nomi_date,
+                    use_id_co,
+                    real_est_nom_type,
+                    buy_sell_value,
+                    real_est_comment,
+                    cmnt,
+                    use_id,
+                    user_lock,
+                    recording_time
+                ) VALUES (
+                    :(data.co_chg_his_id),
+                    :(data.col_hea_id),
+                    :(data.col_num),
+                    :(data.co_ind),
+                    :(data.co_use_id),
+                    :(data.co_ts),
+                    :(data.co_chg_ts),
+                    :(data.co_chg_use_id),
+                    :(data.real_est_euse_id),
+                    :(data.estimate_cus_id),
+                    :(data.real_est_estn_valu),
+                    :(data.real_est_nm_cur_id),
+                    :(data.new_build_val),
+                    :(data.real_est_nomi_desc),
+                    :(data.real_est_estn_date),
+                    :(data.est_type),
+                    :(data.met_est_1),
+                    :(data.met_est_2),
+                    :(data.real_est_nomi_valu),
+                    :(data.real_est_nomi_date),
+                    :(data.use_id_co),
+                    :(data.real_est_nom_type),
+                    :(data.buy_sell_value),
+                    :(data.real_est_comment),
+                    :(data.cmnt),
+                    :(data.use_id),
+                    :(data.user_lock),
+                    CURRENT TIMESTAMP
+                )
+            };
+        }
+        catch (SQLException ex)
+        {
+            StringBuffer buffer = new StringBuffer();
+            buffer.append("co_chg_his_id=").append(data.co_chg_his_id);
+            buffer.append(", col_hea_id=").append(data.col_hea_id);
+            buffer.append(", col_num=").append(data.col_num);
+            buffer.append(", co_ind=").append(data.co_ind);
+            buffer.append(", co_use_id=").append(data.co_use_id);
+            buffer.append(", co_ts=").append(data.co_ts);
+            buffer.append(", co_chg_ts=").append(data.co_chg_ts);
+            buffer.append(", co_chg_use_id=").append(data.co_chg_use_id);
+            buffer.append(", real_est_euse_id=").append(data.real_est_euse_id);
+            buffer.append(", estimate_cus_id=").append(data.estimate_cus_id);
+            buffer.append(", real_est_estn_valu=").append(data.real_est_estn_valu);
+            buffer.append(", real_est_nm_cur_id=").append(data.real_est_nm_cur_id);
+            buffer.append(", new_build_val=").append(data.new_build_val);
+            buffer.append(", real_est_nomi_desc=").append(data.real_est_nomi_desc);
+            buffer.append(", real_est_estn_date=").append(data.real_est_estn_date);
+            buffer.append(", est_type=").append(data.est_type);
+            buffer.append(", met_est_1=").append(data.met_est_1);
+            buffer.append(", met_est_2=").append(data.met_est_2);
+            buffer.append(", real_est_nomi_valu=").append(data.real_est_nomi_valu);
+            buffer.append(", real_est_nomi_date=").append(data.real_est_nomi_date);
+            buffer.append(", use_id_co=").append(data.use_id_co);
+            buffer.append(", real_est_nom_type=").append(data.real_est_nom_type);
+            buffer.append(", buy_sell_value=").append(data.buy_sell_value);
+            buffer.append(", real_est_comment=").append(data.real_est_comment);
+            buffer.append(", cmnt=").append(data.cmnt);
+            buffer.append(", use_id=").append(data.use_id);
+            buffer.append(", user_lock").append(data.user_lock);
+            rc.error("Dogodila se nepredvidjena greska kod upisivanja podataka u povijest promjena kolaterala! " + buffer, ex);
+            throw ex;
+        }
+    }
+    
+
+    /**
+     * Metoda dohvaæa sve podatke iz povijesti promjena za zadani kolateral.
+     * @param col_hea_id ID kolaterala
+     * @return iterator s podacima
+     */
+    public CollHistoryIterator getHistory(BigDecimal col_hea_id) throws Exception
+    {
+        CollHistoryIterator iter = null;
+        try
+        {
+            #sql[ctx] iter = {
+                SELECT 
+                    a.co_chg_his_id             AS co_chg_his_id,
+                    a.col_hea_id                AS col_hea_id,
+                    a.col_num                   AS col_num,
+                    b.col_cat_id                AS col_cat_id,
+                    b.col_type_id               AS col_typ_id,
+                    podvrs.col_sub_id           AS col_sub_id,
+                    a.real_est_nomi_valu        AS real_est_nomi_valu,
+                    a.real_est_nm_cur_id        AS real_est_nm_cur_id,
+                    c.code_char                 AS real_est_nm_cur_code_char,
+                    a.real_est_nomi_date        AS real_est_nomi_date,
+                    a.use_id_co                 AS use_id_co,
+                    d.user_name                 AS use_name_co,
+                    a.real_est_nom_type         AS real_est_nom_type,
+                    e.sys_code_desc             AS real_est_nom_type_name,
+                    a.real_est_estn_valu        AS real_est_estn_valu,
+                    a.real_est_estn_date        AS real_est_estn_date,
+                    a.real_est_nomi_desc        AS real_est_nomi_desc,
+                    a.real_est_euse_id          AS real_est_euse_id,
+                    f.name                      AS real_est_euse_name,
+                    g.cus_id                    AS estimate_cus_id,
+                    g.register_no               AS estimate_cus_register_no,
+                    g.name                      AS estimate_cus_name,
+                    a.est_type                  AS est_type,
+                    h.sys_code_desc             AS est_type_name,
+                    a.met_est_1                 AS met_est_1,
+                    i.sys_code_desc             AS met_est_1_name,
+                    a.met_est_2                 AS met_est_2,
+                    j.sys_code_desc             AS met_est_2_name,
+                    a.buy_sell_value            AS buy_sell_value,
+                    a.new_build_val             AS new_build_val,
+                    a.real_est_comment          AS real_est_comment,
+                    a.cmnt                      AS cmnt,
+                    a.co_ind                    AS co_ind,
+                    a.co_use_id                 AS co_use_id,
+                    k.user_name                 AS co_use_name,
+                    a.co_ts                     AS co_ts,
+                    a.co_chg_ts                 AS co_chg_ts,
+                    a.co_chg_use_id             AS co_chg_use_id,
+                    l.user_name                 AS co_chg_use_name,
+                    a.use_id                    AS use_id,
+                    m.user_name                 AS use_name,
+                    a.user_lock                 AS user_lock,
+                    a.recording_time            AS recording_time
+                FROM co_chg_history a
+                INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                LEFT OUTER JOIN currency c ON a.real_est_nm_cur_id = c.cur_id
+                LEFT OUTER JOIN app_user d ON a.use_id_co = d.use_id
+                LEFT OUTER JOIN system_code_value e ON (e.sys_cod_id = 'coll_RealEstNomTyp' AND a.real_est_nom_type = e.sys_code_value)
+                LEFT OUTER JOIN customer f ON a.real_est_euse_id = f.cus_id
+                LEFT OUTER JOIN customer g ON a.estimate_cus_id = g.cus_id
+                LEFT OUTER JOIN system_code_value h ON (h.sys_cod_id = 'est_type' AND a.est_type = h.sys_code_value)
+                LEFT OUTER JOIN system_code_value i ON (i.sys_cod_id = 'coll_Assessment' AND a.met_est_1 = i.sys_code_value)
+                LEFT OUTER JOIN system_code_value j ON (j.sys_cod_id = 'coll_Assessment' AND a.met_est_2 = j.sys_code_value)
+                LEFT OUTER JOIN app_user k ON a.co_use_id = k.use_id
+                LEFT OUTER JOIN app_user l ON a.co_chg_use_id = l.use_id
+                LEFT OUTER JOIN app_user m ON a.use_id = m.use_id
+                LEFT OUTER JOIN (
+                     SELECT col_hea_id AS col_hea_id, real_est_type AS col_sub_id FROM coll_restate WHERE col_hea_id = :(col_hea_id)
+                     UNION
+                     SELECT col_hea_id AS col_hea_id, veh_group_id AS col_sub_id FROM coll_vehicle WHERE col_hea_id = :(col_hea_id)
+                     UNION
+                     SELECT col_hea_id AS col_hea_id, ves_typ_id AS col_sub_id FROM coll_vessel WHERE col_hea_id = :(col_hea_id)
+                     UNION
+                     SELECT col_hea_id AS col_hea_id, mov_typ_id AS col_sub_id FROM coll_movable WHERE col_hea_id = :(col_hea_id)
+                     FETCH FIRST ROW ONLY
+                ) podvrs ON a.col_hea_id = podvrs.col_hea_id
+                WHERE a.col_hea_id = :(col_hea_id)
+                ORDER BY a.recording_time
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            rc.error("Dogodila se greska kod dohvata povijesti promjena za kolateral! (COL_HEA_ID=" + col_hea_id + ")", ex);
+            throw ex;
+        }
+        return iter;
+    }
+    
+    
+    /**
+     * Metoda dohvaæa sve pondere zadanog tipa za zadani kolateral.
+     * @param ponder_type Tip pondera
+     * @param isDefault da li se radi o defaultnom ponderu
+     * @param col_hea_id ID kolaterala
+     * @param col_cat_id ID kategorije kolaterala
+     * @param col_typ_id ID vrste kolaterala
+     * @param col_sub_id ID podvrste kolaterala
+     * @return iterator s podacima
+     */
+    public CollPonderIterator getCollateralPonders(String ponder_type, boolean isDefault, BigDecimal col_hea_id, BigDecimal col_cat_id, BigDecimal col_typ_id, BigDecimal col_sub_id) throws Exception
+    {
+        CollPonderIterator iter = null;
+        try
+        {
+            if (isDefault)
+            {
+                #sql[ctx] iter = {
+                    SELECT 
+                        dfl_value   AS ponder_value,
+                        date_from   AS date_from,
+                        date_until  AS date_until,
+                        add_request AS add_request
+                    FROM dfl_col_ponder
+                    WHERE col_cat_id = :(col_cat_id)
+                    AND col_typ_id = :(col_typ_id)
+                    AND (col_sub_id = :(col_sub_id) OR col_sub_id IS NULL)
+                    AND ponder_type = :(ponder_type)
+                    AND date_until >= date_from
+                    ORDER BY date_from
+                    WITH UR
+                };
+            }
+            else
+            {
+                #sql[ctx] iter = {
+                    SELECT 
+                        ponder_value    AS ponder_value,
+                        date_from       AS date_from,
+                        date_until      AS date_until,
+                        ''              AS add_request
+                    FROM coll_ponder
+                    WHERE col_hea_id = :(col_hea_id)
+                    AND ponder_type = :(ponder_type)
+                    AND date_until >= date_from
+                    ORDER BY date_from
+                    WITH UR
+                };        
+            }
+        }
+        catch (SQLException ex)
+        {
+            rc.error("Dogodila se greska kod dohvata pondera kolaterala! (PONDER_TYPE=" + ponder_type + ",IS_DEFAULT=" + isDefault + ",COL_HEA_ID=" + col_hea_id + ",COL_CAT_ID=" + col_cat_id + ",COL_TYP_ID=" + col_typ_id + ",COL_SUB_ID=" + col_sub_id + ")", ex);
+            throw ex;
+        }
+        return iter;
+    }
+    
+    
+    
+    /**
+     * Metoda dohvaæa sve indikatore osiguranosti za zadani kolateral.
+     * @param col_hea_id ID kolaterala
+     * @param isCurrent da li da se uzmu trenutni podaci
+     * @return iterator s podacima
+     */
+    public CollInsPolIndIterator getCollateralInsPolInd(BigDecimal col_hea_id, boolean isCurrent) throws Exception
+    {
+        CollInsPolIndIterator iter = null;
+        try
+        {
+            if (isCurrent)
+            {
+                #sql[ctx] iter = {
+                    SELECT 
+                        inspol_ind          AS inspol_ind,
+                        CURRENT DATE        AS date_from,
+                        DATE('9999-12-31')  AS date_until
+                    FROM coll_head
+                    WHERE col_hea_id = :(col_hea_id)
+                    WITH UR 
+                };              
+            }
+            else
+            {
+                #sql[ctx] iter = {
+                    SELECT 
+                        inspol_ind      AS inspol_ind,
+                        load_date_from  AS date_from,
+                        load_date_until AS date_until
+                    FROM coll_head_d
+                    WHERE col_hea_id = :(col_hea_id)
+                    ORDER BY load_date_from
+                    WITH UR 
+                };
+            }
+        }
+        catch (SQLException ex)
+        {
+            rc.error("Dogodila se greska kod dohvata indikatora osiguranosti kolaterala! (COL_HEA_ID=" + col_hea_id + ",IS_CURRENT=" + isCurrent + ")", ex);
+            throw ex;
+        }
+        return iter;
+    }
+    
+}

@@ -1,0 +1,180 @@
+package hr.vestigo.modules.collateral.common.yoyF;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+
+/**
+ * SQLJ za dohvat i ažuriranje potebnih podataka prilikom bilježenja promjena statusa polica osiguranja. 
+ * @author hrakis
+ */
+public class YOYF1
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyF/YOYF1.sqlj,v 1.3 2011/05/18 13:33:55 hrakis Exp $";
+
+    private RemoteContext rc;
+    private ConnCtx ctx;
+
+    public YOYF1(RemoteContext rc) throws SQLException
+    {
+        this.rc = rc;
+        this.ctx = rc.getContext();
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o polici osiguranja i sprema ih u polja danog objekta koja oznaèavaju staro stanje police.
+     * @param data Objekt s podacima o polici osiguranja
+     */
+    public void selectOldState(YOYFData data) throws SQLException
+    {
+        try
+        {   
+            if(data.ip_id != null)  // ako polica osiguranja osigurava kolateral
+            {
+                #sql[ctx] {
+                    SELECT
+                        col_hea_id,
+                        ip_act_noact,
+                        ip_spec_stat,
+                        wrn_status,
+                        kmt_status
+                    INTO
+                        :(data.col_hea_id),
+                        :(data.old_clt_inspolst),
+                        :(data.old_clt_pol_spec_st),
+                        :(data.old_ip_wrn_status),
+                        :(data.old_ip_kmt_status)
+                    FROM insurance_policy
+                    WHERE ip_id = :(data.ip_id)
+                    WITH UR
+                };
+            }
+            else  // ako je polica osiguranja kolateral
+            {
+                #sql[ctx] {
+                    SELECT
+                        col_hea_id,
+                        ip_status,
+                        ip_spec_stat,
+                        wrn_status,
+                        kmt_status
+                    INTO
+                        :(data.col_hea_id),
+                        :(data.old_clt_inspolst),
+                        :(data.old_clt_pol_spec_st),
+                        :(data.old_ip_wrn_status),
+                        :(data.old_ip_kmt_status)
+                    FROM coll_inspolicy
+                    WHERE col_ins_id = :(data.col_ins_id)
+                    WITH UR
+                };
+            }
+            
+            if(data.old_clt_pol_spec_st != null) data.old_clt_pol_spec_st = data.old_clt_pol_spec_st.trim();
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() != 100) throw ex;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o polici osiguranja i sprema ih u polja danog objekta koja oznaèavaju novo stanje police.
+     * @param data Objekt s podacima o polici osiguranja
+     */
+    public void selectNewState(YOYFData data) throws SQLException
+    {
+        try
+        {   
+            if(data.ip_id != null)  // ako polica osiguranja osigurava kolateral
+            {
+                #sql[ctx] {
+                    SELECT
+                        col_hea_id,
+                        ip_act_noact,
+                        ip_spec_stat,
+                        wrn_status,
+                        kmt_status
+                    INTO
+                        :(data.col_hea_id),
+                        :(data.new_clt_inspolst),
+                        :(data.new_clt_pol_spec_st),
+                        :(data.new_ip_wrn_status),
+                        :(data.new_ip_kmt_status)
+                    FROM insurance_policy
+                    WHERE ip_id = :(data.ip_id)
+                    WITH UR
+                };
+            }
+            else  // ako je polica osiguranja kolateral
+            {
+                #sql[ctx] {
+                    SELECT
+                        col_hea_id,
+                        ip_status,
+                        ip_spec_stat,
+                        wrn_status,
+                        kmt_status
+                    INTO
+                        :(data.col_hea_id),
+                        :(data.new_clt_inspolst),
+                        :(data.new_clt_pol_spec_st),
+                        :(data.new_ip_wrn_status),
+                        :(data.new_ip_kmt_status)
+                    FROM coll_inspolicy
+                    WHERE col_ins_id = :(data.col_ins_id)
+                    WITH UR
+                };
+            }
+            
+            if(data.new_clt_pol_spec_st != null) data.new_clt_pol_spec_st = data.new_clt_pol_spec_st.trim();
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() != 100) throw ex;
+        }
+    }
+
+    /**
+     * Metoda koja ubacuje novi zapis u tablicu povijesti promjene police osiguranja.
+     * @param data Objekt s podacima o polici osiguranja
+     */
+    public void insertIntoIpChgHistory(YOYFData data, String field_name, String old_value, String new_value) throws Exception
+    {
+        BigDecimal ip_chg_his_id = new YOY00(rc).getNewId();
+        
+        #sql [ctx] {
+            INSERT INTO ip_chg_history (
+                ip_chg_his_id,
+                ip_id,
+                col_ins_id,
+                col_hea_id,
+                field_name,
+                old_value,
+                new_value,
+                org_uni_id,
+                use_id,
+                eve_id,
+                bank_sign,
+                user_lock)
+            VALUES (
+                :(ip_chg_his_id),
+                :(data.ip_id),
+                :(data.col_ins_id),
+                :(data.col_hea_id),
+                :(field_name),
+                :(old_value),
+                :(new_value),
+                :(data.org_uni_id),
+                :(data.use_id),
+                :(data.eve_id),
+                'RB',
+                CURRENT TIMESTAMP
+             )
+        };
+    }
+}

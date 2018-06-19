@@ -1,0 +1,437 @@
+package hr.vestigo.modules.collateral.batch.bo51;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Vector;
+
+
+public class BO511
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo51/BO511.sqlj,v 1.8 2016/07/06 11:24:06 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator Iter1 with (holdability = true)( 
+        String cus_acc_no,
+        Date exposure_date,
+        String module_code,
+        String flag
+    );
+    
+    #sql iterator Iter2 with (holdability = true)( 
+        String cus_acc_no,
+        Date exposure_date
+    );
+
+    
+    public BO511(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("2681743354"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "HNB rezervacije");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o plasmanima i njihovoj osigurnosti kolateralima.
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter1 selectLoans()
+    {
+        batchContext.startStopWatch("selectLoans");
+        Iter1 iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT
+                    cus_acc_no,
+                    exposure_date,
+                    module_code,
+                    CASE WHEN 
+                        EXISTS
+                        (
+                            SELECT 1
+                            FROM loan_beneficiary a
+                            INNER JOIN coll_hf_prior b ON b.coll_hf_prior_id = a.coll_hf_prior_id
+                            INNER JOIN coll_head c ON c.col_hea_id = b.hf_coll_head_id
+                            WHERE (a.la_acc_id = x.cus_acc_id OR a.acc_no = x.cus_acc_no OR a.request_no = x.request_no)
+                              AND a.status = 'A'
+                              AND b.hf_status = 'A'
+                              AND c.collateral_status IN ('0','1','2','3')
+                              AND c.real_est_nomi_valu > 0
+                              AND
+                              (
+                                    c.col_cat_id = 618223 OR
+                                    c.col_cat_id = 622223 OR
+                                    c.col_cat_id = 613223 OR
+                                    c.col_cat_id = 619223 OR
+                                    c.col_cat_id = 612223
+                              )
+                            FETCH FIRST ROW ONLY
+                        )
+                        OR EXISTS
+                        (
+                            SELECT 1
+                            FROM loan_beneficiary a
+                            INNER JOIN coll_head c ON c.col_hea_id = a.col_hea_id
+                            WHERE (a.la_acc_id = x.cus_acc_id OR a.acc_no = x.cus_acc_no OR a.request_no = x.request_no)
+                              AND a.status = 'A'
+                              AND c.collateral_status IN ('0','1','2','3')
+                              AND c.real_est_nomi_valu > 0
+                              AND c.col_cat_id = 615223
+                            FETCH FIRST ROW ONLY
+                        )
+                    THEN '1' ELSE '0' END AS flag
+                FROM
+                    cusacc_exposure x
+                WHERE
+                    b2asset_class = '20'
+                    AND
+                    (
+                        cus_acc_status='A'
+                        OR
+                        (
+                            cus_acc_status = 'C'
+                            AND
+                            (
+                                (module_code='TRC' AND cus_acc_orig_st='E') OR 
+                                (module_code='PKR' AND cus_acc_orig_st='T') OR 
+                                (module_code='PPZ' AND cus_acc_orig_st IN ('SS', 'NM')) OR
+                                (module_code='SDR' AND cus_acc_orig_st IN ('SS', 'NM')) OR  
+                                (module_code='KRD' AND cus_acc_orig_st='SS') OR 
+                                (module_code='GAR' AND cus_acc_orig_st='SS') OR 
+                                (module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+                                (module_code='LOC' AND cus_acc_orig_st='SS')
+                            )
+                        )
+                    )
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja plasmana!", ex);
+        }
+        batchContext.stopStopWatch("selectLoans");
+        return iter;
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o plasmanima iz okvira.
+     * @param cus_acc_no Partija okvira
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter2 selectFrameLoans(String cus_acc_no)
+    {
+        batchContext.startStopWatch("selectFrameLoans");
+        Iter2 iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT
+                    cus_acc_no,
+                    exposure_date
+                FROM cusacc_exposure
+                WHERE frame_cus_acc_no = :cus_acc_no
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja plasmana iz okvira!", ex);
+        }
+        batchContext.stopStopWatch("selectFrameLoans");
+        return iter;
+    }
+
+    /**
+     * Metoda koja evidentira poèetak obrade.
+     * Metoda postavlja indikator obrade za sve važeæe slogove na '1'. 
+     * @return da li je metoda uspješno završila
+     */
+    public boolean markBatchStart()
+    {
+        try
+        {    
+            batchContext.startStopWatch("markBatchStart");
+            batchContext.beginTransaction();
+            #sql[connCtx] {
+                UPDATE cusacc_ind_coll
+                SET
+                    proc_ind = '1',
+                    user_lock = CURRENT TIMESTAMP
+                WHERE date_until = '9999-12-31'
+            };
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("markBatchStart");
+            return true;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod inicijalnog postavljanja indikatora obrade na vazece slogove!", ex);
+            return false;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o partiji.
+     * @param cus_acc_no Partija raèuna
+     * @return Vektor s ID partije i oznakom radi li se o eksternoj partiji.
+     * Ako partija ne postoji ili je došlo do greške, vraæa null.
+     */
+    public Vector selectCustomerAccount(String cus_acc_no)
+    {
+        batchContext.startStopWatch("selectCustomerAccount");
+        try
+        {    
+            BigDecimal cus_acc_id;
+            String external_flag;
+
+            #sql[connCtx] {
+                SELECT cus_acc_id, external_flag 
+                INTO :cus_acc_id, :external_flag
+                FROM customer_account
+                WHERE cus_acc_no = :cus_acc_no
+                WITH UR
+            };
+
+            Vector vect = new Vector();
+            vect.add(cus_acc_id);
+            vect.add(external_flag);
+            return vect;
+        }
+        catch(SQLException ex)
+        {
+            return null;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("selectCustomerAccount");
+        }
+    }
+       
+    /**
+     * Metoda koja dohvaæa podatke o važeæem indikatoru osiguranosti za zadanu partiju.
+     * @param cus_acc_id ID partije
+     * @return Vektor s ID zapisa u tablici cusacc_ind_coll i indikatorom osiguranosti. 
+     * Ako važeæi zapis ne postoji ili je došlo do greške, vraæa null.
+     */
+    public Vector selectCusaccIndColl(BigDecimal cus_acc_id)
+    {
+        batchContext.startStopWatch("selectCusaccIndColl");
+        try
+        {    
+            BigDecimal cus_ind_col;
+            String coll_ind;
+
+            #sql[connCtx] {
+               SELECT cus_ind_col, coll_ind
+               INTO :cus_ind_col, :coll_ind
+               FROM cusacc_ind_coll
+               WHERE cus_acc_id = :cus_acc_id
+                 AND date_until = '9999-12-31'
+               WITH UR
+            };
+
+            Vector vect = new Vector();
+            vect.add(cus_ind_col);
+            vect.add(coll_ind);
+            return vect;
+        }
+        catch(SQLException ex)
+        {
+            return null;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("selectCusaccIndColl");
+        }
+    }
+    
+    /**
+     * Metoda koja postavlja indikator obrade za zadani slog u tablici cusacc_ind_coll.
+     * Metoda se koristi ukoliko se indikator osiguranosti partije nije promijenio i potrebno je samo evidentirati da je partija obraðena.
+     * @param cus_ind_col ID zapisa u tablici cusacc_ind_coll
+     * @return da li je metoda uspješno završila
+     */
+    public boolean updateProcInd(BigDecimal cus_ind_col)
+    {
+        try
+        {    
+            batchContext.startStopWatch("updateProcInd");
+            #sql[connCtx] {
+                UPDATE cusacc_ind_coll
+                SET
+                    proc_ind = '2',
+                    user_lock = CURRENT TIMESTAMP
+                WHERE cus_ind_col = :cus_ind_col
+            };
+            batchContext.stopStopWatch("updateProcInd");
+            return true;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod postavljanja indikatora obrade!", ex);
+            return false;
+        }
+    }
+    
+    /**
+     * Metoda koja zatvara zadani slog u tablici cusacc_ind_coll.
+     * Metoda se koristi ukoliko se indikator osiguranosti partije promijenio i potrebno je zatvoriti važeæi slog i otvoriti novi.
+     * @param cus_ind_col ID zapisa u tablici cusacc_ind_coll
+     * @param exposure_date Datum izloženosti partije
+     * @return da li je metoda uspješno završila
+     */
+    public boolean updateCusaccIndColl(BigDecimal cus_ind_col, Date exposure_date)
+    {
+        try
+        {    
+            batchContext.startStopWatch("updateCusaccIndColl");
+            
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(exposure_date);
+            calendar.add(Calendar.DAY_OF_MONTH, -1);
+            Date expDate = new Date(calendar.getTimeInMillis());
+            
+            #sql[connCtx] {
+                UPDATE cusacc_ind_coll
+                SET
+                    date_until = :expDate,
+                    proc_ind = '2',
+                    user_lock = CURRENT TIMESTAMP
+                WHERE cus_ind_col = :cus_ind_col
+            };
+            batchContext.stopStopWatch("updateCusaccIndColl");
+            return true;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod zatvaranja sloga!", ex);
+            return false;
+        }
+    }
+    
+    /**
+     * Metoda koja ubacuje novi slog u tablicu cusacc_ind_coll.
+     * @return da li je metoda uspješno završila
+     */
+    public boolean insertIntoCusaccIndColl(BigDecimal cus_acc_id, String cus_acc_no, Date exposure_date, String flag)
+    {
+        try
+        {
+            YOY00 yoy00 = new YOY00(connCtx);
+            BigDecimal cus_ind_col = yoy00.getNewId();
+
+            #sql [connCtx] {
+                INSERT INTO cusacc_ind_coll (
+                    cus_ind_col,
+                    cus_acc_id,
+                    cus_acc_no,
+                    date_from,
+                    date_until,
+                    coll_ind,
+                    proc_ind,
+                    user_lock
+                )
+                VALUES (
+                    :cus_ind_col,
+                    :cus_acc_id,
+                    :cus_acc_no,
+                    :exposure_date,
+                    '9999-12-31',
+                    :flag,
+                    '2',
+                     CURRENT TIMESTAMP
+                )
+            };
+            return true;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska kod ubacivanja zapisa u tablicu CUSACC_IND_COLL!", ex);
+            return false;
+        }
+    }
+    
+    
+    /**
+     * Metoda koja provjerava da li su ostali neobraðeni aktivni slogovi i postavlja im da vrijede do današnjeg datuma.  
+     * @return da li je metoda uspješno završila
+     */
+    public boolean markBatchEnd()
+    {
+        try
+        {    
+            batchContext.startStopWatch("markBatchEnd");
+            batchContext.beginTransaction();
+            #sql[connCtx] {
+                UPDATE cusacc_ind_coll
+                SET
+                    date_until = CURRENT DATE,
+                    user_lock = CURRENT TIMESTAMP
+                WHERE date_until = '9999-12-31'
+                  AND proc_ind = '1'
+            };
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("markBatchEnd");
+            return true;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod deaktiviranja neobradjenih slogova!", ex);
+            return false;
+        }
+    }
+}

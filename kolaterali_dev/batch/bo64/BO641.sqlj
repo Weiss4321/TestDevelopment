@@ -1,0 +1,323 @@
+package hr.vestigo.modules.collateral.batch.bo64;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO641
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo64/BO641.sqlj,v 1.4 2017/03/14 12:32:54 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    private final String policy_type_coll = "K";
+    private final String policy_type_inspol = "P";
+    
+    private BigDecimal eve_id;
+    
+    #sql iterator Iter1(
+        BigDecimal ins_war_not_id,
+        BigDecimal policy_id,
+        String wrn_status,
+        String candidate_status,
+        String ip_code,
+        Date ip_paid_until,
+        Date ip_valid_until,
+        String col_num,
+        String cus_acc_no,
+        Date due_date,
+        BigDecimal cus_id,
+        String register_no,
+        String name,
+        String basel_cus_type,
+        String org_uni_code
+    );
+
+    public BO641(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa.
+     */
+    public BigDecimal insertIntoEvent() throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO641.insertIntoEvent");
+            batchContext.beginTransaction();
+
+            this.eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4490037704"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Priprema datoteke obavijesti/opomena po isteklim policama osiguranja");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("BO641.insertIntoEvent");
+            return this.eve_id;
+        }
+        catch (Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            throw ex;
+        }
+    }
+    
+    /**
+     * Metoda koja vraæa da li su za zadanu vrstu police osiguranja svi kandidati obraðeni.  
+     * @param policy_type Vrsta police osiguranja
+     * @return <b>true</b> ako su svi kandidati obraðeni, <b>false</b> ako nisu
+     */
+    public boolean isAllCandidatesHandled(String policy_type) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO641.isAllCandidatesHandled");
+
+            BigDecimal ins_war_not_id;
+            #sql [connCtx] {
+                SELECT ins_war_not_id
+                INTO :(ins_war_not_id)
+                FROM ip_warning_notes
+                WHERE ip_id IS NOT NULL
+                  AND candidate_status = 'K'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+
+            return false;
+        }
+        catch (SQLException ex)
+        {
+            if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return true;
+            }
+            else
+            {
+                batchContext.error("Greska kod provjere da li su obradjeni svi kandidati za police koje osiguravaju kolateral!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO641.isAllCandidatesHandled");
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa police osiguranja koje su na listi kandidata oznaèene da se šalju ili ne šalju.
+     * @param policy_type Vrsta police osiguranja 
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter1 selectData(String policy_type) throws SQLException
+    {
+        try
+        {
+            batchContext.startStopWatch("BO641.selectData");
+
+            Iter1 iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.ins_war_not_id    AS ins_war_not_id,
+                    a.ip_id             AS policy_id,
+                    a.wrn_status        AS wrn_status,
+                    a.candidate_status  AS candidate_status,
+                    i.ip_code           AS ip_code,
+                    i.ip_vali_until     AS ip_paid_until,
+                    i.ip_date_sec_val   AS ip_valid_until,
+                    c.col_num           AS col_num,
+                    e.cus_acc_no        AS cus_acc_no,
+                    e.due_date          AS due_date,
+                    cc.cus_id           AS cus_id,
+                    cc.register_no      AS register_no,
+                    cc.name             AS name,
+                    cc.basel_cus_type   AS basel_cus_type,
+                    o.code              AS org_uni_code
+                FROM ip_warning_notes a
+                LEFT OUTER JOIN insurance_policy i ON a.ip_id = i.ip_id
+                LEFT OUTER JOIN coll_head c ON i.col_hea_id = c.col_hea_id
+                LEFT OUTER JOIN coll_hf_prior h ON (c.col_hea_id = h.hf_coll_head_id AND h.hf_status = 'A' AND h.hf_own_cus_id = 8218251)
+                LEFT OUTER JOIN loan_beneficiary l ON (h.coll_hf_prior_id = l.coll_hf_prior_id AND l.status = 'A')
+                LEFT OUTER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                LEFT OUTER JOIN customer cc ON e.cus_id = cc.cus_id
+                LEFT OUTER JOIN organization_unit o ON e.org_uni_id = o.org_uni_id
+                WHERE a.ip_id IS NOT NULL
+                  AND a.candidate_status IN ('N','A')
+                  AND cc.basel_cus_type IN ('1','36')
+                ORDER BY a.ip_id
+                WITH UR
+            };
+
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata polica osiguranja!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO641.selectData");
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o zadanom komitentu.
+     * @param cus_id ID komitenta
+     * @return HashMap s podacima o komitentu
+     */
+    public HashMap selectCustomerData(BigDecimal cus_id) throws Exception
+    {
+        HashMap map = new HashMap();
+        
+        try
+        {
+            batchContext.startStopWatch("BO641.selectCustomerData");
+            
+            String street = null, house_no = null, city_name = null, postoffice = null;
+            try
+            {
+                #sql [connCtx] {
+                    SELECT street, house_no, city_name, postoffice
+                    INTO :(street), :(house_no), :(city_name), :(postoffice)
+                    FROM cust_address 
+                    WHERE cus_id = :(cus_id)
+                      AND add_typ_id = 'COMMONCONTACTADDR' 
+                      AND CURRENT DATE BETWEEN date_from AND date_until 
+                    FETCH FIRST ROW ONLY
+                    WITH UR
+                };
+            }
+            catch (SQLException ex2)
+            {
+                if (batchContext.getSQLExHandler().isEmptyRowset(ex2))
+                {
+                    #sql [connCtx] {
+                        SELECT street, house_no, city_name, postoffice
+                        INTO :(street), :(house_no), :(city_name), :(postoffice)
+                        FROM cust_address 
+                        WHERE cus_id = :(cus_id)
+                          AND add_typ_id = 'MAINADDRESS' 
+                          AND CURRENT DATE BETWEEN date_from AND date_until 
+                        FETCH FIRST ROW ONLY
+                        WITH UR
+                    };
+                }
+                else
+                {
+                    throw ex2;
+                }
+            }
+            
+            map.put("street", street);
+            map.put("house_no", house_no);
+            map.put("city_name", city_name);
+            map.put("postoffice", postoffice);
+            
+            return map;
+        }
+        catch (SQLException ex)
+        {
+            if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return map;
+            }
+            else
+            {
+                batchContext.error("Greska kod dohvata podataka o komitentu (CUS_ID = " + cus_id + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO641.selectCustomerData");
+        }
+    }
+    
+    /**
+     * Metoda koja ažurira zapis u evidenciji obavijesti/opomena.
+     * @param ins_war_not_id ID zapisa
+     * @param candidate_status Novi status kandidata
+     * @param war_not_sent_stat Novi status slanja
+     */
+    public void updateWarningNote(BigDecimal ins_war_not_id, String candidate_status, String war_not_sent_stat) throws SQLException
+    {
+        try
+        {
+            batchContext.startStopWatch("BO641.updateWarningNote");
+            
+            #sql [connCtx] {
+                UPDATE ip_warning_notes
+                   SET candidate_status = :(candidate_status),
+                       war_not_sent_stat = :(war_not_sent_stat),
+                       user_lock = CURRENT TIMESTAMP,
+                       use_id = 1
+                 WHERE ins_war_not_id = :(ins_war_not_id)
+            };
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod azuriranja zapisa u evidenciji obavijesti/opomena (INS_WAR_NOT_ID = " + ins_war_not_id + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO641.updateWarningNote");
+        }
+    }
+    
+    /**
+     * Metoda koja ažurira status slanja obavijesti/opomene zadanoj polici.
+     * @param policy_type Vrsta police osiguranja
+     * @param policy_id ID police osiguranja
+     * @param wrn_status Novi status slanja obavijesti/opomene
+     */
+    public void updatePolicyStatus(String policy_type, BigDecimal policy_id, String wrn_status) throws SQLException
+    {
+        try
+        {
+            batchContext.startStopWatch("BO641.updatePolicyStatus");
+            
+            #sql [connCtx] {
+                UPDATE insurance_policy
+                   SET wrn_status = :(wrn_status),
+                       user_lock = CURRENT TIMESTAMP,
+                       use_id = 1
+                 WHERE ip_id = :(policy_id)
+            };
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska azuriranja statusa slanja/obavijesti opomene za policu osiguranja IP_ID = " + policy_id + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO641.updatePolicyStatus");
+        }
+    }
+}

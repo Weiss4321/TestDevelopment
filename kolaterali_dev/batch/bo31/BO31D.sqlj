@@ -1,0 +1,253 @@
+package hr.vestigo.modules.collateral.batch.bo31;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+/**
+ * SQLJ za cesije.
+ * @author hrakis
+ */
+public class BO31D extends ReportData
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo31/BO31D.sqlj,v 1.15 2015/09/24 14:19:20 hrakis Exp $";
+    
+    private final BigDecimal rzb_rat_typ_id = new BigDecimal("1354776003");
+    private final BigDecimal vanjski_rat_typ_id = new BigDecimal("660835251");
+
+    
+    #sql iterator CesijeIterator with (holdability = true)(
+        BigDecimal CEDENT_ID,
+        BigDecimal CESUS_ID,
+        Date datum_sklapanja_ugovora,
+        String radi_naplate_plasmana,
+        String teretimo_limit_cedenta,
+        String regres,
+        Date dat_stanja_potraz,
+        Date dat_dosp_potraz,
+        BigDecimal ukupna_potraz,
+        String dostavljena_lista,
+        Date datum_dostave,
+        Date sljedeca_dostava,
+        String vrsta_potrazivanja,
+        String dinamika_dostave,
+        String id_cedent,
+        String cedent_zbk_status,
+        String naziv_cedent,
+        String id_cesus,
+        String cesus_zbk_status, 
+        String naziv_cesus
+    );
+    
+    
+    public boolean hasMortgage()
+    {
+        return false;
+    }
+    
+    public String getFileName()
+    {
+        return "Cesije";
+    }
+    
+    public void setColumns()
+    {
+        // IZVJEŠTAJ 1
+        int idx = 0;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.iznos);
+        columns.get(idx).add(OutputData.valuta);
+        columns.get(idx).add(OutputData.tip);
+        columns.get(idx).add(OutputData.vrsta_potrazivanja);
+        columns.get(idx).add(OutputData.datum_sklapanja_ugovora);
+        columns.get(idx).add(OutputData.radi_naplate_plasmana);
+        columns.get(idx).add(OutputData.teretimo_limit_cedenta);
+        columns.get(idx).add(OutputData.regres);
+        columns.get(idx).add(OutputData.datum_trzisne_vrijednosti_datum_nom_vrijed_c_o);
+        columns.get(idx).add(OutputData.dat_stanja_potraz);
+        columns.get(idx).add(OutputData.dat_dosp_potraz);
+        columns.get(idx).add(OutputData.ukupna_potraz);
+        columns.get(idx).add(OutputData.vrsta_trzisne_vrijednosti);
+        columns.get(idx).add(OutputData.ces_ponder_prijedlog);
+        columns.get(idx).add(OutputData.coll_officer);
+        columns.get(idx).add(OutputData.dostavljena_lista);
+        columns.get(idx).add(OutputData.datum_dostave);
+        columns.get(idx).add(OutputData.dinamika_dostave);
+        columns.get(idx).add(OutputData.sljedeca_dostava);
+        columns.get(idx).add(OutputData.id_cedent);
+        columns.get(idx).add(OutputData.naziv_cedent);
+        columns.get(idx).add(OutputData.cedent_rzb_rating);
+        columns.get(idx).add(OutputData.cedent_vanjski_rating);
+        columns.get(idx).add(OutputData.cedent_zbk_status);
+        columns.get(idx).add(OutputData.id_cesus);
+        columns.get(idx).add(OutputData.naziv_cesus);
+        columns.get(idx).add(OutputData.cesus_rzb_rating);
+        columns.get(idx).add(OutputData.cesus_vanjski_rating);
+        columns.get(idx).add(OutputData.cesus_zbk_status);
+
+        // IZVJEŠTAJ 2
+        idx = 1;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.iznos);
+        columns.get(idx).add(OutputData.valuta);
+        columns.get(idx).add(OutputData.misljenje_pravne_sluzbe);
+        columns.get(idx).add(OutputData.ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.hnb_ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.prihv_za_rezervacije);
+        columns.get(idx).add(OutputData.b2_hnb_stand_prihvatljivost);
+        columns.get(idx).add(OutputData.b2_irb_prihvatljivost);
+        columns.get(idx).add(OutputData.rba_prihvatljivost);
+        columns.get(idx).add(OutputData.nd_prihvatljivost);
+        columns.get(idx).add(OutputData.omega_id_korisnika_plasmana);
+        columns.get(idx).add(OutputData.zbk_status_korisnika_plasmana);
+        columns.get(idx).add(OutputData.naziv_korisnika_plasmana);
+        columns.get(idx).add(OutputData.partija_plasmana);
+        columns.get(idx).add(OutputData.plasman_osiguran);
+        columns.get(idx).add(OutputData.osiguravatelj);
+        columns.get(idx).add(OutputData.broj_zahtjeva);
+        columns.get(idx).add(OutputData.broj_zahtjeva_aps);
+        columns.get(idx).add(OutputData.broj_ugovora);
+        columns.get(idx).add(OutputData.valuta_izlozenosti);
+        columns.get(idx).add(OutputData.izlozenost_po_plasmanu);
+        columns.get(idx).add(OutputData.datum_izlozenosti);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_plasmana);
+        columns.get(idx).add(OutputData.dwh_status_plasmana);
+        columns.get(idx).add(OutputData.originalni_status_plasmana);
+        columns.get(idx).add(OutputData.datum_dospijeca_plasmana);
+        columns.get(idx).add(OutputData.sifra_liste_na_kojoj_se_nalazi_kolateral);
+        columns.get(idx).add(OutputData.login_referenta);
+        columns.get(idx).add(OutputData.ime_referenta);
+        columns.get(idx).add(OutputData.sifra_oj_referenta);
+        columns.get(idx).add(OutputData.naziv_oj_referenta);
+        columns.get(idx).add(OutputData.datum_unosa);
+        columns.get(idx).add(OutputData.datum_zadnje_promjene);
+        columns.get(idx).add(OutputData.unos_plasmana);
+        columns.get(idx).add(OutputData.im_suduznika);
+        columns.get(idx).add(OutputData.naziv_suduznika);
+        columns.get(idx).add(OutputData.uloga_suduznika);
+        columns.get(idx).add(OutputData.wcov_orig_valuta);
+        columns.get(idx).add(OutputData.kol_ponder_dfl);
+        columns.get(idx).add(OutputData.kolateral_ponder_co);
+        columns.get(idx).add(OutputData.realan_ponder);
+        columns.get(idx).add(OutputData.wcov);
+        columns.get(idx).add(OutputData.iskoristenost_kolaterala_wca);
+        columns.get(idx).add(OutputData.vrsta_ugovora);
+        columns.get(idx).add(OutputData.collateral_code_gctc_kolaterala);
+        columns.get(idx).add(OutputData.endorsement_type_gctc);
+        columns.get(idx).add(OutputData.object_type_gctc);
+        columns.get(idx).add(OutputData.property_type_gctc);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_local_level);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_group_level);
+        columns.get(idx).add(OutputData.suma_hipoteka_viseg_reda_do_prve_rba);
+        columns.get(idx).add(OutputData.raspoloziva_neponderirana_vrijednost);
+        columns.get(idx).add(OutputData.datum_izracuna_raspolozive_vrijednosti);
+    }
+
+    
+    public void selectAdditionalData(HashMap data, Date value_date, YRXX0 yrxx0) throws Exception
+    {
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        
+        data.put(OutputData.iznos, data.get(OutputData.trzisna_vrijednost));
+        data.put(OutputData.valuta, data.get(OutputData.valuta_procijenjene_vrijednosti));
+        
+        try
+        {
+            bc.startStopWatch("BO31D.selectAdditionalData#basic");
+            
+            CesijeIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    e.cedent_id             AS CEDENT_ID,
+                    e.cesus_id              AS CESUS_ID,
+                    e.ces_con_date          AS datum_sklapanja_ugovora,
+                    e.ces_nap_pls           AS radi_naplate_plasmana,
+                    e.ces_limit             AS teretimo_limit_cedenta,
+                    e.ces_regres            AS regres,
+                    e.ces_exp_date          AS dat_stanja_potraz,
+                    e.ces_mat_date          AS dat_dosp_potraz,
+                    e.ces_amount_all        AS ukupna_potraz,
+                    e.ces_lista             AS dostavljena_lista,
+                    e.ces_lista_date        AS datum_dostave,
+                    e.cec_lista_next        AS sljedeca_dostava,
+                    m.use_code_desc         AS vrsta_potrazivanja,
+                    n.use_code_desc         AS dinamika_dostave,
+                    o.register_no           AS id_cedent,
+                    o.status                AS cedent_zbk_status,
+                    o.name                  AS naziv_cedent,
+                    p.register_no           AS id_cesus,
+                    p.status                AS cesus_zbk_status, 
+                    p.name                  AS naziv_cesus
+                FROM coll_cesija e
+                LEFT OUTER JOIN user_code_value m       ON e.ces_typ_id = m.use_cod_val_id
+                LEFT OUTER JOIN user_code_value n       ON e.ces_lista_din = n.use_cod_val_id
+                LEFT OUTER JOIN customer o              ON e.cedent_id = o.cus_id
+                LEFT OUTER JOIN customer p              ON e.cesus_id = p.cus_id
+                WHERE e.col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY      
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                fillDataFromIterator(iter, data, OutputData.class);
+            }
+            
+            bc.stopStopWatch("BO31D.selectAdditionalData#basic");
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o cesiji! " + data.toString(), ex);
+            throw ex;
+        }
+
+        
+        BigDecimal cedent_id = (BigDecimal)data.get(OutputData.CEDENT_ID);
+        BigDecimal cesus_id = (BigDecimal)data.get(OutputData.CESUS_ID);
+        
+        String cedent_rzb_rating = getCustomerRating(cedent_id, rzb_rat_typ_id, value_date);
+        String cedent_vanjski_rating = getCustomerRating(cedent_id, vanjski_rat_typ_id, value_date);
+        String cesus_rzb_rating = getCustomerRating(cesus_id, rzb_rat_typ_id, value_date);
+        String cesus_vanjski_rating = getCustomerRating(cesus_id, vanjski_rat_typ_id, value_date);
+        
+        data.put(OutputData.cedent_rzb_rating, cedent_rzb_rating);
+        data.put(OutputData.cedent_vanjski_rating, cedent_vanjski_rating);
+        data.put(OutputData.cesus_rzb_rating, cesus_rzb_rating);
+        data.put(OutputData.cesus_vanjski_rating, cesus_vanjski_rating);        
+    }
+    
+    
+    private String getCustomerRating(BigDecimal cus_id, BigDecimal rat_typ_id, Date value_date) throws Exception
+    {
+        String rating = null;
+        try
+        {
+            bc.startStopWatch("BO31D.getCustomerRating");
+            #sql [connCtx] {
+                SELECT b.score
+                INTO :(rating)
+                FROM customer_rating b
+                WHERE b.rat_typ_id = :(rat_typ_id)
+                AND :(value_date) BETWEEN b.date_from AND b.date_until
+                AND b.cus_id = :(cus_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            bc.stopStopWatch("BO31D.getCustomerRating");
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata ratinga (CUS_ID=" + cus_id + ",RAT_TYP_ID=" + rat_typ_id + ",VALUE_DATE=" + value_date + ")!", ex);
+                throw ex;
+            }
+        }
+        return rating;
+    }
+}

@@ -1,0 +1,413 @@
+package hr.vestigo.modules.collateral.batch.bo01;
+
+
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*;
+
+/**  
+ *
+ */
+public class BO011{
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo01/BO011.sqlj,v 1.8 2006/10/24 13:09:34 hramkr Exp $";
+	
+    private BatchContext batchContext;
+    private BigDecimal eve_id = null;
+    private ConnCtx ctx;
+    
+	#sql iterator iteratorZapisi (	String login,
+									String acc_no,
+									String request_no,
+									String register_no,
+									String name,
+									Date datum,
+									String coll_type_code,
+									String coll_type_name, 
+									String col_num,
+									BigDecimal real_est_nomi_valu, 
+									String code_char,
+									BigDecimal col_hea_id
+								);	
+    
+    public BO011(BatchContext batchContext) {
+        this.batchContext = batchContext;  
+        try {
+            this.ctx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    public void insertIntoEvent() throws Exception{
+        batchContext.debug("sqlj insertIntoEvent");		
+         
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(batchContext);
+		  	YXYD0 genId = new YXYD0(ctx);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	this.eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",this.eve_id);
+		  	event.put("eve_typ_id", new BigDecimal("1637842003.0"));
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", " Batch za kontrolni ispis unesenih kolaterala po referentu i plasmanu."); //TODO vidjeti sto staviti
+		  	event.put("use_id", batchContext.getUserID());
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", batchContext.getBankSign());
+		  	batchContext.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	
+		  	/* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+		  	 * i koji se nalazi u commonu yxyA. Radi se update: 
+		  	 *    UPDATE batch_log
+		  	 *    SET eve_id = :newEveId
+			 *    WHERE bat_log_id = :batLogId 
+		  	*/
+		  	batchContext.updateEveID(this.eve_id);		
+	  
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}  
+    
+    public BigDecimal getEveId(){
+    	return this.eve_id;
+    }
+   
+    public iteratorZapisi fetchZapise(String [] uParametri) throws SQLException{
+    	iteratorZapisi pomIterator=null;
+		
+    	String [] parametri=null;
+    	int i=0;
+    	
+    	parametri=uParametri;
+    	
+    	for (i=0;i<parametri.length;i++)
+    		batchContext.debug("parametri[" + String.valueOf(i) + "]=" + parametri[i]);
+    	
+        try {
+    		String collStatus = parametri[0];
+    		if (collStatus.compareTo("M")==0){
+    			collStatus="0";
+    		}else if(collStatus.compareTo("A")==0){
+    			collStatus="3";
+    		}
+    		
+    		BigDecimal refId = null;
+    		if (parametri[1]!=null && !parametri[1].trim().equals("")){
+    			refId = new BigDecimal(parametri[1]);
+    		}
+    		
+    		String accNo = "%";
+    		if (parametri[2]!=null && !parametri[2].trim().equals("")){
+    			accNo = parametri[2].replace('*','%');
+    		}
+    		
+    		String requestNo = "%";
+    		if (parametri[3]!=null && !parametri[3].trim().equals("")){
+    			requestNo = parametri[3].replace('*','%');
+    		}	
+    		
+
+    		BigDecimal ownerId = null;
+    		if (parametri[4]!=null && !parametri[4].trim().equals("")) 
+    			ownerId = new BigDecimal(parametri[4]);
+
+    		
+    		Date dateFrom = null;
+    		if(parametri[5]!=null && !parametri[5].trim().equals("")){ 
+    			dateFrom = convertStringToDate(parametri[5]);
+    		}else{
+    			dateFrom = Date.valueOf("1970-01-01");
+    		}
+    		
+    		Date dateUntil = null;
+    		if(parametri[6]!=null && !parametri[6].trim().equals("")){ 
+    			dateUntil = convertStringToDate(parametri[6]);
+    		}else{ 
+    			dateUntil=Date.valueOf("9999-12-31");
+    		}
+    		
+    		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    		batchContext.debug("*************************************SQLJ bo011******************************************************");
+    		if (refId!=null){
+    			//sa referentom i datumom
+    			if (ownerId!=null){
+    				//sa vlasnikom 
+    				batchContext.debug( "......CO261.sqlj select PRVI");
+    				#sql [ctx] pomIterator = {
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE 	a.collateral_status=:collStatus
+    						AND		b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.use_open_id = :refId
+    						AND		b.cus_id = :ownerId
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+    						UNION
+
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+    						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND 	g.hf_status='A' 
+    						AND		g.hf_own_cus_id = 8218251
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.use_open_id = :refId
+    						AND		b.cus_id = :ownerId
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+    						ORDER BY 6
+    				};
+    			}else{
+    				//bez vlasnika
+    				batchContext.debug( "......CO261.sqlj select DRUGI");
+    				#sql [ctx] pomIterator = {
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char, a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.use_open_id = :refId
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+    						UNION
+
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char, a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+    						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND		g.hf_status='A' 
+    						AND		g.hf_own_cus_id = 8218251
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.use_open_id = :refId
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+    				
+    						ORDER BY 6
+    				};
+    			}
+    		}else if (ownerId!=null){
+    			//referent nije unesen sigurno jel je provjereno ranije, al vlasnik je unesen
+    			//sad se provjerava dal je mozda interval datuma unesen
+    			if (dateFrom!=null){
+    				//datum unesen
+    				batchContext.debug( "......CO261.sqlj select TRECI");
+    				#sql [ctx] pomIterator = {
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.cus_id = :ownerId
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+    						UNION
+
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+    						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND		g.hf_status='A' 
+    						AND		g.hf_own_cus_id = 8218251
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.cus_id = :ownerId
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+    						
+    						ORDER BY 6
+    				};
+    			}else{
+    				//bez datuma
+    				batchContext.debug( "......CO261.sqlj select CETVRTI");
+    				#sql [ctx] pomIterator = {
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.cus_id = :ownerId
+
+    						UNION
+
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+    						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND		g.hf_status='A' 
+    						AND		g.hf_own_cus_id = 8218251
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		b.cus_id = :ownerId
+    						
+    						ORDER BY 6
+    				};
+    			}
+    		}else{
+    			//nije ni vlasnik ni referent unesen, ali mozda je datum
+    			if(dateFrom!=null){
+    				//datum je unesen
+    				batchContext.debug( "......CO261.sqlj select PETI");
+    				#sql [ctx] pomIterator = {
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+
+    						UNION
+
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+    						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND		g.hf_status='A' 
+    						AND		g.hf_own_cus_id = 8218251
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo	
+    						AND		date(b.opening_ts) between :dateFrom  AND :dateUntil
+    						
+    						ORDER BY 6
+    				};
+    			}else{
+    				//datum nije unesen
+    				batchContext.debug( "......CO261.sqlj select SESTI");
+    				#sql [ctx] pomIterator = {
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN loan_beneficiary b ON a.col_hea_id=b.col_hea_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						LEFT OUTER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+
+    						UNION
+
+    						SELECT c.login, b.acc_no, b.request_no, d.register_no, d.name, date(b.opening_ts) as datum, e.coll_type_code, 
+    								e.coll_type_name, a.col_num, a.real_est_nomi_valu,f.code_char,a.col_hea_id
+    						FROM coll_head a
+    						INNER JOIN  coll_hf_prior g ON a.col_hea_id=g.hf_coll_head_id
+    						INNER JOIN loan_beneficiary b ON g.coll_hf_prior_id=b.coll_hf_prior_id
+    						INNER JOIN app_user c ON b.use_open_id = c.use_id
+    						INNER JOIN customer d ON b.cus_id = d.cus_id
+    						INNER JOIN collateral_type e ON a.col_type_id=e.coll_type_id
+    						INNER JOIN currency f ON a.real_est_nm_cur_id=f.cur_id
+    						WHERE	a.collateral_status=:collStatus
+    						AND		g.hf_status='A' 
+    						AND		g.hf_own_cus_id = 8218251
+    						AND 	b.acc_no LIKE :accNo
+    						AND		b.request_no LIKE :requestNo
+    						
+    						ORDER BY 6
+    				};
+    			}
+    			
+    		}
+  
+    		batchContext.debug( "......CO261.sqlj select uspješno izvršen");
+
+        }
+        catch (SQLException sqle) {
+            throw sqle;
+        }
+		return pomIterator;
+	}
+
+	private Date convertStringToDate(String dataString){
+		
+		String pomString=null;
+		String dan=null;
+		String mjesec=null;
+		String godina=null;
+		
+		dan=dataString.substring(0,2);
+		mjesec=dataString.substring(3,5);
+		godina=dataString.substring(6,10);
+		
+		pomString=godina + "-" + mjesec + "-" + dan;
+		return Date.valueOf(pomString);
+		
+	}
+    
+}

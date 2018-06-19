@@ -1,0 +1,41 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from  customer;
+
+
+select * from  customer_account;
+
+select * from cust_bill_exch; -- 
+
+---------------------------------------  dohvat raèuna dužnika
+
+select * from customer where tax_number = '45645646044'; -- register_no je 2002123     c.register_no = '2002123' and ca.iban_acc_no = 45645646044 
+
+------  cus_id = 39309275
+
+
+select ca.cus_acc_no, ca.iban_acc_no, c.register_no from customer c, customer_account ca where c.cus_id = ca.cus_id and  ca.cus_id = 39309275;
+
+select * from customer c, customer_account ca where c.cus_id = ca.cus_id and  ca.cus_id = 39309275;
+
+select * from system_code_value;
+
+
+select sys_cod_val_id, sys_code_value, sys_code_desc from system_code_value where sys_cod_id = 'bill_exch_status';  -- ok
+
+
+
+  				SELECT
+                       sys_code_value, sys_cod_id                     
+                      FROM
+                        system_code_value
+                        
+                      WHERE 
+                       sys_cod_id = 'pay_method     ';
+
+                         SELECT
+                       sys_code_value                   
+                      FROM
+                        system_code_value
+                      WHERE 
+                       sys_cod_id  = TRIM('pay_method') -- sys_cod_id  = 'pay_method     '

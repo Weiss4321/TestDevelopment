@@ -1,0 +1,131 @@
+package hr.vestigo.modules.collateral.jcics.co20;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+/**
+ * CO204 delete from RE_SUB_TYPE
+ *  	
+ */
+
+
+
+public class CO204 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co20/CO204.sqlj,v 1.3 2006/06/14 07:53:53 hraamh Exp $";
+	public DeclCO20 decl = null;
+	
+	public CO204 (DeclCO20 decl) {
+		this.decl = decl;
+	}
+	
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();	
+			
+			java.sql.Date DateFrom = null;		
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			DateFrom = new java.sql.Date(timeT);
+			
+			java.sql.Date DateUntil = java.sql.Date.valueOf("9999-12-31");
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			try{	
+			    	#sql [ctx]{  insert into re_sub_type_a (
+			    					RE_SUB_TYPE_ID,
+			    					RE_SUB_TYPE_CODE,
+			    					RE_SUB_TYPE_DESC,
+			    					RE_TYPE_ID,
+			    					RE_SUB_STATUS,
+			    					RE_SUB_SPEC_STAT,
+			    					USE_OPEN_ID,
+			    					USE_ID,
+			    					OPENING_TS,
+			    					USER_LOCK,
+			    					BANK_SIGN
+			    					)
+			    				VALUES (
+			    					:(decl.resubtypedeletem.RE_SUB_TYPE_ID_a), 
+									:(decl.resubtypedeletem.RE_SUB_TYPE_CODE_a), 
+									:(decl.resubtypedeletem.RE_SUB_TYPE_DESC_a),
+									:(decl.resubtypedeletem.RE_TYPE_ID_a),
+									:(decl.resubtypedeletem.RE_SUB_STATUS_a),
+			    					:(decl.resubtypedeletem.RE_SUB_SPEC_STAT_a),
+									:(decl.resubtypedeletem.USE_OPEN_ID_a),
+									:(decl.resubtypedeletem.USE_ID_a),
+									:(decl.resubtypedeletem.OPENING_TS_a),
+									:(decl.resubtypedeletem.USER_LOCK_a),
+									:(tc.getBankSign())
+			    						)
+         		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO202: Error inserting re_sub_type_a! ","err411a", null);
+			}
+			
+			try{	
+			    #sql [ctx]{  insert into re_sub_type_a (
+    					RE_SUB_TYPE_ID,
+    					RE_SUB_TYPE_CODE,
+    					RE_SUB_TYPE_DESC,
+    					RE_TYPE_ID,
+    					RE_SUB_STATUS,
+    					RE_SUB_SPEC_STAT,
+    					USE_OPEN_ID,
+    					USE_ID,
+    					OPENING_TS,
+    					USER_LOCK,
+    					BANK_SIGN
+    					)
+    				VALUES (
+    					:(decl.resubtypedeletem.RE_SUB_TYPE_ID_a), 
+						:(decl.resubtypedeletem.RE_SUB_TYPE_CODE_a), 
+						:(decl.resubtypedeletem.RE_SUB_TYPE_DESC_a),
+						:(decl.resubtypedeletem.RE_TYPE_ID_a),
+						:(decl.resubtypedeletem.RE_SUB_STATUS_a),
+    					'0D',
+						:(decl.resubtypedeletem.USE_OPEN_ID_a),
+						:(decl.resubtypedeletem.use_id),
+						:(decl.resubtypedeletem.OPENING_TS_a),
+						current timestamp,
+						:(tc.getBankSign())
+    						)
+		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO204: Error inserting re_sub_type_a! ","err411a", null);
+			}
+			
+			try{	
+	
+			    
+				#sql [ctx, exCtx]{ 
+			    	DELETE FROM re_sub_type
+			    	WHERE re_sub_type_id=:(decl.resubtypedeletem.RE_SUB_TYPE_ID) 
+			    	AND user_lock=:(decl.resubtypedeletem.USER_LOCK)
+			    	};
+			    	if (exCtx.getUpdateCount() == 0) {//ako ni jedan ne postoji, tj. ako je USER_LOCK promijenjen nece nista obrisati
+			    	    
+						throw new Exception("Nothing was deleted! RE_SUB_TYPE_ID : "+ decl.resubtypedeletem.RE_SUB_TYPE_ID + " and user_lock is: " + decl.resubtypedeletem.USER_LOCK);
+					}
+				}catch(java.sql.SQLException se){
+
+						tc.debug ( "......CO204.sqlj delete from re_sub_type SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO204.sqlj delete from re_sub_type SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO204.sqlj delete from re_sub_type SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO204: Error deleting row in re_sub_type! ","err411a", null);
+				}
+		}//execute
+	
+
+}	
+			

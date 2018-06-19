@@ -1,0 +1,569 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+
+select * from  interface_coll_tbl order by recording_time desc;
+
+
+select * from  interface_coll_tbl where card_no = 'S00000000000590' order by recording_time desc;
+
+select * from  interface_coll_tbl where card_no = '6772813000016065' order by recording_time desc;
+
+ update  interface_coll_tbl set fee_amount = '1.00' where int_col_tbl_id =   784096665;
+
+ commit;
+
+ select * from  interface_coll_tbl  where int_col_tbl_id =   784096665;
+
+
+ ---------------
+
+ 		select * from customer_package cp
+		inner join card crd on cp.car_id = crd.car_id
+		where cp.status = '1'
+		and crd.crd_activ_flag = '0'
+
+		select * from customer where cus_id = 1821715551;
+
+		select * from customer_account where cus_acc_id = 7935610;
+
+		
+
+		select * from customer where cus_id = 1182132551; -- 3200953160
+
+		select * from customer_account where cus_acc_id = 2484782610;
+
+		select * from customer_account where cus_acc_no = '3200009102';
+
+		select * from customer_account where cus_acc_id= 2484782610;
+
+		-- 3200953160
+
+			 SELECT sum(decimal(cb.balance,17,8)*decimal(er.midd_rate,17,8))
+                     FROM cusacc_balance cb, customer_account ca, exchange_rate er
+                WHERE cb.cus_acc_id = ca.cus_acc_id
+                AND ca.external_flag = '0'
+                AND cb.pro_typ_id IN (36999, 42999, 826790005, 826791005)
+                AND ca.cus_acc_id= 2484782610
+                AND er.cur_id = cb.cur_id and '16.12.2015' between er.date_from and er.date_until 
+                AND cb.balance_date = (SELECT MAX(bb.balance_date) 
+                                    FROM cusacc_balance bb
+                                    WHERE bb.pro_typ_id=cb.pro_typ_id
+                                    AND cb.cus_acc_id=bb.cus_acc_id
+                                    AND     bb.cur_id = cb.cur_id
+                                    AND     (bb.balance_date < '16.12.2015' or bb.balance_date = '16.12.2015'))
+
+
+            select * from    cusacc_balance  where cusacc_bal_id = 853771665;  
+
+            --update cusacc_balance set balance = '-100' where cusacc_bal_id = 853771665;
+
+           -- update cusacc_balance set credit_total = '0' where cusacc_bal_id = 853771665;
+
+            --update cusacc_balance set debit_total = '100' where cusacc_bal_id = 853771665;
+
+			commit;          
+
+			  select * from WARNING_NOTES order by user_lock desc;
+
+                 delete from  WARNING_NOTES where war_not_id = 430229656;
+
+                commit;     
+
+			
+             
+			 SELECT *
+                     FROM cusacc_balance cb, customer_account ca, exchange_rate er
+                WHERE cb.cus_acc_id = ca.cus_acc_id
+                AND ca.external_flag = '0'
+                AND cb.pro_typ_id IN (36999, 42999, 826790005, 826791005)
+                AND ca.cus_acc_id= 7935610
+                AND er.cur_id = cb.cur_id and '14.12.2015' between er.date_from and er.date_until 
+                AND cb.balance_date = (SELECT MAX(bb.balance_date) 
+                                    FROM cusacc_balance bb
+                                    WHERE bb.pro_typ_id=cb.pro_typ_id
+                                    AND cb.cus_acc_id=bb.cus_acc_id
+                                    AND     bb.cur_id = cb.cur_id
+                                    AND     (bb.balance_date < '14.12.2015' or bb.balance_date = '14.12.2015'))      
+
+
+             select * from customer_package order by recording_time desc;   
+
+             select * from customer_account where cus_acc_id = 13772797605;       
+
+                                            select * from customer_account where ban_pro_typ_id = 6561936704
+
+                                             select * from customer_account where ban_pro_typ_id = 790661005;
+                                            
+            select * from BANK_PRODUCT_TYPE   ;                             
+
+	-------------  test na RT za prijavu 21669
+			select * from batch_log where bat_def_id = 6260996704 order by recording_time desc;
+
+
+
+		   SELECT sum(decimal(cb.balance,17,8)*decimal(er.midd_rate,17,8))
+                  
+                FROM cusacc_balance cb, customer_account ca, exchange_rate er
+                WHERE cb.cus_acc_id = ca.cus_acc_id
+                AND ca.external_flag = '0'
+                AND cb.pro_typ_id IN (36999, 42999, 826790005, 826791005)
+                AND ca.cus_acc_id=:(CusAccId)
+                AND er.cur_id = cb.cur_id and '16.12.2015' between er.date_from and er.date_until 
+                AND cb.balance_date = (SELECT MAX(bb.balance_date) 
+                                    FROM cusacc_balance bb
+                                    WHERE bb.pro_typ_id=cb.pro_typ_id
+                                    AND cb.cus_acc_id=bb.cus_acc_id
+                                    AND     bb.cur_id = cb.cur_id
+                                    AND     (bb.balance_date < :(Today) or bb.balance_date = :(Today)))
+
+			
+
+
+				
+   			SELECT  
+              *
+                FROM WARNING_NOTES
+                WHERE cus_acc_id = 2484782610
+                    AND cus_let_typ_id = (select cus_let_typ_id from CUST_LETT_TYPE where cus_let_typ_code='WARN_4')
+                    AND candidate_status = 'A'
+                ORDER BY warn_note_date desc, user_lock desc
+                FETCH FIRST 1 ROW ONLY
+
+                 select * from WARNING_NOTES order by user_lock desc;
+
+                select * from WARNING_NOTES where war_not_id = 597856326;
+
+                delete from  WARNING_NOTES where war_not_id = 598150326;
+
+                commit;
+
+                select * from customer_account where cus_acc_id= 2484782610;
+
+                select * from customer_account where  external_flag = '0';
+
+               -- update customer_account set external_flag = '0'  where cus_acc_id= 2484782610 ;
+
+               select * from customer_account where cus_acc_no = '3251009080';
+
+                commit;
+
+				 SELECT sum(decimal(cb.balance,17,8)*decimal(er.midd_rate,17,8))
+                     FROM cusacc_balance cb, customer_account ca, exchange_rate er
+                WHERE cb.cus_acc_id = ca.cus_acc_id
+                AND ca.external_flag = '0'
+                AND cb.pro_typ_id IN (36999, 42999, 826790005, 826791005)
+                AND ca.cus_acc_id= 16681656
+                AND er.cur_id = cb.cur_id and '14.12.2015' between er.date_from and er.date_until 
+                AND cb.balance_date = (SELECT MAX(bb.balance_date) 
+                                    FROM cusacc_balance bb
+                                    WHERE bb.pro_typ_id=cb.pro_typ_id
+                                    AND cb.cus_acc_id=bb.cus_acc_id
+                                    AND     bb.cur_id = cb.cur_id
+                                    AND     (bb.balance_date < '14.12.2015' or bb.balance_date = '14.12.2015'))
+
+
+               select * from    cusacc_balance where     cus_acc_id= 16681656     and pro_typ_id IN (36999, 42999, 826790005, 826791005)  ;
+
+			-- cusacc_bal_id = 871,203,665
+			select * from cusacc_balance where cusacc_bal_id = 871203665;
+
+			--update cusacc_balance set debit_total = '100.00'   where cusacc_bal_id = 871203665;
+			
+              -- update cusacc_balance set credit_total = '0.00'   where cusacc_bal_id = 871203665;   
+
+             -- update cusacc_balance set balance = '-100.00'   where cusacc_bal_id = 871203665;                      
+			
+			select * from cusacc_balance where cus_acc_id = 2484782610 and pro_typ_id IN (36999, 42999, 826790005, 826791005) ;
+
+			--update cusacc_balance set balance = '-678' where cusacc_bal_id = 1159820335;
+
+			commit;
+
+
+
+			select * from EVENT_JOURNAL order by sys_timestamp desc;
+
+			select * from EVENT_JOURNAL where use_login = 'UNAUTHENTICATED';
+
+
+			
+			select * from customer_package cp
+			inner join card crd on cp.car_id = crd.car_id
+			where cp.status = '1'
+			and crd.crd_activ_flag = '0'
+
+			select * from customer_account where cus_acc_id in (2484782610,16681656,124323656);
+			
+			
+			
+			
+			
+			
+			SET CURRENT_SCHEMA = 'SIDEV'
+
+
+		select * from currency;
+
+		select * from customer_account where cus_acc_no =  '1135004474'; -- ALTURA D.O.O.
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 443129326 AND ba.cus_id = 26752352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 443129326 AND cb.cus_id = 26752352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '30.11.2015' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+
+	select * from customer_account where cus_acc_no =  '1135000029'; -- IBM
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 3142396823 AND ba.cus_id = 26738352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 3142396823 AND cb.cus_id = 26738352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '25.11.2015' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+ 
+
+	select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 	select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 	update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 594419326;
+
+ 	update CUST_BILL_EXCH set paid_amount = null, collected_amount = null where cus_bil_exc_id = 497881326;
+
+	commit;
+
+
+     -- dohvat za I
+	SELECT cus_bil_exc_id, cus_bill_ext_no,payer_cus_id,payer_tax_number,payer_reg_no,payer_name,payer_address,payer_place,payer_acc_no,master_acc_no,ben_iban,ben_cus_id,ben_tax_number,ben_reg_no,ben_name,ben_address,credit_ref_typ,credit_ref_no,debit_ref_typ,debit_ref_no,ext_int_flag,payment_method,amount,cur_id,maturity_date,issue_date,status,chg_stat_reason,paid_amount,collected_amount,order_trn,pay_ord_id,payment_amount,payment_date,order_trn_last,pay_ord_id_last,paym_amount_last,payment_date_last,recording_time,eve_id,use_id,recording_use_id,bank_sign,user_lock,ben_place 
+	FROM cust_bill_exch  WHERE maturity_date = '30.11.2015'  AND status = 'A'   AND ext_int_flag = '0' with ur;
+
+
+	select * from customer_account where ban_pro_typ_id = 6561936704 and cus_acc_status = 'A';	
+
+	select * from customer_account where ban_pro_typ_id = 790661005 and cus_acc_status = 'A';	
+
+
+	--   dohvat za E
+
+	 SELECT cus_bil_exc_id, cus_bill_ext_no,cus_bill_exch_no,payer_cus_id,payer_tax_number,payer_reg_no,payer_name,payer_address,payer_place,payer_acc_no,master_acc_no,ben_iban,ben_cus_id,ben_tax_number,ben_reg_no,ben_name,ben_address,credit_ref_typ,credit_ref_no,debit_ref_typ,debit_ref_no,ext_int_flag,payment_method,amount,cur_id,maturity_date,issue_date,status,chg_stat_reason,paid_amount,collected_amount,order_trn,pay_ord_id,payment_amount,payment_date,order_trn_last,pay_ord_id_last,paym_amount_last,payment_date_last,recording_time,eve_id,use_id,recording_use_id,bank_sign,user_lock,ben_place FROM cust_bill_exch  WHERE maturity_date <= current_date  AND status = 'A'   AND ext_int_flag = '1' with ur
+
+
+
+	-- dohvat za cut_off za NKS je 20:00:00
+
+		  SELECT  use_code_value 
+               
+                FROM    user_code_value 
+                WHERE   use_cod_id = 'cut_off_time_p_NKS'
+
+
+                
+		  SELECT  use_code_value 
+               
+                FROM    user_code_value 
+                WHERE   use_cod_id = 'cut_off_time_p_NKS'
+
+                     
+		  SELECT  * 
+               
+                FROM    user_code_value 
+                WHERE   use_cod_id = 'cut_off_time_p_NKS'
+
+
+                          
+		  SELECT  * 
+               
+                FROM    user_code_value 
+                WHERE   use_cod_id like 'cut_off%'
+
+
+                SELECT  use_code_value 
+               
+                FROM    user_code_value 
+                WHERE   use_cod_id = 'cut_off_time_p_NKS'
+
+
+
+		-------------------
+
+		select NEXT VALUE FOR ACCKEEP_SEQ;
+
+		  select nextval for mysseq from  ACCKEEP_SEQ;
+
+		SELECT (NEXTVAL FOR sequence) FROM SYSIBM.SYSDUMMY1; 
+
+		
+
+
+select NEXT VALUE FOR ACCKEEP_SEQ FROM SYSIBM.SYSDUMMY1; 
+
+select * from income_head where inc_hea_id between 53048250 and 53048350
+
+
+		našao dva komitenta na SIDEV-u s paketima i karticama:
+('2002034','2001604')
+kartice su im:
+('8500000000002160','4172386086615703')
+kartièni raèuni (raèun uz koji je vezana kartica, paket je vjerojatno vezan i uz nekakv transakcijski raèun):
+('019-63-8500000215','019-63-3500420511')
+
+
+
+
+sql:
+
+select * from customer_package cp
+inner join card crd on cp.car_id = crd.car_id
+where cp.status = '1'
+and crd.crd_activ_flag = '0'
+
+  select * from customer_account where cus_acc_no = '3205007245'; --3,076,714,823
+
+  select * from customer_package where cus_acc_id = 3076714823;
+
+  select * from customer_account where cus_acc_id = 157386326;
+
+  ----------  primjer na kojemu 
+
+  select warn_note_status from customer_account where cus_acc_id = 157386326;
+
+   			SELECT  
+                war_not_sent_stat 
+                FROM WARNING_NOTES
+                WHERE cus_acc_id = 157386326
+                    AND cus_let_typ_id = (select cus_let_typ_id from CUST_LETT_TYPE where cus_let_typ_code='WARN_4')
+                    AND candidate_status = 'A'
+                ORDER BY warn_note_date desc, user_lock desc
+                FETCH FIRST 1 ROW ONLY
+
+
+			
+   			SELECT  
+              *
+                FROM WARNING_NOTES
+                WHERE cus_acc_id = 157386326
+                    AND cus_let_typ_id = (select cus_let_typ_id from CUST_LETT_TYPE where cus_let_typ_code='WARN_4')
+                    AND candidate_status = 'A'
+                ORDER BY warn_note_date desc, user_lock desc
+                FETCH FIRST 1 ROW ONLY
+
+                 select * from WARNING_NOTES order by user_lock desc;
+
+                select * from WARNING_NOTES where war_not_id = 597856326;
+
+                delete from  WARNING_NOTES where war_not_id = 598150326;
+
+                commit;
+
+
+                 select * from WARNING_NOTES order by user_lock desc;
+  
+			-- SQL iz tablice 
+
+			     SELECT
+                    cp.DATE_FROM,
+                    cp.DATE_UNTIL,
+                    cp.USER_LOCK,
+                    cp.STATUS,
+                    cp.STATUS_REASON,
+                    cp.OVE_TYP_CODE,
+                    cp.CARD_RELATION_FLAG,
+                    cp.KEEP_CARD_FLAG,
+                    temp.INTACC_TYP_NAME,
+                    temp.CARD_NO,
+                    ca.CUS_ACC_NO,
+                    ca.CUS_ACC_NAME,
+                    ca.OVE_TYP_CODE,
+                    ca.BAN_PRO_TYP_ID,
+                    ca.P_SCH_ID,
+                    cpt.CUSPAC_TYP_CODE,
+                    au.LOGIN,
+                    au.USER_NAME
+              
+                FROM
+                    CUSTOMER_PACKAGE cp LEFT OUTER JOIN
+                        CUSTOMER_ACCOUNT ca ON (cp.CUS_ACC_ID = ca.CUS_ACC_ID)
+                        LEFT OUTER JOIN (SELECT ct.INTACC_TYP_NAME, c.CAR_ID, c.CARD_NO from CRDINTACC_TYPE ct, CRDINTACC ci , CARD c
+                        WHERE c.INT_ACC_ID = ci.INT_ACC_ID AND ci.INTACC_TYP_ID =ct.INTACC_TYP_ID
+                        AND BILLING_CODE = 'C' AND CUSTOMER_FLAG = 'P' AND c.BANK_SIGN = 'RB') temp ON (cp.CAR_ID = temp.CAR_ID),
+                    CUST_PACKAGE_TYPE cpt,
+                    APP_USER au
+                WHERE 
+                    cp.CUS_PAC_ID = :( bdCus_pac_id )
+                    AND cp.CUS_PAC_TYP_ID = cpt.CUS_PAC_TYP_ID
+                    AND cp.USE_ID = au.USE_ID
+
+
+			select * from customer_account where cus_acc_no = '3205007245'; -- cus_acc_id = 3076714823
+
+			select * from customer_package where cus_acc_id = 3076714823 ;
+
+
+			select * from customer_account where cus_acc_no = '3205009945'; 
+
+			select * from customer_package where cus_acc_id = 157357326;
+
+			select * from customer_package where cus_pac_id = 147657330;
+
+			update customer_package set keep_card_flag = null where cus_pac_id = 147657330;
+
+			update customer_package set status_reason = '00' where cus_pac_id = 147657330;
+
+			update customer_package set status = '1' where cus_pac_id = 147657330;
+
+			commit;
+
+			
+			select * from customer_package;
+
+			-------------
+
+			select * from batch_log where bat_def_id = 6260996704 order by recording_time desc;
+
+
+
+			 SELECT sum(decimal(cb.balance,17,8)*decimal(er.midd_rate,17,8))
+               
+                FROM cusacc_balance cb, customer_account ca, exchange_rate er
+                WHERE cb.cus_acc_id = ca.cus_acc_id
+                AND ca.external_flag = '0'
+                AND cb.pro_typ_id IN (36999, 42999, 826790005, 826791005)
+                AND ca.cus_acc_id= 157386326
+                AND er.cur_id = cb.cur_id and '14.12.2015' between er.date_from and er.date_until 
+                AND cb.balance_date = (SELECT MAX(bb.balance_date) 
+                                    FROM cusacc_balance bb
+                                    WHERE bb.pro_typ_id=cb.pro_typ_id
+                                    AND cb.cus_acc_id=bb.cus_acc_id
+                                    AND     bb.cur_id = cb.cur_id
+                                    AND     (bb.balance_date < '14.12.2015' or bb.balance_date = '14.12.2015'))
+			
+			select * from cusacc_balance where cus_acc_id = 157386326 and pro_typ_id IN (36999, 42999, 826790005, 826791005) ;
+
+			--update cusacc_balance set balance = '-678' where cusacc_bal_id = 1159820335;
+
+			commit;
+
+			select * from turnover order by system_timestamp desc;
+
+			select * from EVENT_JOURNAL order by sys_timestamp desc;
+
+			select * from EVENT_JOURNAL where use_login = 'UNAUTHENTICATED';
+
+
+
+		 SELECT
+               *
+          
+            FROM
+                cust_bill_exch cbe
+            WHERE
+                cbe.status = 'A'
+            AND
+                (cbe.ben_iban = null
+                OR 
+                    cbe.payer_acc_no = null
+                OR
+                    cbe.master_acc_no = '1135000375'  )
+
+
+
+                    select cus_pac_id, eve_id, cus_pac_typ_id, status, status_reason 
+        		from CUSTOMER_PACKAGE cp where cp.cus_id = 896330 and cp.date_from = 
+        		select max(cpt.date_from) from CUSTOMER_PACKAGE cpt 
+        		where cpt.CUS_ID = cp.CUS_ID  ))
+
+        		    select cus_pac_id, eve_id, cus_pac_typ_id, status, status_reason , card_relation_flag
+        		from CUSTOMER_PACKAGE cp where  cp.date_from = 
+        		select max(cpt.date_from) from CUSTOMER_PACKAGE cpt 
+        		where cpt.CUS_ID = cp.CUS_ID  
+
+        		  select cus_pac_id, eve_id, cus_pac_typ_id, status, status_reason , card_relation_flag
+        		from CUSTOMER_PACKAGE where card_relation_flag = '1';
+
+
+			select * from customer_package;
+
+
+			select * from customer_account where ban_pro_Typ_id = 790661005 and cus_acc_status  = 'A';
+
+				select * from customer_account where cus_acc_status  = 'A';
+
+
+				select * from FINANCIAL_ERRORS;
+
+
+
+				--------------------------------------------------------------------
+
+				SELECT
+						cb.cus_acc_id,						
+						cb.acc_num_id,	
+						cb.account,
+						cb.ban_rel_type,
+						cb.amo_type,
+						cb.cur_id,
+						cb.debit_total,
+						cb.credit_total,
+						cb.balance,
+						cb.ord_no
+                        
+					FROM	
+						cusacc_balance cb 
+						inner join bank_relation_type brt on brt.ban_rel_type = cb.ban_rel_type
+					WHERE											
+						brt.module_name = 'PAY'
+						and cb.cus_id = 26570352						
+						and cb.bank_sign = 'RB'
+						and cb.cus_acc_report = '1'
+						and cb.cus_acc_id IS NOT NULL						
+						and cb.balance_date = (
+										SELECT 
+											MAX(balance_date)
+										FROM 
+											cusacc_balance cusb
+										WHERE 
+												cusb.balance_date <= '17.12.2015'
+											AND cusb.cus_id =26570352
+											AND cusb.cus_acc_id = cb.cus_acc_id
+											AND cusb.acc_num_id = cb.acc_num_id
+											AND cusb.account = cb.account
+											AND cusb.ban_rel_type = cb.ban_rel_type
+											AND cusb.amo_type = cb.amo_type
+											AND cusb.cur_id = cb.cur_id
+											AND cusb.pro_typ_id = cb.pro_typ_id
+											AND cusb.bank_sign = 'RB'
+										)
+
+				
+
+
+SET CURRENT_SCHEMA = 'SIP'
+
+
+select * from customer_package;
+
+select * from customer_account where cus_acc_no = '3200165893'; -- cus_acc_id = 336681003
+
+select * from customer_package where cus_acc_id = 336681003; 
+
+
+select * from direct_notices;
+
+select * from EVENT_JOURNAL where use_login = 'UNAUTHENTICATED';
+
+			 select * from customer_account where cus_acc_no = '3234801215';  -- 253015940522
+
+
+select * from customer_package where cus_acc_id = 253015940522;
+
+select * from customer_account where ban_pro_Typ_id = 790661005 and cus_acc_status  = 'A';
+
+select * from BANK_PRODUCT_type;
+
+
+
+select * from batch_log where bat_def_id = 344447327 order by recording_time desc;
+			
+		

@@ -1,0 +1,604 @@
+package hr.vestigo.modules.collateral.jcics.co00;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ *  CO007.sqlj
+ *  This transaction check existance of row in the table coll_restate for 8 elements 
+ * 	Ova transakcija provjerava postojanja zapisa u tablici coll_restate za 8 elemenata
+ *  sud
+ *  katastarska opcina ( stara i nova )
+ *  broj ZKU
+ *  broj OU
+ *  katastarska cestica ( stara i nova )
+ *  
+ */
+public class CO007 extends RemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co00/CO007.sqlj,v 1.7 2017/07/19 08:04:22 hrazst Exp $";
+
+	public DeclCO00 decl = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO007 (DeclCO00 decl) {
+		this.decl = decl;
+	}
+	
+	
+	
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext(); 
+			
+			
+			
+			tc.debug("decl.redcheeximap.RealEstate_REAL_EST_COURT_ID    		" + decl.redcheeximap.RealEstate_REAL_EST_COURT_ID  );  
+			tc.debug("decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC       	" + decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC );  
+			tc.debug("decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST          	" + decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST    );  
+			tc.debug("decl.redcheeximap.RealEstate_txtRealEstLandRegn       	" + decl.redcheeximap.RealEstate_txtRealEstLandRegn );  
+			tc.debug("decl.redcheeximap.RealEstate_txtRealEstLandSub        	" + decl.redcheeximap.RealEstate_txtRealEstLandSub  );  
+			tc.debug("decl.redcheeximap.RealEstate_txtRealEstLandPart       	" + decl.redcheeximap.RealEstate_txtRealEstLandPart );  
+			tc.debug("decl.redcheeximap.RealEstate_txtReLandPartST          	" + decl.redcheeximap.RealEstate_txtReLandPartST    );  
+			tc.debug("decl.redcheeximap.RealEstate_txtCoown )               	" + decl.redcheeximap.RealEstate_txtCoown ) ;          
+			
+			tc.debug("decl.redcheeximap.RealEstate_COL_HEA_ID )               	" + decl.redcheeximap.RealEstate_COL_HEA_ID ) ;          
+			
+			
+			
+			
+			
+			if(decl.redcheeximap.RealEstate_COL_HEA_ID == null){
+			
+			
+			//000
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres  
+					WHERE real_est_court_id 	is null 
+					AND real_est_cada_munc		is null  
+					AND re_cada_munc_st 		is null   
+					AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)     
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown ) 
+					
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug ( "Slucaj 000 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			
+			tc.debug("Slucaj 000 " + decl.redcheeximap.numberRe);
+			}
+			//001
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+				
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres   
+					WHERE real_est_court_id 	is null 
+					AND real_est_cada_munc		is null  
+					AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )    
+					AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)      
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug("Slucaj 001 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			tc.debug("Slucaj 001 " + decl.redcheeximap.numberRe);
+			}
+			//010
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+				
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres    
+					WHERE real_est_court_id 	is null 
+					AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC)  
+					AND re_cada_munc_st 		is null   
+                    AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)     
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug("Slucaj 010 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			tc.debug("Slucaj 010 " + decl.redcheeximap.numberRe);
+			}
+						
+			//011
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+				
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres   
+					WHERE real_est_court_id 	is null 
+					AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC)  
+					AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )    
+					AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)      
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug("Slucaj 011 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			tc.debug("Slucaj 011 " + decl.redcheeximap.numberRe);
+			}
+			//100
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+				
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres                                                           
+					WHERE real_est_court_id 	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID )  
+					AND real_est_cada_munc		is null  
+					AND re_cada_munc_st 		is null   
+					AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)    
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug("Slucaj 100 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			tc.debug("Slucaj 100 " + decl.redcheeximap.numberRe);
+			}
+			//101
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+				
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres                                                           
+					WHERE real_est_court_id 	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID )
+					AND real_est_cada_munc		is null  
+					AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )   
+					AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)      
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug("Slucaj 101 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			tc.debug("Slucaj 101 " + decl.redcheeximap.numberRe);
+			}
+			//110
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+				
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres                                                           
+					WHERE real_est_court_id 	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID ) 
+					AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC) 
+					AND re_cada_munc_st 		is null   
+					AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)   
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug("Slucaj 110 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			tc.debug("Slucaj 110 " + decl.redcheeximap.numberRe);
+			}
+			//111
+			if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+				
+			try{ 
+				#sql[ctx] { 
+					SELECT count(*)                                                                  
+					INTO  :(decl.redcheeximap.numberRe)                                                
+					FROM coll_restate cres                                                           
+					WHERE real_est_court_id 	     	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID )  
+					AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC)  
+					AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )    
+					AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+					AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+					AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+					AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)     
+					AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+				tc.debug("Slucaj 111 " + decl.redcheeximap.numberRe);
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;;
+				
+			
+			}
+			tc.debug("Slucaj 111 " + decl.redcheeximap.numberRe);
+			}
+	}
+			
+			
+						
+			
+			if(decl.redcheeximap.RealEstate_COL_HEA_ID != null){
+				
+
+				//000
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres  
+						WHERE real_est_court_id 	is null 
+						AND real_est_cada_munc		is null  
+						AND re_cada_munc_st 		is null   
+						AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)     
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown ) 
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+
+					};	
+					
+
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug ( "Slucaj 000 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+					
+				
+				}
+				
+				tc.debug("Slucaj 000 " + decl.redcheeximap.numberRe);
+				}
+				//001
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+					
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres   
+						WHERE real_est_court_id 	is null 
+						AND real_est_cada_munc		is null  
+						AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )    
+						AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)      
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+					};	
+					
+
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug("Slucaj 001 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+					
+				
+				}
+				tc.debug("Slucaj 001 " + decl.redcheeximap.numberRe);
+				}
+				//010
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+					
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres    
+						WHERE real_est_court_id 	is null 
+						AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC)  
+						AND re_cada_munc_st 		is null   
+	                    AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)     
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+					};	
+					
+
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug("Slucaj 010 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+					
+				
+				}
+				tc.debug("Slucaj 010 " + decl.redcheeximap.numberRe);
+				}
+							
+				//011
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID == null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+					
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres   
+						WHERE real_est_court_id 	is null 
+						AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC)  
+						AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )    
+						AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)      
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+					};	
+					
+
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug("Slucaj 011 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+					
+				
+				}
+				tc.debug("Slucaj 011 " + decl.redcheeximap.numberRe);
+				}
+				//100
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+					
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres                                                           
+						WHERE real_est_court_id 	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID )  
+						AND real_est_cada_munc		is null  
+						AND re_cada_munc_st 		is null   
+						AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)    
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+					};	
+					
+
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug("Slucaj 100 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+					
+				
+				}
+				tc.debug("Slucaj 100 " + decl.redcheeximap.numberRe);
+				}
+				//101
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC == null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+					
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres                                                           
+						WHERE real_est_court_id 	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID )
+						AND real_est_cada_munc		is null  
+						AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )   
+						AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)      
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+					};	
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug("Slucaj 101 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+				}
+				tc.debug("Slucaj 101 " + decl.redcheeximap.numberRe);
+				}
+				//110
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST == null)){
+					
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres                                                           
+						WHERE real_est_court_id 	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID ) 
+						AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC) 
+						AND re_cada_munc_st 		is null   
+						AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)   
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+					};
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug("Slucaj 110 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+				}
+				tc.debug("Slucaj 110 " + decl.redcheeximap.numberRe);
+				}
+				//111
+				if((decl.redcheeximap.RealEstate_REAL_EST_COURT_ID != null) && (decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC != null) && (decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST != null)){
+					
+				try{ 
+					#sql[ctx] { 
+						SELECT count(*)                                                                  
+						INTO  :(decl.redcheeximap.numberRe)                                                
+						FROM coll_restate cres                                                           
+						WHERE real_est_court_id 	     	= :(decl.redcheeximap.RealEstate_REAL_EST_COURT_ID )  
+						AND real_est_cada_munc		= :(decl.redcheeximap.RealEstate_REAL_EST_CADA_MUNC)  
+						AND re_cada_munc_st 		= :(decl.redcheeximap.RealEstate_RE_CADA_MUNC_ST )    
+						AND real_est_land_regn  	= :(decl.redcheeximap.RealEstate_txtRealEstLandRegn ) 
+						AND real_est_land_sub  		= :(decl.redcheeximap.RealEstate_txtRealEstLandSub )  
+						AND real_est_land_part  	= :(decl.redcheeximap.RealEstate_txtRealEstLandPart)  
+						AND re_land_part_st			= :(decl.redcheeximap.RealEstate_txtReLandPartST)     
+						AND coown 		 			= :(decl.redcheeximap.RealEstate_txtCoown )           
+						AND col_hea_id 				<> :(decl.redcheeximap.RealEstate_COL_HEA_ID)
+					};	
+					
+
+				} catch(java.sql.SQLException e){
+					tc.debug (".......CO007.sqlj ..... Select from  coll_restate unsuccessful.");
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL ErrorCode " + e.getErrorCode());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate  SQL SQLState " + e.getSQLState());
+					tc.debug ( "......CO007.sqlj Select from  coll_restate   SQL Message " + e.getMessage());
+					tc.debug("Slucaj 111 " + decl.redcheeximap.numberRe);
+					e.printStackTrace();
+					if (e.getErrorCode()!=100) 
+						throw e;;
+				}
+				tc.debug("Slucaj 111 " + decl.redcheeximap.numberRe);
+				}
+			}
+	}
+}

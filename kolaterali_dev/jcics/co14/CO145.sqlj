@@ -1,0 +1,249 @@
+package hr.vestigo.modules.collateral.jcics.co14;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//RevRegCoefRe LIST
+/**
+ * CO145 class selects query_by_example data from table Rev_Reg_Coef_Re	
+ * into list screen and puts this data into vectors LDB.
+ */
+  
+#sql iterator Iter145 (	BigDecimal rev_re_id , 
+						BigDecimal rev_re_place,
+						BigDecimal rev_re_county,
+						BigDecimal rev_re_district,
+						BigDecimal rev_re_resi_quar,
+						BigDecimal place_code,
+						BigDecimal county_code,
+						String district_code,
+						String resi_q_code,
+						String rev_spec_stat,
+						String open_login,
+						String open_user,
+						java.sql.Timestamp opening_ts,
+						String chg_login,
+						String chg_user,
+						java.sql.Timestamp user_lock,
+						BigDecimal eve_id,
+						String rev_re_code,	
+						String rev_re_name,	
+						String place_name ,
+						String county_name, 
+						String district_name,
+						String resi_q_name,
+						BigDecimal rev_re_coef ,
+						String rev_act_noact , 
+						java.sql.Date rev_date_from,
+						java.sql.Date rev_date_unti,
+						BigDecimal use_open_id,
+						BigDecimal use_id
+					 );	
+
+public class CO145 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co14/CO145.sqlj,v 1.2 2006/05/16 12:32:06 hrazst Exp $";
+	
+	public DeclCO14 decl = null;
+	TransactionContext tc_pom = null;
+	
+	private Iter145 iter1 = null;
+	
+	public CO145 (DeclCO14 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.revregcoefrequerrym.ActionListLevel);
+		ConnCtx ctx = tc.getContext();
+		tc_pom = tc;
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+	        String nameP="%";
+	        if (decl.revregcoefrequerrym.RevRegCoefReDialogS_txtName != null && !decl.revregcoefrequerrym.RevRegCoefReDialogS_txtName.equals("")) {
+	        	nameP = decl.revregcoefrequerrym.RevRegCoefReDialogS_txtName.replace('*', '%');
+	        }
+	        String codeP="%";
+	        if (decl.revregcoefrequerrym.RevRegCoefReDialogS_txtCode != null && !decl.revregcoefrequerrym.RevRegCoefReDialogS_txtCode.equals("")) {
+	        	codeP = decl.revregcoefrequerrym.RevRegCoefReDialogS_txtCode.replace('*', '%');
+	        }
+
+		if(decl.revregcoefrequerrym.REV_RE_PLACE==null){		
+			if(decl.revregcoefrequerrym.REV_RE_COUNTY==null){
+				tc.debug ( "...CO145...sql1" );
+					#sql [ctx] iter1 = {                                                                                                           
+				
+											select  a.rev_re_id, a.rev_re_place, a.rev_re_county, a.rev_re_district, 
+													a.rev_re_resi_quar, b.code as place_code, c.code as county_code, 
+													d.code as district_code, e.code as resi_q_code, a.rev_spec_stat, 
+													f.login as open_login, f.user_name as open_user,
+													a.opening_ts, g.login as chg_login, g.user_name as chg_user, 
+													a.user_lock, a.eve_id, 
+													a.rev_re_code, a.rev_re_name, b.name as place_name, 
+													c.name as county_name, d.name as district_name, e.name as resi_q_name, 
+													a.rev_re_coef, a.rev_act_noact, a.rev_date_from, a.rev_date_unti,a.use_open_id,a.use_id
+												from app_user f, app_user g, REV_REG_COEF_RE a
+													left outer join political_map b on (a.rev_re_place=b.pol_map_id)
+													left outer join political_map c on (a.rev_re_county=c.pol_map_id)
+													left outer join political_map d on (a.rev_re_district=d.pol_map_id)
+													left outer join political_map e on (a.rev_re_resi_quar=e.pol_map_id)
+													where a.use_open_id=f.use_id and a.use_id=g.use_id AND a.rev_act_noact='A'
+													and a.rev_re_code like :codeP and a.rev_re_name like :nameP
+													order by a.rev_re_code asc                                                                     
+							}; 
+					tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+					tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+					tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+					tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+					tc.debug ( "......codeP=" + codeP);
+					tc.debug ( "......nameP=" + nameP);
+					tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+					tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				}else{
+					tc.debug ( "...CO145...sql2" );
+					#sql [ctx] iter1 = {                                                                                                           
+							
+														select  a.rev_re_id, a.rev_re_place, a.rev_re_county, a.rev_re_district, 
+																a.rev_re_resi_quar, b.code as place_code, c.code as county_code, 
+																d.code as district_code, e.code as resi_q_code, a.rev_spec_stat, 
+																f.login as open_login, f.user_name as open_user,
+																a.opening_ts, g.login as chg_login, g.user_name as chg_user, 
+																a.user_lock, a.eve_id, 
+																a.rev_re_code, a.rev_re_name, b.name as place_name, 
+																c.name as county_name, d.name as district_name, e.name as resi_q_name, 
+																a.rev_re_coef, a.rev_act_noact, a.rev_date_from, a.rev_date_unti,a.use_open_id,a.use_id
+															from app_user f, app_user g, REV_REG_COEF_RE a
+																left outer join political_map b on (a.rev_re_place=b.pol_map_id)
+																left outer join political_map c on (a.rev_re_county=c.pol_map_id)
+																left outer join political_map d on (a.rev_re_district=d.pol_map_id)
+																left outer join political_map e on (a.rev_re_resi_quar=e.pol_map_id)
+																where a.use_open_id=f.use_id and a.use_id=g.use_id AND a.rev_act_noact='A'
+																and a.rev_re_county=:(decl.revregcoefrequerrym.REV_RE_COUNTY)
+																and a.rev_re_code like :codeP and a.rev_re_name like :nameP
+																order by a.rev_re_code asc                                                                     
+										}; 					
+				}
+		}else{
+			if(decl.revregcoefrequerrym.REV_RE_COUNTY==null){
+				tc.debug ( "...CO145...sql3" );
+				#sql [ctx] iter1 = {                                                                                                           
+			
+										select  a.rev_re_id, a.rev_re_place, a.rev_re_county, a.rev_re_district, 
+												a.rev_re_resi_quar, b.code as place_code, c.code as county_code, 
+												d.code as district_code, e.code as resi_q_code, a.rev_spec_stat, 
+												f.login as open_login, f.user_name as open_user,
+												a.opening_ts, g.login as chg_login, g.user_name as chg_user, 
+												a.user_lock, a.eve_id, 
+												a.rev_re_code, a.rev_re_name, b.name as place_name, 
+												c.name as county_name, d.name as district_name, e.name as resi_q_name, 
+												a.rev_re_coef, a.rev_act_noact, a.rev_date_from, a.rev_date_unti,a.use_open_id,a.use_id
+											from app_user f, app_user g, REV_REG_COEF_RE a
+												left outer join political_map b on (a.rev_re_place=b.pol_map_id)
+												left outer join political_map c on (a.rev_re_county=c.pol_map_id)
+												left outer join political_map d on (a.rev_re_district=d.pol_map_id)
+												left outer join political_map e on (a.rev_re_resi_quar=e.pol_map_id)
+												where a.use_open_id=f.use_id and a.use_id=g.use_id AND a.rev_act_noact='A'
+												and a.rev_re_place=:(decl.revregcoefrequerrym.REV_RE_PLACE)
+												and a.rev_re_code like :codeP and a.rev_re_name like :nameP
+												order by a.rev_re_code asc                                                                     
+						}; 
+			}else{
+				tc.debug ( "...CO145...sql4" );
+				#sql [ctx] iter1 = {                                                                                                           
+						
+													select  a.rev_re_id, a.rev_re_place, a.rev_re_county, a.rev_re_district, 
+															a.rev_re_resi_quar, b.code as place_code, c.code as county_code, 
+															d.code as district_code, e.code as resi_q_code, a.rev_spec_stat, 
+															f.login as open_login, f.user_name as open_user,
+															a.opening_ts, g.login as chg_login, g.user_name as chg_user, 
+															a.user_lock, a.eve_id, 
+															a.rev_re_code, a.rev_re_name, b.name as place_name, 
+															c.name as county_name, d.name as district_name, e.name as resi_q_name, 
+															a.rev_re_coef, a.rev_act_noact, a.rev_date_from, a.rev_date_unti,a.use_open_id,a.use_id
+														from app_user f, app_user g, REV_REG_COEF_RE a
+															left outer join political_map b on (a.rev_re_place=b.pol_map_id)
+															left outer join political_map c on (a.rev_re_county=c.pol_map_id)
+															left outer join political_map d on (a.rev_re_district=d.pol_map_id)
+															left outer join political_map e on (a.rev_re_resi_quar=e.pol_map_id)
+															where a.use_open_id=f.use_id and a.use_id=g.use_id AND a.rev_act_noact='A'
+															and a.rev_re_county=:(decl.revregcoefrequerrym.REV_RE_COUNTY)
+															and a.rev_re_place=:(decl.revregcoefrequerrym.REV_RE_PLACE)
+															and a.rev_re_code like :codeP and a.rev_re_name like :nameP
+															order by a.rev_re_code asc                                                                     
+									}; 					
+			}			
+		}
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO145.sqlj select uspješno izvršen");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		}
+
+	
+	public boolean next() throws Exception {
+		tc_pom.debug ( "-------- CO142 postoji iter"); 		
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector hidden = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		//Šifra
+		//Naziv regionalne oznaka
+		//Mjesto
+		//Županija
+		//Gradska èetvrt
+		//Stambena èetvrt
+		//KL-Koeficijent lokacije
+		//STA-Status zapisa
+		//Zapis vrijedi do
+		//Zapis vrijedi do
+		row.add(iter1.rev_re_code());	
+		row.add(iter1.rev_re_name());
+		row.add(iter1.place_name());
+		row.add(iter1.county_name());	
+		row.add(iter1.district_name());
+		row.add(iter1.resi_q_name());
+		row.add(iter1.rev_re_coef());	
+		row.add(iter1.rev_act_noact());
+		row.add(iter1.rev_date_from());
+		row.add(iter1.rev_date_unti());
+		
+		hidden.add(iter1.rev_re_id());
+		hidden.add(iter1.rev_re_place());
+		hidden.add(iter1.rev_re_county());
+		hidden.add(iter1.rev_re_district());
+		hidden.add(iter1.rev_re_resi_quar());
+		hidden.add(iter1.place_code());
+		hidden.add(iter1.county_code());		
+		hidden.add(iter1.district_code());
+		hidden.add(iter1.resi_q_code());
+		hidden.add(iter1.rev_spec_stat());
+		hidden.add(iter1.open_login());		
+		hidden.add(iter1.open_user());
+		hidden.add(iter1.opening_ts());
+		hidden.add(iter1.chg_login());
+		hidden.add(iter1.chg_user());
+		hidden.add(iter1.user_lock());
+		hidden.add(iter1.eve_id());		
+		hidden.add(iter1.use_open_id());
+		hidden.add(iter1.use_id());		
+		decl.revregcoefrequerrym.tblRevRegCoefRe.addRow(row,hidden);
+	}
+	
+}

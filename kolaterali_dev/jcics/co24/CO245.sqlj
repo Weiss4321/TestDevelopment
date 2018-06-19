@@ -1,0 +1,146 @@
+package hr.vestigo.modules.collateral.jcics.co24;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+/**
+ * CO204 delete from coll_court
+ *  	
+ */
+
+
+
+public class CO245 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co24/CO245.sqlj,v 1.1 2006/07/11 14:26:47 hraaks Exp $";
+	public DeclCO24 decl = null;
+	
+	public CO245 (DeclCO24 decl) {
+		this.decl = decl;
+	}
+	
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();	
+			
+			java.sql.Date DateFrom = null;		
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			DateFrom = new java.sql.Date(timeT);
+			
+			java.sql.Date DateUntil = java.sql.Date.valueOf("9999-12-31");
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			try{	
+				#sql [ctx]{
+					insert into coll_court_a(
+	    					CO_ID,
+	    					CO_CODE,
+	    					CO_NAME,
+	    					CO_POL_MAP_ID_CNT,
+	    					CO_DATE_FROM,
+	    					CO_DATE_UNTIL,
+	    					CO_STATUS,
+	    					USE_OPEN_ID,
+	    					USE_ID,
+	    					OPENING_TS,
+	    					USER_LOCK,
+							EVE_ID,
+							BANK_SIGN
+	    					)
+	    				VALUES (
+		    				:(decl.collcourtdeletem.CollCourtDialog_CO_ID_a), 
+							:(decl.collcourtdeletem.CollCourtDialog_txCoCode_a), 
+							:(decl.collcourtdeletem.CollCourtDialog_txCoName_a),
+							:(decl.collcourtdeletem.CollCourtDialog_POL_MAP_ID_a),
+							current date,
+	    					current date,
+							:(decl.collcourtdeletem.CollCourtDialog_txtCoStatus_a),
+							:(decl.collcourtdeletem.CollCourtDialog_USE_OPEN_ID_a),
+							:(decl.collcourtdeletem.CollCourtDialog_USE_ID_a),
+							:(decl.collcourtdeletem.CollCourtDialog_OPENING_TS_a),
+							:(decl.collcourtdeletem.CollCourtDialog_USER_LOCK_a),
+							5714145003,
+							:(tc.getBankSign()))
+	    						
+ 		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO202: Error inserting re_sub_type_a! ","err411a", null);
+			}
+			
+			try{	
+				#sql [ctx]{
+					insert into coll_court_a(
+	    					CO_ID,
+	    					CO_CODE,
+	    					CO_NAME,
+	    					CO_POL_MAP_ID_CNT,
+	    					CO_DATE_FROM,
+	    					CO_DATE_UNTIL,
+	    					CO_STATUS,
+							CO_SPEC_STATUS,
+	    					USE_OPEN_ID,
+	    					USE_ID,
+	    					OPENING_TS,
+	    					USER_LOCK,
+							EVE_ID,
+							BANK_SIGN
+	    					)
+	    				VALUES (
+		    				:(decl.collcourtdeletem.CollCourtDialog_CO_ID_a), 
+							:(decl.collcourtdeletem.CollCourtDialog_txCoCode_a), 
+							:(decl.collcourtdeletem.CollCourtDialog_txCoName_a),
+							:(decl.collcourtdeletem.CollCourtDialog_POL_MAP_ID_a),
+							current date,
+	    					current date,
+							:(decl.collcourtdeletem.CollCourtDialog_txtCoStatus_a),
+							'0D',
+							:(decl.collcourtdeletem.CollCourtDialog_USE_OPEN_ID_a),
+							:(decl.collcourtdeletem.use_id),
+							:(decl.collcourtdeletem.CollCourtDialog_OPENING_TS_a),
+							:(decl.collcourtdeletem.CollCourtDialog_USER_LOCK_a),
+							5714145003,
+							:(tc.getBankSign()))
+	    						
+ 		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO204.sqlj insert into inserting re_sub_type_a SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO204: Error inserting re_sub_type_a! ","err411a", null);
+			}
+			
+			try{	
+			    
+				#sql [ctx, exCtx]{ 
+			    	DELETE FROM coll_court
+			    	WHERE 
+							co_id=:(decl.collcourtdeletem.CollCourtDialog_CO_ID) 
+			    	AND 
+							user_lock=:(decl.collcourtdeletem.CollCourtDialog_USER_LOCK_a)
+			    	};
+				
+			    	if (exCtx.getUpdateCount() == 0) {//ako ni jedan ne postoji, tj. ako je USER_LOCK promijenjen nece nista obrisati
+			    	    
+						throw new Exception("Nothing was deleted! RE_SUB_TYPE_ID : "+ decl.collcourtdeletem.CollCourtDialog_CO_ID + " and user_lock is: " + decl.collcourtdeletem.CollCourtDialog_USER_LOCK);
+					}
+				}catch(java.sql.SQLException se){
+
+						tc.debug ( "......CO204.sqlj delete from re_sub_type SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO204.sqlj delete from re_sub_type SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO204.sqlj delete from re_sub_type SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO204: Error deleting row in re_sub_type! ","err411a", null);
+				}
+		}//execute
+	
+
+}	
+			
+	

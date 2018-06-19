@@ -1,0 +1,98 @@
+package hr.vestigo.modules.collateral.jcics.co12;
+
+
+import java.sql.SQLData;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyD.*;	
+
+/**
+ * CO122 class insert data into table POLITICAL_MAP ( DISTRICT)
+ *  
+ */
+public class CO122 extends RemoteTransaction {
+		
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co12/CO122.sqlj,v 1.8 2006/04/14 10:07:12 hrarmv Exp $";
+	public DeclCO12 decl = null;
+	
+	private java.math.BigDecimal polMapTypIdDistrict = new java.math.BigDecimal("5854877003.0");
+	private java.math.BigDecimal couIdHr = new java.math.BigDecimal("999.0");
+	public CO122 (DeclCO12 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+			 int broj = 0;				
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+	    
+			try {
+			    #sql [ctx] {SELECT COUNT(*) INTO :broj 
+			    			FROM political_map 
+			    			WHERE pol_map_typ_id = :polMapTypIdDistrict  
+			    			AND (
+			    				 code = :(decl.polmapdistrictinsertmapping.txtDistrictCode)
+			    				OR
+			    				 name = :(decl.polmapdistrictinsertmapping.txtDistrictName)
+			    				)
+			    			};
+            } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO122.sqlj insert into political_map SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO122.sqlj insert into political_map SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO122.sqlj insert into political_map SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO122: Error inserting political_map! ","err411a", null);
+            }
+            
+            if(broj != 0){
+			    throw new VestigoTMException(1, "Transaction CO122: Error inserting political_map! ","errclt8", null);
+			}
+			
+			YXYD0 id_generator = new YXYD0(ctx);
+			java.math.BigDecimal collaterall_id = id_generator.getNewId();
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO122.sqlj collaterall_id " + collaterall_id);
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+			String nameSC = null;
+			String name = decl.polmapdistrictinsertmapping.txtDistrictName;
+			hr.vestigo.framework.util.scramble.Scramble scrambler = new hr.vestigo.framework.util.scramble.Scramble();
+			nameSC = scrambler.doScramble(name,"L");
+			
+        //INSERT INTO political_map
+
+			try{	
+								
+				#sql [ctx]{  
+			    	INSERT INTO political_map ( 
+			    								pol_map_id,
+			    								code,
+                								parent_pol_map_id,
+			    								pol_map_typ_id,
+			    								name,
+			    								name_sc,
+			    								cou_id,
+                								bank_sign,
+			    								user_lock )
+			    	VALUES( :collaterall_id,
+                			:(decl.polmapdistrictinsertmapping.txtDistrictCode),
+                			:(decl.polmapdistrictinsertmapping.POL_MAP_IDD_PLACE),
+                			:polMapTypIdDistrict,
+                			:(decl.polmapdistrictinsertmapping.txtDistrictName),
+                			:nameSC, 
+			    			:couIdHr, 
+			    			:(tc.getBankSign()), 
+			    			current timestamp)
+                	};
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO122.sqlj insert into political_map SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO122.sqlj insert into political_map SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO122.sqlj insert into political_map SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO122: Error inserting political_map! ","err411a", null);
+				}
+		}//execute
+
+	
+}	
+			

@@ -1,0 +1,256 @@
+package hr.vestigo.modules.collateral.jcics.co11;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+
+/**
+ *  * @author hramkr
+ *  	
+ */
+       
+       
+public class CO119 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co11/CO119.sqlj,v 1.23 2015/04/10 08:51:28 hrazst Exp $";
+	
+	public DeclCO11 decl = null;
+	//obj za select sloga iz col_head
+    CollHeadSelectData chds = new CollHeadSelectData();
+    //obj za update tbl coll_head 
+    CollHeadUpdateData chd = new CollHeadUpdateData(); 
+    YOY63 SQLhelper = null;
+    
+	public CO119 (DeclCO11 decl) {
+		this.decl = decl;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();	
+		SQLhelper = new YOY63(tc);
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		BigDecimal col_cat_id=null;
+		try{	
+			
+				#sql [ctx]{
+		            SELECT
+							a.col_hea_id,
+							a.basic_data_status,
+							a.mortgage_status,
+							a.coll_data_status,
+							a.cover_indic,
+							a.origin_org_uni_id,
+		                    a.crm_hnb,
+		                    a.col_cat_id
+	 	            INTO 
+							:(chds.COL_HEA_ID),    
+							:(chds.BASIC_DATA_STATUS),
+							:(chds.MORTGAGE_STATUS),
+							:(chds.COLL_DATA_STATUS),
+							:(chds.COVER_INDIC),
+							:(chds.ORIGIN_ORG_UNI_ID),
+		                    :(chds.Kol_txtCRMHnb),
+		                    :(col_cat_id)
+					FROM COLL_HEAD a, COLL_LOANSTOCK b
+					WHERE a.col_hea_id = :(decl.collloanstockupdatemap.COL_HEA_ID)
+					AND	  a.col_hea_id = b.col_hea_id
+				};
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+			else {
+				throw new VestigoTMException(1, "CO119 - Cannot change, user_lock!", "errclt7", null);				
+			}
+		}							
+		
+		chds.USER_LOCK = decl.collloanstockupdatemap.USER_LOCK;		
+
+//		napraviti update COLL_HEAD		
+//		 punjenje objekta chd iz decl-a		
+		fillCHDobj(col_cat_id); 
+		tc.debug("zovem update Head : "+chd.COL_HEA_ID);	
+		tc.debug("USER_LOCK_IN : "+chd.USER_LOCK_IN);			
+//		 update COLL_HEAD		
+		YOY43 headUpdate = new YOY43(tc, chd);		
+		headUpdate.updateCollHead(); 
+		tc.debug("gotov update Head : "+chd.COL_HEA_ID); 
+		tc.debug("gotov update Head PUNIM user_lock : "+chd.USER_LOCK);
+		decl.collloanstockupdatemap.USER_LOCK = chd.USER_LOCK;		
+        decl.collloanstockupdatemap.Coll_txtUserLock = chd.USER_LOCK;  			
+		
+		tc.debug("UPDATE SATELIT: "+decl.collloanstockupdatemap.COL_SEC_ID);  				
+		tc.debug("sto_typ_id: "+decl.collloanstockupdatemap.SEC_TYP_ID);  		
+		tc.debug("payee_cus_id: "+decl.collloanstockupdatemap.payee_cus_id);  		
+		tc.debug("payee_reg_no: "+decl.collloanstockupdatemap.Coll_txtPayeeRegNo);  		
+		tc.debug("payee_code: "+decl.collloanstockupdatemap.Coll_txtPayeeCode);  		
+		tc.debug("payee_data: "+decl.collloanstockupdatemap.Coll_txtPayeeData1);  		
+		tc.debug("role_id: "+decl.collloanstockupdatemap.role_id);  		
+		tc.debug("isu_place_id: "+decl.collloanstockupdatemap.isu_place_id);  		
+		tc.debug("issue_date: "+decl.collloanstockupdatemap.Coll_txtStockIssueDate);  		
+		tc.debug("cur_id: "+decl.collloanstockupdatemap.stock_cur_id);  		
+		tc.debug("amount: "+decl.collloanstockupdatemap.Coll_txtStockAmount);  	
+		 
+		try{
+					#sql [ctx]{
+							UPDATE coll_loanstock
+								SET	sto_typ_id		= :(decl.collloanstockupdatemap.SEC_TYP_ID), 
+									payee_cus_id 	= :(decl.collloanstockupdatemap.payee_cus_id),     
+									payee_reg_no	= :(decl.collloanstockupdatemap.Coll_txtPayeeRegNo),
+									payee_code		= :(decl.collloanstockupdatemap.Coll_txtPayeeCode),
+									payee_data 		= :(decl.collloanstockupdatemap.Coll_txtPayeeData1), 	
+									role_id 		= :(decl.collloanstockupdatemap.role_id), 
+									isu_place_id 	= :(decl.collloanstockupdatemap.isu_place_id),
+									issue_date		= :(decl.collloanstockupdatemap.Coll_txtStockIssueDate),
+									cur_id			= :(decl.collloanstockupdatemap.stock_cur_id),
+									amount			= :(decl.collloanstockupdatemap.Coll_txtStockAmount),
+									account_no		= :(decl.collloanstockupdatemap.Coll_txtAccNo),
+									repr_cus_id		= :(decl.collloanstockupdatemap.repr_cus_id),
+									repr_reg_no		= :(decl.collloanstockupdatemap.Coll_txtReprRegNo),
+									repr_data		= :(decl.collloanstockupdatemap.Coll_txtReprData1),
+									repr_func_id	= :(decl.collloanstockupdatemap.repr_func_id),
+									pub_not_id		= :(decl.collloanstockupdatemap.pub_not_id),
+									notary_num		= :(decl.collloanstockupdatemap.Kol_txtNotNum)
+								
+
+							WHERE col_loa_id = :(decl.collloanstockupdatemap.COL_SEC_ID)
+					};
+		}catch(SQLException se){				
+			tc.debug ( "......CO119.sqlj update coll_loanstock SQL ErrorCode " + se.getErrorCode());				
+			tc.debug ( "......CO119.sqlj update coll_loanstock SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO119.sqlj update coll_loanstock SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO119: Error update coll_loanstock! ","err411a", null);
+		}
+  
+// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collloanstockupdatemap.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collloanstockupdatemap.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.collloanstockupdatemap.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collloanstockupdatemap.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.collloanstockupdatemap.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();
+
+        decl.collloanstockupdatemap.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collloanstockupdatemap.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collloanstockupdatemap.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collloanstockupdatemap.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti(); 
+        
+        this.fillDeclFromCHDObj();        
+	}//execute
+	
+	private void fillCHDobj (BigDecimal col_cat_id) {
+        chd.COL_TYPE_ID = decl.collloanstockupdatemap.COL_TYPE_ID;
+        chd.COL_SUB_ID = decl.collloanstockupdatemap.SEC_TYP_ID;
+        chd.COL_GRO_ID = null;
+        chd.COL_CAT_ID = col_cat_id;
+	    chd.Coll_txtAcouBDate = decl.collloanstockupdatemap.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.collloanstockupdatemap.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.collloanstockupdatemap.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.collloanstockupdatemap.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.collloanstockupdatemap.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.collloanstockupdatemap.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.collloanstockupdatemap.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.collloanstockupdatemap.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.collloanstockupdatemap.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.collloanstockupdatemap.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.collloanstockupdatemap.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.collloanstockupdatemap.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.collloanstockupdatemap.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.collloanstockupdatemap.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.collloanstockupdatemap.Coll_txtCollRzbPonder;
+		chd.Coll_txtComDoc = decl.collloanstockupdatemap.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.collloanstockupdatemap.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.collloanstockupdatemap.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.collloanstockupdatemap.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.collloanstockupdatemap.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.collloanstockupdatemap.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.collloanstockupdatemap.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.collloanstockupdatemap.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.collloanstockupdatemap.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.collloanstockupdatemap.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.collloanstockupdatemap.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.collloanstockupdatemap.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.collloanstockupdatemap.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.collloanstockupdatemap.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.collloanstockupdatemap.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.collloanstockupdatemap.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.collloanstockupdatemap.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.collloanstockupdatemap.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.collloanstockupdatemap.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.collloanstockupdatemap.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.collloanstockupdatemap.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.collloanstockupdatemap.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.collloanstockupdatemap.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.collloanstockupdatemap.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.collloanstockupdatemap.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.collloanstockupdatemap.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.collloanstockupdatemap.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.collloanstockupdatemap.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.collloanstockupdatemap.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.collloanstockupdatemap.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.collloanstockupdatemap.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.collloanstockupdatemap.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.collloanstockupdatemap.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.collloanstockupdatemap.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.collloanstockupdatemap.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.collloanstockupdatemap.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.collloanstockupdatemap.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.collloanstockupdatemap.Coll_txtThirdRightInNom;
+		chd.REAL_EST_EUSE_ID = decl.collloanstockupdatemap.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.collloanstockupdatemap.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.collloanstockupdatemap.CUS_ID;
+		chd.COLL_CUS_ID = decl.collloanstockupdatemap.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.collloanstockupdatemap.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.collloanstockupdatemap.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.collloanstockupdatemap.COL_PLACE;
+		chd.COL_COUNTY = decl.collloanstockupdatemap.COL_COUNTY;
+		chd.COL_DISTRICT = decl.collloanstockupdatemap.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.collloanstockupdatemap.COL_RESI_QUAR;
+		chd.USE_ID = decl.collloanstockupdatemap.USE_ID;
+		chd.INSPOL_IND = decl.collloanstockupdatemap.INSPOL_IND;
+		chd.Coll_txtDesc = decl.collloanstockupdatemap.Coll_txtDesc;
+		chd.COL_HEA_ID = decl.collloanstockupdatemap.COL_HEA_ID; 
+		chd.USER_LOCK_IN = decl.collloanstockupdatemap.USER_LOCK_IN;
+		chd.Coll_txtAcumBuyValue = decl.collloanstockupdatemap.Coll_txtAcumBuyValue;	
+		chd.ORG_UNI_ID = decl.collloanstockupdatemap.ORG_UNI_ID;		
+		chd.save_ver_aut_flag = decl.collloanstockupdatemap.save_ver_aut_flag;			
+		chd.BASIC_DATA_STATUS = chds.BASIC_DATA_STATUS;		
+		chd.MORTGAGE_STATUS = chds.MORTGAGE_STATUS;
+		chd.COLL_DATA_STATUS = chds.COLL_DATA_STATUS;
+		chd.COVER_INDIC = chds.COVER_INDIC;
+		chd.COL_TYPE_ID = decl.collloanstockupdatemap.COL_TYPE_ID;
+		chd.ORIGIN_ORG_UNI_ID = chds.ORIGIN_ORG_UNI_ID; 
+		chd.ColRba_txtEligibility = decl.collloanstockupdatemap.ColRba_txtEligibility;
+		chd.KolLow_txtEligibility = decl.collloanstockupdatemap.KolLow_txtEligibility;
+		chd.Kol_txtRbaEligDsc = decl.collloanstockupdatemap.Kol_txtRbaEligDsc;
+		chd.Coll_txtNumOf = decl.collloanstockupdatemap.Coll_txtNumOf;
+		chd.SPEC_STATUS = decl.collloanstockupdatemap.SPEC_STATUS;
+        chd.Kol_txtCRMHnb = decl.collloanstockupdatemap.Kol_txtCRMHnb;
+        
+        chd.b2_irb_insag_elig = decl.collloanstockupdatemap.Coll_txtB2IRB;
+        chd.b2_hnb_insag_elig = decl.collloanstockupdatemap.Coll_txtB2HNB;
+        chd.use_id_co = decl.collloanstockupdatemap.USE_ID_CO;
+        chd.contract_type = decl.collloanstockupdatemap.Coll_txtContractTypeCode;         
+	}
+	
+   private void fillDeclFromCHDObj () throws Exception{
+        
+        decl.collloanstockupdatemap.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.collloanstockupdatemap.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.collloanstockupdatemap.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.collloanstockupdatemap.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.collloanstockupdatemap.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.collloanstockupdatemap.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.collloanstockupdatemap.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.collloanstockupdatemap.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.collloanstockupdatemap.COL_HEA_ID);
+        decl.collloanstockupdatemap.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+    }   
+}

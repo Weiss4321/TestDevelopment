@@ -1,0 +1,777 @@
+package hr.vestigo.modules.collateral.batch.bo77;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.ExcelUtils;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+
+import sqlj.runtime.ref.*;
+
+#sql iterator ExposureOwners(BigDecimal cus_id);
+
+#sql iterator PlacementIterator (
+        BigDecimal cus_acc_id, 
+        BigDecimal cus_id
+);
+
+/**
+ * Klasa za kreiranje izvještaja 4.1 Concentration Monitoring
+ * @author hradnp
+ */
+public class BO77F {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo77/BO77F.sqlj,v 1.8 2016/07/06 11:24:08 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    private Date value_date;
+
+    private YOYM0 mapping_4_1_1, mapping_4_1_2, mapping_4_1_3;
+    private YOYM0 mapping_gctc;
+    private YOYM0 mapping_gct;
+    private YOYM0 mapping_rre_cre_indic;
+
+    private Workbook workbook;
+    private ExcelStyleData styles;
+    private Sheet sheet1, sheet2, sheet3;
+    private int rowIndex1 = 0, rowIndex2 = 0, rowIndex3 = 0;
+    
+    private Map data1, data2, data3;
+
+    /**
+     * Konstruktor klase.
+     * @param batchContext Kontekst u kojem se izvršava obrada
+     * @param value_date Datum valute (datum za koji se radi izvještaj)
+     */
+    public BO77F(BatchContext batchContext, Date value_date) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+        this.value_date = value_date;
+
+        // mapiranja
+        this.mapping_4_1_1 = new YOYM0(bc, "4.1.1", value_date);                    // kolaterali koji ulaze u izvještaj 4.1 - 1.sheet
+        this.mapping_4_1_2 = new YOYM0(bc, "4.1.2", value_date);                    // kolaterali koji ulaze u izvještaj 4.1 - 2.sheet
+        this.mapping_4_1_3 = new YOYM0(bc, "4.1.3", value_date);                    // kolaterali koji ulaze u izvještaj 4.1 - 3.sheet
+        this.mapping_gctc = new YOYM0(bc, "gctc", value_date);                      // GCTC kodovi
+        this.mapping_gct = new YOYM0(bc, "gct", value_date);                        // GCT kod
+        this.mapping_rre_cre_indic = new YOYM0(bc, "rre_cre_indic", value_date);    // CRE/RRE indikator (samo za nekretnine)
+        
+        // kreiraj strukturu u kojoj æe se èuvati podaci      
+        this.data1 = new HashMap();        // kljuè ID izdavatelja, a vrijednost sumarni podaci za izdavatelja        
+        this.data2 = new HashMap();        
+        this.data3 = new HashMap();        // kljuè tip kolaterala, a vrijednost objekt sa podacima za taj tip kolaterala
+    }
+    
+    /**
+     * Metoda koja provjerava ulazi li zadani kolateral u izvještaj i stvara redak u izlaznoj datoteci za njega (ako on u isti ulazi).
+     * @param collateral Objekt s podacima o kolateralu
+     * @param date Datum za koji vrijede dani podaci
+     */
+    public void processCollateral(CollateralData collateral, Date date) throws Exception
+    {
+        // ako datum nije jednak datumu valute, preskoèi ovaj kolateral
+        if (date.compareTo(value_date) != 0) return;
+        
+        // mapiraj kolateral na pripadajuæi tip
+        GcmTypeData type = mapping_gctc.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        if (type == null)
+        {
+            bc.warning("...Greska u parametrizaciji - nije definiran GCTC kod. Kolateral ne ulazi u izvjestaj 4.1.");
+            return;
+        }
+
+        // provjeri da li kolateral ulazi u izvještaj 4.1 - 1.sheet
+        if (mapping_4_1_1.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id) != null)
+        {
+            // dohvat podataka o izdavatelju garancije
+            this.selectGuaranteeData(date, collateral);
+            
+            IssuerSummary issSummary = null;
+            if(data1.get(collateral.issuerRegisterNo)==null)
+            {
+                // stvaranje objekta sa podacima o izdavatelju
+                issSummary = new IssuerSummary(collateral);
+                
+                // dohvat GCC-a
+                issSummary.gcc = this.getGcc(collateral.issuerRegisterNo);
+                
+                // dohvat GCT koda
+                issSummary.gct = (mapping_gct.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id)).code; 
+                
+                // postavljanje podatka u Hashmapu za upis u izlaznu datoteku
+                data1.put(collateral.issuerRegisterNo, issSummary);
+            }
+            else
+            {
+                // dohvat veæ postojeæeg objekta sa podacima
+                issSummary = (IssuerSummary)data1.get(collateral.issuerRegisterNo);
+            }
+            
+            // pribroji vrijednosti kolaterala u podatke kod odgovarajuæeg izdavatelja
+            issSummary.ncv_sum = issSummary.ncv_sum.add(collateral.ncv);
+            issSummary.wcv_sum = issSummary.wcv_sum.add(collateral.wcv);
+            
+            // dohvat komitenata vlasnika plasmana koji su pokriveni garancijom
+            ExposureOwners iter = this.getExposureOwners(date, collateral.col_hea_id);
+            while(iter.next())
+            {
+                // provjera da veæ nije uraèunat vlasnik plasmana
+                if(issSummary.customerIds.add(iter.cus_id()))
+                    issSummary.countCustomers++;
+            }
+            iter.close();
+            
+            bc.debug("...Kolateral pribrojen u izvjestaj 4.1.1 pod izdavatelja " + collateral.issuerRegisterNo + ".");            
+        }
+        else
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 4.1. - 1.sheet.");
+        }
+
+        // provjeri da li kolateral ulazi u izvještaj 4.1 - 2.sheet
+        if (mapping_4_1_2.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id) != null)
+        {
+            // dohvat dodatnih podataka o vrijednosnom papiru
+            this.selectVrpData(date, collateral);
+            
+            ISINSummary isinSummary = null;
+            if(data2.get(collateral.isin) == null)
+            {
+                // stvaranje objekta sa podacima
+                isinSummary = new ISINSummary(collateral);
+                
+                // dohvat dodatnih podataka 
+                isinSummary.rbaCategory = this.getCollateralCategory(collateral.col_cat_id);
+                isinSummary.rbaType = this.getCollateralType(collateral.col_typ_id);
+                
+                // dohvat GCTC koda
+                isinSummary.gctc = type.code; 
+                isinSummary.collateralType = type.name;
+                
+                // postavljanje podatka u Hashmapu za upis u izlaznu datoteku
+                data2.put(collateral.isin, isinSummary);
+            }
+            else
+            {
+                // dohvat veæ postojeæeg objekta sa podacima
+                isinSummary = (ISINSummary)data2.get(collateral.isin);
+            }
+            
+            // pribroji vrijednosti kolaterala u podatke kod odgovarajuæeg ISIN-a
+            isinSummary.ncv_sum = isinSummary.ncv_sum.add(collateral.ncv);
+            isinSummary.wcv_sum = isinSummary.wcv_sum.add(collateral.wcv);
+           
+            // potrebno je pribrojati kolateral u ukupan broj kolaterala istog isin-a            
+            isinSummary.countCollaterals++;
+            
+            // dohvat komitenata vlasnika plasmana koji su pokriveni vrijednosnim papirom
+            ExposureOwners iter = this.getExposureOwners(date, collateral.col_hea_id);
+            while(iter.next())
+            {
+                // provjera da veæ nije uraèunat vlasnik plasmana
+                if(isinSummary.customerIds.add(iter.cus_id()))
+                    isinSummary.countCustomers++;
+            }
+            iter.close();
+            bc.debug("...Kolateral pribrojen u izvjestaj 4.1.2 pod ISIN " + collateral.isin + ".");      
+        }
+        else
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 4.1. - 2.sheet.");
+        }
+        
+        // provjeri da li kolateral ulazi u izvještaj 4.1 - 3.sheet
+        if (mapping_4_1_3.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id) != null)
+        {
+
+            SummaryData summary = null;
+            if(data3.get(type.code)==null)
+            {
+                // stvaranje objekta sa podacima
+                summary = new SummaryData(type);
+                data3.put(type.code, summary);
+                
+                // mapiraj kolateral na pripadajuæi RRE/CRE  - samo za nekretnine
+                GcmTypeData rreCreIndic = mapping_rre_cre_indic.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+                if (rreCreIndic != null) summary.creReeIndic = rreCreIndic.code;
+                
+            }
+            else
+            {
+                // dohvat veæ postojeæeg objekta sa podacima
+                summary = (SummaryData)data3.get(type.code);
+            }
+            
+            // pribroji vrijednosti kolaterala u podatke kod odgovarajuæeg tipa kolaterala
+            summary.ncv_sum = summary.ncv_sum.add(collateral.ncv);
+            summary.wcv_sum = summary.wcv_sum.add(collateral.wcv);
+            
+            // pribroji kolateral u ukupan broj kolaterala odreðenog tipa
+            summary.count++;
+            
+            // dohvat svih plasmana i vlasnika plasmana odreðenog kolaterala
+            PlacementIterator iter = this.selectCollateralPlacements(value_date, collateral.col_hea_id);
+            while(iter.next())
+            {
+                // ako veæ nije, pribroji plasman u ukupan broj plasmana odreðenog tipa kolaterala
+                if(summary.contractIds.add(iter.cus_acc_id()))
+                    summary.countContracts++;
+                
+                // ako veæ nije, pribroji vlasnika plasmana u ukupan broj vlasnika 
+                if(summary.customerIDs.add(iter.cus_id()))
+                    summary.countCustomers++;
+            }
+            iter.close();
+            bc.debug("...Kolateral pribrojen u izvjestaj 4.1.3 pod tip " + type.code + ".");
+        }
+        else
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 4.1. - 3.sheet.");
+        }
+    }
+    
+
+    /**
+     * Metoda koja na temelju prikupljenih podataka kreira izvještaj u obliku Excel datoteke. 
+     */
+    public void createReport() throws Exception
+    {
+        // kreiraj workbook
+        this.workbook = new SXSSFWorkbook(100);
+        this.styles = ExcelStyleData.createStyles(workbook);
+        
+        // kreiraj sheetove
+        sheet1 = workbook.createSheet("Guarantors");
+        ExcelUtils.setColumnWidths(sheet1, new int[] { 73, 225, 100, 118, 350, 119, 64, 105, 116, 116});
+        sheet2 = workbook.createSheet("Securities");
+        ExcelUtils.setColumnWidths(sheet2, new int[] { 120, 220, 147, 302, 147, 147, 147, 147, 147, 147, 144, 120, 120, 100, 100, 116, 116 });
+        sheet3 = workbook.createSheet("RE OPC");
+        ExcelUtils.setColumnWidths(sheet3, new int[] { 105, 220, 195, 147, 147, 147, 147, 147, 147, 147 });
+        
+        // kreiraj naslove izvještaja
+        Row row = sheet1.createRow(rowIndex1);
+        ExcelUtils.createCell(row, 0, "4.1", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "Concentration Monitoring", styles.titleStyle);
+        ExcelUtils.createCell(row, 2, "Guarantors", styles.headingStyle);
+        rowIndex1 += 2;
+        
+        row = sheet2.createRow(rowIndex2);
+        ExcelUtils.createCell(row, 0, "4.1", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "Concentration Monitoring", styles.titleStyle);
+        ExcelUtils.createCell(row, 2, "Securities", styles.headingStyle);
+        rowIndex2 += 2;
+        
+        row = sheet3.createRow(rowIndex3);
+        ExcelUtils.createCell(row, 0, "4.1", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "Concentration Monitoring", styles.titleStyle);
+        ExcelUtils.createCell(row, 2, "RE OPC", styles.headingStyle);
+        rowIndex3 += 2;
+        
+        // kreiraj headere izvještaja
+        row = sheet1.createRow(rowIndex1);
+        ExcelUtils.createCell(row, 0, "GCC", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 1, "Country of Residence of Guarantor", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 2, "Country Code", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 3, "Guarantor ID", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 4, "Guarantor Name", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 5, "Guarantor Rating", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 6, "GCT", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 7, "Count of Customer IDs", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 8, "Total NCV", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 9, "Total WCV", styles.headingWrapStyle);
+        rowIndex1++;
+        
+        row = sheet2.createRow(rowIndex2);
+        ExcelUtils.createCell(row, 0, "Country of Issuer Residence", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 1, "Country Code", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 2, "Issuer ID", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 3, "Issuer Name", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 4, "Issuer Rating", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 5, "Kategorija kolaterala", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 6, "Vrsta kolaterala", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 7, "Podvrsta kolaterala", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 8, "Collateral Type", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 9, "Object/ property type according to GCTC", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 10, "ISIN", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 11, "Issue Name", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 12, "Issue Rating", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 13, "Count of Collateral IDs", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 14, "Count of Customer IDs", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 15, "Total NCV", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 16, "Total WCV", styles.headingWrapStyle);
+        rowIndex2++;
+        
+        row = sheet3.createRow(rowIndex3);
+        ExcelUtils.createCell(row, 0, "Country of Residence", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 1, "Country Code", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 2, "Collateral Type", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 3, "Object/property type according to GCTC", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 4, "CRE/RRE indicator", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 5, "Count of Collateral IDs", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 6, "Count of Contract IDs", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 7, "Count of Customer IDs", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 8, "Total NCV", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 9, "Total WCV", styles.headingWrapStyle);
+        rowIndex3++;
+        
+        // kreiraj red za svakog izdavatelja
+        Iterator iter = data1.entrySet().iterator();
+        while (iter.hasNext())
+        {
+            Map.Entry pairs = (Map.Entry)iter.next();
+            IssuerSummary issuer = (IssuerSummary)pairs.getValue();        // izdavatelj garancije
+            
+            row = sheet1.createRow(rowIndex1);
+            ExcelUtils.createCell(row, 0, issuer.gcc, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 1, issuer.issuerCouName, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 2, issuer.issuerCouISOCode, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 3, issuer.issuerRegisterNo, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 4, issuer.issuerName, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 5, issuer.issuerRating, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 6, issuer.gct, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 7, issuer.countCustomers, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 8, issuer.ncv_sum, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 9, issuer.wcv_sum, styles.normalNumericAllBordersStyle);
+            rowIndex1++;
+            
+            iter.remove();
+        }
+        
+        // kreiraj red za svaki ISIN 
+        iter = data2.entrySet().iterator();
+        while (iter.hasNext())
+        {
+            Map.Entry pairs = (Map.Entry)iter.next();
+            ISINSummary isin = (ISINSummary)pairs.getValue();        // ISIN
+            
+            row = sheet2.createRow(rowIndex2);
+            ExcelUtils.createCell(row, 0, isin.issuerCouName, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 1, isin.issuerCouISOCode, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 2, isin.issuerRegisterNo, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 3, isin.issuerName, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 4, isin.issueRating, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 5, isin.rbaCategory, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 6, isin.rbaType, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 7, "", styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 8, isin.collateralType, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 9, isin.gctc, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 10, isin.isin, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 11, isin.issueName, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 12, isin.issueRating, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 13, isin.countCollaterals, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 14, isin.countCustomers, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 15, isin.ncv_sum, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 16, isin.wcv_sum, styles.normalNumericAllBordersStyle);
+            rowIndex2++;
+            
+            iter.remove();
+        }
+        
+        // kreiraj red za svaki tip kolaterala
+        iter = data3.entrySet().iterator();
+        while (iter.hasNext())
+        {
+            Map.Entry pairs = (Map.Entry)iter.next();
+            SummaryData summary = (SummaryData)pairs.getValue();        // tip kolaterala
+            
+            row = sheet3.createRow(rowIndex3);
+            ExcelUtils.createCell(row, 0, "CROATIA", styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 1, "HR", styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 2, summary.type.name, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 3, summary.type.code, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 4, summary.creReeIndic, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 5, summary.count, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 6, summary.countContracts, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 7, summary.countCustomers, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 8, summary.ncv_sum, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 9, summary.wcv_sum, styles.normalNumericAllBordersStyle);
+            rowIndex3++;
+            
+            iter.remove();
+        }
+
+        // spremi izvještaj
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
+        String fileName = bc.getOutDir() + "/" + "Concentration_Monitoring" + "_" + dateFormat.format(value_date) + ".xlsx";
+        FileOutputStream fileOut = new FileOutputStream(fileName);
+        workbook.write(fileOut);
+        fileOut.close();
+        dispose();
+        
+        // kreiraj marker datoteku
+        new File(fileName + ".marker").createNewFile();
+        
+        bc.info("Uspjesno kreiran izvjestaj 4.1.");
+    }
+    
+    /**
+     * Metoda koja dohvaæa dodatne podatke o vrijednosnom papiru.
+     * @param value_date Datum za koji vrijede podaci
+     * @param collateral Objekt s podacima o kolateralu
+     */
+    public void selectVrpData(Date value_date, CollateralData collateral) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectVrpData");
+            #sql [connCtx] {
+                SELECT
+                    c.isin,
+                    d.register_no,
+                    d.name,
+                    r1.score,
+                    co.eng_name,
+                    co.cou_iso_code
+                INTO
+                    :(collateral.isin),
+                    :(collateral.issuerRegisterNo),
+                    :(collateral.issuerName),
+                    :(collateral.issuerRating),
+                    :(collateral.issuerCouName),
+                    :(collateral.issuerCouISOCode)
+                FROM coll_vrp b
+                INNER JOIN coll_in2 c ON b.col_in2_id = c.col_in2_id
+                LEFT OUTER JOIN customer d ON c.iss_cus_id = d.cus_id 
+                LEFT OUTER JOIN customer_rating r1 ON (d.cus_id = r1.cus_id AND r1.rat_typ_id = 1354776003 AND :(value_date) BETWEEN r1.date_from AND r1.date_until)
+                LEFT OUTER JOIN coll_in2_rating r2 ON (c.col_in2_id = r2.col_in2_id AND r2.rat_typ_id = 660835251 AND :(value_date) BETWEEN r2.date_from AND r2.date_to)
+                LEFT OUTER JOIN coll_in2_rating r3 ON (c.col_in2_id = r3.col_in2_id AND r3.rat_typ_id = 660836251 AND :(value_date) BETWEEN r3.date_from AND r3.date_to) 
+                LEFT OUTER JOIN country co ON (co.cou_id = d.citizenship_cou_id)
+                WHERE b.col_hea_id = :(collateral.col_hea_id)
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o vrijednosnom papiru! (VALUE_DATE=" + value_date + ",COLLATERAL.COL_HEA_ID=" + collateral.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectVrpData");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa dodatne podatke o garanciji.
+     * @param value_date Datum za koji vrijede podaci
+     * @param collateral Objekt s podacima o kolateralu
+     */
+    public void selectGuaranteeData(Date value_date, CollateralData collateral) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectGuaranteeData");
+            #sql [connCtx] {
+                SELECT
+                    d.register_no,
+                    d.name,
+                    cr.score,
+                    c.eng_name,
+                    c.cou_iso_code
+                INTO
+                    :(collateral.issuerRegisterNo),
+                    :(collateral.issuerName),
+                    :(collateral.issuerRating),
+                    :(collateral.issuerCouName),
+                    :(collateral.issuerCouISOCode)
+                FROM coll_guarantee b
+                LEFT OUTER JOIN customer d ON b.guar_issuer_id = d.cus_id 
+                LEFT OUTER JOIN customer_rating cr ON (d.cus_id = cr.cus_id AND cr.rat_typ_id = 1354776003 AND :(value_date) BETWEEN cr.date_from AND cr.date_until)
+                LEFT OUTER JOIN country c ON (c.cou_id = b.guar_cou_id)
+                WHERE b.col_hea_id = :(collateral.col_hea_id)
+                ORDER BY cr.date_until DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o garanciji! (VALUE_DATE=" + value_date + ",COLLATERAL.COL_HEA_ID=" + collateral.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectGuaranteeData");
+        }
+    }
+      
+    
+    /**
+     * Metoda koja dohvaæa komitente èiji su plasmani pokriveni garancijom
+     * @param value_date Datum valute
+     * @param col_hea_id ID garancije
+     * @return ExposureOwners iterator sa id-evima komitenata
+     */
+    public ExposureOwners getExposureOwners(Date value_date, BigDecimal col_hea_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("getExposureOwners");
+            ExposureOwners iter = null;
+            #sql [connCtx] iter = {
+                SELECT DISTINCT b.cus_id
+                FROM coll_head_d e
+                INNER JOIN loan_beneficiary_d c ON c.col_hea_id = e.col_hea_id
+                INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE e.col_hea_id = :(col_hea_id)
+                  AND :(value_date) BETWEEN e.load_date_from AND e.load_date_until
+                  AND c.status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND ( b.cus_acc_status='A' OR
+                        ( b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                        )
+                    )
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata komitenata èiji plasmani su pokriveni garancijom! (col_hea_id=" + col_hea_id +  ")", ex);
+                throw ex;
+            }
+            return null;
+        }
+        finally
+        {
+            bc.stopStopWatch("getExposureOwners");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa šifru kategorije kolaterala za dani id
+     * @param col_cat_id ID šifre kategorije kolaterala
+     * @return String slovèana kratica kategorije kolaterala
+     */
+    public String getCollateralCategory(BigDecimal col_cat_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("getCollateralCategory");
+            String category = null;
+            #sql [connCtx]{
+                SELECT  code 
+                INTO    :(category)
+                FROM    coll_category
+                WHERE   col_cat_id = :(col_cat_id)
+                WITH UR
+            };
+            return category;
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata šifre kategorije kolaterala! (col_cat_id=" + col_cat_id +  ")", ex);
+                throw ex;
+            }
+            return null;
+        }
+        finally
+        {
+            bc.stopStopWatch("getCollateralCategory");
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa šifru vrste kolaterala za dani id
+     * @param col_typ_id ID šifre vrste kolaterala
+     * @return String slovèana kratica vrste kolaterala
+     */
+    public String getCollateralType(BigDecimal col_typ_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("getCollateralType");
+            String type = null;
+            #sql [connCtx]{
+                SELECT  coll_type_code 
+                INTO    :(type)
+                FROM    collateral_type
+                WHERE   coll_type_id = :(col_typ_id)
+                WITH UR
+            };
+            return type;
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata šifre vrste kolaterala! (col_typ_id=" + col_typ_id +  ")", ex);
+                throw ex;
+            }
+            return null;
+        }
+        finally
+        {
+            bc.stopStopWatch("getCollateralType");
+        }
+    }
+    
+    /**
+     * Metoda dohvaæa šifru grupe komitenata koja je aktivna, oblika 'G*', te ne poèinje sa 'G8*' ili 'G9*'
+     * @param cus_id id komitenta za kojeg je potrebno dohvatiti šifru
+     * @return šifra grupe komitenta
+     * @throws SQLException
+     */
+    public String getGcc(String register_no) throws SQLException
+    {
+        try
+        { 
+            bc.startStopWatch("getGcc");
+            String gcc = null;
+            #sql [connCtx]{
+                SELECT  cg.cus_gro_code 
+                INTO    :(gcc)
+                FROM    customer_group cg
+                INNER JOIN cus_gro_customer cgc ON (cg.cus_gro_id = cgc.cus_gro_id)
+                INNER JOIN customer c ON (cgc.cus_id = c.cus_id)
+                WHERE   c.register_no = :(register_no)
+                AND     cg.cus_gro_code LIKE 'G%'
+                AND     cg.cus_gro_code NOT LIKE 'G8%'
+                AND     cg.cus_gro_code NOT LIKE 'G9%'
+                AND     cg.status = 'A'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return gcc;
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod šifre grupe komitenata! (register_no=" + register_no +  ")", ex);
+                throw ex;
+            }
+            return null;
+        }
+        finally
+        {
+            bc.stopStopWatch("getGcc");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o plasmanima koje pokriva zadani kolateral.
+     * @param col_hea_id ID kolaterala
+     * @param value_date Datum valute
+     * @return iterator s podacima
+     */
+    public PlacementIterator selectCollateralPlacements(Date value_date, BigDecimal col_hea_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectCollateralPlacements");
+            PlacementIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT DISTINCT
+                    b.cus_acc_id    AS cus_acc_id,
+                    b.cus_id        AS cus_id
+                FROM coll_head_d e
+                    INNER JOIN coll_hf_prior_d d ON d.hf_coll_head_id = e.col_hea_id
+                    INNER JOIN loan_beneficiary_d c ON c.coll_hf_prior_id = d.coll_hf_prior_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE e.col_hea_id = :(col_hea_id)
+                  AND :(value_date) BETWEEN e.load_date_from AND e.load_date_until
+                  AND d.hf_status = 'A'
+                  AND :(value_date) BETWEEN d.load_date_from AND d.load_date_until
+                  AND c.status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND (b.cus_acc_status='A' OR
+                         (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                         )
+                      )
+
+                UNION
+
+                SELECT DISTINCT
+                    b.cus_acc_id    AS cus_acc_id,
+                    b.cus_id        AS cus_id
+                FROM coll_head_d e
+                    INNER JOIN loan_beneficiary_d c ON c.col_hea_id = e.col_hea_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE e.col_hea_id = :(col_hea_id)
+                  AND :(value_date) BETWEEN e.load_date_from AND e.load_date_until
+                  AND c.status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND (b.cus_acc_status='A' OR
+                         (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                         )
+                      )
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata plasmana koje pokriva kolateral! (COL_HEA_ID=" + col_hea_id + ",VALUE_DATE=" + value_date + ")", ex);
+            throw ex;
+
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollateralPlacements");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja briše privremene datoteke koje se stvaraju za vrijeme kreiranja izvještaja.
+     */
+    public void dispose()
+    {
+        if (workbook instanceof SXSSFWorkbook) ((SXSSFWorkbook)workbook).dispose();
+    }
+}

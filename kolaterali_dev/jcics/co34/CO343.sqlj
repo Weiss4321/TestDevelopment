@@ -1,0 +1,87 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+
+
+    // deaktiviranje hipoteke
+    //poziva se za deaktiviranje svih hipoteka
+
+public class CO343 extends RemoteTransaction {
+    // provjera da li je na hipoteku u korist RBA vezan koji plasman 
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co34/CO343.sqlj,v 1.22 2018/01/31 12:15:53 hraskd Exp $";
+	
+	private DeclCO34 d = null;
+	private Timestamp CREATE_DATE_TIME = null;	
+	private YOY62 yoy62 = null;
+	private TransactionContext mtc=null;
+	
+	public CO343(DeclCO34 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+		mtc=tc;
+		ConnCtx ctx = tc.getContext();
+		yoy62 = new YOY62(tc);
+		BigDecimal HF_COLL_HEAD_ID=null;
+		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED};		
+	
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};
+
+        try {
+            #sql [ctx] {
+                SELECT  
+                    HF_COLL_HEAD_ID
+                INTO
+                    :(HF_COLL_HEAD_ID)
+                FROM COLL_HF_PRIOR
+                WHERE coll_hf_prior_id = :(d.kolmortgagedeact.col_hf_prior_id)    
+
+            };                                                                      
+        } catch(SQLException e){
+            if (e.getErrorCode()!=100) throw e;
+            else
+                throw new VestigoTMException(1, "Transaction CO343: Hipoteka obrisana ili mijenjana ","errclt7", null);                 
+        }
+		
+		BigDecimal col_hf_prior_id=d.kolmortgagedeact.col_hf_prior_id;
+        debug("col_hf_prior_id="+col_hf_prior_id);
+
+        yoy62.deactivateMortageFirstPart(ctx, col_hf_prior_id, CREATE_DATE_TIME);
+        debug("Deaktivirao hipoteku prvi dio.");
+        
+        int num_mort=0;            
+        num_mort=yoy62.getNumberOfActiveMortageExceptThis(ctx, HF_COLL_HEAD_ID, col_hf_prior_id);
+        if(num_mort==0){
+            yoy62.deactivateCollateral(ctx, HF_COLL_HEAD_ID, d.kolmortgagedeact.use_id, d.kolmortgagedeact.org_uni_id, CREATE_DATE_TIME);
+            debug("Deaktivirao kolateral.");
+        }
+        //FBPr200010700-> Spremanje povijesti za deaktivaciju hipoteke        
+        yoy62.insertIntoHfHistory(ctx, col_hf_prior_id, HF_COLL_HEAD_ID, d.kolmortgagedeact.use_id, d.kolmortgagedeact.KolMortgageDeact_txtCmnt);
+
+        yoy62.deactivateMortageSecondPart(ctx, col_hf_prior_id, CREATE_DATE_TIME, d.kolmortgagedeact.use_id);
+        debug("Deaktivirao hipoteku drugi dio.");
+	}
+
+    private void debug(String s){
+        mtc.debug("---CO343 -> " + s);
+    } 
+}  
+ 
+

@@ -1,0 +1,171 @@
+package hr.vestigo.modules.collateral.jcics.co32;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */    
+        
+    
+public class CO323 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co32/CO323.sqlj,v 1.4 2017/02/16 15:27:22 hrazst Exp $";
+
+	
+	public DeclCO32 decl = null;
+
+
+	
+	public CO323 (DeclCO32 decl) {
+		this.decl = decl;
+	} 
+	 
+
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		
+		 
+// najprije provjeriti da li postoji u bazi aktivni ugovor s istim brojem 
+		int broj = 0;			
+		try {
+		    #sql [ctx] {SELECT COUNT(*)
+						INTO :broj 
+		    			FROM frame_agreement
+		    			WHERE 
+						agreement_no=:(decl.agrinsert.Agr_txtAgrNo) 
+		                and
+		                status = 'A'
+		                
+		    	};	    	
+		    	tc.debug ( "...broj: " + broj);
+	    } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO05A.sqlj select from coll_vehicle SQL ErrorCode " + sqle.getErrorCode());
+			tc.debug ( "......CO05A.sqlj select from coll_vehicle SQL SQLState " + sqle.getSQLState());
+			tc.debug ( "......CO05A.sqlj select from coll_vehicle SQL Message " + sqle.getMessage());
+			throw new VestigoTMException(1, "Transaction CO323: Error inserting into frame_agreement! ","err411a", null);
+        }
+        if(broj > 0){
+		    throw new VestigoTMException(1, "Transaction CO323: Error inserting into frame_agreement! ","colErr016", null);
+		}	
+		  
+   
+
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal id = id_generator.getNewId();
+
+		tc.debug("dohvat id : "+id);			
+		
+		decl.agrinsert.fra_agr_id = id;				
+
+// statusi. inicijalne vrijednosti 
+		
+		decl.agrinsert.proc_status = "0";
+		decl.agrinsert.Coll_txtMortgageSt = "0";
+		decl.agrinsert.Coll_txtCoverIndic = "0";
+		decl.agrinsert.workflow_indic = "0";
+		decl.agrinsert.Coll_txtFinFlag = "0";
+		decl.agrinsert.status = "A";
+		
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(decl.agrinsert.Coll_txtOpeningTs)
+			FROM sysibm.sysdummy1
+		};
+		
+		 decl.agrinsert.Coll_txtUserLock = decl.agrinsert.Coll_txtOpeningTs;
+	 
+		try{	
+
+					#sql [ctx]{
+							INSERT INTO frame_agreement
+										(
+										fra_agr_id,
+										cus_id,
+										register_no,
+										agreement_no,
+										amount,
+										cur_id,
+										amount_post,
+										amount_rest,
+										date_until,
+										num_of_bill,
+										add_data,
+										proc_status,
+										hipo_status,
+										loan_status,
+										workflow_indic,
+										financial_flag,
+										use_open_id,
+										org_uni_open_id,
+										opening_ts,
+										use_id,
+										org_uni_id,
+										use_id_ver_snd,
+										ver_send_ts,
+										use_id_ver,
+										verification_ts,
+										user_lock,
+										status,
+		                                boe_stock_indicator)
+							VALUES( :(decl.agrinsert.fra_agr_id),    													                                                
+									:(decl.agrinsert.agr_cus_id),
+ 									:(decl.agrinsert.Agr_txtRegNo), 	
+									:(decl.agrinsert.Agr_txtAgrNo),
+									:(decl.agrinsert.Agr_txtAmount),
+									:(decl.agrinsert.agr_cur_id), 	
+									null,                   
+									null,
+									:(decl.agrinsert.Agr_txtDateUntil),
+									:(decl.agrinsert.Agr_txtNumOfBill),
+									:(decl.agrinsert.Agr_txtAddData),
+									:(decl.agrinsert.proc_status),
+									:(decl.agrinsert.Coll_txtMortgageSt),
+									:(decl.agrinsert.Coll_txtCoverIndic),
+									:(decl.agrinsert.workflow_indic),
+									:(decl.agrinsert.Coll_txtFinFlag),
+									:(decl.agrinsert.use_open_id),
+									:(decl.agrinsert.org_uni_open_id),
+									:(decl.agrinsert.Coll_txtOpeningTs),
+									:(decl.agrinsert.use_id),
+									:(decl.agrinsert.org_uni_id),
+									null,  
+									null,
+									null,
+									null,
+									:(decl.agrinsert.Coll_txtUserLock),
+									:(decl.agrinsert.status),
+		                            :(decl.agrinsert.txtSporazumMZ) 
+		                        )	
+					};
+
+		        
+			
+		}catch(SQLException se){
+				
+				tc.debug ( "......CO323.sqlj insert into frame_agreement SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO323.sqlj insert into frame_agreement SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO323.sqlj insert into frame_agreement SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new VestigoTMException(1, "Transaction CO323: Error inserting frame_agreement! ","err411a", null);
+		}
+					 
+
+			
+	}//execute
+ 
+
+  
+
+		
+	 
+}	 
+			

@@ -1,0 +1,315 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+			SELECT *
+                      
+                       FROM system_code_value                
+                       WHERE sys_cod_id = 'fis_pay_code' with ur;
+
+
+select * from vat_report_head;
+
+select * from vat_report_item;
+
+
+select * from VAT_REPORT_HEAD  order by recording_time desc;
+
+
+select * from VAT_REPORT_item  order by user_lock desc;
+
+select * from VAT_REPORT_HEAD where vat_rep_hea_id = 329319335;
+
+
+select * from batch_log order by user_lock desc;
+
+select * from batch_def where bat_def_id = 3185194874;
+
+
+select * from customer;
+
+
+select * from customer_subtype;
+
+select * from organization_unit;
+
+
+		  SELECT
+                org_uni_id,
+                code
+            FROM
+                organization_unit;
+
+                select * from COUNTRY;
+
+                select * from customer_account;
+
+                select * from customer;
+
+		SELECT * FROM income_type;
+
+		select * from customer;
+
+		select register_no, tax_number from customer where cus_id = 116352;
+
+		select * from customer;
+
+			select * from customer where tax_number is not null ;
+
+		select * FROM batch_log order by recording_time desc;
+
+		 select * FROM batch_log order by recording_time desc;
+
+		 select * from customer order by recording_time desc;
+
+		  select register_no, name, tax_number from customer where cus_id = 39309275;
+
+		  select cus_typ_id from customer where cus_id = 39309275;
+
+
+		  select * from customer;
+
+		  select * from customer where cus_id = 1977352;
+
+
+		    SELECT *            
+            FROM CUSTOMER
+            WHERE register_no like '2002123' with ur;
+
+
+		select * from nnb_list where nnb_date between '01.01.2014' and '01.02.2014';
+
+		select * from nnb_list where nnb_lis_id = 60897326;
+
+
+		select * from vat_report_head;
+
+
+		select * from vat_report_head where vat_rep_hea_id = 58248335;
+
+		update vat_report_head set fis_vat_inv_no = '2-0283-1-2015' where vat_rep_hea_id = 58248335;
+
+		commit;
+
+		select * from batch_log order by recording_time desc;
+
+
+		SELECT
+                    vrh.vat_rep_hea_id,
+                    vrh.cus_id,
+                    vrh.vat_invoice_no,   
+                    vrh.vat_invoice_date,
+                    t.accounting_date process_date,
+                    vrh.invoice_ord_no,
+                    vrh.account,
+                    vrh.user_code,
+                    vrh.org_uni_code,
+                    c.register_no cus_code,
+                    vrh.name,
+                    vrh.delivery_channel,
+                    vrh.marked_giro_acc,
+                    vrh.total_amount,
+                    vrh.sending_flag,
+                    vrh.vat_invoice_type,
+                    vrh.reversed,
+                    vrh.fis_vat_inv_no
+                FROM VAT_REPORT_HEAD vrh 
+                          LEFT OUTER JOIN CUSTOMER c on c.cus_id=vrh.cus_id, 
+                      VAT_REPORT_ITEM vri, TURNOVER t  
+                WHERE vrh.vat_rep_hea_id = vri.vat_rep_hea_id
+                    AND vrh.module_name = 'RET'
+                    AND vri.vat_rep_ite_id = (SELECT min(vri1.vat_rep_ite_id) from VAT_REPORT_ITEM vri1 where vri1.vat_rep_hea_id=vrh.vat_rep_hea_id AND 
+                                      ((:(ban_reg_no)=0 AND vri1.cus_id = :(cus_id)) OR (:(ban_reg_no)=1 
+                                      AND (vri1.register_no is null OR RTRIM(vri1.register_no) = '' OR RTRIM(vri1.register_no) = :(bank_reg_no)))) )
+                    AND vri.vat_rep_ite_id = t.tur_id
+                    AND ((:(ban_reg_no)=0 AND (vrh.cus_id = :(cus_id) OR vri.cus_id = :(cus_id))) 
+                              OR (:(ban_reg_no)=1 AND (vrh.register_no is null OR RTRIM(vrh.register_no) = '' OR RTRIM(vrh.register_no) = :(bank_reg_no) 
+                              OR vri.register_no is null OR RTRIM(vri.register_no) = '' OR RTRIM(vri.register_no) = :(bank_reg_no))))
+                    AND vrh.use_id = :(use_id)
+                    AND vrh.org_uni_id = :(org_uni_id)
+                    AND (:(name_flag)=0 OR vrh.name LIKE :(name) OR vri.name LIKE :(name))
+                    AND (:(account_flag)=0 OR vrh.account=:(account) OR vrh.account LIKE :(account))
+                    AND (:(channel_flag)=0 OR vrh.delivery_channel=:(delivery_channel))
+                    AND (:(mzr_flag)=0 OR vrh.marked_giro_acc=:(marked_zr))
+                    AND (:(month_flag)=0 OR MONTH(t.accounting_date)=:(month))
+                    AND (:(year_flag)=0 OR YEAR(t.accounting_date)=:(year))
+                    AND ((:(send_fl_flag)=0 AND vrh.sending_flag in ('0', '1')) OR vrh.sending_flag=:(sending_flag))
+                    AND (:(date_f_flag)=0 OR vrh.vat_invoice_date>=:(date_from))
+                    AND (:(date_u_flag)=0 OR vrh.vat_invoice_date<=:(date_until))
+                    AND (:(vat_inv_no_flag)=0 OR ((vrh.vat_invoice_no LIKE :(vat_invoice_no)) OR (vri.vat_inv_no_orig LIKE :(vat_invoice_no))
+                               OR (vrh.vat_invoice_no in (select vri2.vat_inv_no_orig 
+                                                    from vat_report_item vri2, vat_report_head vrh2 
+                                                where vri2.vat_rep_hea_id=vrh2.vat_rep_hea_id 
+                                                and vrh2.vat_invoice_no LIKE :(vat_invoice_no) ))))
+                ORDER BY vrh.vat_invoice_date desc, vrh.vat_invoice_no desc
+		
+
+		PAY BOS
+		
+		SELECT pro_typ_id, pro_typ_code, name FROM procedure_type WHERE due_term_tabl_ind = '1'  AND   pro_typ_id IN (select PRO_TYP_ID from BAN_PRO_AMO_TYPE bpat, BANK_PRODUCT_TYPE bpt, BANK_RELATION_TYPE brt WHERE bpat.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID AND bpt.BAN_REL_TYPE = brt.BAN_REL_TYPE AND brt.APLIC_CODE = ?)  ORDER BY pro_typ_code  [SIR]] 
+
+		 SELECT pro_typ_id, pro_typ_code, name FROM procedure_type WHERE due_term_tabl_ind = '1'  AND   pro_typ_id IN (select PRO_TYP_ID from BAN_PRO_AMO_TYPE bpat, BANK_PRODUCT_TYPE bpt, BANK_RELATION_TYPE brt WHERE bpat.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID AND bpt.BAN_REL_TYPE = brt.BAN_REL_TYPE AND brt.APLIC_CODE = 'SIR')  ORDER BY pro_typ_code;
+
+
+		 SELECT pro_typ_id, pro_typ_code, name FROM procedure_type WHERE due_term_tabl_ind = '0'  AND   pro_typ_id IN (select PRO_TYP_ID from BAN_PRO_AMO_TYPE bpat, BANK_PRODUCT_TYPE bpt, BANK_RELATION_TYPE brt WHERE bpat.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID AND bpt.BAN_REL_TYPE = brt.BAN_REL_TYPE AND brt.APLIC_CODE = 'SIR')  ORDER BY pro_typ_code 
+
+
+		select PRO_TYP_ID from BAN_PRO_AMO_TYPE bpat, BANK_PRODUCT_TYPE bpt, BANK_RELATION_TYPE brt WHERE bpat.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID AND bpt.BAN_REL_TYPE = brt.BAN_REL_TYPE AND brt.APLIC_CODE = 'SIR' with ur;
+
+		select * from procedure_type;
+		
+
+		SELECT pro_typ_id, pro_typ_code, name FROM procedure_type WHERE due_term_tabl_ind = '1'  AND   pro_typ_id IN (select PRO_TYP_ID from BAN_PRO_AMO_TYPE bpat, BANK_PRODUCT_TYPE bpt, BANK_RELATION_TYPE brt WHERE bpat.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID AND bpt.BAN_REL_TYPE = brt.BAN_REL_TYPE AND brt.APLIC_CODE = 'RET')  ORDER BY pro_typ_code;
+
+		SELECT pro_typ_id, pro_typ_code, name FROM procedure_type WHERE due_term_tabl_ind = '1'  AND   pro_typ_id IN (select PRO_TYP_ID from BAN_PRO_AMO_TYPE bpat, BANK_PRODUCT_TYPE bpt, BANK_RELATION_TYPE brt WHERE bpat.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID AND bpt.BAN_REL_TYPE = brt.BAN_REL_TYPE AND brt.APLIC_CODE = 'RET')  ORDER BY pro_typ_code; 
+
+		 SELECT pro_typ_id, pro_typ_code, name FROM procedure_type WHERE due_term_tabl_ind = '1'  AND   pro_typ_id IN (select PRO_TYP_ID from BAN_PRO_AMO_TYPE bpat, BANK_PRODUCT_TYPE bpt, BANK_RELATION_TYPE brt WHERE bpat.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID AND bpt.BAN_REL_TYPE = brt.BAN_REL_TYPE AND brt.APLIC_CODE = 'SIR')  ORDER BY pro_typ_code;  
+
+		 select distinct
+                     vat_value,
+                     message,
+                     message2,
+                     module_name,
+                     invoice_date
+                 FROM
+                     STATEMENT_MESSAGE
+                 WHERE MODULE_NAME = 'RET'
+                     AND :(invoiceDate) BETWEEN DATE_FROM and DATE_UNTIL
+                     AND DATE_FROM <= DATE_UNTIL
+                     AND bank_sign = 'RB'
+                     AND STA_MES_type = 'Z'
+                     ORDER BY CUS_TYP_ID asc, CUS_SUB_TYP_CODE asc, VAT_VALUE asc, LAN_COD_ID asc
+
+
+
+                     
+		 select distinct
+                   vat_value, sta_mes_id, message, message2, message3, message4
+                 FROM
+                     STATEMENT_MESSAGE
+                     where STA_MES_type = 'Z' ;
+
+
+                     	 select distinct
+                  *
+                 FROM
+                     STATEMENT_MESSAGE
+                     where STA_MES_type = 'Z' ;
+
+                     select * from vat_report_item;
+
+                     select * from vat_report_head where vat_invoice_type = '0' order by user_lock desc; -- zbirni racuri
+
+                     select * from vat_report_item where vat_rep_hea_id = 380693335;
+
+                     select * from vat_report_head order by user_lock desc;
+
+                     
+
+
+			select * from vat_report_head where vat_rep_hea_id = 58248335;
+
+			
+			-------------  test za zbrini račun 103-3079-00000001 -- vat_rep_hea_id
+		
+				 select cashdeskid, inv_org_uni_code from vat_report_head;
+
+				select * from vat_report_head where vat_rep_hea_id = 4745004797;
+
+				--update vat_report_head set fiscal_acc_flag = '1' where vat_rep_hea_id = 4745004797;
+
+				--update vat_report_head set cashdeskid = '12345' where vat_rep_hea_id = 4745004797;
+
+				update vat_report_head set inv_org_uni_code = '7777' where vat_rep_hea_id = 4745004797;
+
+				commit;
+
+
+				       select 
+                     distinct(vri.vat_value),
+                     vri.sta_mes_id,
+                     sm.message
+                 FROM
+                     VAT_REPORT_ITEM vri, STATEMENT_MESSAGE sm
+                 WHERE vri.sta_mes_id = sm.sta_mes_id
+                 AND vri.vat_rep_hea_id = :(vatRepHeaId)
+                 AND (:(vatRepIteId_flag)=0 OR vri.vat_rep_ite_id = :(vatRepIteId)) 
+
+
+			select * from vat_report_item order by user_lock desc;
+
+			select * from vat_report_head order by user_lock desc;
+                 
+			
+			
+		-----------------------------------------------------------------------------------------------------------
+
+		SET CURRENT_SCHEMA = 'SIP'
+
+
+
+select * from VAT_REPORT_HEAD  order by recording_time desc;
+
+select * from VAT_REPORT_item order by user_lock desc;
+
+
+				SELECT *
+                      
+                       FROM system_code_value                
+                       WHERE sys_cod_id = 'fis_pay_code' with ur;
+
+                       
+                       AND sys_code_value = :(FisPayCode) 
+					   
+					   
+		SET CURRENT_SCHEMA = 'SITP'
+
+select * from customer_account where cus_acc_no like '3251014835';
+
+select * from nnb_list where cus_acc_no like '3251014835';
+
+select * from nnb_list where cus_acc_no like '3251014802';
+
+ select * FROM batch_log order by recording_time desc;
+
+ select * from batch_def where bat_def_id = 3185194874;
+
+
+----------------------------------------------------
+
+ 		SET CURRENT_SCHEMA = 'SIP'
+
+select * from customer where register_no = '1278720' with ur;  
+
+			    SELECT     
+               *   
+          
+            FROM 
+                USER_CODE_VALUE
+            WHERE  
+                USE_COD_ID = 'plan_productPO'
+
+
+                select * from income_head where current_date = date(recording_time);
+
+               select * FROM batch_log where bat_def_id = 6549426704 order by recording_time desc;
+
+
+
+		-----------------------------------------
+		
+		
+		SET CURRENT_SCHEMA = 'SIP'
+
+select * from customer where register_no = '1278720' with ur;  
+
+			    SELECT     
+               *   
+          
+            FROM 
+                USER_CODE_VALUE
+            WHERE  
+                USE_COD_ID = 'plan_productPO'
+
+                   
+            AND USE_CODE_VALUE = :(useCodevalue)
+			

@@ -1,0 +1,270 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+  HR0525000091101393260
+  HR5924840083150006775
+  HR7424840083205002013
+
+	 					SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                              FROM system_code_value 
+                             WHERE sys_cod_id = 'bill_change_stat' 
+                             		AND sys_code_value = 'A';
+
+  select status,cus_bil_exc_id  from CUST_BILL_EXCH where cus_bill_exch_no like 'MJ-13012015-00000001'order by user_lock desc;
+
+
+					  SELECT 
+                       ce.cus_id AS cus_id,
+                       ce.cus_name AS name, 
+                       ce.address AS address, 
+                       ce.tax_number AS tax_number,                           
+                       ce.city AS city
+                    FROM
+                      CUSACC_EXTERNAL ce
+                      WHERE ce.iban_acc_no = 'HR5924840083150006775'
+                          AND ce.bank_sign = 'RB';
+
+
+                               SELECT 
+                        ca.cus_id AS cus_id,
+                        c.name AS name,
+                        c.address AS address, 
+                        c.tax_number AS tax_number,                            
+                        c.xcity AS city
+  
+                    FROM
+                        customer_account ca,
+                        customer c
+                    WHERE ca.iban_acc_no = 'HR5924840083150006775'
+                          AND ca.bank_sign = 'RB'
+                          AND c.cus_id=ca.cus_id
+
+  			
+
+
+select * from  system_code_value order by user_lock desc;
+
+select * from  system_code_value where sys_cod_id like 'chg_stat_reason_bi';
+
+select cus_bill_exch_no, issue_date, status from CUST_BILL_EXCH where cus_bill_exch_no like 'MJ-08012015-00000024'order by user_lock desc;
+
+	 update CUST_BILL_EXCH set issue_date = '2015-01-09' where  cus_bill_exch_no like 'MJ-08012015-00000024';
+
+	  update CUST_BILL_EXCH set status = 'P' where  cus_bill_exch_no like 'MJ-13012015-00000001';
+
+	   update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-14012015-00000000' where  cus_bil_exc_id = 3158350823 ;
+
+	    update CUST_BILL_EXCH set issue_date = '2015-01-12' where  cus_bil_exc_id = 3159867823 ;
+
+ 		commit;
+
+  select * from CUST_BILL_EXCH where cus_bil_exc_id = 3159934823;		
+
+     delete from CUST_BILL_EXCH where cus_bil_exc_id = 3159934823;
+
+     commit;
+
+   select issue_date from CUST_BILL_EXCH  where cus_bill_exch_no = 'MJ-12012015-00000002';
+      
+                          SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                              FROM system_code_value 
+                             WHERE sys_cod_id = 'bill_change_stat'
+                             		and sys_code_value = 'A';
+     
+
+			select * from customer_account;
+
+			select * from customer where cus_id = 465571251;
+
+			
+
+
+select * from CUST_BILL_EXCH where status like 'A' order by user_lock desc;
+
+select iban_acc_no from customer_account where iban_acc_no is not null;
+
+select iban_acc_no from cusacc_external where iban_acc_no is not null;
+
+
+select * from CUST_BILL_EXCH where cus_bil_exc_id = 3158542823;
+
+select status, ben_place from CUST_BILL_EXCH where cus_bil_exc_id = 3158542823;  -- 3158542823
+
+		 update CUST_BILL_EXCH set status = 'N' where cus_bil_exc_id = 3158542823;
+
+ 		commit;
+
+
+ 		UPDATE  CUST_BILL_EXCH SET amount = '1000.00'
+ 		cus_bill_ext_no = null maturity_date = 2015-01-09 issue_date = 2015-01-07 payer_reg_no = 150461 payer_tax_number = 54789654123 
+ 		payment_method = 1 payer_name = MORE D.O.O. payer_acc_no = 1135000053 
+ 		ben_iban = HR7424840083205002013 ben_name = VILET ZDESLAVA 
+ 		ben_tax_number = 54789654123 ben_address = VILET ZDESLAVA ben_place = null credit_ref_typ = 99 debit_ref_typ = 99 credit_ref_no =  debit_ref_no =  
+ 		WHERE cus_bil_exc_id = 3158542823
+
+
+		  UPDATE   
+                        cust_bill_exch
+               SET      
+                        amount = '1000.00',
+                        cus_bill_ext_no = null,
+                        maturity_date = '2015-01-09',
+                        issue_date = '2015-01-07',
+                        ben_place = null
+
+			 WHERE    
+                        cus_bil_exc_id = 3158542823
+               WITH CS ;
+                        
+                        payer_reg_no = :(cbed.payer_reg_no),
+                        payer_tax_number = :(cbed.payer_tax_number),
+                        payment_method = :(cbed.payment_method),
+                        payer_acc_no = :(cbed.payer_acc_no),
+                        ben_iban = :(cbed.ben_iban),
+                        ben_name = :(cbed.ben_name),
+                        ben_tax_number = :(cbed.ben_tax_number),
+                        ben_address = :(cbed.ben_address),
+                        ben_place = :(cbed.ben_place),
+                        credit_ref_typ = :(cbed.credit_ref_typ),
+                        debit_ref_typ = :(cbed.debit_ref_typ),
+                        payer_name = :(cbed.payer_name),
+                        credit_ref_no = :(cbed.credit_ref_no),
+                        debit_ref_no =:(cbed.debit_ref_no)
+               WHERE    
+                        cus_bil_exc_id = 3158542823
+               WITH CS ;
+
+			   
+			   SET CURRENT_SCHEMA = 'SIDEV'
+
+	 					SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                              FROM system_code_value 
+                             WHERE sys_cod_id = 'bill_change_stat' 
+                             		AND sys_code_value = 'A';
+
+  select status,cus_bil_exc_id  from CUST_BILL_EXCH where cus_bill_exch_no like 'MJ-13012015-00000001'order by user_lock desc;
+
+
+					  SELECT 
+                       ce.cus_id AS cus_id,
+                       ce.cus_name AS name, 
+                       ce.address AS address, 
+                       ce.tax_number AS tax_number,                           
+                       ce.city AS city
+                    FROM
+                      CUSACC_EXTERNAL ce
+                      WHERE ce.iban_acc_no = 'HR5924840083150006775'
+                          AND ce.bank_sign = 'RB';
+
+
+                               SELECT 
+                        ca.cus_id AS cus_id,
+                        c.name AS name,
+                        c.address AS address, 
+                        c.tax_number AS tax_number,                            
+                        c.xcity AS city
+  
+                    FROM
+                        customer_account ca,
+                        customer c
+                    WHERE ca.iban_acc_no = 'HR5924840083150006775'
+                          AND ca.bank_sign = 'RB'
+                          AND c.cus_id=ca.cus_id
+
+  			
+
+
+select * from  system_code_value order by user_lock desc;
+
+select * from  system_code_value where sys_cod_id like 'chg_stat_reason_bi';
+
+select cus_bill_exch_no, issue_date, status from CUST_BILL_EXCH where cus_bill_exch_no like 'MJ-08012015-00000024'order by user_lock desc;
+
+	 update CUST_BILL_EXCH set issue_date = '2015-01-09' where  cus_bill_exch_no like 'MJ-08012015-00000024';
+
+	  update CUST_BILL_EXCH set status = 'P' where  cus_bill_exch_no like 'MJ-13012015-00000001';
+
+	   update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-14012015-00000000' where  cus_bil_exc_id = 3158350823 ;
+
+	    update CUST_BILL_EXCH set issue_date = '2015-01-12' where  cus_bil_exc_id = 3159867823 ;
+
+ 		commit;
+
+  select * from CUST_BILL_EXCH where cus_bil_exc_id = 3159934823;		
+
+     delete from CUST_BILL_EXCH where cus_bil_exc_id = 3159934823;
+
+     commit;
+
+   select issue_date from CUST_BILL_EXCH  where cus_bill_exch_no = 'MJ-12012015-00000002';
+      
+                          SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                              FROM system_code_value 
+                             WHERE sys_cod_id = 'bill_change_stat'
+                             		and sys_code_value = 'A';
+     
+
+			select * from customer_account;
+
+			select * from customer where cus_id = 465571251;
+
+			
+
+
+select * from CUST_BILL_EXCH where status like 'A' order by user_lock desc;
+
+select iban_acc_no from customer_account where iban_acc_no is not null;
+
+select iban_acc_no from cusacc_external where iban_acc_no is not null;
+
+
+select * from CUST_BILL_EXCH where cus_bil_exc_id = 3158542823;
+
+select status, ben_place from CUST_BILL_EXCH where cus_bil_exc_id = 3158542823;  -- 3158542823
+
+		 update CUST_BILL_EXCH set status = 'N' where cus_bil_exc_id = 3158542823;
+
+ 		commit;
+
+
+ 		UPDATE  CUST_BILL_EXCH SET amount = '1000.00'
+ 		cus_bill_ext_no = null maturity_date = 2015-01-09 issue_date = 2015-01-07 payer_reg_no = 150461 payer_tax_number = 54789654123 
+ 		payment_method = 1 payer_name = MORE D.O.O. payer_acc_no = 1135000053 
+ 		ben_iban = HR7424840083205002013 ben_name = VILET ZDESLAVA 
+ 		ben_tax_number = 54789654123 ben_address = VILET ZDESLAVA ben_place = null credit_ref_typ = 99 debit_ref_typ = 99 credit_ref_no =  debit_ref_no =  
+ 		WHERE cus_bil_exc_id = 3158542823
+
+
+		  UPDATE   
+                        cust_bill_exch
+               SET      
+                        amount = '1000.00',
+                        cus_bill_ext_no = null,
+                        maturity_date = '2015-01-09',
+                        issue_date = '2015-01-07',
+                        ben_place = null
+
+			 WHERE    
+                        cus_bil_exc_id = 3158542823
+               WITH CS ;
+                        
+                        payer_reg_no = :(cbed.payer_reg_no),
+                        payer_tax_number = :(cbed.payer_tax_number),
+                        payment_method = :(cbed.payment_method),
+                        payer_acc_no = :(cbed.payer_acc_no),
+                        ben_iban = :(cbed.ben_iban),
+                        ben_name = :(cbed.ben_name),
+                        ben_tax_number = :(cbed.ben_tax_number),
+                        ben_address = :(cbed.ben_address),
+                        ben_place = :(cbed.ben_place),
+                        credit_ref_typ = :(cbed.credit_ref_typ),
+                        debit_ref_typ = :(cbed.debit_ref_typ),
+                        payer_name = :(cbed.payer_name),
+                        credit_ref_no = :(cbed.credit_ref_no),
+                        debit_ref_no =:(cbed.debit_ref_no)
+               WHERE    
+                        cus_bil_exc_id = 3158542823
+               WITH CS ;
+
+
+
+

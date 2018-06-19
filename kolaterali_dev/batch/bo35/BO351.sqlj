@@ -1,0 +1,125 @@
+package hr.vestigo.modules.collateral.batch.bo35;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+import sqlj.runtime.ref.*;
+
+public class BO351 {
+    
+     private final BigDecimal COL_CAT_ID = new BigDecimal(624223);
+     private final BigDecimal HF_OWN_CUS_ID = new BigDecimal(8218251);
+     
+     #sql public iterator Iter (
+            String col_num,
+            String veh_vin_num,
+            String cus_acc_no,
+            String register_no,
+            Date approval_date,
+            String veh_con_num,
+            Date con_date
+            
+    );
+     
+     private BigDecimal eve_id = null;
+     
+     private ConnCtx connCtx;
+     
+     private BatchContext bc;
+     
+ 
+     
+     public BO351(BatchContext bc) {
+         this.bc = bc;
+         try {
+             this.connCtx = bc.getContext();
+         }catch (SQLException e) {
+             bc.debug("CAN'T MAKE CONTEXT "+e.toString());
+         }
+     }
+     
+     public BigDecimal insertIntoEvent() {
+         eve_id = null;
+     
+         try {
+             YXYB0 eve1 = new YXYB0(bc); 
+             YXYD0 genId = new YXYD0(bc);
+             eve_id = genId.getNewId();
+             
+             HashMap event = new HashMap();
+             
+             event.put("eve_id",eve_id);
+             event.put("eve_typ_id",new BigDecimal("2649492003"));
+             event.put("event_date",new java.sql.Date(System.currentTimeMillis()));
+             event.put("cmnt","Izvješæe za fiducije vozila ");
+             event.put("use_id",bc.getUserID());
+             event.put("ext_event_code",null);
+             event.put("ext_event_num",null);
+             //event.put("org_uni_id", new BigDecimal("53253"));
+             event.put("bank_sign",bc.getBankSign());
+             eve1.insertEvent(event);
+             bc.updateEveID(eve_id);
+         }
+         catch(Exception e) {
+             return null;
+         }
+         return eve_id;
+     }
+     
+     public Iter fetchData(Date datum_od, Date datum_do){
+         Iter iter = null;
+         
+         try {
+             #sql [connCtx] iter = {select
+                                     a.col_num as col_num,  
+                                     b.veh_vin_num as veh_vin_num, 
+                                     e.cus_acc_no as cus_acc_no,
+                                     f.register_no as register_no, 
+                                     e.approval_date as approval_date, 
+                                     c.veh_con_num as veh_con_num,
+                                     c.date_rec_lop as con_date
+
+                             from 
+                                     coll_head a,
+                                     coll_vehicle b,
+                                     coll_hf_prior c,
+                                     loan_beneficiary d,  
+                                     cusacc_exposure e,
+                                     customer f
+
+                             where 
+                                 a.col_cat_id = :(COL_CAT_ID) 
+                             and
+                                 a.collateral_status in ('0','1','2','3')
+                             and
+                                 a.col_hea_id = b.col_hea_id
+                             and
+                                 b.col_hea_id = c.hf_coll_head_id
+                             and
+                                 c.hf_own_cus_id = :(HF_OWN_CUS_ID)
+                             and
+                                 c.hf_status = 'A'
+                             and 
+                                 c.coll_hf_prior_id = d. coll_hf_prior_id
+                             and
+                                 (d.la_acc_id = e.cus_acc_id or d.acc_no = e.cus_acc_no or d.request_no = e.request_no)
+                             and
+                                 e.approval_date between :(datum_od) and :(datum_do)
+                             and
+                                 e.cus_id=f.cus_id
+                             order by 2 with ur
+};
+        } catch (Exception e) {
+            bc.debug("Greska s iteratorom :" + e.toString());
+        }
+        bc.debug("DOHVATIO NESTO");
+        return iter;
+     }
+
+}

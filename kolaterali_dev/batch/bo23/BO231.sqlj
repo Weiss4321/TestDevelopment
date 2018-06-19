@@ -1,0 +1,736 @@
+package hr.vestigo.modules.collateral.batch.bo23;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import java.lang.String;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.util.DateUtils;
+import hr.vestigo.modules.rba.util.DecimalUtils;
+
+
+#sql iterator IteratorCollateral with(holdability = true) (
+	BigDecimal col_hea_id,
+	String col_num,
+	BigDecimal col_typ_id,
+	String col_typ_name,	
+	BigDecimal cur_id,
+	BigDecimal value,
+	String eligibility
+	);
+
+#sql iterator IteratorOwner with(holdability = true) (
+	String register_no,
+	String name
+);
+ 
+#sql iterator IteratorHfPrior with(holdability = true) (
+	BigDecimal cur_id_ref, 
+	BigDecimal amount_ref, 
+	BigDecimal hf_rec_lop_id, 
+	Date date_rec_lop, 
+	Date hf_date_hfc_until
+	);
+
+/*
+#sql iterator IteratorExpColl with(holdability = true) (
+		BigDecimal cus_acc_exp_col_id,
+		BigDecimal cus_acc_id, 
+		BigDecimal exp_cur_id, 
+		BigDecimal exp_balance, 
+		String cus_acc_no, 
+		String request_no, 
+		String exp_owner_code, 
+		String exp_owner_name,
+		BigDecimal col_hea_id,
+		String col_num,
+		BigDecimal col_typ_id,
+		String col_typ_name,	
+		BigDecimal col_cur_id,
+		BigDecimal col_value,
+		String eligibility
+	);
+
+*/
+#sql iterator IteratorExpColl with(holdability = true) (
+		BigDecimal cus_acc_id, 
+		BigDecimal exp_cur_id, 
+		BigDecimal exp_balance, 
+		String cus_acc_no, 
+		String request_no, 
+		Date due_date,
+		String exp_owner_code, 
+		String exp_owner_name,
+		BigDecimal col_hea_id,
+		String col_num,
+		BigDecimal col_typ_id,
+		BigDecimal col_cat_id,
+		String col_typ_name,	
+		BigDecimal col_cur_id,
+		BigDecimal col_value,
+		String eligibility,
+        String b2_irb_elig,
+		Date hf_date_from,
+		Date hf_date_until,
+        String b2asset_class
+
+	);
+
+public class BO231{
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo23/BO231.sqlj,v 1.19 2016/07/06 11:23:59 hrakis Exp $";
+	
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+	private Map exchangeRate=null;
+	private BigDecimal kn_id=null;
+	
+	public BO231(BatchContext bc) throws SQLException{
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+		exchangeRate=new HashMap ();
+		kn_id= new BigDecimal(63999);
+	}
+	
+	/**
+	*dohvat srednjeg tecaja za dan
+	*@param cur_id id valute
+	*@param date datum valute
+	*@return tecaj valute
+	*
+	*/
+	public BigDecimal selectMiddRate(BigDecimal cur_id, Date date){
+		BigDecimal rate=null;
+		try{
+			#sql[connCtx]{
+				SELECT midd_rate 
+				INTO :(rate)
+				FROM exchange_rate 
+				WHERE :(date) BETWEEN date_from AND date_until 
+				AND cur_id =:(cur_id)
+				AND BANK_SIGN=:(bc.getBankSign())
+			};
+		}catch(SQLException e){
+			bc.debug(".....BO231.sqlj selectMiddRate        Message  : " + e.getMessage());
+			bc.debug(".....BO231.sqlj selectMiddRate      Error code : " + e.getErrorCode());
+			bc.debug(".....BO231.sqlj selectMiddRate        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			if(e.getErrorCode() == 100){
+			    rate = null;
+			}
+		}
+		return rate;
+	}
+	
+	/**
+	*preracunava vrijednosti u drugu valutu
+	*
+	*@param cur_id id valute
+	*@param value iznos
+	*@param value_date datum valute
+	*@param toKn da li mijenja u kune ili iz kuna u cur_id valutu
+	*@return preracunata vrijednost
+	*/
+	public BigDecimal exchange(BigDecimal cur_id_from, BigDecimal cur_id_to,BigDecimal value,Date value_date){
+		if((value==null)||(cur_id_from==null)||(cur_id_to==null)) return null;
+		//ako su obe valute iste
+		if(cur_id_from.compareTo(cur_id_to)==0){
+			return value;
+		}
+		BigDecimal result=null;
+		BigDecimal to_kn=null;
+		BigDecimal from_kn=null;
+		
+		if(cur_id_from.compareTo(kn_id)!=0){
+			to_kn=(BigDecimal)this.exchangeRate.get(cur_id_from);
+			if(to_kn==null){
+				to_kn=selectMiddRate(cur_id_from,value_date);
+				this.exchangeRate.put(cur_id_from,to_kn);
+			}
+		}else{
+			to_kn=new BigDecimal(1);
+		}
+		
+		if(cur_id_to.compareTo(kn_id)!=0){
+			from_kn=(BigDecimal)this.exchangeRate.get(cur_id_to);
+			if(from_kn==null){
+				from_kn=selectMiddRate(cur_id_to,value_date);
+				this.exchangeRate.put(cur_id_to,from_kn);
+			}
+		}else{
+			from_kn=new BigDecimal(1);
+		}	
+		result=value.multiply(to_kn);
+		result=result.divide(from_kn, 2, BigDecimal.ROUND_HALF_UP);
+		return result;	
+	}
+	
+	public String getCurrencyChar(BigDecimal cur_id) throws Exception{
+		if (cur_id==null) return null;
+		String result=null;
+		#sql[connCtx]{
+			select code_char
+			into :(result)
+			from currency 
+			where cur_id=:(cur_id)
+		};
+		return result;
+	}
+	
+	public Date getDueDate(BigDecimal col_cat_id, BigDecimal col_hea_id, Date cusacc_due_date) throws Exception{
+		Date result=null;
+		if(col_cat_id.longValue()==615223){
+			//garancija
+			#sql[connCtx]{
+				select 
+					guar_datn_unti 
+				into 
+					:(result)
+				from coll_guarantee 
+				where col_hea_id=:(col_hea_id)
+			};
+		}else if(col_cat_id.longValue()==616223){
+			//polica osiguranja
+			#sql[connCtx]{
+				select 
+					ip_valid_until 
+				into 
+					:(result)
+				from coll_inspolicy 
+				where col_hea_id=:(col_hea_id)
+			};
+		}else if((col_cat_id.longValue()==625223)||(col_cat_id.longValue()==617223)){
+			//zaduznice i mjenice
+			result=cusacc_due_date;
+		}else{
+			//za ostale kategorije kolaterala ostaje null
+			result=null;
+		}
+		return result;
+	}
+	
+	public IteratorCollateral getCollateralIterator(Date value_date) throws SQLException{
+		IteratorCollateral result=null;
+		#sql[connCtx] result={
+			select 
+				a.col_hea_id, 
+				a.col_num, 
+				a.col_type_id as col_typ_id, 
+				b.coll_type_name as col_typ_name, 
+				a.real_est_nm_cur_id as cur_id, 
+				a.real_est_nomi_valu as value, 
+				a.eligibility
+			from 
+				coll_head_d a, 
+				collateral_type b
+			where 
+				:(value_date) between a.load_date_from and a.load_date_until and
+				a.collateral_status ='3' and
+				a.eligibility='D' and
+				a.col_type_id=b.coll_type_id	
+		};
+		
+		
+		return result;
+	}
+	/*
+	public IteratorExpColl getExpCollIterator(Date value_date, BigDecimal col_pro_id, String cus_type) throws SQLException{
+		IteratorExpColl result=null;
+		if(cus_type.equalsIgnoreCase("F")){
+			#sql[connCtx] result={
+					select 
+						a.cus_acc_exp_col_id,
+						a.cus_acc_id, 
+						a.exp_cur_id, 
+						a.exp_balance, 
+						b.cus_acc_no, 
+						b.request_no, 
+						c.register_no as exp_owner_code, 
+						c.name as exp_owner_name, 
+						a.col_hea_id,
+						d.col_num, 
+						d.col_type_id as col_typ_id, 
+						e.coll_type_name as col_typ_name, 
+						d.real_est_nm_cur_id as col_cur_id, 
+						d.real_est_nomi_valu as col_value, 
+						d.eligibility
+					from 
+						cusacc_exp_coll a, 
+						cusacc_exposure b, 
+						customer c, 
+						coll_head_d d,
+						collateral_type e
+					where 
+						a.col_pro_id=:(col_pro_id) and
+						a.cus_acc_id=b.cus_acc_id and
+						b.b2asset_class in ('1','20') and
+						d.col_hea_id = a.col_hea_id and
+						d.load_date = :(value_date) and
+						d.col_type_id=e.coll_type_id and
+						c.cus_id=a.cus_id	
+					order by a.cus_acc_exp_col_id	
+				};
+		}else{
+			#sql[connCtx] result={
+					select 
+						a.cus_acc_exp_col_id,
+						a.cus_acc_id, 
+						a.exp_cur_id, 
+						a.exp_balance, 
+						b.cus_acc_no, 
+						b.request_no, 
+						c.register_no as exp_owner_code, 
+						c.name as exp_owner_name, 
+						a.col_hea_id,
+						d.col_num, 
+						d.col_type_id as col_typ_id, 
+						e.coll_type_name as col_typ_name, 
+						d.real_est_nm_cur_id as col_cur_id, 
+						d.real_est_nomi_valu as col_value, 
+						d.eligibility
+					from 
+						cusacc_exp_coll a, 
+						cusacc_exposure b, 
+						customer c, 
+						coll_head_d d,
+						collateral_type e
+					where 
+						a.col_pro_id=:(col_pro_id) and
+						a.cus_acc_id=b.cus_acc_id and
+						b.b2asset_class not in ('1','20') and
+						d.col_hea_id = a.col_hea_id and
+						d.load_date = :(value_date) and
+						d.col_type_id=e.coll_type_id and
+						c.cus_id=a.cus_id	
+					order by a.cus_acc_exp_col_id	
+				};
+		}
+		
+		return result;
+	}
+	
+	*/
+	
+	public IteratorExpColl getNewExpCollIterator(Date value_date, String cus_type) throws SQLException{
+		IteratorExpColl result=null;
+		
+		if(cus_type.equalsIgnoreCase("F")){
+			#sql[connCtx] result={
+					select 	
+						b.cus_acc_id as cus_acc_id, 
+						b.exposure_cur_id as exp_cur_id,
+						b.exposure_balance as exp_balance,
+						b.cus_acc_no as cus_acc_no, 
+						b.request_no as request_no, 
+						b.due_date as due_date,
+						c.register_no as exp_owner_code, 
+						c.name as exp_owner_name, 
+						d.col_hea_id as col_hea_id,
+						d.col_num as col_num, 
+						d.col_type_id as col_typ_id, 
+						d.col_cat_id as col_cat_id,
+						e.coll_type_name as col_typ_name, 
+						d.real_est_nm_cur_id as col_cur_id, 
+						d.real_est_nomi_valu as col_value, 
+						d.eligibility as eligibility,
+		                d.b2_irb_elig as b2_irb_elig,
+						f.date_rec_lop as hf_date_from, 
+						f.hf_date_hfc_until as hf_date_until,
+		                b.b2asset_class as b2asset_class
+		                
+					from 
+						coll_head_d d,
+						coll_hf_prior_d f,
+						loan_beneficiary_d g,
+						cusacc_exposure b, 
+						customer c,
+						collateral_type e	
+					where 
+						:(value_date) between d.load_date_from and d.load_date_until and
+						d.collateral_status = '3' and
+						d.col_hea_id = f.hf_coll_head_id and
+						:(value_date) between f.load_date_from and f.load_date_until and
+						f.hf_status = 'A' and
+						f.coll_hf_prior_id = g.coll_hf_prior_id and
+						:(value_date) between g.load_date_from and g.load_date_until and
+						g.status = 'A' and
+						(g.la_acc_id = b.cus_acc_id or g.acc_no = b.cus_acc_no or g.request_no = b.request_no) and
+                        (
+                            b.cus_acc_status='A'
+                                OR
+                                (
+                                    b.cus_acc_status = 'C'
+                                    AND
+                                    (
+                                        (module_code='TRC' AND cus_acc_orig_st='E') OR 
+                                        (module_code='PKR' AND cus_acc_orig_st='T') OR 
+                                        (module_code='PPZ' AND cus_acc_orig_st IN ('SS', 'NM')) OR
+		                                (module_code='SDR' AND cus_acc_orig_st IN ('SS', 'NM')) OR  
+                                        (module_code='KRD' AND cus_acc_orig_st='SS') OR 
+                                        (module_code='GAR' AND cus_acc_orig_st='SS') OR 
+                                        (module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+                                        (module_code='LOC' AND cus_acc_orig_st='SS')
+                                    )
+                                )
+                        ) AND
+						b.b2asset_class = '1' and
+						g.cus_id = c.cus_id and
+						d.col_type_id = e.coll_type_id	
+			
+					union
+		
+					select 
+						b.cus_acc_id as cus_acc_id, 
+						b.exposure_cur_id as exp_cur_id,
+						b.exposure_balance as exp_balance,
+						b.cus_acc_no as cus_acc_no, 
+						b.request_no as request_no, 
+						b.due_date as due_date,
+						c.register_no as exp_owner_code, 
+						c.name as exp_owner_name, 
+						d.col_hea_id as col_hea_id,
+						d.col_num as col_num, 
+						d.col_type_id as col_typ_id, 
+						d.col_cat_id as col_cat_id,
+						e.coll_type_name as col_typ_name, 
+						d.real_est_nm_cur_id as col_cur_id, 
+						d.real_est_nomi_valu as col_value, 
+						d.eligibility as eligibility,
+		                d.b2_irb_elig as b2_irb_elig,
+						'0001-01-01' as hf_date_from, 
+						'0001-01-01' as hf_date_until,
+		                b.b2asset_class as b2asset_class
+		                
+					from 
+						coll_head_d d,
+						loan_beneficiary_d g,
+						cusacc_exposure b, 
+						customer c,
+						collateral_type e	
+					where 
+						:(value_date) between d.load_date_from and d.load_date_until and
+						d.collateral_status = '3' and
+						d.col_hea_id = g.col_hea_id and
+						:(value_date) between g.load_date_from and g.load_date_until and
+						g.status = 'A' and
+						(g.la_acc_id = b.cus_acc_id or g.acc_no = b.cus_acc_no or g.request_no = b.request_no) and
+                        (
+                            b.cus_acc_status='A'
+                                OR
+                                (
+                                    b.cus_acc_status = 'C'
+                                    AND
+                                    (
+                                        (module_code='TRC' AND cus_acc_orig_st='E') OR 
+                                        (module_code='PKR' AND cus_acc_orig_st='T') OR 
+                                        (module_code='PPZ' AND cus_acc_orig_st IN ('SS', 'NM')) OR
+		                                (module_code='SDR' AND cus_acc_orig_st IN ('SS', 'NM')) OR  
+                                        (module_code='KRD' AND cus_acc_orig_st='SS') OR 
+                                        (module_code='GAR' AND cus_acc_orig_st='SS') OR 
+                                        (module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+                                        (module_code='LOC' AND cus_acc_orig_st='SS')
+                                    )
+                                )
+                        ) AND
+						b.b2asset_class = '1' and
+						g.cus_id = c.cus_id and
+						d.col_type_id = e.coll_type_id				
+					order by col_num		
+				};			
+		}else{
+			#sql[connCtx] result={
+				select 	
+					b.cus_acc_id as cus_acc_id, 
+					b.exposure_cur_id as exp_cur_id,
+					b.exposure_balance as exp_balance,
+					b.cus_acc_no as cus_acc_no, 
+					b.request_no as request_no, 
+					b.due_date as due_date,
+					c.register_no as exp_owner_code, 
+					c.name as exp_owner_name, 
+					d.col_hea_id as col_hea_id,
+					d.col_num as col_num, 
+					d.col_type_id as col_typ_id, 
+					d.col_cat_id as col_cat_id,
+					e.coll_type_name as col_typ_name, 
+					d.real_est_nm_cur_id as col_cur_id, 
+					d.real_est_nomi_valu as col_value, 
+					d.eligibility as eligibility,
+		            d.b2_irb_elig as b2_irb_elig,
+					f.date_rec_lop as hf_date_from, 
+					f.hf_date_hfc_until as hf_date_until,
+		            b.b2asset_class as b2asset_class
+		            
+				from 
+					coll_head_d d,
+					coll_hf_prior_d f,
+					loan_beneficiary_d g,
+					cusacc_exposure b, 
+					customer c,
+					collateral_type e	
+				where  
+					:(value_date) between d.load_date_from and d.load_date_until and
+					d.collateral_status = '3' and
+					d.col_hea_id = f.hf_coll_head_id and
+					:(value_date) between f.load_date_from and f.load_date_until and		
+					f.hf_status = 'A' and
+					f.coll_hf_prior_id = g.coll_hf_prior_id and
+					:(value_date) between g.load_date_from and g.load_date_until and
+					g.status = 'A' and
+					(g.la_acc_id = b.cus_acc_id or g.acc_no = b.cus_acc_no or g.request_no = b.request_no) and
+                    (
+                        b.cus_acc_status='A'
+                            OR
+                            (
+                                b.cus_acc_status = 'C'
+                                AND
+                                (
+                                    (module_code='TRC' AND cus_acc_orig_st='E') OR 
+                                    (module_code='PKR' AND cus_acc_orig_st='T') OR 
+                                    (module_code='PPZ' AND cus_acc_orig_st IN ('SS', 'NM')) OR
+		                            (module_code='SDR' AND cus_acc_orig_st IN ('SS', 'NM')) OR
+                                    (module_code='KRD' AND cus_acc_orig_st='SS') OR 
+                                    (module_code='GAR' AND cus_acc_orig_st='SS') OR 
+                                    (module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+                                    (module_code='LOC' AND cus_acc_orig_st='SS')
+                                )
+                            )
+                    ) AND
+					b.b2asset_class <> '1' and
+					g.cus_id = c.cus_id and
+					d.col_type_id = e.coll_type_id	
+		
+				union
+	
+				select 
+					b.cus_acc_id as cus_acc_id, 
+					b.exposure_cur_id as exp_cur_id,
+					b.exposure_balance as exp_balance,
+					b.cus_acc_no as cus_acc_no, 
+					b.request_no as request_no, 
+					b.due_date as due_date,
+					c.register_no as exp_owner_code, 
+					c.name as exp_owner_name, 
+					d.col_hea_id as col_hea_id,
+					d.col_num as col_num, 
+					d.col_type_id as col_typ_id, 
+					d.col_cat_id as col_cat_id,
+					e.coll_type_name as col_typ_name, 
+					d.real_est_nm_cur_id as col_cur_id, 
+					d.real_est_nomi_valu as col_value, 
+					d.eligibility as eligibility,
+		            d.b2_irb_elig as b2_irb_elig,
+					'0001-01-01' as hf_date_from, 
+					'0001-01-01' as hf_date_until,
+		            b.b2asset_class as b2asset_class
+		            
+				from 
+					coll_head_d d,
+					loan_beneficiary_d g,
+					cusacc_exposure b, 
+					customer c,
+					collateral_type e	
+				where 
+					:(value_date) between d.load_date_from and d.load_date_until and
+					d.collateral_status = '3' and
+					d.col_hea_id = g.col_hea_id and
+					:(value_date) between g.load_date_from and g.load_date_until and
+					g.status = 'A' and
+					(g.la_acc_id = b.cus_acc_id or g.acc_no = b.cus_acc_no or g.request_no = b.request_no) and
+					(
+		                b.cus_acc_status='A'
+                            OR
+                            (
+                                b.cus_acc_status = 'C'
+                                AND
+                                (
+                                    (module_code='TRC' AND cus_acc_orig_st='E') OR 
+                                    (module_code='PKR' AND cus_acc_orig_st='T') OR 
+                                    (module_code='PPZ' AND cus_acc_orig_st IN ('SS', 'NM')) OR
+		                            (module_code='SDR' AND cus_acc_orig_st IN ('SS', 'NM')) OR 
+                                    (module_code='KRD' AND cus_acc_orig_st='SS') OR 
+                                    (module_code='GAR' AND cus_acc_orig_st='SS') OR 
+                                    (module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+                                    (module_code='LOC' AND cus_acc_orig_st='SS')
+                                )
+                            )
+		            ) AND
+					b.b2asset_class <> '1' and
+					g.cus_id = c.cus_id and
+					d.col_type_id = e.coll_type_id				
+				order by col_num		
+			};
+		}
+	
+		return result;
+	}
+	    
+	
+	/**
+	*
+	* Vraca vlasnika kolaterala u mapi preko polja "owner_code" i "owner_name"
+	* 
+	* @param col_hea_id id kolaterala
+	* @return mapa s podacima
+	*/
+	public Map getCollOwner(BigDecimal col_hea_id, BigDecimal col_cat_id) throws SQLException
+	{
+		Map result= new HashMap();
+		IteratorOwner owner = null;
+		
+		if (col_cat_id.longValue() == 615223)  // garancija
+		{
+		    #sql[connCtx] owner = {
+		        SELECT
+		            a.guar_iss_regno AS register_no,
+		            a.guar_issuer    AS name
+		        FROM coll_guarantee a
+	            WHERE a.col_hea_id = :(col_hea_id)
+		        FETCH FIRST ROW ONLY
+		    };
+		}
+		else if (col_cat_id.longValue() == 616223)  // polica osiguranja
+		{
+		    #sql[connCtx] owner = {
+		        SELECT
+		            c.register_no AS register_no,
+		            c.name        AS name
+		        FROM coll_inspolicy a
+		        INNER JOIN insu_company b ON a.ip_cus_id = b.ic_id
+		        INNER JOIN customer c ON b.ic_cus_id = c.cus_id
+		        WHERE a.col_hea_id = :(col_hea_id)
+		        FETCH FIRST ROW ONLY
+		    };
+		}
+		else
+		{
+		    #sql[connCtx] owner = {
+			    select 
+				    b.register_no, 
+				    b.name 
+			    from
+				    coll_owner a,
+				    customer b
+			    where 
+				    a.col_hea_id = :(col_hea_id) and
+				    a.cus_id = b.cus_id and
+		            a.date_until = '9999-12-31'  
+		        order by b.status, a.ser_num	
+			    FETCH FIRST ROW ONLY
+		    };
+		}
+		
+		if(owner!=null){
+			while(owner.next()){
+				result.put("owner_code", owner.register_no());
+				result.put("owner_name", owner.name());
+				owner.close();
+				return result;
+			}
+		}
+		return result;
+	}
+	
+	public Map getHfPriorData(BigDecimal col_hea_id, Date value_date, BigDecimal col_hea_cur_id, BigDecimal col_cat_id) throws SQLException{
+		IteratorHfPrior iter=null;
+		boolean firstRBA=false;
+		Date date_from=null;
+		Date date_until=null;
+		BigDecimal other_amount=new BigDecimal("0.00");
+		BigDecimal rbaRight=new BigDecimal(1602772003);
+
+		#sql[connCtx] iter={
+			select 
+				cur_id_ref, 
+				amount_ref, 
+				hf_rec_lop_id, 
+				date_rec_lop, 
+				hf_date_hfc_until
+			from 
+				coll_hf_prior_d
+			where 
+				hf_coll_head_id = :(col_hea_id) and
+				hf_status = 'A' and
+				:(value_date) between load_date_from and load_date_until
+				order by hf_priority
+			};
+		if(iter!=null){
+			while(iter.next()){
+				if(rbaRight.compareTo(iter.hf_rec_lop_id())==0){
+					//RBA HIPOTEKA
+					if(!firstRBA){
+						firstRBA=true;
+					}
+					date_from= getOlder(date_from, iter.date_rec_lop());
+					date_until=getYounger(date_until, iter.hf_date_hfc_until());				
+				}else if((iter.amount_ref()!=null)&&(!firstRBA)){
+					other_amount=other_amount.add(exchange(iter.cur_id_ref(), col_hea_cur_id,  iter.amount_ref(), value_date));
+				}
+			}
+			iter.close();
+		}   
+		
+// samo za depozite		
+		if(col_cat_id.longValue()==612223) {
+            #sql[connCtx]{
+                select 
+                    cde_dep_unti_final 
+                 into 
+                     :(date_until)
+                 from  COLL_CASHDEP 
+                 where col_hea_id=:(col_hea_id)
+             };
+		}
+		
+		Map result= new HashMap();
+		result.put("date_from", date_from);
+		result.put("date_until", date_until);
+		result.put("other_amount", other_amount);
+		return result;
+	}
+	
+	private Date getOlder(Date first,Date second){
+		if(first==null){
+			return second;
+		}else if(second==null){
+			return first;
+		}
+		if(DateUtils.whoIsOlder(first, second)<0){
+			return first;
+		}else{
+			return second;
+		}
+	}
+	
+	private Date getYounger(Date first,Date second){
+		if(first==null){
+			return second;
+		}else if(second==null){
+			return first;
+		}
+		if(DateUtils.whoIsOlder(first, second)<0){
+			return second;
+		}else{
+			return first;
+		}
+	}
+    public Date getCashDueDate(BigDecimal col_hea_id) throws Exception{
+        Date result=null;
+        
+            //depoziti
+            #sql[connCtx]{
+               select 
+                   cde_dep_unti_final 
+                into 
+                    :(result)
+                from  COLL_CASHDEP 
+                where col_hea_id=:(col_hea_id)
+            };
+        
+        return result;
+    }	
+	
+}

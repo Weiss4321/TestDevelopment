@@ -1,0 +1,130 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+
+/**
+ * CO046 class selects all data from table VESSEL
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+ 
+
+#sql iterator IterVessel ( BigDecimal col_hea_id ,         
+							String ves_number ,      
+							String ves_type,
+							java.sql.Date ves_made_date,
+							String ves_make,
+							String ves_plate,
+							String ves_licence,
+ 							String hao_office ,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id           
+                   );	 
+
+public class CO046 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO046.sqlj,v 1.4 2006/05/08 13:27:58 hramkr Exp $";
+	
+	public DeclCO04 decl = null;
+	
+	private IterVessel iterVessel = null;
+	
+	public CO046 (DeclCO04 decl) {
+		this.decl = decl;
+	}
+	
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.vessellistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+
+		if(decl.vessellistmapping.CUS_ID == null ){
+			#sql [ctx] iterVessel = {
+							SELECT 	vs.col_hea_id as col_hea_id , ch.col_num as ves_number, vt.ves_type as ves_type,
+									vs.ves_made_date as ves_made_date, vt.ves_make as ves_make, vs.ves_plate as ves_plate,
+									vs.ves_ves_licence as ves_licence, ho.hao_office as hao_office,
+									ch.real_est_status as status, vs.col_ves_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id             
+							FROM
+									coll_head ch, coll_vessel vs , vessel_type vt, harbour_office ho 
+							WHERE	ch.col_hea_id = vs.col_hea_id 
+							AND		vs.ves_typ_id = vt.ves_typ_id
+							AND 	vs.har_off_id = ho.har_off_id
+							ORDER BY	2							
+							
+			};
+		
+		}
+		
+		if(decl.vessellistmapping.CUS_ID != null ){
+			#sql [ctx] iterVessel = {
+							SELECT 	vs.col_hea_id as col_hea_id , ch.col_num as ves_number, vt.ves_type as ves_type,
+									vs.ves_made_date as ves_made_date, vt.ves_make as ves_make, vs.ves_plate as ves_plate,
+									vs.ves_ves_licence as ves_licence, ho.hao_office as hao_office,
+									ch.real_est_status as status, vs.col_ves_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id              
+							FROM
+									coll_head ch, coll_vessel vs , vessel_type vt, harbour_office ho 
+							WHERE	ch.cus_id = :(decl.vessellistmapping.CUS_ID)
+							AND		ch.col_hea_id = vs.col_hea_id 
+							AND		vs.ves_typ_id = vt.ves_typ_id
+							AND 	vs.har_off_id = ho.har_off_id
+							ORDER BY	2		
+							
+			}; 
+		
+		}
+		//
+		
+		
+		
+	}
+	
+	public boolean next() throws Exception {
+		return iterVessel.next();
+	}
+    
+	public void close() {
+		if(iterVessel!=null) {
+			try {
+				iterVessel.close();
+			} catch (Exception ignored) {}
+		}
+	}   
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+ 		
+		row.add(iterVessel.ves_number());	
+		row.add(iterVessel.ves_type());
+		row.add(iterVessel.ves_made_date());
+		row.add(iterVessel.ves_make());	
+		row.add(iterVessel.ves_plate());
+		row.add(iterVessel.ves_licence());
+		row.add(iterVessel.hao_office());	
+		row.add(iterVessel.status());  
+
+		row1.add(iterVessel.col_hea_id());
+		row1.add(iterVessel.col_res_id());
+		row1.add(iterVessel.real_est_nm_cur_id());
+		
+		decl.vessellistmapping.tblVessel.addRow(row,row1);
+				
+//		decl.vessellistmapping.tblVessel.addRow(row,iterVessel.col_hea_id());
+    	
+		
+	}
+	
+}

@@ -1,0 +1,126 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+
+SELECT * FROM cusacc_balance  where cur_id = 64999 and ban_rel_type = '005';
+
+--update cusacc_balance set balance_date = '2014-06-16' where cusacc_bal_id = 165305706 -- bilo je 2005-04-25
+
+select * from cusacc_balance where cus_id = 6494251 and cus_acc_id= 12131221610
+
+select * from balance;
+
+select * from bank_relation_type;
+
+select * from bank_product_type; --- 790,661,005
+
+select * from customer where register_no = '1045';
+
+
+select * from customer_account where cus_id = 4067251 and ban_pro_typ_id = 790661005;
+-- 3205895515
+
+select * from customer_account where cus_acc_no = '8000000187';  ----
+
+ 			SELECT *                      
+                      FROM cusacc_balance  
+                     WHERE  cus_acc_id = 13240429610
+
+  -----------------------------------------------------------------------------
+ 			SELECT *                  
+                    FROM cusacc_balance  WHERE  cus_acc_id = 1233114522
+
+
+
+                     
+                    WHERE  pro_typ_id  = 31598005
+
+                    
+                  --  AND cur_id  = :cur_id  
+                   -- AND pro_typ_id = :pro_typ_id 
+                    AND balance_date = (select max(balance_date) 
+                        FROM cusacc_balance  
+                        WHERE  cus_acc_id  = :cus_acc_id 
+                        AND cur_id  = :cur_id  
+                        AND pro_typ_id = :pro_typ_id
+                        AND balance_date <= :(value_date)
+
+--------------------------------------------------------------------------------------------------------
+
+
+       SELECT ctt.cus_acc_id, ca.cus_id, ctt.openacc_cus_id, ca.org_uni_id, ctt.ter_tab_cur_id, 
+                   cus1.name, cus1.register_no, cus1.code, ctt.proc_status, ctt.ter_tab_date, 
+                  ca.cus_acc_no, ca.ban_pro_typ_id, ctt.ter_tab_amount, cus2.name   openacc_name, cus2.register_no    openacc_reg_no, 
+                   ctt.openacc_swift_addr, ctt.tertab_foreign_fee, ctt.tertab_bank_fee, ctt.tertab_amount_paid 
+               FROM customer_account ca, bank_relation_type brt, customer cus1, 
+                   cusacc_term_table ctt  LEFT OUTER JOIN customer cus2 ON ctt.openacc_cus_id = cus2.cus_id 
+               WHERE ca.cus_acc_id = ctt.cus_acc_id 
+                   AND ca.cus_id = cus1.cus_id 
+                   AND ca.ban_rel_typ_id = brt.ban_rel_typ_id 
+                  -- AND brt.ban_rel_type = 'loro_nostro' 
+                   AND brt.bank_sign = 'RB' 
+                   AND ctt.bank_sign = 'RB' 
+                  AND ca.bank_sign = 'RB' 
+
+                  
+                   AND ((ctt.ter_tab_date BETWEEN '"+tab_date+"' AND '"+tab_date_to+"') " ;
+
+
+   select * from cusacc_term_table;
+
+
+   --update cusacc_term_table set ter_tab_date = '15.06.2014' where cus_ter_tab_id = 13236655610;
+
+   commit;
+                   
+                     
+
+
+select * from customer_account where cus_acc_id = 12416344610;
+
+select * from posting_scheme;
+
+---update customer_account set cus_acc_status = 'A' where cus_acc_id = 12416344610;
+
+commit;
+
+-- 35238
+
+
+select * from customer_account where cus_acc_status = 'A' and cus_id = 8665251;
+
+
+
+select * from procedure_type where pro_typ_id=113933005;  -- Aktiva  izvanbil. u devizi po instr.platnog prometa
+
+
+               SELECT *                      
+                      FROM cusacc_balance  
+                     WHERE  pro_typ_id=113933005
+					and ban_rel_type = '005'  
+
+
+                                       
+                     AND cur_id  = :cur_id  
+                      AND pro_typ_id = :pro_typ_id
+                     AND balance_date = (select max(balance_date) 
+                         FROM cusacc_balance  
+                         WHERE  cus_acc_id  = :cus_acc_id 
+                          AND cur_id  = :cur_id  
+                          AND pro_typ_id = :pro_typ_id
+                         
+						 
+						 
+						 
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+select * from system_code_value
+
+select * from system_code_value where sys_cod_id = 'write_off';
+
+
+select * from customer_account;
+
+select * from cusacc_balance where cus_id = 50020352 and cus_acc_id= 286249022 and pro_typ_id = 41999;
+
+select * from account ;						 

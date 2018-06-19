@@ -1,0 +1,218 @@
+package hr.vestigo.modules.collateral.jcics.co18;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//Insurance_policy LIST
+/**
+ * CO181 class selects all data from table Rev_Reg_Coef_Re	
+ * into list screen and puts this data into vectors LDB.
+ */
+  
+#sql iterator InsurancePolicyIterator (	BigDecimal ip_id, 
+						String ip_code,
+						BigDecimal ip_type_id,
+						BigDecimal ip_ic_id,
+						BigDecimal ip_contractor,
+						BigDecimal ip_pol_holder,
+						String ip_place,
+						BigDecimal ip_secu_val,
+						BigDecimal ip_cur_id,
+						java.sql.Date ip_date_sec_val,
+						BigDecimal col_hea_id,
+						String ip_replace,
+						java.sql.Date ip_vali_from,
+						java.sql.Date ip_vali_until,
+						String ip_act_noact,
+						String ip_spec_stat,  
+						String contractor,
+						String pol_holder,
+						String code_char,
+						String int_pol_type_name,
+						String ic_name,
+						BigDecimal use_open_id,
+						String open_login,
+						String open_user,
+						java.sql.Timestamp opening_ts,
+						BigDecimal use_id,
+						String chg_login,
+						String chg_user,
+						java.sql.Timestamp user_lock,		
+						String int_pol_type_code, 
+						String  ic_code,
+						String contractor_code, 
+						String pol_holder_code	,
+						String sys_code_desc ,
+						String sys_code_desc_2,
+                        String wrn_status,
+                        String kmt_status,
+                        String vinkulacija_code,
+                        String vinkulacija_desc,
+                        BigDecimal osigurani_iznos,
+                        BigDecimal osigurana_valuta_id,
+                        String osigurana_valuta_code_char,
+                        BigDecimal vinkulirani_iznos,
+                        BigDecimal vinkulirana_valuta_id,
+                        String vinkulirana_valuta_code_char,
+                        String rba_vinkulacija_code,
+                        String rba_vinkulacija_desc,
+                        String dodatni_podaci,
+                        String ic_register_no
+					 );	
+		    			
+
+public class CO181 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co18/CO181.sqlj,v 1.11 2014/11/12 14:13:48 hrazst Exp $";
+	
+	public DeclCO18 decl = null;
+	
+	private InsurancePolicyIterator iter1 = null;
+	
+	public CO181 (DeclCO18 decl) {
+		this.decl = decl;
+	}
+	
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		ConnCtx ctx = tc.getContext();
+		BigDecimal colHeaId = (BigDecimal) decl.InsuPolicy_COL_HEA_ID;
+		
+		tc.debug("*** CO181 :"+colHeaId);
+		tc.info("*** CO181 :"+colHeaId);
+				
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		    #sql [ctx] iter1 = {                                                                                                           
+                    SELECT a.ip_id, a.ip_code, a.ip_type_id, a.ip_ic_id, a.ip_contractor, 
+                        a.ip_pol_holder, a.ip_place, a.ip_secu_val, a.ip_cur_id,
+                        a.ip_date_sec_val, a.col_hea_id, a.ip_replace, a.ip_vali_from,
+                        a.ip_vali_until, a.ip_act_noact, a.ip_spec_stat, 
+                        b.name as contractor, c.name as pol_holder, d.code_char, 
+                        e.int_pol_type_name, b1.name as ic_name,
+                        a.use_open_id, g.login as open_login, g.user_name as open_user, a.opening_ts,
+                        a.use_id, h.login as chg_login, h.user_name as chg_user, a.user_lock,
+                        e.int_pol_type_code, f.ic_code, b.register_no as contractor_code, 
+                        c.register_no as pol_holder_code, scva.sys_code_desc as sys_code_desc,
+                        scva2.sys_code_desc as sys_code_desc_2,
+                        a.wrn_status, a.kmt_status, 
+                        vinkulacija_1_red.sys_code_value as vinkulacija_code,
+                        vinkulacija_1_red.sys_code_desc as vinkulacija_desc,
+                        a.IP_P_SECU_VAL as osigurani_iznos,
+                        osigurana_valuta.cur_id as osigurana_valuta_id, 
+                        osigurana_valuta.code_char as osigurana_valuta_code_char,
+		                a.IP_RESTR_VAL as vinkulirani_iznos, 
+                        vinkulirana_valuta.cur_id as vinkulirana_valuta_id,
+                        vinkulirana_valuta.code_char as vinkulirana_valuta_code_char,
+		                rba_vinkulacija.sys_code_value as rba_vinkulacija_code,
+		                rba_vinkulacija.sys_code_desc as rba_vinkulacija_desc,
+		                a.IP_ADD_DATA as dodatni_podaci,
+		                b1.register_no AS ic_register_no
+                    FROM  
+                        currency d, insu_policy_type e, app_user g, app_user h, insurance_policy a
+		                inner join insu_company f on (a.ip_ic_id=f.ic_id)
+                        left outer join system_code_value scva2 on (a.ip_spec_stat = scva2.sys_code_value and scva2.sys_cod_id = 'clt_pol_spec_st')
+                        left outer join customer b on (a.ip_contractor=b.cus_id)
+                        left outer join customer c on (a.ip_pol_holder=c.cus_id)
+		                left outer join customer b1 on (f.ic_cus_id=b1.cus_id)
+                        inner join system_code_value  scva on ( scva.sys_code_value = a.ip_act_noact AND scva.sys_cod_id = 'clt_inspolst')
+                        left outer join currency osigurana_valuta on (a.IP_P_CUR_ID = osigurana_valuta.CUR_ID)
+                        left outer join currency vinkulirana_valuta on (a.IP_RESTR_CUR_ID = vinkulirana_valuta.CUR_ID)
+                        left outer join system_code_value vinkulacija_1_red on (vinkulacija_1_red.sys_cod_id='clt_vinkulacija_1_' and vinkulacija_1_red.sys_code_value = a.IP_RESTR_1_IND)
+		                left outer join system_code_value rba_vinkulacija on (rba_vinkulacija.sys_cod_id='clt_rba_vinkulacij' and rba_vinkulacija.sys_code_value = a.IP_RESTR_TYPE)
+                    WHERE a.use_open_id=g.use_id and a.use_id=h.use_id
+                        AND a.ip_cur_id=d.cur_id AND a.ip_type_id=e.int_pol_type_id 
+                        AND col_hea_id=:colHeaId  
+                        
+            ORDER BY a.ip_vali_until desc
+            }; 
+		    	
+				tc.debug ( "......CO181.sqlj select uspješno izvršen");
+		}
+ 
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+        
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector hidden = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		row.add(iter1.ip_code());	
+		row.add(iter1.int_pol_type_name());
+		row.add(iter1.ip_secu_val());
+		row.add(iter1.code_char());	
+		row.add(iter1.ip_date_sec_val());
+		row.add(iter1.ip_vali_until());
+		row.add(iter1.ip_act_noact());		
+		row.add(iter1.ip_spec_stat());
+		row.add(iter1.wrn_status());
+		row.add(iter1.kmt_status());
+		
+		hidden.add(iter1.ip_id());//0
+		hidden.add(iter1.ip_type_id());
+		hidden.add(iter1.ip_ic_id());
+		hidden.add(iter1.ip_contractor());
+		hidden.add(iter1.ip_pol_holder());
+		hidden.add(iter1.ip_place());//5
+		hidden.add(iter1.ip_cur_id());		
+		hidden.add(iter1.ip_vali_from());
+		hidden.add(iter1.col_hea_id());
+		hidden.add(iter1.ip_replace());
+		hidden.add(iter1.contractor());//10
+		hidden.add(iter1.pol_holder()); 
+		hidden.add(iter1.ic_name());
+		hidden.add(iter1.use_open_id());
+		hidden.add(iter1.open_login());		
+		hidden.add(iter1.open_user());//15
+		hidden.add(iter1.opening_ts());
+		hidden.add(iter1.use_id());
+		hidden.add(iter1.chg_login());		
+		hidden.add(iter1.chg_user());
+		hidden.add(iter1.user_lock());//20
+		hidden.add(iter1.int_pol_type_code());//21 
+		hidden.add(iter1.ic_register_no());//22
+		hidden.add(iter1.contractor_code());//23
+		hidden.add(iter1.pol_holder_code());//24
+		hidden.add(iter1.sys_code_desc());//25
+		hidden.add(iter1.sys_code_desc_2());//26
+		hidden.add(iter1.vinkulacija_code());//27
+		hidden.add(iter1.vinkulacija_desc());//28
+		hidden.add(iter1.osigurani_iznos());//29 - IP_P_SECU_VAL
+		hidden.add(iter1.osigurana_valuta_id());//30
+		hidden.add(iter1.osigurana_valuta_code_char());//31
+		hidden.add(iter1.vinkulirani_iznos());//32 - IP_RESTR_VAL
+		hidden.add(iter1.vinkulirana_valuta_id());//33
+		hidden.add(iter1.vinkulirana_valuta_code_char());//34
+		hidden.add(iter1.rba_vinkulacija_code());//35 - IP_RESTR_TYPE
+		hidden.add(iter1.rba_vinkulacija_desc());//36 - IP_RESTR_TYPE
+		hidden.add(iter1.dodatni_podaci());//37 - IP_ADD_DATA
+		
+		System.out.println("ID:"+iter1.ip_id());
+		System.out.println("vinkulacija_code:"+iter1.vinkulacija_code());
+		System.out.println("vinkulacija_desc:"+iter1.vinkulacija_desc());
+		System.out.println("osigurani_iznos:"+iter1.osigurani_iznos());		
+		System.out.println("id osigurane valute:"+iter1.osigurana_valuta_id());
+		System.out.println("sifra osigurane valute:"+iter1.osigurana_valuta_code_char());
+		System.out.println("osigurani_iznos:"+iter1.osigurani_iznos());
+		System.out.println("id vinkulirane valute:"+iter1.vinkulirana_valuta_id());
+		System.out.println("sifra vinkulirane valute:"+iter1.vinkulirana_valuta_code_char());
+		System.out.println("");
+		
+		
+		decl.tblInsuPolicy.addRow(row,hidden);
+	}
+}
+

@@ -1,0 +1,100 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+			select * from pay_instruction where p_contract_id = 'moneta_wo_code';
+
+
+				select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 	select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status,amount, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 	SELECT cus_acc_no FROM PAY_INSTRUCTION where cus_acc_id = 938394326 and p_contract_id = 'moneta_wo_code'
+
+ 	select * from customer_account where cus_acc_no = '1103971418';
+
+ 	select * from customer_account where cus_acc_no = '1500148783';
+
+ 	select * from CUSACC_BALANCE_LAST where cus_acc_id = 436503848522;
+
+ 	1500148783
+
+ 	436503848522
+
+ 	select *  FROM cusacc_balance_last  WHERE CUS_ACC_ID = 436503848522;
+
+ 	 SELECT SUM(BALANCE)
+               
+                     FROM cusacc_balance_last
+                     WHERE CUS_ACC_ID = 436503848522           
+                 AND amo_type in( '023','025')
+
+                  SELECT SUM(BALANCE)
+               
+                     FROM cusacc_balance_last
+                     WHERE CUS_ACC_ID = 436503848522           
+                 AND amo_type in( '025')
+
+                 
+
+	select * from CUSACC_BALANCE_LAST where cus_acc_id = 29619676522; -- za 027 -4,827.5
+
+	select * from CUSACC_BALANCE where cus_acc_id = 29619676522 and  amo_type = '027' order by user_lock desc; 
+
+
+			1103971418 
+
+
+	    			SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id =  29619676522
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '08.04.2016'
+                                                   )        
+
+
+	select * from customer_account where cus_acc_no = '1500188305'
+
+
+		select * from procedure_type where  pro_typ_id =	3850368797
+
+		  select * from   ban_pro_amo_type where amo_type =  '022' and ban_pro_typ_id = 6561936704;  
+
+			     select * from procedure_type where  pro_typ_id =    8271662797  ; -- 640
+
+		select * from procedure_type where  pro_typ_id = 3850368797
+
+		select * from procedure_type where  pro_typ_id = 618080335
+	
+	    			SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id =  347087718522
+                                and cb.pro_typ_id = 3850368797
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '08.04.2016'
+                                                   )        
+
+ 	

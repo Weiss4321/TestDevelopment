@@ -1,0 +1,603 @@
+package hr.vestigo.modules.collateral.jcics.co30;
+
+
+import hr.vestigo.framework.remote.transaction.*;
+
+// import hr.vestigo.modules.financial.common.yfwA.*;
+import hr.vestigo.modules.financial.common.yfwL.*;
+
+ 
+/**
+ * CO301 class for posting of collateral
+ *  	
+ */
+ 
+
+public class CO301 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co30/CO301.sqlj,v 1.7 2006/11/08 12:32:45 hramkr Exp $";
+	
+	public DeclCO30 decl = null;
+	
+	public CO301 (DeclCO30 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+							
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+	    
+	    
+			
+			PostingEngineInputData   	postEngInputData = new PostingEngineInputData();
+			PostingEngineResponseData   postEngRespnse = new PostingEngineResponseData();
+			
+			
+			java.sql.Date todaySQLDate = null;
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			todaySQLDate = new java.sql.Date(timeT);
+			
+			
+			java.math.BigDecimal zeroNumber = new java.math.BigDecimal("0.00");
+			java.math.BigDecimal valueCollOff = zeroNumber;
+			java.math.BigDecimal curIdOfCollateral = zeroNumber;
+			String               curCodeNum        = null;
+			String colNumCusAccNo = null;       //Partija kolaterala
+			
+			java.math.BigDecimal hrkCurId = new java.math.BigDecimal ("63999.0");
+			String indikatorDeviznosti  = null;
+			
+			
+			
+			java.math.BigDecimal valueOfThirdRights = zeroNumber;
+			java.sql.Date maxBalanceDate = null;
+			
+			
+			java.math.BigDecimal remValueCollOff = zeroNumber;  // Ono sto ostane od cijene collateral officera
+																// kada se oduzmu tudje hipoteke
+			
+			
+			
+			//96
+			java.math.BigDecimal currentBalance = zeroNumber;
+			java.math.BigDecimal currentDebitToral = zeroNumber;
+			java.math.BigDecimal currentCreditTotal = zeroNumber;
+			
+			
+			
+			String activeAccount = null; 
+				
+			String pasiveAccount = null; 
+			
+			
+			java.math.BigDecimal toBook = zeroNumber;
+			java.math.BigDecimal toUnBook = zeroNumber;
+			
+			
+			java.math.BigDecimal cusIdOwner = null; //vlasnik kolaterala
+			String               registerNoOwner = null;
+			
+			
+			java.math.BigDecimal useOpenId  = null;
+			java.math.BigDecimal originOrgUniId = null;
+			
+			String useOpenAbbreviation  = null;
+			String originOrgUniCode = null;
+		
+			
+			java.math.BigDecimal colCatId = null;
+			
+
+			java.math.BigDecimal colCatIdCashDep = new java.math.BigDecimal("612223.0");
+			java.math.BigDecimal colCatIdRealEstate = new java.math.BigDecimal("618223.0");
+			java.math.BigDecimal colCatIdVehicle = new java.math.BigDecimal("624223.0");
+			
+			
+			java.math.BigDecimal colCatIdZapisi = new java.math.BigDecimal("627223.0");
+			java.math.BigDecimal colCatIdObveznice = new java.math.BigDecimal("619223.0");
+			java.math.BigDecimal colCatIdDionice= new java.math.BigDecimal("613223.0");
+			java.math.BigDecimal colCatIdUdjeli = new java.math.BigDecimal("622223.0");
+			
+			boolean isRBADeposit = false;
+			java.math.BigDecimal cdeCusId = null;
+			java.math.BigDecimal rbaCdeCusId = new java.math.BigDecimal("8218251.0");
+			
+//			 Andjelkova parametrizacija				
+//			
+//			EVE_TYP_ID	CODE	NAME
+//			1666837003	POST_COL_DC     	Knjizenje kolaterala-kn
+//			1666851003	POST_COL_FC     	Knjizenje kolaterala-devize
+//			1666865003	POST_COL_CC     	Knjizenje kolaterala-VK
+//			1666879003	POST_COL        	Knjizenje kolaterala
+//			1666899003	POSTC_COL_DC    	Isknjizenje kolaterala-kn
+//			1666919003	POSTC_COL_FC    	Isknjizenje kolaterala-devize
+//			1666940003	POSTC_COL_CC    	Isknjizenje kolaterala-VK
+//			1666960003	POSTC_COL       	Isknjizenje kolaterala
+//
+//
+//			TRANSACTION TYPE
+//
+//			TRA_TYP_ID	CODE	NAME
+//			1666811003	POST_COL_DC		Knjizenje kolaterala-kn
+//			1666817003	POST_COL_FC		Knjizenje kolaterala-devize
+//			1666824003	POST_COL_CC		Knjizenje kolaterala-VK
+//			1666831003	POST_COL		Knjizenje kolaterala
+//			1666893003	POSTC_COL_DC	Isknjizenje kolaterala-kn
+//			1666913003	POSTC_COL_FC	Isknjizenje kolaterala-devize
+//			1666933003	POSTC_COL_CC	Isknjizenje kolaterala-VK
+//			1666954003	POSTC_COL		Isknjizenje kolaterala
+//
+//
+			
+			//DOHVAT VRIJEDNOSTI KOLATERALA KOJU JE DAO COLLATERAL OFFICER
+				try {
+					#sql [ctx]{ 
+						SELECT	real_est_nomi_valu, 
+								real_est_nm_cur_id,
+								col_num,
+								use_open_id,
+								origin_org_uni_id,
+								col_cat_id
+
+						INTO	:valueCollOff,
+								:curIdOfCollateral,
+								:colNumCusAccNo,
+								:useOpenId,
+								:originOrgUniId,
+								:colCatId
+						FROM	coll_head
+						WHERE	col_hea_id = :(decl.COL_HEA_ID) 	};
+		
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO301.sqlj select from coll_head SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO301.sqlj select from coll_head SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO301.sqlj select from coll_head SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select from coll_head! ","err411a", null);
+				}	
+			
+			
+				if(colCatId.compareTo(colCatIdCashDep) == 0){
+					try {
+						#sql [ctx]{ 
+							SELECT	cde_cus_id 
+							INTO	:cdeCusId
+							FROM	coll_cashdep
+							WHERE	col_hea_id = :(decl.COL_HEA_ID) 	};
+			
+					}catch(java.sql.SQLException se){
+						tc.debug ( "......CO301.sqlj select from coll_cashdep SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO301.sqlj select from coll_cashdep SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO301.sqlj select from coll_cashdep SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select from coll_cashdep! ","err411a", null);
+					}	
+					
+					if(cdeCusId != null){
+						if(cdeCusId.compareTo(rbaCdeCusId) == 0){
+							isRBADeposit = true;
+						}
+					
+					}
+				
+				}
+				
+				
+				
+				//DOHVAT IZNOSA TUDJIH HIPOTEKA
+				try {
+					#sql [ctx]{ 
+						SELECT	coalesce(sum(hf_amount),0.00) 
+						INTO	:valueOfThirdRights
+						FROM	coll_hf_prior
+						WHERE	hf_coll_head_id = :(decl.COL_HEA_ID) 
+						AND     hf_own_cus_id <> 8218251 };
+		
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO301.sqlj select from coll_hf_prior SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO301.sqlj select from coll_hf_prior SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO301.sqlj select from coll_hf_prior SQL Message " + se.getMessage());
+					
+					if (se.getErrorCode()!=100) { 
+					   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select from coll_hf_prior! ","err411a", null);
+					}
+				}	
+				
+				//DOHVAT MAX DATUMA STANJA balance_date
+				try {
+					#sql [ctx]{ 
+						SELECT	max(balance_date)
+						INTO	:maxBalanceDate
+						FROM	cusacc_balance
+						WHERE	cus_acc_id = :(decl.COL_HEA_ID) 	 };
+		
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO301.sqlj select max(balance_date) from cusacc_balance SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO301.sqlj select max(balance_date) from cusacc_balance SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO301.sqlj select max(balance_date) from cusacc_balance SQL Message " + se.getMessage());
+					
+					if (se.getErrorCode()!=100) { 
+					   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select max(balance_date) from cusacc_balance! ","err411a", null);
+					}
+				}	
+				
+				
+				
+				if(maxBalanceDate != null){
+					//DOHVAT stanja iz  cusacc_balance
+				
+					
+					try {
+						#sql [ctx]{ 
+							SELECT	coalesce(debit_total,0.00), 
+									coalesce(credit_total,0.00), 
+									coalesce(balance,0.00)
+							INTO	:currentDebitToral,
+									:currentCreditTotal,
+									:currentBalance
+							FROM	cusacc_balance
+							WHERE	cus_acc_id = :(decl.COL_HEA_ID)
+							AND     balance_date = :maxBalanceDate
+							AND     account like '96%'};
+			
+					}catch(java.sql.SQLException se){
+						tc.debug ( "......CO301.sqlj select max(balance_date) from cusacc_balance SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO301.sqlj select max(balance_date) from cusacc_balance SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO301.sqlj select max(balance_date) from cusacc_balance SQL Message " + se.getMessage());
+						
+						if (se.getErrorCode()!=100) { 
+						   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select max(balance_date) from cusacc_balance! ","err411a", null);
+						}
+					}	
+				
+					//ODLUKA O KNJIZENJU ILI ISKNJIZAVANJU
+					if(currentBalance.signum() == -1){
+						currentBalance = currentBalance.abs();
+					}
+					
+				
+				}else{
+					currentBalance = zeroNumber;
+				}
+			
+				
+				remValueCollOff = valueCollOff.subtract(valueOfThirdRights);
+				
+				
+				
+				//DOHVAT VLASNIKA
+				//select * from sidev.coll_owner  where col_hea_id = 1235223  and 
+				
+				
+				try {
+					#sql [ctx]{ 
+						SELECT	cus_id,
+								register_no
+						INTO	:cusIdOwner,
+								:registerNoOwner
+						FROM	coll_owner
+						WHERE	col_hea_id = :(decl.COL_HEA_ID)
+						AND     ser_num = 1 };
+		
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL Message " + se.getMessage());
+					
+					if (se.getErrorCode()!=100) { 
+					   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select cus_id from coll_owner! ","err411a", null);
+					}
+				}	
+				
+				if(cusIdOwner == null){
+					try {
+						#sql [ctx]{ 
+							SELECT	cus_id,
+									register_no
+							INTO	:cusIdOwner,
+									:registerNoOwner
+							FROM	coll_owner
+							WHERE	col_hea_id = :(decl.COL_HEA_ID)
+							AND     ser_num = 2 };
+			
+					}catch(java.sql.SQLException se){
+						tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL Message " + se.getMessage());
+						
+						if (se.getErrorCode()!=100) { 
+						   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select cus_id from coll_owner! ","err411a", null);
+						}
+					}	
+				
+				
+				}
+				if(cusIdOwner == null){
+					try {
+						#sql [ctx]{ 
+							SELECT	cus_id,
+									register_no
+							INTO	:cusIdOwner,
+									:registerNoOwner
+							FROM	coll_owner
+							WHERE	col_hea_id = :(decl.COL_HEA_ID)
+							AND     ser_num = 3 };
+			
+					}catch(java.sql.SQLException se){
+						tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO301.sqlj select cus_id from coll_owner SQL Message " + se.getMessage());
+						
+						if (se.getErrorCode()!=100) { 
+						   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select cus_id from coll_owner! ","err411a", null);
+						}
+					}	
+				
+				
+				}
+				
+				
+				//DOHVAT valute zbog commona
+				try {
+					#sql [ctx]{ 
+						SELECT	code_num
+						INTO	:curCodeNum
+						FROM	currency
+						WHERE	cur_id = :curIdOfCollateral	 };
+		
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO301.sqlj select code_num from currency SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO301.sqlj select code_num from currency SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO301.sqlj select code_num from currency SQL Message " + se.getMessage());
+					
+					if (se.getErrorCode()!=100) { 
+					   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select code_num from currency! ","err411a", null);
+					}
+				}	
+				
+				
+				
+				//DOHVAT korisnika zbog commona
+				try {
+					#sql [ctx]{ 
+						SELECT	rtrim(abbreviation)
+						INTO	:useOpenAbbreviation
+						FROM	app_user
+						WHERE	use_id = :useOpenId	 };
+		
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO301.sqlj select abbreviation from app_user SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO301.sqlj select abbreviation from app_user SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO301.sqlj select abbreviation from app_user SQL Message " + se.getMessage());
+					
+					if (se.getErrorCode()!=100) { 
+					   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select abbreviation from app_user! ","err411a", null);
+					}
+				}	
+				//DOHVAT OJ zbog commona
+				try {
+					#sql [ctx]{ 
+						SELECT	code
+						INTO	:originOrgUniCode
+						FROM	organization_unit
+						WHERE	org_uni_id = :originOrgUniId 	 };
+		
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO301.sqlj select code from organization_unit SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO301.sqlj select code from organization_unit SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO301.sqlj select code from organization_unit SQL Message " + se.getMessage());
+					
+					if (se.getErrorCode()!=100) { 
+					   throw new VestigoTMException(1, "Transaction CO301.sqlj: Error select code from organization_unit! ","err411a", null);
+					}
+				}	
+				
+				
+				
+				
+				
+				if(remValueCollOff.compareTo(currentBalance)== 0){
+				//NEMA KNJIZENJA NITI ISKNJIZAVANJA	
+				
+				}else{
+							//POSTAVKE RACUNA, OJ , REFERENTA
+				
+				
+				}
+				
+				
+				
+				
+				if(hrkCurId.compareTo(curIdOfCollateral)== 0){
+					indikatorDeviznosti = "D";
+					if(colCatId.compareTo(colCatIdRealEstate)== 0){
+						
+					}else if(colCatId.compareTo(colCatIdCashDep)== 0){
+						activeAccount = "96010";
+						pasiveAccount = "99010";
+					}else if((colCatId.compareTo(colCatIdZapisi)== 0) || (colCatId.compareTo(colCatIdObveznice)== 0) || (colCatId.compareTo(colCatIdDionice)== 0)   ||(colCatId.compareTo(colCatIdUdjeli)== 0)){
+						activeAccount = "96010";
+						pasiveAccount = "99010";
+					}else{
+						
+					}
+				}else{
+					indikatorDeviznosti = "F";
+					if(colCatId.compareTo(colCatIdRealEstate)== 0){
+						activeAccount = "96021";
+						pasiveAccount = "99021";
+					}else if(colCatId.compareTo(colCatIdCashDep)== 0){
+						activeAccount = "96112";
+						pasiveAccount = "99112";
+					}else if((colCatId.compareTo(colCatIdZapisi)== 0) || (colCatId.compareTo(colCatIdObveznice)== 0) || (colCatId.compareTo(colCatIdDionice)== 0)   ||(colCatId.compareTo(colCatIdUdjeli)== 0)){
+						activeAccount = "96110";
+						pasiveAccount = "99110";
+					}else{
+						activeAccount = "96120";
+						pasiveAccount = "99120";
+					
+					}
+					
+//					 Andjelkova parametrizacija				
+//					
+//					EVE_TYP_ID	CODE	NAME
+//					1666837003	POST_COL_DC     	Knjizenje kolaterala-kn
+//					1666851003	POST_COL_FC     	Knjizenje kolaterala-devize
+//					1666865003	POST_COL_CC     	Knjizenje kolaterala-VK
+//					1666879003	POST_COL        	Knjizenje kolaterala
+//					1666899003	POSTC_COL_DC    	Isknjizenje kolaterala-kn
+//					1666919003	POSTC_COL_FC    	Isknjizenje kolaterala-devize
+//					1666940003	POSTC_COL_CC    	Isknjizenje kolaterala-VK
+//					1666960003	POSTC_COL       	Isknjizenje kolaterala
+		//
+		//
+//					TRANSACTION TYPE
+		//
+//					TRA_TYP_ID	CODE	NAME
+//					1666811003	POST_COL_DC		Knjizenje kolaterala-kn
+//					1666817003	POST_COL_FC		Knjizenje kolaterala-devize
+//					1666824003	POST_COL_CC		Knjizenje kolaterala-VK
+//					1666831003	POST_COL		Knjizenje kolaterala
+//					1666893003	POSTC_COL_DC	Isknjizenje kolaterala-kn
+//					1666913003	POSTC_COL_FC	Isknjizenje kolaterala-devize
+//					1666933003	POSTC_COL_CC	Isknjizenje kolaterala-VK
+//					1666954003	POSTC_COL		Isknjizenje kolaterala
+		//
+		//					
+				}
+				
+				
+				
+				if(remValueCollOff.compareTo(currentBalance)== -1){
+					//ISKNJIZAVANJE	
+					toUnBook = currentBalance.subtract(remValueCollOff);
+					postEngInputData.amount = toUnBook;
+//					postEngInputData.eventTypeCode = "POSTC_COL";
+					//postEngInputData.eventTypeId = new java.math.BigDecimal("1666960003.0");
+					postEngInputData.eventTypeId = new java.math.BigDecimal("1666960003.0");
+					
+					
+					
+					
+				
+					
+					
+					postEngInputData.accountCredit = colNumCusAccNo;  
+					postEngInputData.accountDebit = colNumCusAccNo;
+					
+					
+						
+				}
+				if(remValueCollOff.compareTo(currentBalance)== 1){
+					//KNJIZENJE
+					toBook = remValueCollOff.subtract(currentBalance);
+					postEngInputData.amount = toBook;
+//					postEngInputData.eventTypeCode = "POST_COL";
+					//postEngInputData.eventTypeId = new java.math.BigDecimal("1666879003.0");
+					postEngInputData.eventTypeId = new java.math.BigDecimal("1666879003.0");
+					postEngInputData.accountCredit =  colNumCusAccNo;
+					postEngInputData.accountDebit = colNumCusAccNo;
+					
+					
+				}
+				
+				
+				
+					
+					
+						
+						
+					postEngInputData.currencyCode = curCodeNum;
+					postEngInputData.customerCredit = registerNoOwner;
+					postEngInputData.customerDebit = registerNoOwner;
+					
+					postEngInputData.indicatorOUDomicilCredit = "f";
+					postEngInputData.indicatorOUDomicilDebit = "f";
+					postEngInputData.organizationUnitDomicilCredit = originOrgUniCode;
+					postEngInputData.organizationUnitDomicilDebit = originOrgUniCode;
+					postEngInputData.organizationUnitInitiator = originOrgUniCode;
+						
+						
+						
+						
+					postEngInputData.paymentData = null;
+					postEngInputData.referentIniciator = useOpenAbbreviation;
+					postEngInputData.relatedCustomerData = null;
+					postEngInputData.reversed = "N";
+					postEngInputData.trn = null;
+					postEngInputData.turnoverReference = null;
+					postEngInputData.valueDate = todaySQLDate;
+					
+				
+				
+				
+				
+				
+				
+				if((toBook.compareTo(zeroNumber)!= 0)    || (toUnBook.compareTo(zeroNumber)!= 0) ){
+					if(colCatId.compareTo(colCatIdCashDep) == 0){
+						//KNJIZI AKO NIJE RBA DEPOZIT	
+						if(!isRBADeposit){
+							YFWL0 objek1 = new YFWL0(tc);
+							try{
+								postEngRespnse = objek1.execute(postEngInputData);
+								tc.debug("IZLAZ ZA CASH DEPOPZIT ostalih banaka " + postEngRespnse.errorCode);
+							}catch(Exception e){
+								tc.debug("GRESKA ZA CASH DEPOPZIT ostalih banaka  " + e.getMessage());
+								tc.debug("GRESKA ZA CASH DEPOPZIT ostalih banaka  " + e.toString());
+								
+								throw new VestigoTMException(1, "Transaction CO301.sqlj: Error postinng of collateral! ","errclt15", null);
+								
+							}
+						}
+					}else{
+						//KNJIZI	
+						YFWL0 objek1 = new YFWL0(tc);
+						try{
+							postEngRespnse = objek1.execute(postEngInputData);
+							tc.debug("IZLAZ ZA OSTALE " + postEngRespnse.errorCode);
+						}catch(java.sql.SQLException se){
+							se.printStackTrace();
+							tc.debug ( "......CO301.sqlj aaaaaaaaaaa SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO301.sqlj aaaaaaaaaaa SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO301.sqlj aaaaaaaaaaa SQL Message " + se.getMessage());
+						
+							throw new VestigoTMException(1, "Transaction CO301.sqlj: Error postinng of collateral! ","errclt15", null);
+							
+						}catch(Exception e){
+							tc.debug("GRESKA ZA OSTALE  " + e.getMessage());
+							tc.debug("GRESKA ZA OSTALE  " + e.toString());
+							
+							throw new VestigoTMException(1, "Transaction CO301.sqlj: Error postinng of collateral! ","errclt15", null);
+							
+						}
+						
+					}
+					
+					//POSTAVI STATUS
+					
+					
+					try {
+						#sql [ctx]{ 
+							UPDATE	coll_head
+							SET  	financial_flag = '1'
+							WHERE	col_hea_id = :(decl.COL_HEA_ID) 	};
+			
+					}catch(java.sql.SQLException se){
+						tc.debug ( "......CO301.sqlj update coll_head SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO301.sqlj update coll_head SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO301.sqlj update coll_head SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO301.sqlj: Error update from coll_head! ","err411a", null);
+					}	
+					
+					
+				
+				}
+				
+				
+					
+		}//execute
+	
+}	
+			

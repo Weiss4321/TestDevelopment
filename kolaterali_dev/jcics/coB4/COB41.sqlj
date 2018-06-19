@@ -1,0 +1,57 @@
+package hr.vestigo.modules.collateral.jcics.coB4;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import hr.vestigo.modules.collateral.common.yoyJ.*;
+
+import hr.vestigo.framework.remote.transaction.*;   
+
+// ovo je transakcija koju poziva web servis WS0073
+public class COB41 extends RemoteTransaction
+{
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB4/COB41.sqlj,v 1.3 2017/03/07 07:22:19 hraaks Exp $";
+
+    private DeclCOB4 decl;
+    private ConnCtx connCtx;
+    private TransactionContext tc;
+    private YOYJ0 yoyj0 = null;
+    
+    public COB41(DeclCOB4 decl){
+        this.decl = decl;  
+    }
+    
+    
+    
+   
+    public void execute(TransactionContext tc) throws Exception {
+        connCtx = tc.getContext();
+        this.tc = tc;
+        #sql [connCtx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+        // TODO Auto-generated method stub
+        InputData data = new InputData();
+        data.amount = decl.amount;
+        data.aps_number = decl.aps_number;
+        data.coll_category = decl.coll_category;
+        data.coll_owner_register_no = decl.coll_owner_register_no;
+        data.coll_type = decl.coll_type;
+        data.cur_code_num = decl.cur_code_num;
+        data.cusacc_no = decl.cusacc_no;
+        data.deposit_account_no = decl.deposit_account_no;
+        data.register_no = decl.register_no;
+        yoyj0 = new YOYJ0(tc);
+        
+        OutputData data_out = yoyj0.openCollateral(data);
+        
+        
+        decl.col_num_out = data_out.col_num;
+        decl.errorCode = new BigDecimal(data_out.errorCode);
+        decl.errorDesc = data_out.errorDesc;
+        //decl.errorDesc = "TEST WEB SERVICES";
+        
+        return;
+        
+    }
+    
+    
+}

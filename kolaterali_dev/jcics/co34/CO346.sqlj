@@ -1,0 +1,113 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+
+ 
+
+public class CO346 extends RemoteTransaction { 
+    private DeclCO34 d = null;   
+
+
+    public CO346(DeclCO34 d) {   
+        this.d = d;
+    } 
+
+    public void execute(TransactionContext tc) throws Exception { 
+        tc.startStopWatch("CO346.execute");
+        
+        
+        ConnCtx ctx = tc.getContext();   
+        BigDecimal dom_cur_id = new BigDecimal(63999);
+        d.mortgagedeactprintdemo.Dom_cur_id = dom_cur_id;
+        tc.debug("INPUT d.mortgagedeactprintdemo.col_hf_prior_id " + d.mortgagedeactprintdemo.col_hf_prior_id); 
+       
+        
+        
+        #sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        
+           
+            #sql [ctx] {  
+                        SELECT      
+                              chp.coll_hf_prior_id , 
+                              trim(cc.co_name)  ,
+                              trim(cr.real_est_pdesc) ,
+                              trim(lb.acc_no),
+                              (trim(po1.postal_code) concat ' ' concat trim(pm1.name)) city,
+                              (trim(cr.street) concat ' ' concat trim(cr.housenr)), 
+                              trim(c.name),
+                              trim(c.tax_number) ,
+                              chp.hf_amount,
+                              chp.hf_notary_agr,   
+                              chp.hf_notary_date ,
+                              chp.hf_cur_id,
+                              curr.code_char,
+                              ce.contract_amount,
+                              trim(c1.name),
+                              trim(c1.tax_number)
+                              
+                               
+                         INTO                       
+                              :(d.mortgagedeactprintdemo.col_hf_prior_id)  , 
+                              :(d.mortgagedeactprintdemo.court) , 
+                              :(d.mortgagedeactprintdemo.mortgageDesc),
+                              :(d.mortgagedeactprintdemo.loanCusAccNo),
+                              :(d.mortgagedeactprintdemo.ownerCity),
+                              :(d.mortgagedeactprintdemo.ownerAddress) ,
+                              :(d.mortgagedeactprintdemo.ownerName) ,
+                              :(d.mortgagedeactprintdemo.ownerTaxNum) ,
+                              :(d.mortgagedeactprintdemo.realEstateValue) ,
+                              :(d.mortgagedeactprintdemo.bussinessNo), 
+                              :(d.mortgagedeactprintdemo.requestDate),
+                              :(d.mortgagedeactprintdemo.mortgageCurrency),
+                              :(d.mortgagedeactprintdemo.mortgageCurrencyCode),
+                              :(d.mortgagedeactprintdemo.loanAmount),
+                              :(d.mortgagedeactprintdemo.loanUserName),
+                              :(d.mortgagedeactprintdemo.loanUserTaxNum) 
+                                  
+                         FROM    
+                                coll_hf_prior   chp  ,coll_court cc   , loan_beneficiary lb , customer c, coll_owner co, currency curr, 
+                                coll_restate cr 
+                                LEFT OUTER JOIN political_map pm1 ON cr.pol_map_id_ad = pm1.pol_map_id
+                                LEFT OUTER JOIN post_office po1 ON cr.pos_off_id_ad = po1.pos_off_id,
+                                cusacc_exposure ce
+                                LEFT OUTER JOIN customer c1 ON c1.cus_id = ce.cus_id
+                        WHERE   
+                                chp.coll_hf_prior_id = :(d.mortgagedeactprintdemo.col_hf_prior_id) 
+                        AND  
+                                chp.HF_COLL_HEAD_ID = cr.col_hea_id
+                        AND    
+                                cr.real_est_court_id = cc.co_id 
+                        AND  
+                                lb.coll_hf_prior_id = chp.coll_hf_prior_id  
+                        AND  
+                                chp.HF_COLL_HEAD_ID = co.col_hea_id
+                        AND  
+                                c.cus_id = co.cus_id
+                        AND     
+                                chp.hf_cur_id = curr.cur_id
+                        AND     
+                                lb.la_acc_id = ce.cus_acc_id
+  
+                                 
+                };    
+       
+       if(d.mortgagedeactprintdemo.mortgageCurrency.compareTo(new BigDecimal(63999)) != 0){
+           d.mortgagedeactprintdemo.realEstateValueFc = d.mortgagedeactprintdemo.realEstateValue; 
+           d.mortgagedeactprintdemo.loanAmountFc = d.mortgagedeactprintdemo.loanAmount;
+       }
+        d.mortgagedeactprintdemo.contractDate = Date.valueOf("2012-02-01");                    
+        if(d.mortgagedeactprintdemo.mortgageCurrency.compareTo(d.mortgagedeactprintdemo.Dom_cur_id) == 0){
+            d.mortgagedeactprintdemo.isDomestic = "1"; 
+        }else{
+            d.mortgagedeactprintdemo.isDomestic = "0";          
+        }
+           
+        tc.stopStopWatch("CO346.execute");                                                                                                                            
+        }  
+    }

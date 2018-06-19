@@ -1,0 +1,64 @@
+package hr.vestigo.modules.collateral.jcics.co25;
+
+
+import java.sql.SQLData;
+import java.sql.Timestamp;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+/**
+ * CO251 
+ *  	
+ */
+
+ 
+
+public class CO251 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co25/CO251.sqlj,v 1.4 2006/11/08 12:18:35 hramkr Exp $";
+	
+	public DeclCO25 decl = null;
+	
+	
+	
+	
+	public CO251 (DeclCO25 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+							
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+	    
+			
+			
+			
+			
+			
+			try{ 
+				#sql[ctx] { 
+					SELECT current timestamp 
+					INTO :(decl.Coll_USER_LOCK)
+					FROM sysibm.sysdummy1
+				};	
+				
+
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO251.sqlj ..... Select from  sysibm.sysdummy1 unsuccessful.");
+				tc.debug ( "......CO251.sqlj Select from  sysibm.sysdummy1  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO251.sqlj Select from  sysibm.sysdummy1  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO251.sqlj Select from  sysibm.sysdummy1 event  SQL Message " + e.getMessage());
+				e.printStackTrace();
+				throw e;
+			
+			}
+			
+		
+		
+		}//execute
+	
+}	
+			

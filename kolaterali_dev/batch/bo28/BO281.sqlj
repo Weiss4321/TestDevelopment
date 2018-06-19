@@ -1,0 +1,378 @@
+package hr.vestigo.modules.collateral.batch.bo28;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoyF.*;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Vector;
+
+
+public class BO281
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo28/BO281.sqlj,v 1.17 2017/04/20 11:29:17 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator ColProcIterator with (holdability = true) (BigDecimal col_pro_id, String proc_status);
+    #sql iterator InsurancePoliciesIterator with (holdability = true) 
+    		(BigDecimal col_hea_id,
+			BigDecimal ip_id);
+    
+
+    public BO281(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("2532273003"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Deaktivacija isteklih polica osiguranja");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+	
+	/**
+	 * Metoda koja provjerava da li u tabeli COL_PROC za ovu vrstu obrade i current date postoji slog.
+	 * @return Vektor s atributima col_pro_id i proc_status ukoliko je metoda uspješno završila, inaèe null.
+	 */
+	public Vector selectColProId()
+	{
+	    batchContext.startStopWatch("selectColProId");
+	    Vector vect = new Vector();
+		ColProcIterator iter = null;
+		try
+		{
+			#sql [connCtx] iter = {
+				SELECT col_pro_id, proc_status 
+				FROM col_proc 
+				WHERE proc_type = '7'
+		          AND value_date = CURRENT DATE
+			};
+			if(iter.next())
+			{
+				vect.add(iter.col_pro_id());
+				vect.add(iter.proc_status());
+			}
+			else
+			{
+				vect.add(null);
+				vect.add(null);
+			}
+			iter.close();
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod provjere da li je obrada vec pustena za danasnji datum!", ex);
+			return null;
+		}
+		batchContext.stopStopWatch("selectColProId");
+		return vect;
+	}
+
+	
+	/** 
+	 * Metoda koja evidentira poèetak izvoðenja obrade ubacujuæi novi zapis u tablicu COL_PROC.
+	 * @return Primarni kljuè zapisa iz tablice COL_PROC
+	 */
+	public BigDecimal insertIntoColProc()
+	{
+	    batchContext.startStopWatch("insertIntoColProc");
+	    BigDecimal col_pro_id = null;
+		try
+		{
+			YOY00 yoy00 = new YOY00(connCtx);
+			col_pro_id = yoy00.getNewId();
+
+			batchContext.beginTransaction();
+			#sql [connCtx] {
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					org_uni_id,
+					use_id,
+					user_lock )
+				VALUES (
+					:col_pro_id,
+					CURRENT DATE,
+					CURRENT DATE,
+					'7',
+					'A',
+					'0',
+					0,
+					53253,
+					1,
+					CURRENT TIMESTAMP )
+			};
+			batchContext.commitTransaction();
+		}
+		catch(Exception ex)
+		{
+			batchContext.error("Greska kod ubacivanja zapisa u tablicu COL_PROC!", ex);
+			return null;
+		}
+		batchContext.stopStopWatch("insertIntoColProc");
+		return col_pro_id;
+	}
+	
+	
+	/**
+	 * Metoda koja dohvaæa broj dana koji mora proæi od datuma isteka police osiguranja da bi mogla biti deaktivirana. 
+	 * @return broj dana
+	 */
+	public int selectDeactivationDelay() throws SQLException
+	{
+	    try
+        {
+	        String delay_str;
+	        #sql [connCtx] {
+	            SELECT sys_code_value
+	            INTO :(delay_str)
+	            FROM system_code_value
+	            WHERE sys_cod_id = 'ip_deact_delay'
+	            FETCH FIRST ROW ONLY
+	        };
+	        int delay = Integer.parseInt(delay_str);
+	        batchContext.info("Odgoda deaktivacije = " + delay + " dana");
+	        return delay;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata parametra odgode deaktivacije polica osiguranja!", ex);
+            throw ex;
+        }
+	}
+
+	
+	/**
+	 * Metoda koja dohvaæa skup podataka koji ulaze u obradu.
+	 * U obradu ulaze sve aktivne police osiguranja kojima je datum do kada je plaæena premija manji od current date za aktivne kolaterale.
+	 * Ako je obrada veæ puštana, iskljuèuju se one police osiguranja obraðene prethodnim puštanjem.
+	 * @param obradaVecPustana Oznaka da li je obrada veæ puštana prije ali nije završila do kraja (1) ili je ovo prvi put da se pušta (0)
+	 * @param col_pro_id ID obrade
+	 * @param broj dana koji mora proæi od istekla police osiguranja da bi mogla biti deaktivirana
+	 * @return Iterator
+	 */
+	public InsurancePoliciesIterator selectInsurancePolicies(int obradaVecPustana, BigDecimal col_pro_id, int delay)
+	{
+	    batchContext.startStopWatch("selectInsurancePolicies");
+	    InsurancePoliciesIterator iter = null;
+		try
+		{
+			#sql [connCtx] iter = {
+				SELECT 
+					b.col_hea_id		AS col_hea_id,
+					b.ip_id				AS ip_id
+				FROM insurance_policy b 
+				WHERE 
+					b.ip_act_noact = 'A' AND 
+                    ( 
+		              ((b.ip_spec_stat = 'S' OR b.ip_vali_until = b.ip_date_sec_val) AND (b.ip_vali_until < CURRENT DATE))  OR 
+                      ((b.ip_spec_stat <> 'S') AND (b.ip_vali_until < CURRENT DATE - :(delay) DAYS ) )
+                    ) 
+		            AND  
+					( 
+		              (:obradaVecPustana=0) OR
+				  	  (:obradaVecPustana=1 AND b.ip_id NOT IN (SELECT c.input_id FROM in_data_dwh_item c WHERE c.col_pro_id = :(col_pro_id)))
+					)
+				ORDER BY b.col_hea_id
+		        WITH UR
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja polica osiguranja!", ex);
+		}
+		batchContext.stopStopWatch("selectInsurancePolicies");
+		return iter;
+	}
+
+	
+	/**
+	 * Metoda koja oznaèava zadanu policu osiguranja kao isteklu. 
+	 * @param ip_id ID police osiguranja
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean updatePolicyStatus(BigDecimal ip_id)
+	{
+		try
+		{
+			#sql [connCtx] {
+				UPDATE insurance_policy
+				SET ip_act_noact = 'I',
+					use_id = 1,
+					user_lock = CURRENT TIMESTAMP
+				WHERE ip_id = :(ip_id)
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod promjene statusa police osiguranja!", ex);
+			return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * Metoda koja ubacuje zapis o obradi odreðene police osiguranja u tablicu IN_DATA_DWH_ITEM.
+	 * @param col_pro_id ID obrade
+	 * @param ip_id ID police osiguranja
+	 * @param string_promjene opis promjene
+	 * @param col_hea_id ID kolaterala kojeg polica osigurava
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertIntoInDataDwhItem(BigDecimal col_pro_id, BigDecimal ip_id, String string_promjene, BigDecimal col_hea_id)
+	{
+		try
+		{
+			#sql [connCtx] {
+				INSERT INTO in_data_dwh_item (
+					col_pro_id,
+					input_id,
+					input_code,
+					status,
+					output_id )
+				VALUES (
+					:col_pro_id,
+					:ip_id,
+					:string_promjene,
+					'0',
+					:col_hea_id )
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod ubacivanja zapisa u tablicu IN_DATA_DWH_ITEM!", ex);
+			return false;
+		}
+		return true;
+	}
+	
+    /**
+     * Metoda koja upisuje indikator osiguranosti zadanom kolateralu. 
+     * @param col_hea_id ID kolaterala
+     * @param inspol_ind Indikator osiguranosti
+     * @return Da li je metoda uspješno završila
+     */
+	public boolean updateInspolInd(BigDecimal col_hea_id, String inspol_ind)
+    {
+        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+        //use_id=:(use_id), user_lock=current timestamp
+        try
+        {
+            #sql [connCtx] {
+                UPDATE coll_head
+                SET inspol_ind = :(inspol_ind),
+                CHG_NOM_VAL_PROC_TS = current timestamp
+                WHERE col_hea_id = :(col_hea_id)
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod promjene indikatora osiguranosti kolaterala!", ex);
+            return false;
+        }
+        return true;
+    }
+	
+	/**
+	 * Metoda koja upisuje flag za kasko osiguranje. 
+	 * @param col_hea_id ID kolaterala
+	 * @param inspol_ind Indikator osiguranosti
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean updateVehKasko(BigDecimal col_hea_id, String inspol_ind)
+	{
+		try
+		{
+			#sql [connCtx] {
+				UPDATE coll_vehicle
+		        SET veh_kasko = :(inspol_ind)
+		        WHERE col_hea_id = :(col_hea_id) 
+			};		
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod promjene flaga za kasko osiguranje!", ex);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Metoda koja u tablicu COL_PROC zapisuje broj obraðenih slogova u obradi. 
+	 * @param col_pro_id ID obrade
+	 * @return Da li je metoda uspješno završila
+	 */	
+	public boolean updateColProc(BigDecimal col_pro_id)
+	{
+		try
+		{
+			batchContext.beginTransaction();
+		    #sql [connCtx] {
+				UPDATE col_proc
+				SET	col_number = (SELECT COUNT(*) FROM in_data_dwh_item WHERE col_pro_id =:(col_pro_id)),
+					proc_ts = CURRENT TIMESTAMP,
+					proc_status = '1'
+				WHERE col_pro_id = :(col_pro_id)
+			};
+			batchContext.commitTransaction();
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod spremanja broja obraðenih slogova u tablicu COL_PROC!", ex);
+			return false;
+		}
+		return true;
+	}
+}

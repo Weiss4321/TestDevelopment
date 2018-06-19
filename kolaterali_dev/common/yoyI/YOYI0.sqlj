@@ -1,0 +1,126 @@
+package hr.vestigo.modules.collateral.common.yoyI;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.util.SendMail;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+ * Common za slanje izvješæa na mail.
+ * @author hrakis
+ */
+public class YOYI0
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyI/YOYI0.sqlj,v 1.1 2011/02/04 08:17:57 hrakis Exp $";
+
+    private RemoteContext rc;
+    private ConnCtx ctx;
+
+
+    public YOYI0(RemoteContext rc) throws SQLException
+    {
+        this.rc = rc;
+        this.ctx = rc.getContext();
+    }
+
+    /**
+     * Metoda koja šalje mail.
+     * @param rpt_code Šifra izvješæa
+     * @param use_id ID naruèitelja izvješæa
+     * @param files Popis svih datoteka koje se šalju kao privitak
+     * @return da li je mail uspješno poslan
+     */
+    public boolean sendMail(String rpt_code, BigDecimal use_id, String[] files)
+    {
+        // dohvat parametara izvješæa
+        String rpt_desc = null;             // Naslov poruke
+        String dest_mail_address = null;    // Odredišna mail adresa
+        String send_by_request = null;      // Indikator da li se mail šalje naruèitelju
+        rc.debug("YOYI0.sendMail: Dohvat parametara izvjesca (RPT_CODE = " + rpt_code + ").");
+        try
+        {
+            #sql [ctx] {
+                SELECT rpt_desc, dest_mail_address, send_by_request
+                INTO :rpt_desc, :dest_mail_address, :send_by_request
+                FROM report_def 
+                WHERE rpt_code = :rpt_code
+            };
+            rc.debug("YOYI0.sendMail: RPT_DESC = " + rpt_desc);
+            rc.debug("YOYI0.sendMail: DEST_MAIL_ADDRESS = " + dest_mail_address);
+            rc.debug("YOYI0.sendMail: SEND_BY_REQUEST = " + send_by_request);
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() == 100) rc.error("Izvjesce nije definirano u tablici REPORT_DEF!", ex);
+            else rc.error("Greska kod dohvata parametara izvjesca!", ex);
+            return false;
+        }
+
+        // ako je parametrima definirano da se izvješæe šalje naruèitelju, dohvatiti mail adresu naruèitelja
+        String request_address = null;
+        if("1".equals(send_by_request))
+        {
+            rc.debug("YOYI0.sendMail: Izvjesce je definirano da se salje narucitelju. Slijedi dohvat mail adrese narucitelja (USE_ID = " + use_id + ").");
+            try
+            {
+                #sql [ctx] {
+                    SELECT pau.parameter_value
+                    INTO :request_address
+                    FROM app_user au
+                    INNER JOIN param_app_user pau ON au.use_id = pau.app_use_id
+                    INNER JOIN params_dictionary pd ON pau.par_dic_id = pd.par_dic_id AND pd.name = 'e-mail'
+                    WHERE au.use_id = :(use_id)
+                };
+                rc.debug("YOYI0.sendMail: REQUEST_ADDRESS = " + request_address);
+            }
+            catch(SQLException ex)
+            {
+                if(ex.getErrorCode() == 100) rc.error("Narucitelju nije definirana e-mail adresa!", ex);
+                else rc.error("Greska kod dohvata mail adrese narucitelja!", ex);
+                return false;
+            }
+        }
+
+        // slaganje adrese na koju se šalje mail
+        String address = "";
+        if(dest_mail_address != null && !dest_mail_address.trim().equals("")) address += "," + dest_mail_address.trim();
+        if(request_address != null && !request_address.trim().equals("")) address += "," + request_address.trim();
+        address = address.replaceFirst(",", "").trim();
+
+        // provjera da li je popunjena mail adresa na koju se šalje izvješæe
+        if(address.equals(""))
+        {
+            rc.error("Nije definirana e-mail adresa na koju se salje izvjesce!", null);
+            return false;
+        }
+
+        // slaganje popisa datoteka koje se šalju
+        String filenames = "";
+        for(int a=0;a<files.length;a++) if(files[a] != null) filenames += "///" + files[a];
+        filenames = filenames.replaceFirst("///", "").trim();
+        rc.debug("YOYI0.sendMail: Privitak = " + filenames);
+
+        // slanje maila
+        try
+        {
+            rc.debug("YOYI0.sendMail: Salje se mail na: " + address);
+            int mailFlag = new SendMail().send(rc, "", "", address, "", "", rpt_desc, "", null, filenames);
+            if(mailFlag != 0)
+            {
+                rc.error("Mail nije poslan!", null);
+                return false;
+            }
+        }
+        catch(Exception ex)
+        {
+            rc.error("Greska kod slanja maila!", ex);
+            return false;
+        }
+
+        rc.info("Mail naslova '" + rpt_desc + "' poslan na: " + address);
+        return true;
+    }
+}

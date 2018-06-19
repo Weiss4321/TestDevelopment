@@ -1,0 +1,136 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+             
+ 
+ 
+ 
+#sql iterator IterPrec (
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String pre_type ,      
+							String pre_name ,
+							String pre_unit ,
+							BigDecimal pre_num_of_unit ,
+							String pre_year ,
+							String pre_cond ,
+							java.sql.Date pre_cond_date ,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id              
+                   );	
+
+public class CO045 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO045.sqlj,v 1.4 2006/05/08 13:27:59 hramkr Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterPrec iterPrec = null;
+	
+	public CO045 (DeclCO04 decl) { 
+		this.decl = decl;
+	}
+	 
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.collpreclistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		if(decl.collpreclistmapping.CUS_ID == null ){
+			#sql [ctx] iterPrec = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.prt_type_code as pre_type, mova.prt_type_desc as pre_name, cols.pre_unit_mes as pre_unit, 
+									cols.pre_num_of_unit as pre_num_of_unit, cols.pre_art_year as pre_year,
+									cols.pre_condition as pre_cond, cols.pre_cond_date as pre_cond_date,
+									ch.real_est_status as status, cols.pre_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                       
+							FROM
+									coll_head ch, coll_precious cols , precious_type mova 
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		cols.prt_typ_id = mova.prt_typ_id
+						ORDER BY	2
+							
+			};
+		 
+		} 
+		  
+ 		
+		if(decl.collpreclistmapping.CUS_ID != null ){
+			#sql [ctx] iterPrec = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.prt_type_code as pre_type, mova.prt_type_desc as pre_name, cols.pre_unit_mes as pre_unit, 
+									cols.pre_num_of_unit as pre_num_of_unit, cols.pre_art_year as pre_year,
+									cols.pre_condition as pre_cond, cols.pre_cond_date as pre_cond_date ,
+									ch.real_est_status as status, cols.pre_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                                   
+							FROM	
+									coll_head ch, coll_precious cols , precious_type mova 
+							WHERE	ch.cus_id = :(decl.collpreclistmapping.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id
+							AND 	cols.prt_typ_id = mova.prt_typ_id
+						ORDER BY	2
+							
+			};
+		 
+		}   
+	
+		 
+	}
+	
+	public boolean next() throws Exception {
+		return iterPrec.next(); 
+	}
+    
+	public void close() {
+		if(iterPrec!=null) {
+			try {
+				iterPrec.close();
+			} catch (Exception ignored) {}
+		}
+	}
+     
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterPrec.col_num());	
+		row.add(iterPrec.pre_type());	
+		row.add(iterPrec.pre_name());
+		row.add(iterPrec.pre_unit()); 
+		row.add(iterPrec.pre_num_of_unit());
+		
+		row.add(iterPrec.pre_year()); 
+		row.add(iterPrec.pre_cond());	
+		row.add(iterPrec.pre_cond_date());			
+		row.add(iterPrec.status());  
+ 
+		row1.add(iterPrec.col_hea_id());
+		row1.add(iterPrec.col_res_id());
+		row1.add(iterPrec.real_est_nm_cur_id());
+		
+		decl.collpreclistmapping.tblCollPrec.addRow(row,row1);
+		
+//		decl.collpreclistmapping.tblCollPrec.addRow(row,iterPrec.col_hea_id());   	
+		
+	}
+	
+}
+

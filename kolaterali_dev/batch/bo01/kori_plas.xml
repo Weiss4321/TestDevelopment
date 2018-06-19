@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+		<Data><Parameter Name="naslov"/></Data>	
+	</Row>	
+	<Row>
+		<Data><Parameter Name="datum"/></Data>	
+	</Row>	
+	<Row>
+		<Data><Parameter Name="orgUnit"/></Data>	   
+	</Row>	
+	<Row>
+	</Row>
+	<Row>
+		<Data><Text>Šifra referenta</Text></Data>
+		<Data><Text>Partija plasmana</Text></Data>
+		<Data><Text>Broj zahtjeva</Text></Data>
+		<Data><Text>Interni MB vl. plasmana</Text></Data>
+		<Data><Text>Naziv vl. plasmana</Text></Data>
+		<Data><Text>Datum unosa plasmana</Text></Data>
+		<Data><Text>Šifra vrste kolaterala</Text></Data>
+		<Data><Text>Kolateral</Text></Data>
+		<Data><Text>Šifra kolaterala</Text></Data>
+		<Data><Text>Tržišna vrijednost kolaterala</Text></Data>
+		<Data><Text>Valuta</Text></Data>
+	</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="login"/></Data>
+			<Data><Field Name="acc_no"/></Data>
+			<Data><Field Name="request_no"/></Data>
+			<Data><Field Name="register_no"/></Data>
+			<Data><Field Name="name"/></Data>
+			<Data><Field Name="opening_ts"/></Data>
+			<Data><Field Name="coll_type_code"/></Data>
+			<Data><Field Name="coll_type_name"/></Data>
+			<Data><Field Name="col_num"/></Data>
+			<Data><Field Name="real_est_nomi_valu"/></Data>
+			<Data><Field Name="code_char"/></Data>
+			<Data><Field Name="col_hea_id"/></Data>
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>	

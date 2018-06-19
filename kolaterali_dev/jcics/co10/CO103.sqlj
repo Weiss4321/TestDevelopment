@@ -1,0 +1,72 @@
+package hr.vestigo.modules.collateral.jcics.co10;
+
+//Transaction gets data about current state of loan account for given la_acc_id
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+
+
+public class CO103 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co10/CO103.sqlj,v 1.6 2006/03/28 08:27:25 hrasia Exp $";
+
+	private DeclCO10 decl = null;
+		
+	public CO103(DeclCO10 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO103.sqlj     " );
+		tc.debug ( "......CO103.sqlj     TRANSAKCIJA ZA DOHVAT ZADNJEG STANJA PLASMANA PREKO ID LOAN ACCOUNT" );
+		tc.debug ( "......CO103.sqlj     LoanComponentItemGetFullBalance " );
+		tc.debug ( "......CO103.sqlj     decl.lcigetfbmapping.LoanComponentItem_laAccId " + decl.lcigetfbmapping.LoanComponentItem_laAccId);
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+	
+		  	
+		
+		
+		try{			
+			#sql [ctx] {SELECT  loac.balance, loac.cur_id, curla.code_char, loac.balance_date,
+								loac.balance_ref, loac.cur_id_ref, curlf.code_char,
+								loac.exc_rat_ref, loac.exc_rat_ref_date, loac.la_date_from, loac.la_date_until
+						INTO    :(decl.lcigetfbmapping.LoanComponentItem_txtBalance),
+								:(decl.lcigetfbmapping.LoanComponentItem_CUR_ID),                            
+								:(decl.lcigetfbmapping.LoanComponentItem_txtBalanceCurIdLoanCodeC) ,         
+								:(decl.lcigetfbmapping.LoanComponentItem_txtBalanceDate),                    
+								:(decl.lcigetfbmapping.LoanComponentItem_txtBalanceRef),                     
+								:(decl.lcigetfbmapping.LoanComponentItem_CUR_ID_REF),                        
+								:(decl.lcigetfbmapping.LoanComponentItem_txtBalanceCurIdRefLoanCodeC),       
+								:(decl.lcigetfbmapping.LoanComponentItem_txtExcRatRef ),                     
+								:(decl.lcigetfbmapping.LoanComponentItem_txtExcRatRefDate),
+								:(decl.lcigetfbmapping.LoanComponentItem_laDateFrom),    
+								:(decl.lcigetfbmapping.LoanComponentItem_laDateUntil )  
+
+					    FROM 	loan_account   loac
+						INNER JOIN  currency curla  ON loac.cur_id = curla.cur_id     
+						LEFT OUTER JOIN  currency curlf  ON  loac.cur_id_ref = curlf.cur_id   
+						WHERE  	loac.la_acc_id = :(decl.lcigetfbmapping.LoanComponentItem_laAccId)                                                 
+								
+				};                                                         
+		       
+			
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO103.sqlj  SQLException   LoanComponentItem_laAccId     " + decl.lcigetfbmapping.LoanComponentItem_laAccId );
+			tc.debug ( "......CO103.sqlj select  from loan_account SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO103.sqlj select  from loan_account SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO103.sqlj select  from loan_account SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO103: Error selecting balance,... from loan_account ! ","errclt1", null);
+		}
+		tc.debug("......CO103.sqlj  balance     " + decl.lcigetfbmapping.LoanComponentItem_txtBalance );
+		
+				                    
+
+	}
+	
+}
+

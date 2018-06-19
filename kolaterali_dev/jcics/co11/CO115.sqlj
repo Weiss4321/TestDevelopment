@@ -1,0 +1,322 @@
+package hr.vestigo.modules.collateral.jcics.co11;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyD.YOYD0;
+import hr.vestigo.modules.collateral.common.yoyD.YOYDData;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */
+      
+    
+public class CO115 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co11/CO115.sqlj,v 1.33 2017/06/01 12:03:41 hrazst Exp $";
+	
+	public DeclCO11 decl = null;
+	YOY63 SQLhelper = null;
+	
+	public CO115 (DeclCO11 decl) {
+		this.decl = decl;
+	} 
+	
+	//obj za select sloga iz col_head
+	CollHeadSelectData chds = new CollHeadSelectData();
+	// 	obj za update tbl coll_head	
+	CollHeadUpdateData chd = new CollHeadUpdateData();			
+	// obj za update valute kolaterala u hipotekama
+	YOYDData mortgage = new YOYDData();	
+	public void execute(TransactionContext tc) throws Exception {		
+	    ConnCtx ctx = tc.getContext();		
+	    SQLhelper = new YOY63(tc);
+	    #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+	    String sign = decl.vesselupdatemapping.Ves_txtSign;           
+	    //najprije provjeriti da li postoji u bazi plovilo s istim znakom raspoznavanja
+	    if(sign != null && !(sign.trim().equals(""))) {
+	        int broj = 0;           
+	        try {
+	            #sql [ctx] {SELECT COUNT(*)
+                        INTO :broj 
+                        FROM coll_vessel a, coll_head b
+                        WHERE 
+                            a.ves_sign=:(decl.vesselupdatemapping.Ves_txtSign)
+                        AND
+                            a.col_ves_id <> :(decl.vesselupdatemapping.COL_SEC_ID)
+                        AND
+                            a.col_hea_id = b.col_hea_id
+                        AND
+                            b.collateral_status <> '4'
+                };          
+	            tc.debug ( "...broj: " + broj);
+	        } catch (SQLException  sqle) {
+	            throw  sqle;
+	        }
+	        if(broj > 0){
+	            throw new VestigoTMException(1, "Transaction CO055: Error inserting into coll_vessel! ","colErr014", null);
+	        }   
+	    }        
+ 
+		try{
+			#sql [ctx]{
+				SELECT
+						a.col_hea_id,
+						a.basic_data_status,
+						a.mortgage_status,
+						a.coll_data_status,
+						a.cover_indic,
+						a.origin_org_uni_id,
+		                a.crm_hnb
+				INTO 
+						:(chds.COL_HEA_ID),    
+						:(chds.BASIC_DATA_STATUS),
+						:(chds.MORTGAGE_STATUS),
+						:(chds.COLL_DATA_STATUS),
+						:(chds.COVER_INDIC),
+						:(chds.ORIGIN_ORG_UNI_ID),
+		                :(chds.Kol_txtCRMHnb)
+				FROM COLL_HEAD a, COLL_VESSEL b
+				WHERE a.col_hea_id = :(decl.vesselupdatemapping.COL_HEA_ID)
+				AND	  a.col_hea_id = b.col_hea_id
+	               		                   
+			}; 			
+			
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+			else {
+				throw new VestigoTMException(1, "CO114 - Cannot change, user_lock!", "errclt7", null);				
+			}			
+		}
+		chds.USER_LOCK = decl.vesselupdatemapping.USER_LOCK;
+		//napraviti update COLL_HEAD		
+		//punjenje objekta chd iz decl-a		
+		fillCHDobj(); 
+		tc.debug("zovem update Head : "+chd.COL_HEA_ID);	
+		tc.debug("USER_LOCK_IN : "+chd.USER_LOCK_IN);			
+		//update COLL_HEAD		
+		YOY43 headUpdate = new YOY43(tc, chd);		
+		headUpdate.updateCollHead(); 
+
+		tc.debug("gotov update Head : "+chd.COL_HEA_ID);   
+		tc.debug("gotov update Head PUNIM user_lock : "+chd.USER_LOCK);
+		
+		decl.vesselupdatemapping.USER_LOCK = chd.USER_LOCK;
+        decl.vesselupdatemapping.Coll_txtUserLock = chd.USER_LOCK; 
+		tc.debug("UPDATE SATELIT : "+decl.vesselupdatemapping.COL_SEC_ID);  		
+		
+		try{	
+
+					#sql [ctx]{
+							UPDATE coll_vessel
+								SET	
+									ves_typ_id	 	= :(decl.vesselupdatemapping.SEC_TYP_ID),  
+									har_off_id		= :(decl.vesselupdatemapping.HAR_OFF_ID),
+									ves_name 		= :(decl.vesselupdatemapping.Ves_txtName), 
+									ves_made_year 	= :(decl.vesselupdatemapping.Ves_txMadeYear),
+									ves_num_engine 	= :(decl.vesselupdatemapping.Vessel_txtNumEngine),
+									ves_sign 		= :(decl.vesselupdatemapping.Ves_txtSign), 
+									ves_brutto 		= :(decl.vesselupdatemapping.Ves_txtBrutto), 
+									ves_netto 		= :(decl.vesselupdatemapping.Ves_txtNetto), 
+									ves_number 		= :(decl.vesselupdatemapping.Ves_txtNumber), 
+									ves_licence 	= :(decl.vesselupdatemapping.Ves_txtLicence), 
+									ves_colour 		= :(decl.vesselupdatemapping.Vehicle_txtVehColour), 						
+									ves_power_kw 	= :(decl.vesselupdatemapping.Vessel_txtVehPowerKW), 
+									ves_equipment 	= :(decl.vesselupdatemapping.Vehicle_txtVehEquipment), 
+									har_sec_id 		= :(decl.vesselupdatemapping.HAR_SEC_ID), 
+									ves_dsc 		= :(decl.vesselupdatemapping.Ves_txtDsc), 
+									ves_ins_date	= :(decl.vesselupdatemapping.Vehi_txtVehInsDate),
+		                            estimate_cus_id = :(decl.vesselupdatemapping.Coll_txtEUsePersonCusId) 	
+
+							WHERE col_ves_id = :(decl.vesselupdatemapping.COL_SEC_ID)
+					};
+					
+				
+		}catch(SQLException se){
+			if (se.getErrorCode()!=-803) throw se;
+			else {
+				throw new VestigoTMException(1, "Transaction CO115: Error updating into coll_vessel! ","colErr014", null);			
+			}				
+		}
+
+		// ako se promijenila valuta kolaterala promijeniti i na svim vezanim hipotekama		
+		tc.debug("radim update hipoteka: "+mortgage.col_hea_id);	
+		
+		YOYD0 YOYD0 = new YOYD0(tc);
+		YOYDData mortgage = new YOYDData();   	
+		
+		mortgage.col_hea_id = decl.vesselupdatemapping.COL_HEA_ID;
+		mortgage.cur_id = decl.vesselupdatemapping.REAL_EST_NM_CUR_ID;;
+		
+		YOYD0.chgMortgageCurrencyAmount(mortgage); 
+		
+		tc.debug("gotov update hipoteka: "+mortgage.col_hea_id);	
+		
+		// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.vesselupdatemapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+        yoyg0.azurirajPrihvatljivosti();
+        decl.vesselupdatemapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.vesselupdatemapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.vesselupdatemapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.vesselupdatemapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();
+            
+        decl.vesselupdatemapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.vesselupdatemapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.vesselupdatemapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.vesselupdatemapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();                    
+		
+        this.fillDeclFromCHDObj();
+	}//execute
+	
+	private void fillCHDobj () {
+		chd.Coll_txtAcouBDate = decl.vesselupdatemapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.vesselupdatemapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.vesselupdatemapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.vesselupdatemapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.vesselupdatemapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.vesselupdatemapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.vesselupdatemapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.vesselupdatemapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.vesselupdatemapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.vesselupdatemapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.vesselupdatemapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.vesselupdatemapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.vesselupdatemapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.vesselupdatemapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.vesselupdatemapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtComDoc = decl.vesselupdatemapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.vesselupdatemapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.vesselupdatemapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.vesselupdatemapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.vesselupdatemapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.vesselupdatemapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.vesselupdatemapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.vesselupdatemapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.vesselupdatemapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.vesselupdatemapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.vesselupdatemapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.vesselupdatemapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.vesselupdatemapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.vesselupdatemapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.vesselupdatemapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.vesselupdatemapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.vesselupdatemapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.vesselupdatemapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.vesselupdatemapping.Coll_txtMissingDoc; 
+		chd.Coll_txtNepoDate = decl.vesselupdatemapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.vesselupdatemapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.vesselupdatemapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.vesselupdatemapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.vesselupdatemapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.vesselupdatemapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.vesselupdatemapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.vesselupdatemapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.vesselupdatemapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.vesselupdatemapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.vesselupdatemapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.vesselupdatemapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.vesselupdatemapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.vesselupdatemapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.vesselupdatemapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.vesselupdatemapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.vesselupdatemapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.vesselupdatemapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.vesselupdatemapping.Coll_txtThirdRightInNom;
+		chd.REAL_EST_EUSE_ID = decl.vesselupdatemapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.vesselupdatemapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.vesselupdatemapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.vesselupdatemapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.vesselupdatemapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.vesselupdatemapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.vesselupdatemapping.COL_PLACE;
+		chd.COL_COUNTY = decl.vesselupdatemapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.vesselupdatemapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.vesselupdatemapping.COL_RESI_QUAR;
+		chd.USE_ID = decl.vesselupdatemapping.USE_ID;
+		chd.INSPOL_IND = decl.vesselupdatemapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.vesselupdatemapping.Coll_txtDesc;
+		chd.COL_HEA_ID = decl.vesselupdatemapping.COL_HEA_ID;
+		chd.USER_LOCK_IN = decl.vesselupdatemapping.USER_LOCK_IN;
+		chd.Coll_txtAcumBuyValue = decl.vesselupdatemapping.Coll_txtAcumBuyValue;
+		chd.ORG_UNI_ID = decl.vesselupdatemapping.ORG_UNI_ID;
+		chd.save_ver_aut_flag = decl.vesselupdatemapping.save_ver_aut_flag;
+		chd.BASIC_DATA_STATUS = chds.BASIC_DATA_STATUS;
+		chd.MORTGAGE_STATUS = chds.MORTGAGE_STATUS;
+		chd.COLL_DATA_STATUS = chds.COLL_DATA_STATUS;
+		chd.COVER_INDIC = chds.COVER_INDIC;
+		chd.COL_TYPE_ID = decl.vesselupdatemapping.COL_TYPE_ID;
+        chd.COL_SUB_ID = decl.vesselupdatemapping.SEC_TYP_ID;
+        chd.COL_GRO_ID = null;
+        chd.COL_CAT_ID = decl.vesselupdatemapping.col_cat_id;
+		chd.ORIGIN_ORG_UNI_ID = chds.ORIGIN_ORG_UNI_ID; 
+		chd.ColRba_txtEligibility = decl.vesselupdatemapping.ColRba_txtEligibility;
+		chd.KolLow_txtEligibility = decl.vesselupdatemapping.KolLow_txtEligibility;
+		chd.Kol_txtRbaEligDsc = decl.vesselupdatemapping.Kol_txtRbaEligDsc; 
+        chd.SPEC_STATUS = decl.vesselupdatemapping.SPEC_STATUS;   
+        chd.Kol_txtCRMHnb=decl.vesselupdatemapping.Kol_txtCRMHnb;
+        
+        chd.used_in_recovery = decl.vesselupdatemapping.Coll_txtUsedInRecovery;
+        chd.kind_of_recovery = decl.vesselupdatemapping.Coll_txtKindOfRecoveryCode;
+        chd.full_amount = decl.vesselupdatemapping.Coll_txtFullAmountRecovery;
+        chd.full_amount_cur_id = decl.vesselupdatemapping.CUR_ID_FULL_AMOUNT;
+        chd.recovery_amount = decl.vesselupdatemapping.Coll_txtRecoveryAmount;
+        chd.recovery_cur_id = decl.vesselupdatemapping.CUR_ID_RECOVERY_AMOUNT;
+        chd.recovery_comment = decl.vesselupdatemapping.Coll_txtRecoveryComment;
+        chd.recovery_date = decl.vesselupdatemapping.Coll_txtRecoveryDate;
+        chd.recovery_rate = decl.vesselupdatemapping.Coll_txtRecoveryRate;
+        
+        chd.realization_amount = decl.vesselupdatemapping.Coll_txtRealizationAmount;
+        chd.realization_cur_id = decl.vesselupdatemapping.CUR_ID_REALIZATION_AMOUNT;
+        chd.realization_date = decl.vesselupdatemapping.Coll_txtRealizationDate;
+        chd.realization_kind = decl.vesselupdatemapping.Coll_txtKindOfRealization;
+        chd.realization_cost = decl.vesselupdatemapping.Coll_txtCostRealization;  
+        
+        chd.realization_cost_cur_id=decl.vesselupdatemapping.REALIZATION_COST_CUR_ID;
+        chd.for_sale=decl.vesselupdatemapping.Coll_txtForSale;
+        chd.for_sale_date=decl.vesselupdatemapping.Coll_txtForSaleDate;
+        
+        chd.b2_irb_insag_elig = decl.vesselupdatemapping.Coll_txtB2IRB;
+        chd.b2_hnb_insag_elig = decl.vesselupdatemapping.Coll_txtB2HNB;
+        chd.use_id_co = decl.vesselupdatemapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.vesselupdatemapping.Coll_txtTypeTVCode;
+        chd.prec_exec_est = decl.vesselupdatemapping.Coll_txtAccuracyEstimatesCode;
+        chd.correct_value = decl.vesselupdatemapping.Coll_txtFairnessValuesCode;
+        chd.respect_deadline = decl.vesselupdatemapping.Coll_txtDeadLinesCode;
+        chd.prof_to_rba = decl.vesselupdatemapping.Coll_txtProfByRBACode;
+        chd.prof_to_client = decl.vesselupdatemapping.Coll_txtProfByClientCode;
+        chd.col_eco_life = decl.vesselupdatemapping.Coll_txtEconomicLife;
+        chd.real_est_estn_int = decl.vesselupdatemapping.Coll_txtInternalValuer;
+        chd.est_type = decl.vesselupdatemapping.EST_TYPE_CODE;
+        chd.met_est_1 = decl.vesselupdatemapping.Coll_txtAssessmentMethod1Code;
+        chd.met_est_2 = decl.vesselupdatemapping.Coll_txtAssessmentMethod2Code;
+        chd.non_ins_reason = decl.vesselupdatemapping.Coll_txtNonInsReasoneCode;
+        chd.ins_cov_coll = decl.vesselupdatemapping.Coll_txtInsTotalCoverCode;
+        chd.recovery_proc_stat = decl.vesselupdatemapping.Coll_txtRecoveryProcStat; 
+        chd.contract_type = decl.vesselupdatemapping.Coll_txtContractTypeCode;   
+        
+        
+	}
+	
+   private void fillDeclFromCHDObj () throws Exception{	        
+        decl.vesselupdatemapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.vesselupdatemapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.vesselupdatemapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.vesselupdatemapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.vesselupdatemapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.vesselupdatemapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.vesselupdatemapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.vesselupdatemapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.vesselupdatemapping.COL_HEA_ID);
+        decl.vesselupdatemapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+    }   
+}	
+	 		

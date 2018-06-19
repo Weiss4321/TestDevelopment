@@ -1,0 +1,81 @@
+package hr.vestigo.modules.collateral.jcics.co19;
+
+
+import java.math.BigDecimal;
+import hr.vestigo.framework.remote.transaction.*;
+
+public class CO194 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co19/CO194.sqlj,v 1.2 2015/01/13 08:26:43 hrajkl Exp $";
+	public DeclCO19 decl = null;
+	
+	public CO194 (DeclCO19 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();		
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			String tmpCode = (decl.insupolicytypeupdatem.InsuPolicyTypeDialog_txtIntPolTypeCode);
+			BigDecimal tmpTypeID = decl.insupolicytypeupdatem.INT_POL_TYPE_ID;
+			int num = 0;
+			try {
+				#sql [ctx] {SELECT COUNT(*) INTO :num 
+	    			FROM 
+						INSU_POLICY_TYPE 
+	    			WHERE 
+						INT_POL_TYPE_CODE=: tmpCode AND
+						INT_POL_TYPE_ID <> :tmpTypeID	 
+	    	}; 	
+	    	tc.debug ( " /n/n/n/n/n/n/n");
+	    	tc.debug ( "...broj postojecih zapisa: " + num);
+	    	tc.debug ( " /n/n/n/n/n/n/n");
+    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO194.sqlj update INSU_POLICY_TYPE SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO194.sqlj update INSU_POLICY_TYPE SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO194.sqlj update INSU_POLICY_TYPE SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO194: Error updating INSU_POLICY_TYPE! ","err411a", null);
+            }
+		    if(num > 0){// ako vec postoji real_es_type_code
+			    throw new VestigoTMException(1, "Transaction CO194: Error updating INSU_POLICY_TYPE! ","errclt8", null);
+			}	
+		    
+		    java.sql.Date date_from = (decl.insupolicytypeupdatem.InsuPolicyTypeDialog_txtDateFrom);
+			java.sql.Date date_until = (decl.insupolicytypeupdatem.InsuPolicyTypeDialog_txtDateUntil);
+			String code = (decl.insupolicytypeupdatem.InsuPolicyTypeDialog_txtIntPolTypeCode);
+			String name = (decl.insupolicytypeupdatem.InsuPolicyTypeDialog_txtIntPolTypeName);
+			try{	//UPDATE real_estate_type	
+		    	#sql [ctx]{ UPDATE INSU_POLICY_TYPE
+							SET
+							INT_POL_TYPE_CODE	= :code,
+							INT_POL_TYPE_NAME	= :name,
+							INT_POL_COMPANY_ID	= :(decl.insupolicytypeupdatem.INT_POL_COMPANY_ID),
+							INT_POL_DATE_FROM	= :date_from,
+							INT_POL_DATE_UNTIL	= :date_until,
+							use_id				= :(decl.insupolicytypeupdatem.use_id),		
+		    				user_lock			= current timestamp,
+			                INT_GROUP1 = :(decl.insupolicytypeupdatem.INT_GROUP1),
+			                INT_GROUP2 = :(decl.insupolicytypeupdatem.INT_GROUP2),
+			                INT_GROUP3 = :(decl.insupolicytypeupdatem.INT_GROUP3),
+			                INT_GROUP4 = :(decl.insupolicytypeupdatem.INT_GROUP4)
+							WHERE
+							INT_POL_TYPE_ID		= :(decl.insupolicytypeupdatem.INT_POL_TYPE_ID) 
+							AND
+							user_lock			= :(decl.insupolicytypeupdatem.USER_LOCK)
+     		        	};
+     		        	
+     		        	//uvjet za promjenu: ako je USER_LOCK(dohvacen pri select-u) jednak kao trenutni u tablici
+		}catch(java.sql.SQLException se){
+					tc.debug ( "......CO194.sqlj insert into inserting INSU_POLICY_TYPE SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO194.sqlj insert into inserting INSU_POLICY_TYPE SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO194.sqlj insert into inserting INSU_POLICY_TYPE SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO194: Error updating UPDATE INSU_POLICY_TYPE! ","err411a", null);
+			}
+		}//execute
+	
+
+}	

@@ -1,0 +1,421 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from CUST_BILL_EXCH where cus_bil_exc_id = 3149631823;
+
+
+select * from CUST_BILL_EXCH order by recording_time desc;
+
+
+------------------  MJ-29012015-00000003  MJ-29012015-00000003 MJ-29012015-00000003
+
+  			SELECT 
+  					cus_bil_exc_id,
+                        cus_bill_ext_no,
+                        issue_date,
+                        maturity_date,
+                        cus_bill_exch_no,
+                        amount,
+                        payer_reg_no,
+                        payer_tax_number,
+                        payer_address,
+                        ben_iban,
+                        ben_name,
+                        ben_tax_number,
+                        ben_address,
+                        status,
+                        paid_amount,
+                        payer_acc_no,
+                        payment_method,
+                        payer_name,
+                        ben_place,
+                        chg_stat_reason,
+                        credit_ref_typ,
+                        credit_ref_no,
+                        debit_ref_typ,
+                        debit_ref_no,
+                        recording_time              
+                    FROM
+                        cust_bill_exch
+                    WHERE cus_bill_exch_no = 'MJ-29012015-00000008'
+                    AND bank_sign = 'RB';
+
+
+                    
+select * from CUST_BILL_EXCH_LOG;
+
+select * from CUST_BILL_EXCH_LOG order by change_time desc;
+
+
+select * from turn_customer;
+
+select * from turnover_type where tur_typ_id = 3994622797 ; -- 5310c Preknjiženje pretplate
+
+select * from turnover where tur_id = 7999748797;
+
+
+				SELECt
+				    t.tur_id,
+					t.tur_typ_id,
+                        ex.tra_id,
+                        ex.tra_typ_id,
+                        ca.cus_acc_id,
+                        ca.cus_acc_no,
+                        ca.old_cus_acc_no,
+                        ca.iban_acc_no,
+                        ca.cus_acc_name,
+                        ca.org_uni_id,
+                        ca.currency_type,
+                        ca.acc_cur_id,
+                        ca.opening_date,
+                        ca.closing_date,
+                        ca.cus_acc_status,
+                        ca.chg_stat_reason,
+                        ca.chg_stat_date,
+                        ca.warn_note_status,
+                        ca.law_block_status,
+                        ca.collection_status,
+                        ca.court_proc_status,
+                        ci.cus_id,
+                        ci.code cus_code,
+                        ci.register_no,
+                        ci.name,
+                        ci.surname,
+                        ci.pay_list_flag,
+                        cl.nnb_no_days,
+                        cl.nnb_date,
+                        cl.absorbing_status,
+                        cl.abs_status_date,
+                        cl.process_date cl_process_date,
+                        t.tur_id,
+                        t.eve_id,
+                        t.value_date,
+                        t.process_date,
+                        t.process_timestamp,
+                        t.cur_id,
+                        t.fc_debit_amount,
+                        t.fc_credit_amount,
+                        t.debit_amount,
+                        t.credit_amount,
+                        t.turnover_desc,
+                        tt.tur_typ_id,
+                        tt.code tt_code,
+                        tt.name tt_name,
+                        tt.reg_income
+                    FROM
+                        turn_customer tc
+                        INNER JOIN turnover t ON tc.tur_id = t.tur_id
+                        INNER JOIN event_trx ex ON t.tra_id = ex.tra_id
+                        INNER JOIN turnover_type tt ON t.tur_typ_id = tt.tur_typ_id
+                        INNER JOIN customer_account ca ON tc.cus_acc_id = ca.cus_acc_id                
+                        INNER JOIN citizen ci ON ca.cus_id = ci.cus_id
+                        LEFT OUTER JOIN counter_list cl ON ( 
+                                ca.cus_acc_id = cl.cus_acc_id 
+                                AND cl.pro_met_code = 'HNB' 
+                                AND cl.process_date = '20.1.2015' )
+                    WHERE
+                        ca.ban_pro_typ_id = 790661005
+                        AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                        AND ( (ca.cus_acc_status <> 'I') OR (ca.cus_acc_status = 'I' AND chg_stat_date >= '20.11.2014') )
+                        AND ca.bank_sign = 'RB'                   
+                        AND tc.process_date >= '20.11.2014' 
+                        AND tc.process_date <= '20.1.2015'
+                        AND t.credit_amount <> 0
+                        AND t.tur_typ_id NOT IN (
+                                203992005, 203991005, 203990005, 203989005,     /* Prometi preknjizenja */
+                                272350005, 272356005, 272357005, 272366005,     /* Prometi preknjizenja po po domicilu, sektoru i komitentu */
+                                1561010887, 1561012317, 1561039487, 1561040917, 1561055217, 1561070947, 1561128147, 1561129577, 1561133867, 1561135297, 1901718005, 1901719005,     /* Rezervacije */
+                                3718517667, 3850379797,     /* Prijenosi na utuzeno potrazivanje */
+                                3850379797)                 /* Preknjizenje duga po utuzenim */
+                        AND (ex.tra_typ_id <> 1426436003   /* Kamate za Opci nalog */
+                                OR t.tur_typ_id NOT IN (120348005, 120362005, 867912005, 867916005, 867920005, 867924005, 867928005, 
+                                                        984509005, 984719005, 984722005, 984723005, 989237005, 1173130005, 989239005, 984721005,
+                                                        4020407797, 4020408797, 4034626797, 4034629797, 4034630797, 4034632797, 4034660797))                     
+                        AND ex.tra_typ_id NOT IN (
+                                4680657704, 4680661704, 4670626704, 4680665704, 4680669704, 4680673704,
+                                1685855003, 1685858003, 1685861003, 1685880003, 1685883003, 1685886003, 1685900003, 1685903003, 1685906003,
+                                1700949003, 1700984003, 1700987003, 1701043003, 1701046003, 1701049003, 1700952003, 1700955003, 1700981003)     /* Kamate */
+                      AND (ca.cus_acc_status <> 'W'
+                                       OR t.tur_typ_id NOT IN(3994573797,3994572797))     /*  Prometi rasknjiženja i storna rasknjiženja za priljeve po WO računu */
+                      AND gl_flag IN ('2','4')   /* 2 - poslano u eksternu glavnu knjigu,  4 - verificirani prometi i smiju ići u eksternu glavnu knjigu */ 
+                      AND t.tur_typ_id NOT IN (995188005,995190005, /* Saldacije */
+                                                4041104797,4041105797,4041106797,4041109797,4041110797,4041112797,4041115797,4041117797,  /* Otpisi */
+                                                4041118797,4041120797,4041122797,4041125797,4041138797,4041139797,4041141797,4041144797,4041162797,4041163797, /* Otpisi */
+                                                4041166797,4041179797,4041224797,4041226797,4041228797,4041230797,4041232797,4041233797,4041237797,4041238797, /* Otpisi */
+                                                4041241797,4041242797) /* Otpisi */;
+
+
+
+  select * from CUST_BILL_EXCH where cus_bill_exch_no like  'MJ-22012015-00000001';
+
+    update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-22012015-00000123' where cus_bil_exc_id = 3158237823;
+
+    commit;
+
+   update CUST_BILL_EXCH set status = 'P' where cus_bil_exc_id = 3162985823;
+
+   commit;
+	
+  select * from currency;
+
+  update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-19012015-00000000' where cus_bil_exc_id = 3158312823;
+
+  update CUST_BILL_EXCH set status = 'P' where cus_bil_exc_id = 3161412823;
+
+ 		commit;
+
+					SELECT * 
+                           FROM system_code_value 
+                          WHERE sys_cod_id = 'bill_change_stat';
+
+			
+					SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                           FROM system_code_value 
+                          WHERE sys_cod_id = 'bill_change_stat';
+
+      update system_code_value set sys_code_desc = 'U otvaranju' where sys_cod_val_id = 6569160704;
+
+      
+
+                          
+
+	 					SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                              FROM system_code_value 
+                             WHERE sys_cod_id = 'bill_change_stat' 
+                             		AND sys_code_value = 'A';
+
+		select * from CUST_BILL_EXCH order by recording_time desc;
+                             		
+		select * from cusacc_external where iban_acc_no is not null;
+
+
+		 select * from cusacc_external where iban_acc_no like 'HR9624840081837900010';
+
+		 select * from customer_account where iban_acc_no like 'HR9624840081837900010';
+
+		-- -------------------
+		
+
+		  	SELECT 
+                       ce.cus_id AS cus_id,
+                       ce.cus_name AS name, 
+                       ce.address AS address, 
+                       ce.tax_number AS tax_number,                           
+                       ce.city AS city          
+                    FROM
+                      CUSACC_EXTERNAL ce
+                      WHERE ce.iban_acc_no = 'HR8024110061100006583'
+                          AND ce.bank_sign = 'RB';
+		
+		
+		 -----------  sql za dohvat lookupa CNP19 
+
+		 select  payer_reg_no, payer_tax_number, payer_name, cus_bill_exch_no, cus_bill_ext_no, payer_acc_no, status from CUST_BILL_EXCH; -- where 
+
+		  select  payer_reg_no, payer_tax_number, payer_name, cus_bill_exch_no, cus_bill_ext_no, payer_acc_no, status from CUST_BILL_EXCH
+		  WHERE cus_bill_exch_no like 'MJ17/09/2014%'; -- where 
+
+
+  select status,cus_bil_exc_id  from CUST_BILL_EXCH where cus_bill_exch_no like 'MJ-13012015-00000001'order by user_lock desc;
+
+
+   select * from cusacc_external where iban_acc_no like 'HR2524840081005658748';
+
+   select * from customer_account where iban_acc_no like 'HR2524840081005658748';
+
+   select * from customer_account order by cus_id desc; 
+
+   select * from customer where cus_id = 8830951251;
+
+   select * from customer where cus_id = 2193130251;
+
+    select * from CUST_BILL_EXCH where cus_bill_exch_no like 'MJ-05012015-00000010'order by user_lock desc;
+
+     update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-14012015-00000034' where  cus_bil_exc_id = 3158495823 ;
+
+     commit;
+
+	 
+	 -----------------------------------------------------------------------------------------------------------------
+	 
+	  SET CURRENT_SCHEMA = 'SITP'
+
+					SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                           FROM system_code_value 
+                          WHERE sys_cod_id = 'bill_change_stat';
+
+                          SELECT *
+                           FROM system_code_value 
+                          WHERE sys_cod_id = 'bill_change_stat';
+
+				  update system_code_value set sys_code_desc = 'Predverifikacija' where sys_cod_val_id = 6569159704;
+
+				  commit;
+                          
+
+
+select * from CUST_BILL_EXCH;
+
+select * from CUST_BILL_EXCH order by recording_time desc;
+
+select * from CUST_BILL_EXCH_LOG order by change_time desc;
+
+SELECT * FROM SITP.cust_bill_exch where cus_bil_exc_id=4208656;
+
+select * from CUST_BILL_EXCH_LOG where cus_bil_exc_id=4208656;
+
+
+select * from CUST_BILL_EXCH where  cus_bill_exch_no like 'MJ-18012015-00000001'; --
+
+update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-18012015-00000000' where cus_bil_exc_id = 3656656;
+
+commit;
+
+select * from CUST_BILL_EXCH_LOG;
+
+					SELECT * 
+                           FROM system_code_value 
+                          WHERE sys_cod_id = 'bill_change_stat';
+
+
+                          update system_code_value set sys_code_desc = 'aktivan' where sys_cod_val_id = '6569161704' and ;
+
+
+SELECT * FROM SITP.cust_bill_exch where cus_bil_exc_id=4208656;
+
+select status from CUST_BILL_EXCH where cus_bil_exc_id = 3656656;
+
+  --- prijava   -- 18610 --  HR8024110061100006583
+
+    select * from cusacc_external where iban_acc_no like 'HR8024110061100006583';
+
+    				SELECT 
+                       ce.cus_id AS cus_id,
+                       ce.cus_name AS name, 
+                       ce.address AS address, 
+                       ce.tax_number AS tax_number,                           
+                       ce.city AS city          
+                    FROM
+                      CUSACC_EXTERNAL ce
+                      WHERE ce.iban_acc_no = 'HR8024110061100006583'
+                          AND ce.bank_sign = 'RB';
+
+
+		-- HR9624840081837900010
+
+		select * from cusacc_external where iban_acc_no like 'HR9624840081837900010';
+		
+ ----------- prijava
+
+
+ 
+     select * from customer_account where iban_acc_no like 'HR8224840081135000238';
+
+
+    select * from customer where cus_id = 10951251;
+  
+
+   select * from cusacc_external where iban_acc_no like 'HR8524840081100411342';
+   select * from customer_account where iban_acc_no like 'HR8524840081100411342';
+
+    select * from cusacc_external where iban_acc_no like 'HR7124840083251001989';
+    
+   select * from customer_account where iban_acc_no like 'HR7124840083251001989';
+
+   select * from cusacc_external where iban_acc_no like 'HR4024840087000003853';
+
+
+    select * from cusacc_external where iban_acc_no is not null;
+
+    select * from customer_account where iban_acc_no is not null;
+
+   select * from cusacc_external where iban_acc_no like 'HR5924840083150006775';
+
+   select * from cusacc_external where iban_acc_no like 'HR9624840081837900010';
+
+   select name, register_no, address from customer where cus_id = 10801413605;
+
+   update customer set xcity = 'Šibenik' where cus_id = 10951251;
+
+commit;
+
+   select * from customer_account where iban_acc_no like 'HR8024110061100006583';
+
+   
+   DONJE SVETICE                      00038
+
+
+select name,register_no, address,  xcity from customer where cus_id = 10192980605;  --  greška u podacima
+
+
+select name,register_no, address,  xcity from customer where cus_id = 10801413605;  --  greška u podacima
+
+ select * from customer_account where cus_id = 10801413605;
+
+update customer set xcity = 'Šibenik' where cus_id = 10192980605;
+
+commit;
+
+select * from customer_account;
+
+select * from customer where tax_number is not null;
+
+select * from cusacc_external where iban_acc_no like 'HR9624840081837900010';
+
+select * from CUST_BILL_EXCH where status = 'N' order by user_lock desc;
+
+select * from CUST_BILL_EXCH where payer_reg_no like '2000111';
+
+  delete from CUST_BILL_EXCH where cus_bil_exc_id = 3340656;
+
+     commit;
+
+
+ select cus_bil_exc_id, issue_date, status from CUST_BILL_EXCH where cus_bill_exch_no like  'MJ-12012015-00000006';
+
+
+ select * from CUST_BILL_EXCH where cus_bill_exch_no like  'MJ-27012015-00000004';
+ 
+
+ select * from CUST_BILL_EXCH where cus_bill_exch_no like  'MJ-15012015-00000002';
+
+  update CUST_BILL_EXCH set recording_time = '2015-01-16 08:09:27.267042' where cus_bil_exc_id = 3485656;
+
+  update CUST_BILL_EXCH set status = 'N' where cus_bil_exc_id = 3431656;
+
+ 		commit;
+
+ --------------------------		
+
+		select status, cus_bill_exch_no from CUST_BILL_EXCH where cus_bil_exc_id = 3485656;  -- 3158542823
+
+	 update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 3309656;
+
+ 		commit;
+
+ 		select * from customer where tax_number is not null;
+		
+		
+-------------------------------------------------------------------------------------------------
+SET CURRENT_SCHEMA = 'SIP'
+
+select * from turnover where tur_id like '2836433338321';
+
+select * from turn_customer  where tur_id like '2836433338321';;
+
+select * from customer_account where cus_acc_no like '3200128792' ;
+
+select * from turnover_type where tur_typ_id = 3994622797;
+
+select * from event_trx where eve_id = 1069673213303;
+
+
+select * from transaction_type;
+
+
+
+select * from event where eve_id = 1069673213303;
+
+select * from event where eve_typ_id = 4662612704;
+
+		
+	 

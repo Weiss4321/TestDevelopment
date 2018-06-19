@@ -1,0 +1,758 @@
+package hr.vestigo.modules.collateral.batch.bo30;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+#sql iterator IteratorInColType with(holdability = true) (
+		String in_col_typ
+		);
+
+#sql iterator IteratorId with(holdability = true) (
+        BigDecimal id
+        );
+
+#sql iterator IteratorRatingScore with(holdability = true) (
+        BigDecimal rat_sco_id,
+        String score
+        );
+
+
+
+#sql iterator IteratorCmToVrpType with(holdability = true) (
+		BigDecimal col_cat_id,
+		BigDecimal col_typ_id,
+		String col_typ_code,
+		String in_col_typ,
+		String in_col_name,
+		String currency_clause
+		);
+
+
+public class BO301{
+
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo30/BO301.sqlj,v 1.14 2014/07/09 12:07:42 hraziv Exp $";
+	
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+    private ConnCtx conn2=null;
+	private BigDecimal col_pro_id=null;
+	private YOY00 primary=null;
+	
+	public BO301(BatchContext bc) throws Exception{
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+        this.conn2=new ConnCtx(bc.getNewConnection());
+		primary= new YOY00(bc);
+	}
+    
+    public void closeExtraConnection() throws Exception{
+        this.conn2.close();
+        this.conn2=null;
+    }
+	
+	public BigDecimal insertStockExchange(String code, String name, BigDecimal cou_id) throws Exception{
+		BigDecimal id= primary.getNewId();
+		
+		#sql [connCtx]{
+			insert into stock_exchange (
+				sto_exc_id,
+				code,
+				name,
+				cou_id,
+				use_id,
+				user_lock
+			)VALUES (
+				:(id),
+				:(code),
+				:(name),
+				:(cou_id),
+				1,
+				current timestamp
+			)
+		};
+		return id;
+	}
+	
+	public BigDecimal getStockByCode(String code) throws SQLException{
+		BigDecimal result=null;
+		
+		try{
+			#sql [connCtx]{
+				select sto_exc_id
+				into :(result)
+				from stock_exchange 
+				where code = :(code)			
+			};	
+		}catch(SQLException sqle){
+			if(sqle.getErrorCode()==100){
+				result=null;
+			}else{
+				bc.debug(".....BO301.sqlj getStockByCode        Message  : " + sqle.getMessage());
+				bc.debug(".....BO301.sqlj getStockByCode      Error code : " + sqle.getErrorCode());
+				bc.debug(".....BO301.sqlj getStockByCode        SQLState : " + sqle.getSQLState());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+	
+	public BigDecimal getCountry(String country) throws SQLException{
+		BigDecimal result=null;
+		
+		try{
+			#sql [connCtx]{
+				select cou_id
+				into :(result)
+				from country 
+				where shortcut_num = :(country)			
+			};	
+		}catch(SQLException sqle){
+			if(sqle.getErrorCode()==100){
+				result=null;
+			}else{
+				bc.debug(".....BO301.sqlj getCountry        Message  : " + sqle.getMessage());
+				bc.debug(".....BO301.sqlj getCountry      Error code : " + sqle.getErrorCode());
+				bc.debug(".....BO301.sqlj getCountry        SQLState : " + sqle.getSQLState());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+	
+	public void insertCMVRPType(String in_col_typ, String in_col_name) throws Exception{
+		#sql [connCtx]{
+			insert into cm_to_in2_vrp_typ (
+				in_col_typ,
+				in_col_name
+			)VALUES (
+				:(in_col_typ),
+				:(in_col_name)
+			)
+		};
+	}
+	
+	public String getCMVRPType(String code) throws SQLException{
+		IteratorInColType iter= null;
+		String result=null;
+		
+		try{
+			#sql [connCtx] iter={
+				select in_col_typ
+				from cm_to_in2_vrp_typ 
+				where in_col_typ = :(code)	
+
+				FETCH FIRST ROW ONLY		
+			};	
+			
+			if(iter!=null){
+				while(iter.next()){
+					result=iter.in_col_typ();
+					break;
+				}
+			}
+			
+		}catch(SQLException sqle){
+			bc.debug(".....BO301.sqlj getCMVRPType        Message  : " + sqle.getMessage());
+			bc.debug(".....BO301.sqlj getCMVRPType      Error code : " + sqle.getErrorCode());
+			bc.debug(".....BO301.sqlj getCMVRPType        SQLState : " + sqle.getSQLState());
+			throw sqle;
+		}finally{
+			iter.close();
+		}
+		return result;
+	}
+	
+	public Map getFromCMVRPType(String type, String issuer) throws SQLException{
+		Map result=null;
+		IteratorCmToVrpType iter= null;
+		try{
+			#sql [connCtx] iter={
+				select 
+					col_cat_id,
+					col_typ_id, 
+					col_typ_code,
+					in_col_typ,
+					in_col_name,
+					currency_clause
+				from 
+					cm_to_in2_vrp_typ 
+				where 
+					in_col_typ = :(type)			
+			};	
+			
+			if(iter!=null){
+				while(iter.next()){	
+					
+					result=new HashMap();
+					result.put("col_cat_id", iter.col_cat_id());
+					result.put("col_typ_id", iter.col_typ_id());
+					result.put("currency_clause", iter.currency_clause());
+					//malo special case hardcode
+					if(type.equals("OE9")){
+						if(issuer.equals("4808")){
+							result.put("col_typ_id", new BigDecimal(24777));
+						}else if(issuer.equals("16431")){
+							result.put("col_typ_id", new BigDecimal(25777));
+						}
+					}	
+					break;
+				}
+			}
+		}catch(SQLException sqle){
+			bc.debug(".....BO301.sqlj getFromCMVRPType        Message  : " + sqle.getMessage());
+			bc.debug(".....BO301.sqlj getFromCMVRPType      Error code : " + sqle.getErrorCode());
+			bc.debug(".....BO301.sqlj getFromCMVRPType        SQLState : " + sqle.getSQLState());
+			throw sqle;
+		}finally{
+			iter.close();
+		}
+		return result;
+	}
+
+	public BigDecimal insertCollIn2(CollIn2Data data) throws Exception{
+        if(data.isin==null){
+            throw new IgnoreException("IsIn je null!");
+        }
+		BigDecimal id= primary.getNewId();
+		data.col_in2_id=id;
+		try{
+		#sql [connCtx]{
+			insert into coll_in2(
+				col_in2_id,
+				col_cat_id,
+				col_typ_id,
+				iss_cus_id,
+				ticker,
+				isin,
+				nom_cur_id,
+				nom_amount,
+				sto_mar_id,
+				issue_date,
+				maturity_date,
+				int_rate,
+				stock_ind,
+				use_id,
+				user_lock,
+				currency_clause,
+		        daily_price,
+		        seniority_indic
+			)values(	
+				
+				:(data.col_in2_id),
+				:(data.col_cat_id),
+				:(data.col_typ_id),
+				:(data.iss_cus_id),
+				:(data.ticker),
+				:(data.isin),
+				:(data.nom_cur_id),
+				:(data.nom_amount),
+				:(data.sto_mar_id),
+				:(data.issue_date),
+				:(data.maturity_date),
+				:(data.int_rate),
+				:(data.stock_ind),
+				1,
+				current timestamp,
+				:(data.currency_clause),
+		        :(data.daily_price),
+		        :(data.seniority_indic)
+			)
+		};
+		
+		return id;
+        }catch(SQLException e){
+            bc.debug("SQLException "+e.getErrorCode()+" exception occured! \n data to insert:"+data.toString());
+            if(e.getErrorCode()==-803){
+                throw new IgnoreException("insertCollIn2 SQL:-803",e);
+            }else{
+                throw e;
+            } 
+        }catch(Exception e){
+            bc.debug("insertCollIn2 exception occured! \n data to insert:"+data.toString());
+            throw e;
+        }
+	}
+    
+    public void updateCollIn2(CollIn2Data data) throws Exception{  
+        try{
+            #sql [connCtx]{
+            update 
+                coll_in2 
+            set
+                sto_mar_id = :(data.sto_mar_id),
+                issue_date = :(data.issue_date),
+                maturity_date = :(data.maturity_date),
+                int_rate =:(data.int_rate),
+                stock_ind = :(data.stock_ind),
+                nom_amount=:(data.nom_amount),
+                daily_price=:(data.daily_price),
+                seniority_indic=:(data.seniority_indic),
+                use_id = 1,
+                user_lock = current timestamp
+            where 
+                col_in2_id = :(data.col_in2_id)
+            };
+        }catch(Exception e){
+            bc.debug("updateCollIn2 exception occured! \n data to update:"+data.toString());
+            throw e;
+        }
+    }
+
+	public BigDecimal insertCollIn2Price(BigDecimal col_in2_id, BigDecimal price, Date date_from, Date date_to) throws Exception{
+		BigDecimal id= primary.getNewId();
+		
+		#sql [connCtx]{
+			insert into coll_in2_price (
+				col_in2_pri_id,
+				col_in2_id,
+				date_from,
+				date_to,
+				price,
+				use_id,
+				user_lock
+			)VALUES (
+				:(id),
+				:(col_in2_id),
+				:(date_from),
+				:(date_to),
+				:(price),
+				1,
+				current timestamp
+			)
+		};
+		return id;
+	}
+    
+    public BigDecimal insertCollIn2Rating(BigDecimal col_in2_id, Date date_from,
+            BigDecimal rat_sco_id, BigDecimal rat_typ_id, String score) throws Exception{
+        BigDecimal id= primary.getNewId();
+        System.out.println("insertCollIn2Rating: col_in2_id:"+col_in2_id+" rat_typ_id:"+rat_typ_id);
+        #sql [connCtx]{
+            insert into coll_in2_rating (
+                
+                col_in2_rat_id,
+                col_in2_id,
+                date_from,
+                date_to,
+                rat_sco_id,
+                rat_typ_id,
+                score,
+                use_id,
+                user_lock
+            )VALUES (
+                :(id),
+                :(col_in2_id),
+                :(date_from),
+                '9999-12-31',
+                :(rat_sco_id),
+                :(rat_typ_id),
+                :(score),
+                1,
+                current timestamp
+            )
+        };
+        return id;
+    }
+    
+    public void updateCollIn2Rating(Date date_to,BigDecimal col_in2_rat_id) throws Exception{        
+        #sql [connCtx]{
+            update 
+                coll_in2_rating 
+            set
+                date_to = :(date_to),
+                use_id = 1,
+                user_lock = current timestamp
+            where 
+                col_in2_rat_id = :(col_in2_rat_id)
+        };
+    }
+    
+    public void updateRatings_old(BigDecimal rat_typ_id, Date date_to, BigDecimal col_in2_id)throws Exception{
+        IteratorId iter= null;
+        try{
+            #sql [conn2] iter={
+                select 
+                    col_in2_rat_id as id
+                from 
+                    coll_in2_rating 
+                where 
+                    col_in2_id=:(col_in2_id) and
+                    rat_typ_id=:(rat_typ_id) and
+                    date_to > :(date_to) and
+                    date_to <>'9999-12-31'
+                    with ur         
+            };  
+            
+            if(iter!=null){
+                if(iter.next()){ 
+                    System.out.println("UPDATING FOR col_in2_rat_id:"+iter.id());
+                    updateCollIn2Rating(date_to,iter.id());
+                }
+            }
+        }catch(SQLException sqle){
+            bc.debug(".....BO301.sqlj updateRatings        Message  : " + sqle.getMessage());
+            bc.debug(".....BO301.sqlj updateRatings      Error code : " + sqle.getErrorCode());
+            bc.debug(".....BO301.sqlj updateRatings        SQLState : " + sqle.getSQLState());
+            throw sqle;
+        }finally{
+            iter.close();
+        }
+    } 
+    public void updateRatings(BigDecimal rat_typ_id, Date date_to, BigDecimal col_in2_id)throws Exception{
+        IteratorId iter= null;
+        try{
+            #sql [conn2] iter={
+                select 
+                    col_in2_rat_id as id
+                from 
+                    coll_in2_rating 
+                where 
+                    col_in2_id=:(col_in2_id) and
+                    rat_typ_id=:(rat_typ_id) and
+                    date_to > :(date_to) 
+                    with ur         
+            };  
+            
+            if(iter!=null){
+                if(iter.next()){ 
+                    System.out.println("UPDATING FOR col_in2_rat_id:"+iter.id());
+                    updateCollIn2Rating(date_to,iter.id());
+                }
+            }
+        }catch(SQLException sqle){
+            bc.debug(".....BO301.sqlj updateRatings        Message  : " + sqle.getMessage());
+            bc.debug(".....BO301.sqlj updateRatings      Error code : " + sqle.getErrorCode());
+            bc.debug(".....BO301.sqlj updateRatings        SQLState : " + sqle.getSQLState());
+            throw sqle;
+        }finally{
+            iter.close();
+        }
+    }    
+    public boolean isCollIn2RatingChanged(BigDecimal col_in2_id,BigDecimal rat_typ_id, String score, Date date_to) throws SQLException{
+        System.out.println("isCollIn2RatingChanged->col_in2_id:"+col_in2_id+" rat_typ_id:"+rat_typ_id+"  score:"+score);
+        int count=0;
+        #sql [connCtx]{
+            select count(*)
+            into :(count)
+            from coll_in2_rating 
+            where 
+                col_in2_id=:(col_in2_id) and
+                rat_typ_id=:(rat_typ_id) and
+                score = :(score) and
+                date_to > :(date_to)
+        
+            };  
+        if(count==0)
+            return true;
+        else
+            return false;
+    }
+    
+    
+    public Map getRatingScore(BigDecimal rat_typ_id, String score) throws SQLException{
+        Map result=null;
+        IteratorRatingScore iter= null;
+        try{
+            #sql [connCtx] iter={
+                select 
+                    rat_sco_id,
+                    score
+                from rating_score
+                where
+                    rat_typ_id = :(rat_typ_id) and
+                    score = :(score) 
+           
+            };  
+            
+            if(iter!=null){
+                while(iter.next()){ 
+                    
+                    result=new HashMap();
+                    result.put("rat_sco_id", iter.rat_sco_id());
+                    result.put("score", iter.score());  
+                    break;
+                }
+            }
+        }catch(SQLException sqle){
+            bc.debug(".....BO301.sqlj getRatingScore        Message  : " + sqle.getMessage());
+            bc.debug(".....BO301.sqlj getRatingScore      Error code : " + sqle.getErrorCode());
+            bc.debug(".....BO301.sqlj getRatingScore        SQLState : " + sqle.getSQLState());
+            throw sqle;
+        }finally{
+            iter.close();
+        }
+        return result;
+    }
+	
+	public BigDecimal getCMVRPWithIsIn(String isin) throws SQLException{
+        System.out.println("getCMVRPWithIsIn isin:"+isin);
+		BigDecimal result=null;
+		
+		try{
+			#sql [connCtx]{
+				select col_in2_id
+				into :(result)
+				from coll_in2 
+				where isin= :(isin)			
+			};	
+		}catch(SQLException sqle){
+			if(sqle.getErrorCode()==100){
+				result=null;
+			}else{
+				bc.debug(".....BO301.sqlj getCMVRPWithIsIn        Message  : " + sqle.getMessage());
+				bc.debug(".....BO301.sqlj getCMVRPWithIsIn      Error code : " + sqle.getErrorCode());
+				bc.debug(".....BO301.sqlj getCMVRPWithIsIn        SQLState : " + sqle.getSQLState());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+	
+	public BigDecimal getCMVRPWithTicker(String ticker) throws SQLException{
+        System.out.println("getCMVRPWithTicker ticker:"+ticker);
+		BigDecimal result=null;
+		
+		try{
+			#sql [connCtx]{
+				select col_in2_id
+				into :(result)
+				from coll_in2 
+				where ticker= :(ticker)			
+			};	
+		}catch(SQLException sqle){
+			if(sqle.getErrorCode()==100){
+				result=null;
+			}else{
+				bc.debug(".....BO301.sqlj getCMVRPWithTicker        Message  : " + sqle.getMessage());
+				bc.debug(".....BO301.sqlj getCMVRPWithTicker      Error code : " + sqle.getErrorCode());
+				bc.debug(".....BO301.sqlj getCMVRPWithTicker        SQLState : " + sqle.getSQLState());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+    
+    /*
+    public BigDecimal getCMVRP(String isin,String ticker) throws SQLException{
+        System.out.println("getCMVRP isin:"+isin);
+        int blankIsin=0;
+        int blankTicker=0;
+        if((isin!=null) && (isin.compareTo("")!=0)){
+            blankIsin=1;
+        }
+        if((ticker!=null) && (ticker.compareTo("")!=0)){
+            blankTicker=1;
+        }
+        BigDecimal result=null;
+        
+        try{
+            #sql [connCtx]{
+                select col_in2_id
+                into :(result)
+                from coll_in2 
+                where 
+                    ((isin= :(isin)) OR (0=:(blankIsin))) and
+                    (( ticker= :(ticker)) OR (0=:(blankTicker))OR ((1=:(blankIsin)) and (ticker='')))
+                          
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO301.sqlj getCMVRP        Message  : " + sqle.getMessage());
+                bc.debug(".....BO301.sqlj getCMVRP      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO301.sqlj getCMVRP        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        return result;
+        
+    }*/
+    
+    public BigDecimal getCMVRP(String isin,String ticker) throws SQLException{
+        System.out.println("getCMVRP isin:"+isin);
+        int blankIsin=0;
+        int blankTicker=0;
+        if((isin!=null) && (isin.compareTo("")!=0)){
+            blankIsin=1;
+        }
+        if((ticker!=null) && (ticker.compareTo("")!=0)){
+            blankTicker=1;
+        }
+        BigDecimal result=null;
+        if((blankIsin==1)&&(blankTicker==1)){
+            try{
+                #sql [connCtx]{
+                    select col_in2_id
+                    into :(result)
+                    from coll_in2 
+                    where 
+                        (isin= :(isin)) and (ticker= :(ticker))
+                };  
+                return result;
+            }catch(SQLException sqle){
+                if(sqle.getErrorCode()==100){
+                    result=null;
+                }else{
+                    bc.debug(".....BO301.sqlj getCMVRP        Message  : " + sqle.getMessage());
+                    bc.debug(".....BO301.sqlj getCMVRP      Error code : " + sqle.getErrorCode());
+                    bc.debug(".....BO301.sqlj getCMVRP        SQLState : " + sqle.getSQLState());
+                    throw sqle;
+                }
+            }
+            
+        }
+        try{
+            #sql [connCtx]{
+                select col_in2_id
+                into :(result)
+                from coll_in2 
+                where 
+                    (isin= :(isin)) and (1=:(blankIsin))
+            };  
+            return result;
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO301.sqlj getCMVRP        Message  : " + sqle.getMessage());
+                bc.debug(".....BO301.sqlj getCMVRP      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO301.sqlj getCMVRP        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        try{
+            #sql [connCtx]{
+                select col_in2_id
+                into :(result)
+                from coll_in2 
+                where 
+                    (ticker= :(ticker)) and (1=:(blankTicker))
+                          
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO301.sqlj getCMVRP        Message  : " + sqle.getMessage());
+                bc.debug(".....BO301.sqlj getCMVRP      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO301.sqlj getCMVRP        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        
+        return result;
+        
+    }
+	
+	/**
+	* zatvaranje sloga vrijednosnice
+	* 
+	* @param col_in2_id id sloga
+	* @param date_to datum d okad vrijedi
+	* 
+	*/
+	public void updateCollIn2Price(BigDecimal col_in2_id ,Date date_to) throws SQLException{
+		#sql [connCtx]{
+			update coll_in2_price 
+			set date_to = :(date_to)
+			where col_in2_id = :(col_in2_id) and
+			date_to = '9999-12-31'		
+		};	
+	}
+	
+	
+	public BigDecimal insertCollIn2Price(BigDecimal col_in2_id ,Date date_from, BigDecimal price) throws Exception{
+		BigDecimal id= primary.getNewId();
+		
+		#sql [connCtx]{
+			insert into coll_in2_price (
+				col_in2_pri_id,
+				col_in2_id,
+				date_from,
+				date_to,
+				price,
+				use_id,
+				user_lock
+			)VALUES (
+				:(id),
+				:(col_in2_id),
+				:(date_from),
+				'9999-12-31',
+				:(price),
+				1,
+				current timestamp
+			)
+		};
+		return id;
+	}
+	
+	
+	public BigDecimal getCustomer(String register_no) throws SQLException{
+		BigDecimal result=null;
+		
+		try{
+			#sql [connCtx]{
+				select cus_id 
+				into :(result)
+				from CUSTOMER
+				where REGISTER_NO =:(register_no)			
+			};	
+		}catch(SQLException sqle){
+			if(sqle.getErrorCode()==100){
+				result=null;
+			}else{
+				bc.debug(".....BO301.sqlj getCustomer        Message  : " + sqle.getMessage());
+				bc.debug(".....BO301.sqlj getCustomer      Error code : " + sqle.getErrorCode());
+				bc.debug(".....BO301.sqlj getCustomer        SQLState : " + sqle.getSQLState());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+	
+	public BigDecimal getCurrency(String code_char) throws SQLException{
+		BigDecimal result=null;
+		
+		try{
+			#sql [connCtx]{
+				select cur_id
+				into :(result)
+				from CURRENCY
+				where code_char = :(code_char)
+		
+			};	
+		}catch(SQLException sqle){
+			if(sqle.getErrorCode()==100){
+				result=null;
+			}else{
+				bc.debug(".....BO301.sqlj getCurrency        Message  : " + sqle.getMessage());
+				bc.debug(".....BO301.sqlj getCurrency      Error code : " + sqle.getErrorCode());
+				bc.debug(".....BO301.sqlj getCurrency        SQLState : " + sqle.getSQLState());
+				throw sqle;
+			}
+		}
+		return result;
+	}
+	
+    public String fetchRecipients(String code) throws SQLException{
+        bc.debug("sqlj fetchRecipients."); 
+        String address = null;
+        #sql[connCtx]{
+            SELECT dest_mail_address 
+            INTO :address
+            FROM report_def 
+            WHERE rpt_code = :(code)
+        }; 
+        bc.debug("sqlj fetchRecipients gotov."); 
+        return address;   
+    }
+    
+}

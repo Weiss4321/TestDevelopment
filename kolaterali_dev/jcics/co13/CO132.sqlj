@@ -1,0 +1,227 @@
+package hr.vestigo.modules.collateral.jcics.co13;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+//import hr.vestigo.modules.collateral.common.yoyH.YOYH0;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+  
+/**
+ * CO132 class insert data about colaterall owner into table COLL_OWNERS 
+ *  
+ */
+public class CO132 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co13/CO132.sqlj,v 1.21 2011/11/09 12:55:20 hramkr Exp $";
+    public DeclCO13 decl = null;
+	
+	public CO132 (DeclCO13 decl) {
+		this.decl = decl;
+	}
+	
+		
+	
+    public void execute(TransactionContext tc) throws Exception {
+        
+        ConnCtx ctx = tc.getContext();
+         int broj = -1; 
+    
+         //provjerava da li vec postoji isti vlasnik
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        try {
+            #sql [ctx] {SELECT COUNT(*) INTO :broj 
+                            FROM coll_owner 
+                            WHERE col_hea_id = :(decl.collownersinsertmapping.CollOwners_COL_HEA_ID)
+                                AND cus_id = :(decl.collownersinsertmapping.CollOwnersDialog_CUS_ID)
+                                
+                            };
+
+            tc.debug ( "...broj: " + broj);
+
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO132.sqlj select coll_owners SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......CO132.sqlj select coll_owners SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......CO132.sqlj select coll_owners SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction CO132: Error select coll_owners! ","err411a", null);
+        }
+        
+        if(broj > 0){
+            throw new VestigoTMException(1, "Transaction CO132: Error select coll_owners! ","errclt13", null);
+        }
+// provjera indikatora glavnog vlasnika, dozvoljen je samo jedan aktivan glavni vlasnik
+        String main_owner = decl.collownersinsertmapping.Kol_txtMainOwner;
+        broj = -1;  
+        try {
+            #sql [ctx] {SELECT COUNT(*) INTO :broj 
+                            FROM coll_owner 
+                            WHERE col_hea_id = :(decl.collownersinsertmapping.CollOwners_COL_HEA_ID)
+                                AND 
+                                    date_until = '9999-12-31'
+                                AND
+                                    main_owner = 'D'
+                            };
+
+            tc.debug ( "...broj: " + broj);
+
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO132.sqlj select main owner from coll_owners SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......CO132.sqlj select main owner from coll_owners SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......CO132.sqlj select main owner from coll_owners SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction CO132: Error selecting from coll_owners! ","err411a", null);
+        }           
+           
+        if (broj > 0 && main_owner != null && main_owner.equalsIgnoreCase("D")) {
+            throw new VestigoTMException(1, "Transaction CO132: Error select main owner from coll_owners! ","errclt11", null);
+        } else if (broj <= 0 && main_owner != null && main_owner.equalsIgnoreCase("N")) {
+         // ako je kao indikator upisano N, provjeriti da li je ovo jedini vlasnik, ne smije biti N                
+            throw new VestigoTMException(1, "Transaction CO132: Error select main owner from coll_owners! ","errclt12", null);
+        }
+   
+        
+        int serNum = 0;
+        //dohvaca max redni broj vlasnika nekog collaterala, ako je null zamjeni s 1 
+        try{
+            #sql [ctx]{
+                    SELECT coalesce(max(ser_num),0)  INTO :serNum
+                    FROM coll_owner
+                    WHERE col_hea_id = :(decl.collownersinsertmapping.CollOwners_COL_HEA_ID)
+                };
+            tc.debug("max redni broj vlasnika nekog collaterala" + serNum );    
+            serNum++;
+            
+        }catch(java.sql.SQLException sel){
+                tc.debug ( "......CO132.sqlj SELECT max(ser_num) INTO :serNum FROM coll_owner SQL ErrorCode " + sel.getErrorCode());
+                tc.debug ( "......CO132.sqlj SELECT max(ser_num) INTO :serNum FROM coll_owner SQL SQLState " + sel.getSQLState());
+                tc.debug ( "......CO132.sqlj SELECT max(ser_num) INTO :serNum FROM coll_owner SQL Message " + sel.getMessage());
+                throw new VestigoTMException(1, "Transaction CO132: Error SELECT max(ser_num) coll_owner! ","err411a", null);
+        }           
+        
+            
+        //generator id-a za modul Collateral
+        hr.vestigo.modules.collateral.common.yoy0.YOY00 id_generator = new hr.vestigo.modules.collateral.common.yoy0.YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id = id_generator.getNewId();
+     
+    
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+        tc.debug ( "......CO132.sqlj date_from " + decl.collownersinsertmapping.CollOwnersDialog_DATE_FROM);
+        tc.debug ( "......CO132.sqlj collaterall_id " + collaterall_id);
+                
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_txtRegisterNo " + decl.collownersinsertmapping.CollOwnersDialog_txtRegisterNo);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_CUS_ID " + decl.collownersinsertmapping.CollOwnersDialog_CUS_ID);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_txtCode " + decl.collownersinsertmapping.CollOwnersDialog_txtCode);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_txtFirstName " + decl.collownersinsertmapping.CollOwnersDialog_txtFirstName);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_txtSurname " + decl.collownersinsertmapping.CollOwnersDialog_txtSurname);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_txtUseCodeValue " + decl.collownersinsertmapping.CollOwnersDialog_txtUseCodeValue);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_txtUseCodeDesc " + decl.collownersinsertmapping.CollOwnersDialog_txtUseCodeDesc);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwners_COL_HEA_ID " + decl.collownersinsertmapping.CollOwners_COL_HEA_ID);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_DATE_FROM " + decl.collownersinsertmapping.CollOwnersDialog_DATE_FROM);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_DATE_UNTIL " + decl.collownersinsertmapping.CollOwnersDialog_DATE_UNTIL);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_USE_OPEN_ID " + decl.collownersinsertmapping.CollOwnersDialog_USE_OPEN_ID);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_DATE_UNTIL " + decl.collownersinsertmapping.CollOwnersDialog_DATE_UNTIL);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.CollOwnersDialog_USE_ID " + decl.collownersinsertmapping.CollOwnersDialog_USE_ID);
+        tc.debug ( "\n......CO132.sqlj decl.collownersinsertmapping.Kol_txtMainOwner " + decl.collownersinsertmapping.Kol_txtMainOwner);
+        
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+     
+//INSERT INTO coll_owners
+        try{     
+                #sql [ctx]{  INSERT INTO coll_owner 
+                                               (coll_own_id,
+                                                register_no,
+                                                cus_id,
+                                                ser_num,
+                                                part_id,
+                                                col_hea_id,
+                                                date_from,
+                                                date_until,
+                                                use_open_id,
+                                                use_id,
+                                                opening_ts,
+                                                user_lock,
+                                                part_id2,
+                                                own_num,
+                                                num_of_estate, 
+                                                main_owner,
+                                                statement_owner_id
+                                                ) 
+                            VALUES( :collaterall_id,
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_txtRegisterNo),
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_CUS_ID),
+                                    :serNum,
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_txtUseCodeValue),
+                                    :(decl.collownersinsertmapping.CollOwners_COL_HEA_ID),
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_DATE_FROM),
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_DATE_UNTIL),
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_USE_OPEN_ID),
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_USE_ID),
+                                    current timestamp,
+                                    current timestamp,
+                                    :(decl.collownersinsertmapping.CollOwnersDialog_txtUseCodeDesc),
+                                    :(decl.collownersinsertmapping.Kol_txtOwnNum),
+                                    :(decl.collownersinsertmapping.Kol_txtOwnNumOfEstate),
+                                    :(decl.collownersinsertmapping.Kol_txtMainOwner),
+                                    :(decl.collownersinsertmapping.Kol_txtStatementUseId)
+                                    )
+                            };
+      
+        }catch(java.sql.SQLException se){
+            tc.debug ( "......CO132.sqlj insert into coll_owners SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO132.sqlj insert into coll_owners SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO132.sqlj insert into coll_owners SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO132: Error inserting coll_owners! ","err411a", null);
+        }
+        
+        BigDecimal col_hea_id = decl.collownersinsertmapping.CollOwners_COL_HEA_ID;
+        BigDecimal col_cat_id = null;
+        BigDecimal col_typ_id = null;
+        BigDecimal col_sub_typ_id = null;
+        
+        try
+        {
+            #sql [ctx] {
+                 SELECT
+                    a.col_cat_id,
+                    a.col_type_id,
+                    b.real_est_type
+                INTO
+                    :(col_cat_id),
+                    :(col_typ_id),
+                    :(col_sub_typ_id)
+                FROM coll_head a left outer join coll_restate b on a.col_hea_id = b.col_hea_id 
+                WHERE a.col_hea_id = :(col_hea_id)
+             };
+        }
+        catch(java.sql.SQLException se)
+        {
+            if(se.getErrorCode() != 100) throw se;
+        }
+        
+
+     // samo za stambene nekretnine   col_typ_id = 8777     
+/*        if ( col_cat_id != null && col_cat_id.compareTo(new BigDecimal("618223")) == 0 && 
+                col_typ_id != null && col_typ_id.compareTo(new BigDecimal("8777")) == 0 &&
+                col_sub_typ_id != null && col_sub_typ_id.compareTo(new BigDecimal("1156953223")) != 0) {
+            YOYH0 yoyh0 = new YOYH0(tc, col_hea_id);            
+            yoyh0.azurirajCRM_HNBPrihvatljivost();
+            tc.debug ( "......odredjena crm hnb prihvatljivost ");
+            decl.collownersinsertmapping.Kol_CRMHnb = yoyh0.getCRM_HNBPrihvatljivost();   
+        } */
+     // poziv common-a za update prihvatljivosti
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collownersinsertmapping.Kol_ND =yoyg0.getNDPrihvatljivost();
+        decl.collownersinsertmapping.Kol_B2 = yoyg0.getB2StandPrihvatljivost();
+        decl.collownersinsertmapping.Kol_HNB = yoyg0.getHNBPrihvatljivost();
+        decl.collownersinsertmapping.Kol_B2IRB = yoyg0.getB2IRBPrihvatljivost();    
+        
+        decl.collownersinsertmapping.Kol_ND_dsc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collownersinsertmapping.Kol_B2_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collownersinsertmapping.Kol_HNB_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collownersinsertmapping.Kol_B2IRB_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();
+
+        decl.collownersinsertmapping.Kol_CRMHnb = yoyg0.getCRMHNBMisljenje();
+    }//execute
+}	
+			 

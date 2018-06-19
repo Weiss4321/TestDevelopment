@@ -1,0 +1,55 @@
+package hr.vestigo.modules.collateral.jcics.co03;
+
+//Transaction gets data about customer who use placement for given customer cus_id
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+public class CO033 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co03/CO033.sqlj,v 1.3 2014/10/07 10:54:20 hrazst Exp $";
+
+	private DeclCO03 decl = null;
+		
+	public CO033(DeclCO03 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO033.sqlj     " );
+		tc.debug ( "......CO033.sqlj     TRANSAKCIJA ZA DOHVAT KORISNIKA PLASMAN NA OSNOVU CUS_IS" );
+		tc.debug ( "......CO033.sqlj     CollHfPriorDialogPlacementUse " );
+		tc.debug ( "......CO033.sqlj     decl.chpdplausemap.CUS_ID " +  decl.chpdplausemap.CUS_ID);
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+	
+		
+		
+		try{			
+			#sql [ctx] {SELECT  register_no, 
+								name
+						INTO    :(decl.chpdplausemap.CollHfPriorDialog_txtColaCusIdUseRegisterNo),
+								:(decl.chpdplausemap.CollHfPriorDialog_txtColaCusIdUseOwnerName) 
+
+					    FROM 	customer  
+						WHERE  	cus_id = :(decl.chpdplausemap.CUS_ID)                                                
+								
+				};                                                         
+		                                                                                                                          
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO033.sqlj  SQLException   decl.chpdplausemap.CUS_ID     " + decl.chpdplausemap.CUS_ID );
+			tc.debug ( "......CO033.sqlj select  from customer SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO033.sqlj select  from customer SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO033.sqlj select  from customer SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO033: Error selecting register_no, name from customer ! ","errclt1", null);
+		}
+		tc.debug("......CO033.sqlj  register_no     " + decl.chpdplausemap.CollHfPriorDialog_txtColaCusIdUseRegisterNo );
+		tc.debug("......CO033.sqlj  name            " + decl.chpdplausemap.CollHfPriorDialog_txtColaCusIdUseOwnerName );
+			                    
+
+	}
+	
+}
+

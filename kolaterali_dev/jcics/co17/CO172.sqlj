@@ -1,0 +1,112 @@
+package hr.vestigo.modules.collateral.jcics.co17;
+
+import java.math.BigDecimal;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;	
+
+//ovo u import OBAVEZNO (tako mora biti po nareðenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+/**
+ * CO172 class insert data  into table REAL_ESTATE_TYPE
+ *  
+ */
+public class CO172 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co17/CO172.sqlj,v 1.6 2006/06/06 08:21:23 hrajkl Exp $";
+    public DeclCO17 decl = null;
+	
+	public CO172 (DeclCO17 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+		
+			 //provjerava da li vec postoji isti vlasnik
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			java.sql.Date DateFrom = null;		
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			DateFrom = new java.sql.Date(timeT);
+			
+			java.sql.Date DateUntil = java.sql.Date.valueOf("9999-12-31");
+    		
+            //generator id-a za modul Collateral
+        	YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+			java.math.BigDecimal collaterall_id = id_generator.getNewId();
+			//java.math.BigDecimal eve_id = new BigDecimal("5714145003");//ne postoji u novoj verziji tablice
+			
+			//dali postoji isti zapis
+			int num = 0;
+			try {
+				#sql [ctx] {SELECT COUNT(*) INTO :num 
+			    			FROM 
+								real_estate_type 
+			    			WHERE 
+								real_es_type_code=:(decl.realestatetypeinsertm.RealEstateDailog_txtCode) 
+			    	};			    	
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+			    	tc.debug ( "...broj postojecih zapisa: " + num);
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+		    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO172.sqlj insert into real_state_type SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO172.sqlj insert into real_state_type SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO172.sqlj insert into real_state_type SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO172: Error inserting into real_state_type! ","err411a", null);
+            }
+		    if(num > 0){// ako vec postoji real_es_type_code
+			    throw new VestigoTMException(1, "Transaction CO172: Error inserting into real_state_type! ","errclt8", null);
+			}
+		    
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n......CO172.sqlj code " + decl.realestatetypeinsertm.RealEstateDailog_txtCode);
+			tc.debug ( "\n......CO172.sqlj desc " + decl.realestatetypeinsertm.RealEstateDailog_txtDesc);
+			tc.debug ( "\n......CO172.sqlj status " + decl.realestatetypeinsertm.RealEstateDailog_txtRealEsActNoact);
+			tc.debug ( "\n......CO172.sqlj use_id " + decl.realestatetypeinsertm.use_id);
+
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			
+			//INSERT INTO real_estate_type
+			try{	
+			    	#sql [ctx]{  
+							insert into real_estate_type (
+									real_es_type_id,
+									real_es_type_code,
+									real_es_type_desc,
+									COLL_TYPE_ID,
+									real_es_date_from,
+									real_es_date_unti, 
+									real_es_act_noact,
+									use_open_id,
+									use_id,
+									opening_ts,
+									user_lock,
+									bank_sign
+									)
+								values (
+									:collaterall_id, 
+									:(decl.realestatetypeinsertm.RealEstateDailog_txtCode), 
+									:(decl.realestatetypeinsertm.RealEstateDailog_txtDesc),
+									:(decl.realestatetypeinsertm.COLL_TYPE_ID),
+									:(DateFrom),
+									:(DateUntil),
+									:(decl.realestatetypeinsertm.RealEstateDailog_txtRealEsActNoact),
+									:(decl.realestatetypeinsertm.use_id),
+									:(decl.realestatetypeinsertm.use_id),
+									current timestamp,
+									current timestamp,
+									:(tc.getBankSign())
+								)
+         		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO172.sqlj insert into real_state_type SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO172.sqlj insert into real_state_type SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO172.sqlj insert into real_state_type SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO172: Error inserting real_state_type! ","err411a", null);
+				}
+		}
+}	
+			

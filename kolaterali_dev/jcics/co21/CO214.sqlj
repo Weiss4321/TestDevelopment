@@ -1,0 +1,459 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy9.*;
+import hr.vestigo.modules.collateral.common.yoyH.YOYH0;
+
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+ 
+  
+public class CO214 extends RemoteTransaction {
+// akcija verifikacije na verifikacijskoj listi
+// update aktivnog sloga za verifikacijsku listu s koje se nalog salje:
+// 		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = VERIFICIRAJ	
+// insert u tbl. COLL_LIST_Q sloga za listu na koju ce collateral otici sto ovisi o statusima
+// 		status=0
+//		income_time = current timestamp
+//		use_id = null 
+//		org_uni_id = null 
+// update collateral_status, mortgage_status, cover_indic, basic_data_status, use_id_ver, verification_ts 
+
+// Milka 25.09.2006 
+// akcija verificiraj: salje predmet dalje u obradu ovdino o parametrizaciji
+// 1. ako predmet preskace autorizaciju i ide odmah na arhivsku listu (automatska autorizacija)
+//	 update aktivnog sloga za verifikacijsku listu s koje se nalog salje:
+//		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = AUTORIZIRAJ	
+// insert u tbl. COLL_LIST_Q sloga za arhivsku listu
+//		status=0
+//		income_time = current timestamp
+//		use_id = null 
+//		org_uni_id = null 
+// update collateral_status, mortgage_status, cover_indic, basic_data_status, coll_data_status, use_id_ver, verification_ts 	
+// use_id_aut, autorization_ts
+//
+// 2. predmet ide na autorizaciju: imam 2 slucaja
+// 2.1. nisu upisani i potvrdjeni podaci coll. off. - ide na autorizacijsku listu
+//	 update aktivnog sloga za verifikacijsku listu s koje se nalog salje:
+//		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = VERIFICIRAJ	
+//	insert u tbl. COLL_LIST_Q sloga za autorizacijsku listu
+//		status=0
+//		income_time = current timestamp
+//		use_id = null 
+//		org_uni_id = null 
+//	update collateral_status, mortgage_status, cover_indic, basic_data_status, use_id_ver, verification_ts 	
+// 2.2. upisani su i potvrdjeni podaci coll.off. - ide na arhivsku listu			
+//	 update aktivnog sloga za verifikacijsku listu s koje se nalog salje:
+//		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = VERIFICIRAJ	
+//	insert u tbl. COLL_LIST_Q sloga za arhivsku listu
+//		status=0
+//		income_time = current timestamp
+//		use_id = null 
+//		org_uni_id = null 
+//	update collateral_status, mortgage_status, cover_indic, basic_data_status, use_id_ver, verification_ts
+//	use_id_aut, autorization_ts
+	
+// Milka, 03.11.2006 - dodana kontrola: referent koji je poslao predmet na verifikaciju ne moze ga verificirati	  
+
+// Milka, 05.02.2007 - dodano knjizenje kolaterala
+// 	
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO214.sqlj,v 1.18 2014/12/16 12:24:02 hrakis Exp $";
+	
+	private DeclCO21 d = null;
+
+	private Date CURR_DATE = null;
+	private Timestamp CREATE_DATE_TIME = null;
+
+	
+	public CO214(DeclCO21 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+		
+	    ConnCtx ctx = tc.getContext();
+		
+		
+		String mortgage_status = "";
+		String collateral_status = "";
+		String workflow_indic= "";
+		String cover_indic= "";
+		String basic_data_status= "";
+		String coll_data_status= "";
+
+		String mortgage_flag = "";
+		String cover_flag = "";
+		String coll_data_flag ="";
+		
+		String accounting_indic = "";
+		
+		d.collverification.poruka = ""; 
+		
+		
+		String ver_ind = "";
+		String aut_ind = "";
+		
+		String basic_data_status_new= "";
+		String mortgage_status_new = "";		
+		String cover_indic_new= "";
+		String coll_data_status_new= "";		
+		
+		Timestamp verification_ts = null;
+		BigDecimal use_id_ver = null;
+		Timestamp autorization_ts  = null;
+		BigDecimal use_id_aut = null;
+		
+		Timestamp verification_ts_new = null;
+		BigDecimal use_id_ver_new = null;
+		Timestamp autorization_ts_new  = null;
+		BigDecimal use_id_aut_new = null;
+		
+		BigDecimal ver_snd_user = null;
+		BigDecimal col_cat_id = null;
+		BigDecimal col_type_id = null;
+		
+        BigDecimal colCatIdInsurance = new BigDecimal("616223.00");  // police osiguranja
+        BigDecimal colCatIdCesije = new BigDecimal("614223.00");  // cesije
+        BigDecimal colCatIdGuarantee= new BigDecimal("615223.00");  // garancije
+        
+        BigDecimal colTypeIdInsuranceLOMB=new BigDecimal("54777");
+        BigDecimal colTypeIdGuaranteeLoc=new BigDecimal("35777");
+        
+            
+        
+//	verificirati se moze samo ako je collateral na verifikacijskoj listi i ako 
+//  je status osnovnih podataka 1 ili 3
+		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+
+		try {
+
+		#sql[ctx]{  
+			SELECT
+					a.mortgage_status,
+					a.collateral_status,
+					a.workflow_indic,
+					a.cover_indic, 
+					a.basic_data_status,
+					a.coll_data_status,
+					a.verification_ts,
+					a.use_id_ver,
+					a.autorization_ts,
+					a.use_id_aut,
+					a.use_id_ver_snd,
+					d.accounting_indic,
+					b.mortgage_flag,
+					b.cover_flag,
+					b.coll_data_flag,
+					c.ver_ind,
+					c.aut_ind,
+		            a.col_cat_id,
+		            a.col_type_id
+			INTO
+					:(mortgage_status),
+					:(collateral_status),
+					:(workflow_indic),
+					:(cover_indic),
+					:(basic_data_status),
+					:(coll_data_status),
+					:(verification_ts),
+					:(use_id_ver),
+					:(autorization_ts),
+					:(use_id_aut),
+					:(ver_snd_user),
+					:(accounting_indic),
+					:(mortgage_flag),
+					:(cover_flag),
+					:(coll_data_flag),
+					:(ver_ind),
+					:(aut_ind),
+		            :(col_cat_id),
+		            :(col_type_id)
+			FROM
+					coll_head a, coll_category d,collateral_type b, coll_category_prm c
+			WHERE
+					a.col_hea_id=:(d.collverification.col_hea_id)
+			AND	
+					a.collateral_status = '1'
+			AND
+					a.basic_data_status in ('1','3')
+			AND 
+					a.col_cat_id = d.col_cat_id
+			AND
+					a.col_type_id = b.coll_type_id
+			AND 	
+					b.col_cat_id = c.col_cat_id
+			AND 
+					a.origin_org_uni_id = c.org_uni_id
+
+	};  						
+			
+			
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				// poslati poruku na klijenta da collateral nije vise na verif. listi
+				d.collverification.poruka = "wrn475";
+			}
+		}		
+ 
+		tc.info("COLL_HEA_ID:...." + d.collverification.col_hea_id);
+		tc.info("WORKFLOW_INDIC:...." + workflow_indic);				
+		tc.info("COLLATERAL_STATUS:...." + collateral_status);		
+		tc.info("BASIC_DATA_STATUS:...." + basic_data_status);
+		tc.info("MORTGAGE_STATUS...." + mortgage_status);
+		tc.info("COVER_INDIC:...." + cover_indic);
+
+		tc.info("MORTGAGE_FLAG...." + mortgage_flag);
+		tc.info("COVER_FLAG:...." + cover_flag);
+		tc.info("COLL_DATA_FLAG:...." + coll_data_flag);
+
+		tc.info("VERIFIKACIJA:...." + ver_ind);
+		tc.info("AUTORIZACIJA:...." + aut_ind);
+		
+		tc.info("PORUKA .....:" + d.collverification.poruka);		
+		
+
+		#sql[ctx] { 
+			SELECT current date, current timestamp 
+			INTO :(CURR_DATE), :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};		
+		
+
+// Milka, 03.11.2006 - dodana kontrola: referent koji je poslao predmet na verifikaciju ne moze ga verificirati
+		if ((d.collverification.use_id).compareTo(ver_snd_user) == 0) {
+			throw new VestigoTMException(1, "Transaction CO214: Error-verifikator i referent su ista osoba! ","colErr012", null);
+		}
+		
+		
+// Milka 25.09.2006
+// postavljam statuse ovisno o parametrizaciji (da li predmet ide na verifikaciju i autorizaciju)		
+
+		
+//		 postaviti statuse za update, target listu, akciju  ovisno na koju listu ide predmet		
+		basic_data_status_new= basic_data_status;
+		mortgage_status_new = mortgage_status;		
+		cover_indic_new= cover_indic;
+		coll_data_status_new= coll_data_status;			
+		
+		verification_ts_new = verification_ts;
+		use_id_ver_new = use_id_ver;
+		autorization_ts_new  = autorization_ts;
+		use_id_aut_new = use_id_aut;
+
+		YOY60 YOY60=new YOY60(tc);
+		
+		CollListQData plq=new CollListQData();   		
+		
+// predmet ne ide na autorizaciju (verifikacija i automatska autorizacija) i ide na arhivsku listu 
+		if (aut_ind.equalsIgnoreCase("0")) {
+//	 predmet preskace i autorizaciju i ide na arhivsku listu
+			plq.action_type="VERIFICIRAJ";	
+			plq.target_list = "700223";   // arhivska lista
+			d.collverification.proc_status = "3";		
+			
+//mijenjaju se status osnovnih podataka iz 1 na 3 i ostali statusi iz 1 na 2
+			if (basic_data_status.equalsIgnoreCase("1"))
+				basic_data_status_new= "3";
+			if (mortgage_status.equalsIgnoreCase("1"))
+				mortgage_status_new = "2";
+			if (cover_indic.equalsIgnoreCase("1"))
+				cover_indic_new= "2";	
+			if (coll_data_status.equalsIgnoreCase("1"))
+				coll_data_status_new = "2";
+			
+//tko je i kada verificirao
+			verification_ts_new	= CREATE_DATE_TIME;
+			use_id_ver_new = d.collverification.use_id;			
+//tko je i kada autorizirao
+			autorization_ts_new  = CREATE_DATE_TIME;
+			use_id_aut_new = d.collverification.use_id;	
+			
+		} else if (aut_ind.equalsIgnoreCase("1")) {
+// predmet po parametrizaciji ide na autorizaciju
+// 1. slucaj - nisu upisani i potvrdjeni podaci coll.off. predmet ide na autorizacijsku listu
+			plq.action_type="VERIFICIRAJ";	
+			plq.target_list = "699223";   // autorizacijska lista
+			d.collverification.proc_status = "2";			
+//			tko je i kada verificirao
+			verification_ts_new	= CREATE_DATE_TIME;
+			use_id_ver_new = d.collverification.use_id;	
+			
+			if (coll_data_status.equalsIgnoreCase("0")) {
+				if (basic_data_status.equalsIgnoreCase("1"))
+					basic_data_status_new= "2";
+				if (mortgage_status.equalsIgnoreCase("1")) 
+					mortgage_status_new = "2";
+				if (cover_indic.equalsIgnoreCase("1"))
+					cover_indic_new= "2";						
+			} else if (coll_data_status.equalsIgnoreCase("2")) {
+// 2. slucaj - upisani su i potvrdjeni podaci coll.off - predmet ide na arhivsku listu		
+//				 predmet preskace i autorizaciju i ide na arhivsku listu
+				plq.action_type="VERIFICIRAJ";	
+				plq.target_list = "700223";   // arhivska lista
+				d.collverification.proc_status = "3";						
+				
+//				tko je i kada verificirao
+				verification_ts_new	= CREATE_DATE_TIME;
+				use_id_ver_new = d.collverification.use_id;						
+				
+				if (basic_data_status.equalsIgnoreCase("2"))
+					basic_data_status_new= "3";
+				if (mortgage_status.equalsIgnoreCase("1"))
+					mortgage_status_new = "2";
+				if (cover_indic.equalsIgnoreCase("1"))
+					cover_indic_new= "2";	
+/*				if (coll_data_status.equalsIgnoreCase("1"))  podaci coll.off. autoriziraju se na autorizacijskoj listi, ne verificiraju se
+					coll_data_status_new = "2";				*/	
+			}
+		}
+    
+		tc.info("BASIC_DATA_STATUS_NEW:...." + basic_data_status_new);
+		tc.info("MORTGAGE_STATUS_NEW...." + mortgage_status_new);		 
+		tc.info("COVER_INDIC_NEW:...." + cover_indic_new);		
+		tc.info("COLL_DATA_NEW:...." + coll_data_status_new);				
+
+		plq.col_hea_id=d.collverification.col_hea_id;	
+		plq.status="1";
+		plq.income_time = CREATE_DATE_TIME;
+		plq.use_id=d.collverification.use_id;	
+		plq.release_time = CREATE_DATE_TIME;
+		plq.cmnt=null;
+		plq.org_uni_id = d.collverification.org_uni_id;
+		plq.source_list = d.collverification.source_list;
+		plq.status_source_list = "1";
+
+		plq.status_target_list = "0";
+		plq.target_list_use_id = null;
+		plq.target_list_org_uni_id = null;
+		
+		tc.info("COLLATERAL_STATUS_NEW:...." + collateral_status);		
+		tc.info("STATUS......:"+plq.status);
+		tc.info("INCOME_TIME ....."+plq.income_time);
+		tc.info("USE_ID....."+plq.use_id);
+		tc.info("RELEASE TIME .....:" + plq.release_time);
+		tc.info("CMNT......:"+plq.cmnt);
+		tc.info("ACTION_TYPE ....."+plq.action_type);
+		tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+		tc.info("SOURCE_LIST .....:" + plq.source_list);
+		tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		tc.info("TARGET_LIST ....."+plq.target_list);
+		tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+		tc.info("PROC_STATUS....."+d.collverification.proc_status);				
+		 
+		YOY60.update_insert_CollListQ(plq); 
+ 
+//		 Milka, 05.02.2007 - dodano knjizenje kolaterala
+// knjiziti kolateral ako je parametrizacijom definirano da se knjizi
+		
+		if (accounting_indic.equalsIgnoreCase("1")) {
+// knjizi se 		
+			YOY90 YOY90=new YOY90(tc); 
+			 
+			try {
+				YOY90.CollPosting(d.collverification.col_hea_id, false); 
+			} catch (Exception e) {
+			// TODO: handle exception
+//			throw new VestigoTMException(1, "Transaction CO214: Greska kod knjizenja! ","colErr015", null);
+				throw e;
+			}		
+	 
+		} 
+
+		
+		// RTC 13934
+		// poziv commona je stavljen prije updatea koji mijenja user_lock kako polje Zapis promijenio ne bi imalo krivu vrijednost
+		YOYH0 yoyH0 = new YOYH0(tc);
+		yoyH0.historize(d.collverification.col_hea_id);
+		
+		
+// napraviti update statusa,use_id,org_uni_id,VER_SEND_TS		
+
+// 1 - collateral je poslan na verifikacjsku listu
+
+		try {
+
+			#sql[ctx]{
+				UPDATE
+						coll_head
+				SET
+						verification_ts  = :(verification_ts_new),
+						use_id_ver = :(use_id_ver_new),
+						autorization_ts  = :(autorization_ts_new),
+						use_id_aut = :(use_id_aut_new),
+						collateral_status = :(d.collverification.proc_status),
+						mortgage_status = :(mortgage_status_new),
+						cover_indic = :(cover_indic_new),
+						basic_data_status = :(basic_data_status_new),
+						coll_data_status = :(coll_data_status_new),
+		                user_lock = current timestamp
+				WHERE
+						col_hea_id=:(d.collverification.col_hea_id)
+				AND	
+						collateral_status = '1'
+		};			
+			
+			
+			
+			  
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+//				 poslati poruku na klijenta da collateral nije vise na radnoj listi
+				d.collverification.poruka = "wrn475"; 
+			}
+		} 
+
+		tc.info("PORUKA .....:" + d.collverification.poruka);
+		
+// 02.05.2011 - dodana automatska kvacica DKK za week loc, cesije, police zo
+		  
+		if ((col_cat_id.compareTo(colCatIdCesije)== 0 ) ||
+		    (col_cat_id.compareTo(colCatIdGuarantee)== 0 && col_type_id.compareTo(colTypeIdGuaranteeLoc) == 0) ||
+		    (col_cat_id.compareTo(colCatIdInsurance)== 0 && col_type_id.compareTo(colTypeIdInsuranceLOMB) != 0)) {
+	        try {
+
+	            #sql[ctx]{
+	                UPDATE
+	                        loan_beneficiary
+	                SET
+	                        krad_admin_ind = 'D',
+	                        kred_admin_use_id = 1,
+	                        kred_admin_ts  = :(verification_ts_new)
+	                WHERE
+	                        col_hea_id=:(d.collverification.col_hea_id) };
+	        }catch(SQLException sqle){
+	            if (sqle.getErrorCode() == 100) {
+	            }
+	        } 
+		    
+		}
+	}
+} 
+
+

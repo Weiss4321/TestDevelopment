@@ -1,0 +1,121 @@
+package hr.vestigo.modules.collateral.jcics.co19;
+
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO191 class selects data 
+ * from table INSU_POLICY_TYPE	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+#sql iterator Iter191 (	BigDecimal INT_POL_TYPE_ID,
+						String INT_POL_TYPE_CODE,
+						String INT_POL_TYPE_NAME,
+						BigDecimal INT_POL_COMPANY_ID,
+						String IC_CODE,
+						String IC_NAME,
+						java.sql.Date INT_POL_DATE_FROM,
+						java.sql.Date INT_POL_DATE_UNTIL,
+						String login1,
+						String user1,
+						String login2,
+						String user2,
+						java.sql.Timestamp opening_ts,
+						java.sql.Timestamp user_lock,
+						BigDecimal IC_CUS_ID,
+                        String INT_GROUP1,
+                        String INT_GROUP2,
+                        String INT_GROUP3,
+                        String INT_GROUP4,
+                        String REGISTER_NO
+	 );	 
+
+public class CO191 extends SQLJScrollableRemoteTransaction {
+	 
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co19/CO191.sqlj,v 1.6 2017/04/05 10:28:16 hraziv Exp $";
+	
+	public DeclCO19 decl = null;
+	
+	private Iter191 iter = null;
+	
+	public CO191 (DeclCO19 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		#sql [ctx] iter = {
+							SELECT 
+							ipt.INT_POL_TYPE_ID, ipt.INT_POL_TYPE_CODE, ipt.INT_POL_TYPE_NAME,
+							ipt.INT_POL_COMPANY_ID, ic.IC_CODE, ic.IC_NAME,
+							ipt.INT_POL_DATE_FROM, ipt.INT_POL_DATE_UNTIL,
+							us1.login as login1, us1.user_name as user1, us2.login as login2, us2.user_name as user2,
+							ipt.opening_ts, ipt.user_lock, ic.IC_CUS_ID,
+		                    ipt.INT_GROUP1 , ipt.INT_GROUP2 , ipt.INT_GROUP3 , ipt.INT_GROUP4, cus.REGISTER_NO
+							FROM
+							INSU_POLICY_TYPE ipt, INSU_COMPANY ic,
+							APP_USER us1, APP_USER us2, CUSTOMER cus
+							WHERE
+							ipt.INT_POL_COMPANY_ID=ic.IC_ID AND
+							ipt.use_open_id=us1.use_id AND
+							ipt.use_id = us2.use_id AND
+							ipt.use_id = us2.use_id AND
+		                    cus.CUS_ID = ic.IC_CUS_ID
+							order by ipt.INT_POL_TYPE_CODE, ipt.INT_POL_TYPE_NAME
+				};
+	}
+
+	public boolean next() throws Exception {
+		return iter.next();
+	}
+    
+	public void close() {
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	
+	public void populateRowData() throws Exception {
+
+		Vector data = new Vector();
+		Vector hidden = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		
+		//prikazuju se u tablici
+		data.add(iter.INT_POL_TYPE_CODE());//0
+		data.add(iter.INT_POL_TYPE_NAME());//1
+		data.add(iter.IC_NAME());//2
+		data.add(iter.INT_POL_DATE_FROM());//3
+		data.add(iter.INT_POL_DATE_UNTIL());//4
+		
+		//hidden
+		hidden.add(iter.INT_POL_TYPE_ID());//0
+		hidden.add(iter.INT_POL_COMPANY_ID());//1
+		hidden.add(iter.IC_CODE());//2
+		hidden.add(iter.login1());//3
+		hidden.add(iter.user1());//4
+		hidden.add(iter.login2());//5
+		hidden.add(iter.user2());//6
+		hidden.add(iter.opening_ts());//7
+		hidden.add(iter.user_lock());//8
+		hidden.add(iter.REGISTER_NO());//9
+		hidden.add(iter.INT_GROUP1());//10
+		hidden.add(iter.INT_GROUP2());//11
+		hidden.add(iter.INT_GROUP3());//12
+		hidden.add(iter.INT_GROUP4());//13
+				
+		decl.tblInsuPolicyType.addRow(data,hidden);
+	}
+}

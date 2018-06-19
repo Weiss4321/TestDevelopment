@@ -1,0 +1,167 @@
+package hr.vestigo.modules.collateral.jcics.co33;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+
+
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+import java.math.BigDecimal;
+
+ 
+public class CO333 extends RemoteTransaction {
+// akcija vrati predmet s verifikacijske liste na referentsku
+// insert u tbl. AGR_LIST_Q sloga za akciju VRATI U OBRADU
+// update statusa, workflow indikatora
+	
+// predmet se vraca referentu koji ga je poslao na verifikaciju
+// ili se prerasporedjuje odabranom referentu u odabranoj OJ sa monitoring liste	
+// treba napraviti update org_uni_id i use_id u tbl. frame_agreement	
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co33/CO333.sqlj,v 1.3 2011/12/02 14:20:51 hramkr Exp $";
+	 
+	private DeclCO33 d = null;
+
+	private Timestamp CREATE_DATE_TIME = null;
+	
+	public CO333(DeclCO33 d) {
+		this.d = d;
+	}  
+	
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+
+		String proc_status = "";
+		String workflow_indic = "";
+		BigDecimal org_uni_id = null;
+		BigDecimal use_id_ver_snd = null;
+		 
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+		try {
+			
+				#sql[ctx]{  
+						SELECT
+								proc_status,
+								workflow_indic,
+								org_uni_id,
+								use_id_ver_snd
+						INTO
+								:(proc_status),
+								:(workflow_indic),
+								:(org_uni_id),
+								:(use_id_ver_snd)
+						FROM
+								frame_agreement
+						WHERE
+								fra_agr_id=:(d.agrlistback.w_fra_agr_id)
+				};  
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO333: Predmet nije na listi! ","colErr022", null);	
+			}
+		}				
+  
+			#sql[ctx] { 
+				SELECT current timestamp 
+				INTO :(CREATE_DATE_TIME)
+				FROM sysibm.sysdummy1 
+			};				
+   
+
+		tc.info("FRA_AGR_ID:...." + d.agrlistback.w_fra_agr_id);
+		tc.info("PROC_STATUS:...." + d.agrlistback.w_proc_status);
+
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};		
+
+		 
+		YOY61 YOY61=new YOY61(tc);
+		
+		CollListQData plq=new CollListQData();   
+		
+		plq.col_hea_id=d.agrlistback.w_fra_agr_id;
+		
+// ako se predmet vraca sa verifikacijske liste
+// vraca se referentu koji ga je poslao na verifikaciju		
+		if ((d.agrlistback.source_list).compareToIgnoreCase("704223") == 0) {
+			d.agrlistback.use_id_asg = use_id_ver_snd;
+			d.agrlistback.org_uni_id_asg = org_uni_id;
+		} else {
+			d.agrlistback.w_workflow_indic = workflow_indic;
+		}
+		
+//		 source lista
+		plq.source_list = d.agrlistback.source_list;
+		plq.status_source_list = "1";		
+		plq.release_time = CREATE_DATE_TIME;
+		plq.use_id=d.agrlistback.use_id;	
+		plq.org_uni_id = d.agrlistback.org_uni_id;
+		plq.cmnt=d.agrlistback.CollListQ_txaCmnt;
+		plq.action_type=d.agrlistback.action_type;		 		
+		
+//		 target lista		
+		plq.target_list = d.agrlistback.target_list;
+		plq.status_target_list = "0";		
+		plq.income_time = CREATE_DATE_TIME;
+		plq.target_list_use_id = d.agrlistback.use_id_asg;
+		plq.target_list_org_uni_id = d.agrlistback.org_uni_id_asg;
+		
+		
+		plq.status=d.w_proc_status;
+
+		tc.info("AGR_FRA_ID .....:" + plq.col_hea_id);
+		tc.info("INCOME_TIME ....."+plq.income_time);
+		tc.info("USE_ID....."+plq.use_id);
+		tc.info("RELEASE TIME .....:" + plq.release_time);
+		tc.info("CMNT......:"+plq.cmnt);
+		tc.info("ACTION_TYPE ....."+plq.action_type);
+		tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+		tc.info("SOURCE_LIST .....:" + plq.source_list);
+		tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		tc.info("TARGET_LIST ....."+plq.target_list);
+		tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+		tc.info("PROC_STATUS....."+plq.status);				
+		 
+		YOY61.update_insert_AgrListQ(plq); 
+		
+
+		 
+// napraviti update statusa, workflow indikatora, usera i org uni	
+
+		try {
+			#sql[ctx]{
+					UPDATE
+							frame_agreement
+					SET
+							proc_status = :(d.agrlistback.w_proc_status),
+							workflow_indic = :(d.agrlistback.w_workflow_indic),
+							use_id = :(d.agrlistback.use_id_asg),
+							org_uni_id = :(d.agrlistback.org_uni_id_asg),
+		                    user_lock = current timestamp
+							
+					WHERE
+							fra_agr_id=:(d.agrlistback.w_fra_agr_id)
+
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO333: Predmet nije na ref listi! ","colErr022", null);	
+			}
+		}  	
+		 
+	}
+	
+
+}
+
+

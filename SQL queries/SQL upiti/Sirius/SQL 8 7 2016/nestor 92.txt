@@ -1,0 +1,93 @@
+
+SET CURRENT_SCHEMA = 'SITP'
+
+
+							SELECT
+										fci.fee_cal_ite_id,
+										fci.pay_cov_id,
+										fp.f_pay_id,
+										fci.trx_cur_id,
+										fp.order_trn,
+										fci.trx_amount,
+										c.code_num,
+										fci.fee_amount,
+										fci.tur_id,
+										t.process_date,
+										fci.fee_status
+								FROM
+										paym_cover pc,
+										currency c,
+										f_payment fp,
+										fee_calc_item fci
+								LEFT OUTER JOIN
+										turnover t
+								ON
+										t.tur_id=fci.tur_id
+								WHERE
+										fci.pay_cov_id=pc.pay_cov_id
+								AND
+										pc.f_pay_id=fp.f_pay_id
+								AND
+										c.cur_id=fci.trx_cur_id
+								AND
+										fci.fee_cal_hea_id= 1668548665
+								ORDER BY
+										fp.f_pay_id
+
+
+		select * from turn_customer order by process_timestamp desc;
+
+
+		select * from customer_account where cus_acc_no = '1135006958';  -- cus_acC_id =  194501656
+
+
+
+
+		 SELECT
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id ,
+                       t.tur_id,
+                       t.pay_ord_id
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc                      
+                    WHERE
+                    tc.tur_id = t.tur_id                   
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = 194501656
+				ORDER BY tc.process_timestamp ASC  with ur 
+                    
+                    AND tc.process_timestamp >= '08:50:03.476049'
+                    AND t.process_timestamp >= '08:50:03.476049'                                         
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+                      SELECT 
+                   recording_time
+              
+                FROM 
+                     batch_log 
+                WHERE
+                    bat_def_id = 1617844003
+                    AND param_value like 'RB#PAY;cp1250;P%'  
+                    AND exec_return_code in ('100', '104')
+                    order by recording_time desc 
+                    fetch first 1 rows only 
+                    with ur
+
+
+
+
+										
+                                select count(*) from interface_coll_tbl 
+				where orig_trx_date = '15.06.2016' with ur;
+
+				
+										
+                                select count_big(*) from interface_coll_tbl 
+				where orig_trx_date = '15.06.2016' with ur;

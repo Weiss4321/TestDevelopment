@@ -1,0 +1,460 @@
+package hr.vestigo.modules.collateral.batch.bo60;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO601
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo60/BO601.sqlj,v 1.7 2017/03/14 12:00:19 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+
+    private final String policy_type_coll = "K";
+    private final String policy_type_inspol = "P";
+
+    private BigDecimal eve_id;
+    
+    #sql iterator IterPolicies with(holdability = true) (
+        BigDecimal id,
+        String ip_code,
+        BigDecimal col_hea_id,
+        Date ip_paid_until,
+        String wrn_status,
+        String col_num
+    );
+
+    
+    public BO601(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa.
+     */
+    public BigDecimal insertIntoEvent() throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO601.insertIntoEvent");
+            batchContext.beginTransaction();
+
+            this.eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4490037704"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Priprema kandidata za slanje opomena po policama osig.");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("BO601.insertIntoEvent");
+            return this.eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u tablicu event!", ex);
+            throw ex;
+        }
+    }
+    
+    /**
+     * Metoda koja vraæa da li su za zadanu vrstu police osiguranja sve obavijesti/opomene obraðene, tj. poslane/riješene/odbaèene.  
+     * @return <b>true</b> ako su sve obavijesti obraðene, <b>false</b> ako nisu
+     */
+    public boolean isAllWarnNotesHandled() throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO601.isAllWarnNotesHandled");
+            
+            BigDecimal ins_war_not_id;
+            #sql [connCtx] {
+                SELECT ins_war_not_id
+                INTO :(ins_war_not_id)
+                FROM ip_warning_notes
+                WHERE ip_id IS NOT NULL
+                  AND candidate_status IN ('K','N','A')
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            return false;
+        }
+        catch (SQLException ex)
+        {
+            if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return true;
+            }
+            else
+            {
+                batchContext.error("Greska kod provjere da li su obradjene sve obavijesti za police koje osiguravaju kolateral!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO601.isAllWarnNotesHandled");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa riješene police osiguranja.
+     * @return iterator s podacima
+     */
+    public IterPolicies selectResolvedPolicies() throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO601.selectResolvedPolicies");
+            
+            IterPolicies iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.ip_id         AS id,
+                    a.ip_code       AS ip_code,
+                    a.col_hea_id    AS col_hea_id,
+                    a.ip_vali_until AS ip_paid_until,
+                    a.wrn_status    AS wrn_status,
+                    b.col_num       AS col_num
+                FROM insurance_policy a
+                INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                WHERE a.wrn_status IN ('1','5')
+                  AND b.col_cat_id = 618223
+                  AND b.collateral_status IN ('1','2','3')
+                  AND EXISTS (
+                    SELECT a2.ip_id
+                    FROM insurance_policy a2
+                    WHERE a2.col_hea_id = a.col_hea_id
+                      AND a2.ip_act_noact = 'A'
+                      AND a2.ip_vali_until >= CURRENT DATE   
+                  )
+                ORDER BY b.col_num
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja rijesenih polica koje osiguravaju kolateral!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO601.selectResolvedPolicies");
+        }
+    }
+    
+    /**
+     * Metoda koja ažurira status slanja obavijesti/opomene zadanoj polici na '0'-bez podstatusa.
+     * @param id ID police osiguranja
+     */
+    public void updatePolicyStatusToResolved(BigDecimal policy_id) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO601.updatePolicyStatusToResolved");
+            
+            #sql [connCtx] {
+                UPDATE insurance_policy
+                   SET wrn_status = '0',
+                       use_id = 1,
+                       user_lock = CURRENT TIMESTAMP
+                 WHERE ip_id = :(policy_id)
+            };
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska azuriranja statusa slanja/obavijesti opomene za policu osiguranja IP_ID = " + policy_id + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO601.updatePolicyStatusToResolved");
+        }
+    }
+    
+    /**
+     * Metoda koja ubacuje novi zapis o riješenosti u evidenciju obavijesti/opomena po policama osiguranja.
+     * @param policy_id ID police osiguranja
+     * @param col_hea_id ID kolaterala
+     * @param resolved_date Datum rješavanja opomene
+     * @param wrn_status Status slanja obavijesti/opomene koji se rješava
+     * @param cus_let_typ_id Tip obavijesti/opomene koji se rješava
+     */
+    public void insertResolvedIntoWarningNotes(BigDecimal policy_id, BigDecimal col_hea_id, Date resolved_date, String wrn_status, BigDecimal cus_let_typ_id) throws Exception
+    {
+        BigDecimal id = null;
+        BigDecimal col_ins_id = null;
+        BigDecimal ip_id = policy_id;
+        
+        try
+        {
+            batchContext.startStopWatch("BO601.insertResolvedIntoWarningNotes");
+            
+            id = new YOY00(connCtx).getNewId();
+            
+            #sql [connCtx] {
+                INSERT INTO ip_warning_notes (
+                    ins_war_not_id,
+                    col_hea_id,
+                    col_ins_id,
+                    ip_id,
+                    wrn_status,
+                    expiration_date,
+                    candidate_status,
+                    warn_note_date,
+                    cus_let_typ_id,
+                    war_not_sent_stat,
+                    resolved_date,
+                    eve_id,
+                    use_id,
+                    user_lock,
+                    fee_eve_id,
+                    fee_amount,
+                    fee_cur_id,
+                    ban_tar_code,
+                    fee_flag
+                ) VALUES (
+                    :(id),
+                    :(col_hea_id),
+                    :(col_ins_id),
+                    :(ip_id),
+                    :(wrn_status),
+                    NULL,
+                    'R',
+                    :(resolved_date),
+                    :(cus_let_typ_id),
+                    '3',
+                    :(resolved_date),
+                    :(eve_id),
+                    1,
+                    CURRENT TIMESTAMP,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    'X'
+                )
+            };
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod rjesavanja police osiguranja!" + " (ID=" + id + ", COL_HEA_ID=" + col_hea_id + ", COL_INS_ID=" + col_ins_id + ", IP_ID=" + ip_id + ", WRN_STATUS=" + wrn_status + ", RESOLVED_DATE=" + resolved_date + ", CUS_LET_TYP_ID=" + cus_let_typ_id + ", EVE_ID=" + eve_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO601.insertResolvedIntoWarningNotes");
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa police osiguranja koje su kandidati za slanje obavijesti / ugovaranje grupne police.
+     * @return iterator s podacima
+     */
+    public IterPolicies selectCandidates() throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO601.selectCandidates");
+            
+            IterPolicies iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.ip_id         AS id,
+                    a.ip_code       AS ip_code,
+                    a.col_hea_id    AS col_hea_id,
+                    a.ip_vali_until AS ip_paid_until,
+                    a.wrn_status    AS wrn_status,
+                    b.col_num       AS col_num
+                FROM insurance_policy a
+                INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                WHERE a.ip_vali_until < CURRENT DATE
+                  AND a.wrn_status IN ('0','1')
+                  AND b.col_cat_id = 618223
+                  AND b.collateral_status IN ('1','2','3')
+                  AND NOT EXISTS (
+                    SELECT a2.ip_id
+                    FROM insurance_policy a2
+                    WHERE a2.col_hea_id = a.col_hea_id
+                      AND a2.ip_act_noact = 'A'
+                      AND a2.ip_vali_until >= CURRENT DATE
+                      AND a2.wrn_status = '0'
+                  )
+                ORDER BY b.col_num, a.ip_vali_until DESC
+                WITH UR
+            };
+            
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata kandidata!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO601.selectCandidates");                
+        }
+    }
+    
+    
+    /**
+     * Metoda ispituje da li je prva aktivna RBA hipoteka zadanog kolaterala povezana na plasman èiji je vlasnik komitent B2 asset klase 1 ili 36.
+     * @param col_hea_id ID kolaterala
+     */
+    public String selectRetailPlacementOwner(BigDecimal col_hea_id) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO601.selectRetailPlacementOwner");
+            
+            // prva aktivna RBA hipoteka na zadanom kolateralu
+            BigDecimal coll_hf_prior_id = null;
+            String hf_priority = null;
+            #sql [connCtx] {
+                SELECT coll_hf_prior_id, hf_priority
+                INTO :(coll_hf_prior_id), :(hf_priority)
+                FROM coll_hf_prior
+                WHERE hf_coll_head_id = :(col_hea_id)
+                  AND hf_status = 'A'
+                  AND hf_own_cus_id = 8218251
+                ORDER BY hf_priority
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            // da li postoji fizièka osoba vlasnik plasmana povezanog na hipoteku
+            String owner_name = null, owner_register_no = null, cus_acc_no = null;
+            #sql [connCtx] {
+                SELECT c.name, c.register_no, e.cus_acc_no
+                INTO :(owner_name), :(owner_register_no), :(cus_acc_no)
+                FROM loan_beneficiary l
+                INNER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                INNER JOIN customer c ON e.cus_id = c.cus_id
+                WHERE l.coll_hf_prior_id = :(coll_hf_prior_id)
+                  AND l.status = 'A'
+                  AND c.basel_cus_type IN ('1','36')
+                FETCH FIRST ROW ONLY  
+                WITH UR
+            };
+            
+            return "hipoteka #" + hf_priority + " -> plasman " + cus_acc_no + " -> vlasnik plasmana " + owner_register_no + " " + owner_name;
+        }
+        catch (SQLException ex)
+        {
+            if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                batchContext.error("Greska kod ispitivanja da li polica osiguranja pripada Retailu!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO601.selectRetailPlacementOwner");
+        }
+    }
+    
+    /**
+     * Metoda koja ubacuje novi zapis o kandidatu u evidenciju obavijesti/opomena po policama osiguranja.
+     * @param policy_id ID police osiguranja
+     * @param col_hea_id ID kolaterala
+     * @param expiration_date Datum do kada je plaæena polica osiguranja
+     * @param warn_note_date Datum generiranja obavijesti/opomene
+     * @param wrn_status Status slanja obavijesti/opomene police osiguranja
+     * @param cus_let_typ_id Tip obavijesti/opomene
+     */
+    public void insertCandidateIntoWarningNotes(BigDecimal policy_id, BigDecimal col_hea_id, Date expiration_date, Date warn_note_date, String wrn_status, BigDecimal cus_let_typ_id) throws Exception
+    {
+        BigDecimal id = null;
+        BigDecimal col_ins_id = null;
+        BigDecimal ip_id = policy_id;
+        
+        try
+        {
+            batchContext.startStopWatch("BO601.insertCandidateIntoWarningNotes");
+            
+            id = new YOY00(connCtx).getNewId();
+            
+            #sql [connCtx] {
+                INSERT INTO ip_warning_notes (
+                    ins_war_not_id,
+                    col_hea_id,
+                    col_ins_id,
+                    ip_id,
+                    wrn_status,
+                    expiration_date,
+                    candidate_status,
+                    warn_note_date,
+                    cus_let_typ_id,
+                    war_not_sent_stat,
+                    resolved_date,
+                    eve_id,
+                    use_id,
+                    user_lock,
+                    fee_eve_id,
+                    fee_amount,
+                    fee_cur_id,
+                    ban_tar_code,
+                    fee_flag
+                ) VALUES (
+                    :(id),
+                    :(col_hea_id),
+                    :(col_ins_id),
+                    :(ip_id),
+                    :(wrn_status),
+                    :(expiration_date),
+                    'K',
+                    :(warn_note_date),
+                    :(cus_let_typ_id),
+                    '1',
+                    NULL,
+                    :(eve_id),
+                    1,
+                    CURRENT TIMESTAMP,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    'X'
+                )
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod kandidiranja police osiguranja! " +  "(ID=" + id + ", COL_HEA_ID=" + col_hea_id + ", COL_INS_ID=" + col_ins_id + ", IP_ID=" + ip_id + ", WRN_STATUS=" + wrn_status + ", EXPIRATION_DATE=" + expiration_date + ", WARN_NOTE_DATE=" + warn_note_date + ", CUS_LET_TYP_ID=" + cus_let_typ_id + ", EVE_ID=" + eve_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO601.insertCandidateIntoWarningNotes");            
+        }
+    }
+}

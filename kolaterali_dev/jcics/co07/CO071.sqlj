@@ -1,0 +1,1786 @@
+package hr.vestigo.modules.collateral.jcics.co07;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+
+//LOAN_REL_COLL  LIST
+
+
+#sql iterator Iter1 (	
+		java.math.BigDecimal lrc_id , 
+		java.math.BigDecimal comp_id, 
+		java.math.BigDecimal lc_acc_id,                              
+		java.sql.Date lcr_date_from ,
+		java.sql.Date lcr_date_until,                          
+		String lcr_status ,
+		String lcr_spec_status,                              
+		java.math.BigDecimal use_open_id , 
+		java.math.BigDecimal use_id,                                             
+		java.sql.Timestamp user_lock,
+		java.math.BigDecimal col_hea_id, 
+		String col_num,  
+		java.math.BigDecimal hf_coll_head_id,
+		java.math.BigDecimal col_type_id , 
+		String coll_type_code, 
+		String coll_type_name , 
+		java.math.BigDecimal hf_hfc_id,	
+		String hfHfcSCD,  
+		java.math.BigDecimal hf_amo, 
+		java.math.BigDecimal hf_cur_id,
+		String hfCurIdCodeC,
+		String hf_priority, 
+		String acc_prior, 
+		java.math.BigDecimal comp_cov_amo,                                                                    
+		java.math.BigDecimal comp_cov_amo_ref, 
+		java.math.BigDecimal col_cur_id_ref,  
+		String colCurIdRefCodeC,
+		String acc_no, 
+		java.math.BigDecimal loan_type, 
+		String loantypeSCD,                  
+		java.math.BigDecimal balance, 
+		java.sql.Date balance_date, 
+		java.math.BigDecimal cur_id_loan,
+		String curIdLoanCodeC, 
+		java.math.BigDecimal lc_cov_amo, 
+		java.math.BigDecimal lc_cov_amo_ref, 
+		java.math.BigDecimal cur_id_loan_ref,
+		String curIdLoanRefCodeC
+		
+);	
+
+
+public class CO071 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co07/CO071.sqlj,v 1.21 2006/02/22 13:58:53 hrasia Exp $";
+	
+	public DeclCO07 decl = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO071 (DeclCO07 decl) {
+		this.decl = decl;
+	}
+	TransactionContext tc_pom = null;
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		tc_pom = tc;
+		
+		String Collateral_txtColNum = decl.Collateral_txtColNum;
+		if (!(Collateral_txtColNum == null)){
+			Collateral_txtColNum = Collateral_txtColNum.trim();
+			if(Collateral_txtColNum.compareTo("")== 0){
+				Collateral_txtColNum = null;
+			}
+		}
+		
+		String Collateral_txtAccNo = decl.Collateral_txtAccNo;
+		if (!(Collateral_txtAccNo == null)){
+			Collateral_txtAccNo = Collateral_txtAccNo.trim();
+			if(Collateral_txtAccNo.compareTo("")== 0){
+				Collateral_txtAccNo = null;
+			}
+		}
+		
+		tc.debug("Collateral_txtColNum    " + "A" + Collateral_txtColNum + "A");
+		tc.debug("Collateral_txtAccNo    " + "B" + Collateral_txtAccNo + "B");
+		tc.debug("decl.COL_TYPE_ID    " + "C" + decl.COL_TYPE_ID + "C");
+		tc.debug("decl.LOAN_TYPE    " + "D" + decl.LOAN_TYPE + "D");
+		tc.debug("decl.MODULE_LOAN    " + "E" + decl.MODULE_LOAN + "E");
+		
+		
+		
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+			if( (Collateral_txtColNum != null) && (Collateral_txtAccNo != null) ){
+				tc.debug("CASE     11" );
+				//11
+				if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)   ){
+				//000
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)	
+					
+					
+					#sql [ctx] iter1 = {   
+						SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+	 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+						
+					};
+
+					
+					     
+
+					
+					
+					
+					
+				}
+				if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+				//001
+				//	:(decl.COL_TYPE_ID)  
+				//	:(decl.LOAN_TYPE)    
+				//	:(decl.MODULE_LOAN)  
+					#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+	
+							AND 		loac.module_loan = :(decl.MODULE_LOAN)
+
+						};
+					
+				}
+				if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+				//010
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  
+					#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+							FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND 	loac.loan_type =   :(decl.LOAN_TYPE)   
+						};
+					
+				}
+				if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+				//011
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)        
+							AND 		loac.module_loan = :(decl.MODULE_LOAN)      
+ 
+						};
+					
+						
+				}
+				if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)){
+				//100
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND	  coh.col_num = :(decl.Collateral_txtColNum)
+							AND	  loac.acc_no= :(decl.Collateral_txtAccNo)
+	    					AND	  coh.col_type_id =  :(decl.COL_TYPE_ID)
+  
+ 
+						};
+							
+				}
+				if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+				//110
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)   
+						};
+							
+								
+				}
+				if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+				//101
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+
+						};
+							
+									
+				}
+				if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+				//111
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)   
+							AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+
+
+						};
+				}
+				
+			}//11
+
+			////////////////////////////////////////////////////
+					
+			if( (Collateral_txtColNum != null) && (Collateral_txtAccNo == null) ){
+				//10
+				tc.debug("CASE     10" );
+				if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)   ){
+					//000
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)	
+						
+						
+						#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							
+	
+							
+							
+						};
+
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+					//001
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND 		loac.module_loan = :(decl.MODULE_LOAN)
+
+							};
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+					//010
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND 		loac.loan_type =   :(decl.LOAN_TYPE)   
+							};
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+					//011
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)        
+							AND 		loac.module_loan = :(decl.MODULE_LOAN)      
+	 
+							};
+						
+							
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)){
+					//100
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID)
+	  
+	 
+							};
+								
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+					//110
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND		coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND		loac.loan_type =   :(decl.LOAN_TYPE)   
+							};
+								
+									
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+					//101
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+
+							};
+								
+										
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+					//111
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		coh.col_num = :(decl.Collateral_txtColNum)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)   
+							AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+
+
+							};
+					}
+
+
+			}//10
+			
+			////////////////////////////
+			
+			if( (Collateral_txtColNum == null) && (Collateral_txtAccNo != null) ){
+				//01
+				tc.debug("CASE     01" );
+				if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)   ){
+					//000
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)	
+						
+						
+						#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+	
+							
+						};
+
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+					//001
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND 		loac.module_loan = :(decl.MODULE_LOAN)
+
+							};
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+					//010
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+								FROM		loan_rel_coll lorc, coll_head coh, coll_hf_prior chp, loan_account  loac,
+											coll_component coc, collateral_type cot,
+											currency curhf, currency curcol, system_code_value scv2 ,currency curlo,
+											loan_component loco ,currency curlf, system_code_value scv1  
+
+								WHERE   	coh.cus_id = :(decl.CUS_ID)
+								AND			loac.acc_no= :(decl.Collateral_txtAccNo)
+								AND			coh.cus_id = loac.cus_id
+								AND 		coh.col_hea_id = chp.hf_coll_head_id
+								AND 		coh.col_type_id = cot.coll_type_id
+								AND			chp.hf_cur_id = curhf.cur_id
+								AND			coc.comp_hf_prior_id = chp.coll_hf_prior_id 
+								AND 		coc.cur_id_ref = curcol.cur_id
+								AND 		loac.loan_type = scv2.sys_cod_val_id 
+								AND 		loac.cur_id = curlo.cur_id
+								AND 		loco.la_acc_id = loac.la_acc_id
+								AND 		loac.cur_id_ref = curlf.cur_id 
+								AND 		chp.hf_hfc_id = scv1.sys_cod_val_id  
+								AND			chp.hf_coll_head_id = coh.col_hea_id
+								AND 		lorc.comp_id = coc.comp_id
+								AND			lorc.lc_acc_id = loco.lc_acc_id
+								AND 		loac.loan_type =   :(decl.LOAN_TYPE)   
+							};
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+					//011
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)        
+							AND 		loac.module_loan = :(decl.MODULE_LOAN)      
+	 
+							};
+						
+							
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)){
+					//100
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID)
+	  						};
+								
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+					//110
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)   
+							};
+									
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+					//101
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+
+							};
+										
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+					//111
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							AND		loac.acc_no= :(decl.Collateral_txtAccNo)
+							AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+							AND			loac.loan_type =   :(decl.LOAN_TYPE)   
+							AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+							};
+					}
+			}//01
+			
+			///////////////////////////////////////////
+			
+			if( (Collateral_txtColNum == null) && (Collateral_txtAccNo == null) ){
+				//00
+				tc.debug("CASE     00" );
+				if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)   ){
+					//000
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)	
+						
+						
+						#sql [ctx] iter1 = {   
+							SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+		 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+							
+							
+						};
+
+						
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+					//001
+					//	:(decl.COL_TYPE_ID)  
+					//	:(decl.LOAN_TYPE)    
+					//	:(decl.MODULE_LOAN)  
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+								AND 		loac.module_loan = :(decl.MODULE_LOAN)
+
+							};
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+					//010
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+								AND 		loac.loan_type =   :(decl.LOAN_TYPE)   
+							};
+						
+					}
+					if((decl.COL_TYPE_ID == null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+					//011
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+								AND			loac.loan_type =   :(decl.LOAN_TYPE)        
+								AND 		loac.module_loan = :(decl.MODULE_LOAN)      
+	 
+							};
+							
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN == null)){
+					//100
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+								AND			coh.col_type_id =  :(decl.COL_TYPE_ID)
+	  
+							};
+								
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN == null)){
+					//110
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+								AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+								AND			loac.loan_type =   :(decl.LOAN_TYPE)   
+							};
+													
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE == null) && (decl.MODULE_LOAN != null)){
+					//101
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+								AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+								AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+							};
+										
+					}
+					if((decl.COL_TYPE_ID != null) && (decl.LOAN_TYPE != null) && (decl.MODULE_LOAN != null)){
+					//111
+						//	:(decl.COL_TYPE_ID)  
+						//	:(decl.LOAN_TYPE)    
+						//	:(decl.MODULE_LOAN)  	
+						#sql [ctx] iter1 = {   
+								SELECT  lorc.lrc_id as lrc_id , lorc.comp_id as comp_id, lorc.lc_acc_id as lc_acc_id,
+								lorc.lcr_date_from as lcr_date_from ,lorc.lcr_date_until as lcr_date_until,
+	 							lorc.lcr_status as lcr_status ,lorc.lcr_spec_status as lcr_spec_status,
+	 							lorc.use_open_id as use_open_id , lorc.use_id as use_id,   lorc.user_lock as user_lock,
+	 							coh.col_hea_id as col_hea_id, coh.col_num as col_num,
+	 							chp.hf_coll_head_id as hf_coll_head_id, 
+	 							coh.col_type_id as col_type_id , cot.coll_type_code as coll_type_code, 
+	 							cot.coll_type_name as coll_type_name , 
+	 				 			chp.hf_hfc_id	as hf_hfc_id,	scv1.sys_code_desc as hfHfcSCD, 
+	 							chp.hf_amount as hf_amo, chp.hf_cur_id as hf_cur_id	, curhf.code_char as hfCurIdCodeC, 
+	 							chp.hf_priority as hf_priority,cot.acc_prior as acc_prior,
+	 							coc.comp_cov_amo as comp_cov_amo,
+	 							coc.comp_cov_amo_ref as comp_cov_amo_ref,
+	 							coc.cur_id_ref as col_cur_id_ref, curcol.code_char as colCurIdRefCodeC,
+	 							loac.acc_no as acc_no, loac.loan_type as loan_type, scv2.sys_code_desc as loantypeSCD, 
+	 							loac.balance as balance, loac.balance_date as balance_date, 
+	 							loac.cur_id as cur_id_loan,  curlo.code_char as curIdLoanCodeC, 
+	 							loco.lc_cov_amo as lc_cov_amo, loco.lc_cov_amo_ref as lc_cov_amo_ref,
+								loco.cur_id_ref as cur_id_loan_ref, curlf.code_char as curIdLoanRefCodeC
+			 				
+						FROM		loan_rel_coll lorc
+							INNER JOIN coll_component coc     ON lorc.comp_id = coc.comp_id
+							INNER JOIN loan_component loco    ON lorc.lc_acc_id = loco.lc_acc_id
+							INNER JOIN coll_hf_prior  chp     ON coc.comp_hf_prior_id = chp.coll_hf_prior_id
+							INNER JOIN loan_account   loac    ON loco.la_acc_id = loac.la_acc_id
+							INNER JOIN coll_head coh          ON chp.hf_coll_head_id = coh.col_hea_id
+							INNER JOIN currency curhf				  ON chp.hf_cur_id = curhf.cur_id
+							INNER JOIN currency curlo         ON loac.cur_id = curlo.cur_id
+							INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+							INNER JOIN system_code_value scv1 ON chp.hf_hfc_id = scv1.sys_cod_val_id 
+							INNER JOIN collateral_type cot    ON coh.col_type_id = cot.coll_type_id
+							LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+							LEFT OUTER JOIN currency curcol   ON coc.cur_id_ref = curcol.cur_id
+							WHERE  coh.cus_id = :(decl.CUS_ID)
+							AND   loac.cus_id = :(decl.CUS_ID)
+								AND			coh.col_type_id =  :(decl.COL_TYPE_ID) 
+								AND			loac.loan_type =   :(decl.LOAN_TYPE)   
+								AND 		loac.module_loan = :(decl.MODULE_LOAN) 
+
+							};
+					}
+			}//00
+			
+			
+			
+			Collateral_txtColNum = null;
+			Collateral_txtAccNo = null;
+		
+	}
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+
+		//Šifra kol.			col_num						coll_head   				col_num        
+		//Vrsta kol.			coll_type_name				coll_head    				coll_type_name       
+		//Vr.pravaRBA			hf_hfc_id					coll_hf_prior				hfHfcSCD	
+		//Uk.izn.pravaRBA		hf_amo						coll_hf_prior	    		hf_amo
+		//Val.pravaRBA			hf_cur_id					coll_hf_prior  			hfCurIdCodeC    
+		//Prior.napl.			hf_priority					coll_hf_prior    			hf_priority  
+		//Prior.knj.			acc_prior					collateral_type 			acc_prior    
+		//Izn.elem.				comp_cov_amo				coll_component    			comp_cov_amo  
+		//Izn.el.u ref.val.		comp_cov_amo_ref			coll_component  			comp_cov_amo_ref    
+		//Datum povez.			lcr_date_from				loan_rel_coll 				lcr_date_from      
+		//Ref.val.kol.			cur_id_ref					coll_component   			colCurIdRefCodeC   
+		//Partija plas.			acc_no						loan_account				acc_no        
+		//Tip plas.				loan_type					loan_account  				loantypeSCD      
+		//Uk.sta.pla.			balance						loan_account				balance			
+		//Dat.sta.pla.			balance_date				loan_account   				balance_date     
+		//Val.plas.				cur_id						loan_account 				curIdLoanCodeC       
+		//Izn.pok.dij.			lc_cov_amo					loan_component 				lc_cov_amo     
+		//Izn.dij.u ref.val.	lc_cov_amo_ref				loan_component    			lc_cov_amo_ref  
+		//Ref.val.pla.			cur_id_ref					loan_account        		curIdLoanRefCodeC
+
+		
+		row.add(iter1.col_num());           				    
+		row.add(iter1.coll_type_name());    				    
+		row.add(iter1.hfHfcSCD()); 	                    
+		row.add(iter1.hf_amo());                        
+		row.add(iter1.hfCurIdCodeC());                  
+		row.add(iter1.hf_priority());                   
+		row.add(iter1.acc_prior());                     
+		row.add(iter1.comp_cov_amo());                  
+		row.add(iter1.comp_cov_amo_ref());              
+		row.add(iter1.lcr_date_from());                 
+		row.add(iter1.colCurIdRefCodeC());              
+		row.add(iter1.acc_no());                        
+		row.add(iter1.loantypeSCD());                   
+		row.add(iter1.balance()); 			                
+		row.add(iter1.balance_date());                  
+		row.add(iter1.curIdLoanCodeC());                
+		row.add(iter1.lc_cov_amo());                    
+		row.add(iter1.lc_cov_amo_ref());                
+		row.add(iter1.curIdLoanRefCodeC());             
+
+		
+		tc_pom.debug (	"00 000 iter1.col_num());           		" + iter1.col_num());           			
+		tc_pom.debug (	"00 000 iter1.coll_type_name());    		" + iter1.coll_type_name());    			
+		tc_pom.debug (	"00 000 iter1.hfHfcSCD()); 	        	" + iter1.hfHfcSCD()); 	              
+		tc_pom.debug (	"00 000 iter1.hf_amo());            		" + iter1.hf_amo());                  
+		tc_pom.debug (	"00 000 iter1.hfCurIdCodeC());      		" + iter1.hfCurIdCodeC());            
+		tc_pom.debug (	"00 000 iter1.hf_priority());       		" + iter1.hf_priority());             
+		tc_pom.debug (	"00 000 iter1.acc_prior());         		" + iter1.acc_prior());               
+		tc_pom.debug (	"00 000 iter1.comp_cov_amo());      		" + iter1.comp_cov_amo());            
+		tc_pom.debug (	"00 000 iter1.comp_cov_amo_ref());  		" + iter1.comp_cov_amo_ref());        
+		tc_pom.debug (	"00 000 iter1.lcr_date_from());     		" + iter1.lcr_date_from());           
+		tc_pom.debug (	"00 000 iter1.colCurIdRefCodeC());  		" + iter1.colCurIdRefCodeC());        
+		tc_pom.debug (	"00 000 iter1.acc_no());            		" + iter1.acc_no());                  
+		tc_pom.debug (	"00 000 iter1.loantypeSCD());       		" + iter1.loantypeSCD());             
+		tc_pom.debug (	"00 000 iter1.balance()); 			    	" + iter1.balance()); 			          
+		tc_pom.debug (	"00 000 iter1.balance_date());      		" + iter1.balance_date());            
+		tc_pom.debug (	"00 000 iter1.curIdLoanCodeC());    		" + iter1.curIdLoanCodeC());          
+		tc_pom.debug (	"00 000 iter1.lc_cov_amo());        		" + iter1.lc_cov_amo());              
+		tc_pom.debug (	"00 000 iter1.lc_cov_amo_ref());    		" + iter1.lc_cov_amo_ref());          
+		tc_pom.debug (	"00 000 iter1.curIdLoanRefCodeC()); 		" + iter1.curIdLoanRefCodeC());       
+
+		
+		  row1.add(iter1.lrc_id ());               
+		  row1.add(iter1.comp_id());               
+		  row1.add(iter1.lc_acc_id());             
+		  row1.add(iter1.lcr_date_until());        
+		  row1.add(iter1.lcr_status ());           
+		  row1.add(iter1.lcr_spec_status());       
+		  row1.add(iter1.use_open_id ());          
+		  row1.add(iter1.use_id());                
+		  row1.add(iter1.user_lock());             
+		  row1.add(iter1.col_hea_id());            
+		  row1.add(iter1.hf_coll_head_id());       
+		  row1.add(iter1.col_type_id ());          
+		  row1.add(iter1.coll_type_code());        
+		  row1.add(iter1.hf_hfc_id());	           
+		  row1.add(iter1.hf_cur_id());             
+		  row1.add(iter1.col_cur_id_ref());        
+		  row1.add(iter1.loan_type());             
+		  row1.add(iter1.cur_id_loan());           
+		  row1.add(iter1.cur_id_loan_ref());       
+		 				
+		decl.tblLoanRelColl.addRow(row,row1);
+    			
+	}
+	
+}

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+		<Data><Parameter Name="datum"/></Data>	
+		<Data><Parameter Name="naslov"/></Data>
+	</Row>
+	<Row>
+		<Data><Text>Interni MB komitenta korisnika plasmana</Text></Data>
+		<Data><Text>Naziv komitenta</Text></Data>
+		<Data><Text>Partija plasmana</Text></Data>
+		<Data><Text>Izloženost</Text></Data>
+		<Data><Text>Gotovinski depozit</Text></Data>
+		<Data><Text>Polica osiguranja sa štednom komponentom</Text></Data>
+		<Data><Text>Garancija države</Text></Data>
+		<Data><Text>Garancija druge banke</Text></Data>
+		<Data><Text>Stambeni objekt</Text></Data>
+		<Data><Text>Graðevinsko zemljište</Text></Data>
+		<Data><Text>Poljoprivredno zemljište i šuma</Text></Data>
+		<Data><Text>Proizvodna hala i uslužni prostor</Text></Data>
+		<Data><Text>Uredske prostorije i prodajni prostor</Text></Data>
+		<Data><Text>Hotel, pansion</Text></Data>
+		<Data><Text>Privatni smještaj</Text></Data>
+		<Data><Text>Skladišni prostor</Text></Data>
+		<Data><Text>Osobni automobili</Text></Data>
+		<Data><Text>Motocikli i ostala vozila</Text></Data>
+		<Data><Text>Kamioni, autobusi, pružna vozila</Text></Data>
+		<Data><Text>Graðevinska vozila i graðevinski strojevi</Text></Data>
+		<Data><Text>Plovila</Text></Data>
+		<Data><Text>Zrakoplovi</Text></Data>
+		<Data><Text>Strojevi</Text></Data>
+		<Data><Text>Osigurano</Text></Data>
+		<Data><Text>Neosigurano</Text></Data>
+	</Row>
+	<Row>
+	</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="register_no"/></Data>
+			<Data><Field Name="client_name"/></Data>
+			<Data><Field Name="invest_party"/></Data>
+			<Data><Field Name="exposure"/></Data>
+			<Data><Field Name="cash_deposit"/></Data>
+			<Data><Field Name="assur_policy"/></Data>
+			<Data><Field Name="guaranty_state"/></Data>
+			<Data><Field Name="guaranty_other_bank"/></Data>
+			<Data><Field Name="housing_object"/></Data>
+			<Data><Field Name="building_plot"/></Data>
+			<Data><Field Name="agricultural_plot"/></Data>
+			<Data><Field Name="indust_hall"/></Data>
+			<Data><Field Name="office_rooms"/></Data>
+			<Data><Field Name="hotel"/></Data>
+			<Data><Field Name="private_accom"/></Data>
+			<Data><Field Name="stock"/></Data>
+			<Data><Field Name="priv_cars"/></Data>
+			<Data><Field Name="other_veh"/></Data>
+			<Data><Field Name="trucks_etc"/></Data>
+			<Data><Field Name="building_veh"/></Data>
+			<Data><Field Name="vessels"/></Data>
+			<Data><Field Name="airplanes"/></Data>
+			<Data><Field Name="machines"/></Data>
+			<Data><Field Name="insured"/></Data>
+			<Data><Field Name="not_insured"/></Data>
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>	

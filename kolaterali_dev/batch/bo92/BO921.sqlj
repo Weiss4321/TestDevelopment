@@ -1,0 +1,724 @@
+package hr.vestigo.modules.collateral.batch.bo92;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za Izraèun pomoæne tržišne vrijednosti za revalorizaciju.
+* @author hrakis
+*/
+public class BO921
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo92/BO921.sqlj,v 1.4 2016/07/06 11:24:01 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+
+    #sql iterator RevaKoefIterator (
+        BigDecimal rev_koe_id,
+        BigDecimal col_gcm_typ_id,
+        String col_gcm_type_name,
+        BigDecimal county_id,
+        String county_code,
+        String county_name,
+        String county_type,
+        BigDecimal city_id,
+        String city_code,
+        String city_name,
+        String city_type,
+        BigDecimal cada_id,
+        String cada_code,
+        String cada_name,
+        String cada_type,
+        Integer est_year,
+        BigDecimal value_from,
+        BigDecimal value_to,
+        Integer age_from,
+        Integer age_to,
+        BigDecimal koef_rev
+    );
+    
+    #sql iterator RevaExceptionIterator (
+        BigDecimal col_hea_id
+    );
+
+    #sql iterator RealEstateIterator (
+        BigDecimal col_hea_id, 
+        String col_num, 
+        String collateral_status, 
+        String financial_flag,
+        BigDecimal col_cat_id, 
+        String col_cat_name, 
+        BigDecimal col_typ_id, 
+        String col_typ_name,
+        BigDecimal col_sub_id,
+        String col_sub_name,
+        BigDecimal nomi_value,
+        BigDecimal nomi_value_cur_id,
+        String nomi_value_cur_code,
+        Date nomi_value_date,
+        Date est_date,
+        BigDecimal cada_id,
+        String cada_code,
+        String cada_name,
+        BigDecimal city_id,
+        String city_code,
+        String city_name,
+        BigDecimal county_id,
+        String county_code,
+        String county_name
+    );
+    
+    #sql iterator RealEstateReportDataIterator (
+        BigDecimal col_hea_id,
+        String col_num,
+        String collateral_status,
+        String col_typ_name,
+        String col_sub_name,
+        BigDecimal nomi_value,
+        String nomi_value_cur_code,
+        Date nomi_value_date,
+        Date est_date,
+        String cada_name,
+        String city_name,
+        String county_name,
+        BigDecimal new_value
+    );
+
+    #sql iterator VehicleIterator (
+        BigDecimal col_hea_id, 
+        String col_num, 
+        String collateral_status, 
+        String financial_flag,
+        BigDecimal col_cat_id, 
+        String col_cat_name, 
+        BigDecimal col_typ_id, 
+        String col_typ_name,
+        BigDecimal col_sub_id,
+        String col_sub_name,
+        BigDecimal nomi_value,
+        BigDecimal nomi_value_cur_id,
+        String nomi_value_cur_code,
+        Date nomi_value_date,
+        BigDecimal est_value,
+        Date est_date,
+        String veh_made_year
+    );
+    
+    #sql iterator VehicleReportDataIterator (
+        BigDecimal col_hea_id,
+        String col_num,
+        String collateral_status,
+        String col_typ_name,
+        String col_sub_name,
+        BigDecimal nomi_value,
+        String nomi_value_cur_code,
+        Date nomi_value_date,
+        BigDecimal est_value,
+        Date est_date,
+        String veh_made_year,
+        BigDecimal new_value
+    );
+
+
+
+    public BO921(BatchContext batchContext) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+
+    /**
+     * Metoda dohvaæa podatke o važeæim koeficijentima promjene za revalorizaciju.
+     * @return iterator s podacima
+     */
+    public RevaKoefIterator selectRevalorizationCoefficients() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.selectRevalorizationCoefficients");
+            
+            RevaKoefIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.rev_koe_id        AS rev_koe_id,
+                    h.col_gcm_typ_id    AS col_gcm_typ_id,
+                    h.name              AS col_gcm_type_name,
+                    b.pol_map_id        AS county_id,
+                    b.code              AS county_code,
+                    b.name              AS county_name,
+                    c.name              AS county_type,
+                    d.pol_map_id        AS city_id,
+                    d.code              AS city_code,
+                    d.name              AS city_name,
+                    e.name              AS city_type,
+                    f.cad_map_id        AS cada_id,
+                    f.code              AS cada_code,
+                    f.name              AS cada_name,
+                    g.name              AS cada_type,
+                    a.est_year          AS est_year,
+                    a.value_from        AS value_from,
+                    a.value_to          AS value_to,
+                    a.age_from          AS age_from,
+                    a.age_to            AS age_to,
+                    a.koef_rev          AS koef_rev
+                FROM reva_koef a
+                    LEFT OUTER JOIN political_map b ON a.county_id = b.pol_map_id
+                    LEFT OUTER JOIN political_map_type c ON b.pol_map_typ_id = c.pol_map_typ_id
+                    LEFT OUTER JOIN political_map d ON a.city_id = d.pol_map_id
+                    LEFT OUTER JOIN political_map_type e ON d.pol_map_typ_id = e.pol_map_typ_id
+                    LEFT OUTER JOIN cadastre_map f ON a.cada_id = f.cad_map_id
+                    LEFT OUTER JOIN cadastre_map_type g ON f.cad_map_typ_id = g.cad_map_typ_id
+                    INNER JOIN coll_gcm_type h ON a.col_gcm_typ_id = h.col_gcm_typ_id
+                WHERE status = 'A'
+                ORDER BY h.name, b.name, d.name, f.name, a.est_year, a.value_from, a.age_from
+                WITH UR 
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata vazecih koeficijenata promjene za revalorizaciju!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.selectRevalorizationCoefficients");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa listu kolaterala iskljuèenih iz revalorizacije.
+     * @return iterator s podacima
+     */
+    public RevaExceptionIterator selectRevalorizationExceptions() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.selectRevalorizationExceptions");
+            
+            RevaExceptionIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT a.col_hea_id
+                FROM reva_exception a
+                WHERE a.status = 'A'
+                WITH UR 
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata liste kolaterala iskljucenih iz revalorizacije!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.selectRevalorizationExceptions");
+        }
+    }
+
+
+    /**
+     * Metoda dohvaæa podatke o vozilima za revalorizaciju.
+     * @return iterator s podacima
+     */
+    public VehicleIterator selectVehicles() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.selectVehicles");
+            
+            VehicleIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT
+                    b.col_hea_id            AS col_hea_id, 
+                    b.col_num               AS col_num, 
+                    b.collateral_status     AS collateral_status, 
+                    b.financial_flag        AS financial_flag,
+                    b.col_cat_id            AS col_cat_id, 
+                    c.name                  AS col_cat_name, 
+                    b.col_type_id           AS col_typ_id, 
+                    d.coll_type_name        AS col_typ_name,
+                    e.veh_gro_id            AS col_sub_id,
+                    e.veh_gro_desc          AS col_sub_name,
+                    b.real_est_nomi_valu    AS nomi_value,
+                    b.real_est_nm_cur_id    AS nomi_value_cur_id,
+                    f.code_char             AS nomi_value_cur_code,
+                    b.real_est_nomi_date    AS nomi_value_date,
+                    b.real_est_estn_valu    AS est_value,
+                    b.real_est_estn_date    AS est_date,
+                    a.veh_made_year         AS veh_made_year
+                FROM coll_vehicle a
+                    INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                    INNER JOIN currency f ON b.real_est_nm_cur_id = f.cur_id
+                    INNER JOIN coll_category c ON b.col_cat_id = c.col_cat_id
+                    INNER JOIN collateral_type d ON b.col_type_id = d.coll_type_id
+                    INNER JOIN vehicle_group e ON a.veh_group_id = e.veh_gro_id
+                WHERE b.collateral_status IN ('3','0','1')
+                ORDER BY b.col_num
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka o vozilima!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.selectVehicles");
+        }
+    }
+
+
+    /**
+     * Metoda dohvaæa podatke o nekretninama za revalorizaciju.
+     * @return iterator s podacima
+     */
+    public RealEstateIterator selectRealEstates() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.selectRealEstates");
+            
+            RealEstateIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT 
+                    b.col_hea_id            AS col_hea_id, 
+                    b.col_num               AS col_num, 
+                    b.collateral_status     AS collateral_status, 
+                    b.financial_flag        AS financial_flag,
+                    b.col_cat_id            AS col_cat_id, 
+                    c.name                  AS col_cat_name, 
+                    b.col_type_id           AS col_typ_id, 
+                    d.coll_type_name        AS col_typ_name,
+                    a.real_est_type         AS col_sub_id,
+                    e.real_es_type_desc     AS col_sub_name,
+                    b.real_est_nomi_valu    AS nomi_value,
+                    b.real_est_nm_cur_id    AS nomi_value_cur_id,
+                    f.code_char             AS nomi_value_cur_code,
+                    b.real_est_nomi_date    AS nomi_value_date,
+                    b.real_est_estn_date    AS est_date,
+                    ko.cad_map_id           AS cada_id,
+                    ko.code                 AS cada_code,
+                    ko.name                 AS cada_name,
+                    mjesto.pol_map_id       AS city_id,
+                    TRIM(mjesto.code)       AS city_code,
+                    TRIM(mjesto.name)       AS city_name,
+                    zupanija.pol_map_id     AS county_id,
+                    TRIM(zupanija.code)     AS county_code,
+                    TRIM(zupanija.name)     AS county_name
+                FROM coll_restate a
+                    INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                    INNER JOIN currency f ON b.real_est_nm_cur_id = f.cur_id
+                    INNER JOIN coll_category c ON b.col_cat_id = c.col_cat_id
+                    INNER JOIN collateral_type d ON b.col_type_id = d.coll_type_id
+                    INNER JOIN real_estate_type e ON a.real_est_type = e.real_es_type_id
+                    INNER JOIN cadastre_map ko ON a.real_est_cada_munc = ko.cad_map_id
+                    INNER JOIN political_map mjesto ON a.pol_map_id_ad = mjesto.pol_map_id
+                    INNER JOIN political_map opcina ON mjesto.parent_pol_map_id = opcina.pol_map_id
+                    INNER JOIN political_map zupanija ON opcina.parent_pol_map_id = zupanija.pol_map_id
+                WHERE b.collateral_status IN ('3','0','1')
+                ORDER BY b.col_num
+                WITH UR 
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka o nekretninama!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.selectRealEstates");
+        }
+    }
+
+
+    /**
+     * Metoda dohvaæa broj aktivnih Corporate plasmana povezanih na zadani kolateral.
+     * @param col_hea_id ID kolaterala
+     */
+    public int selectNumberOfCorporatePlacements(BigDecimal col_hea_id) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.selectNumberOfCorporatePlacements");
+
+            int number;
+
+            #sql [connCtx] {
+                SELECT COUNT(*)
+                INTO :(number)
+                FROM coll_hf_prior d
+                    INNER JOIN loan_beneficiary c ON c.coll_hf_prior_id = d.coll_hf_prior_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                    INNER JOIN customer a ON b.cus_id = a.cus_id
+                WHERE d.hf_coll_head_id = :(col_hea_id)
+                  AND d.hf_status = 'A'
+                  AND c.status = 'A'
+                  AND (b.cus_acc_status='A' OR
+                        (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR  
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                        )
+                    )
+                  AND a.basel_cus_type IS NOT NULL AND TRIM(a.basel_cus_type) NOT IN ('1','36')
+                WITH UR
+            };
+
+            return number;
+        }
+        catch(Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska pri dohvatu broja Corporate plasmana za kolateral! (COL_HEA_ID = " + col_hea_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.selectNumberOfCorporatePlacements");
+        }
+    }
+
+
+    /**
+     * Metoda koja poništava postojeæi izraèun.
+     */
+    public void deactivateCollReva() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.deactivateCollReva");
+
+            #sql [connCtx] {
+                UPDATE coll_reva
+                SET status = 'N',
+                    user_lock = CURRENT TIMESTAMP
+                WHERE status = 'K'
+            };
+        }
+        catch(SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod ponistavanja postojeceg izracuna!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.deactivateCollReva");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa podatke potrebne za izvještaj o izraèunu revalorizacije za vozila.
+     * @return iterator s podacima
+     */
+    public VehicleReportDataIterator selectReportDataForVehicles() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.selectReportDataForVehicles");
+            
+            VehicleReportDataIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT
+                    b.col_hea_id            AS col_hea_id,
+                    b.col_num               AS col_num,
+                    b.collateral_status     AS collateral_status,
+                    d.coll_type_name        AS col_typ_name,
+                    e.veh_gro_desc          AS col_sub_name,
+                    b.real_est_nomi_valu    AS nomi_value,
+                    f.code_char             AS nomi_value_cur_code,
+                    b.real_est_nomi_date    AS nomi_value_date,
+                    b.real_est_estn_valu    AS est_value,
+                    b.real_est_estn_date    AS est_date,
+                    a.veh_made_year         AS veh_made_year,
+                    r.new_value             AS new_value
+                FROM coll_reva r
+                    INNER JOIN coll_vehicle a ON r.col_hea_id = a.col_hea_id
+                    INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                    INNER JOIN currency f ON b.real_est_nm_cur_id = f.cur_id
+                    INNER JOIN collateral_type d ON b.col_type_id = d.coll_type_id
+                    INNER JOIN vehicle_group e ON a.veh_group_id = e.veh_gro_id
+                WHERE r.status = 'K'
+                ORDER BY b.col_num
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka za izvjestaj o izracunu revalorizacije za vozila!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.selectReportDataForVehicles");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa podatke potrebne za izvještaj o izraèunu revalorizacije za nekretnine.
+     * @return iterator s podacima
+     */
+    public RealEstateReportDataIterator selectReportDataForRealEstates() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.selectReportDataForRealEstates");
+            
+            RealEstateReportDataIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT
+                    b.col_hea_id            AS col_hea_id,
+                    b.col_num               AS col_num,
+                    b.collateral_status     AS collateral_status,
+                    d.coll_type_name        AS col_typ_name,
+                    e.real_es_type_desc     AS col_sub_name,
+                    b.real_est_nomi_valu    AS nomi_value,
+                    f.code_char             AS nomi_value_cur_code,
+                    b.real_est_nomi_date    AS nomi_value_date,
+                    b.real_est_estn_date    AS est_date,
+                    ko.name                 AS cada_name,
+                    TRIM(mjesto.name)       AS city_name,
+                    TRIM(zupanija.name)     AS county_name,
+                    r.new_value             AS new_value
+                FROM coll_reva r
+                    INNER JOIN coll_restate a ON r.col_hea_id = a.col_hea_id
+                    INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                    INNER JOIN currency f ON b.real_est_nm_cur_id = f.cur_id
+                    INNER JOIN collateral_type d ON b.col_type_id = d.coll_type_id
+                    INNER JOIN real_estate_type e ON a.real_est_type = e.real_es_type_id
+                    INNER JOIN cadastre_map ko ON a.real_est_cada_munc = ko.cad_map_id
+                    INNER JOIN political_map mjesto ON a.pol_map_id_ad = mjesto.pol_map_id
+                    INNER JOIN political_map opcina ON mjesto.parent_pol_map_id = opcina.pol_map_id
+                    INNER JOIN political_map zupanija ON opcina.parent_pol_map_id = zupanija.pol_map_id
+                WHERE r.status = 'K'
+                ORDER BY b.col_num
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka za izvjestaj o izracunu revalorizacije za nekretnine!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.selectReportDataForRealEstates");
+        }
+    }
+    
+
+
+    /** 
+     * Metoda koja evidentira izvoðenje obrade ubacujuæi novi zapis u tablicu COL_PROC.
+     * @return ID zapisa iz tablice COL_PROC.
+     */
+    public BigDecimal insertIntoColProc() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.insertIntoColProc");
+
+            YOY00 yoy00 = new YOY00(connCtx);
+            BigDecimal col_pro_id = yoy00.getNewId();
+
+            #sql [connCtx] {
+                INSERT INTO col_proc (
+                    col_pro_id,
+                    proc_date,
+                    value_date,
+                    proc_type,
+                    proc_way,
+                    proc_status,
+                    col_number,
+                    org_uni_id,
+                    use_id,
+                    user_lock )
+                VALUES (
+                    :(col_pro_id),
+                    CURRENT DATE,
+                    CURRENT DATE,
+                    'RI',
+                    'R',
+                    '0',
+                    0,
+                    53253,
+                    1,
+                    CURRENT TIMESTAMP )
+            };
+
+            return col_pro_id;
+        }
+        catch(Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska pri evidentiranju izvodjenja obrade u modulu kolaterala!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.insertIntoColProc");
+        }
+    }
+    
+    
+    /** 
+     * Metoda koja zapisuje izraèun revalorizacije za zadani kolateral u bazu podataka.
+     * @param collateral kolateral koji se revalorizira
+     * @param col_pro_id ID obrade u Collateral modulu
+     */
+    public void insertIntoCollReva(CollateralData collateral, BigDecimal col_pro_id) throws Exception
+    {
+        BigDecimal col_rev_id = null, col_hea_id = null, old_value = null, new_value = null, cur_id = null, rev_koe_id = null, koef_rev = null;
+        
+        try
+        {
+            bc.startStopWatch("BO921.insertIntoCollReva");
+            
+            YOY00 yoy00 = new YOY00(connCtx);
+            col_rev_id = yoy00.getNewId();
+            
+            col_hea_id = collateral.col_hea_id;
+            old_value = collateral.nomi_value;
+            new_value = collateral.new_nomi_value;
+            cur_id = collateral.nomi_value_cur_id;
+            rev_koe_id = collateral.coefficient.rev_koe_id;
+            koef_rev = collateral.coefficient.koef_rev;
+
+            #sql [connCtx] {
+                INSERT INTO coll_reva (
+                    col_rev_id,
+                    col_hea_id,
+                    col_pro_id,
+                    status,
+                    cur_id,
+                    old_value,
+                    new_value,
+                    rev_koe_id,
+                    koef_rev,
+                    opening_ts,
+                    user_lock
+                )
+                VALUES (
+                    :(col_rev_id),
+                    :(col_hea_id),
+                    :(col_pro_id),
+                    'K',
+                    :(cur_id),
+                    :(old_value),
+                    :(new_value),
+                    :(rev_koe_id),
+                    :(koef_rev),
+                    CURRENT TIMESTAMP,
+                    CURRENT TIMESTAMP
+                )
+            };
+        }
+        catch(Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska kod zapisivanja izracuna revalorizacije u bazu podataka! (COL_REV_ID=" + col_rev_id + ", COL_HEA_ID=" + col_hea_id + ", COL_PRO_ID=" + col_pro_id + ", CUR_ID=" + cur_id + ", OLD_VALUE=" + old_value + ", NEW_VALUE=" + new_value + ", REV_KOE_ID=" + rev_koe_id + ", KOEF_REV=" + koef_rev, ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.insertIntoCollReva");
+        }
+    }
+
+
+    /**
+     * Metoda koja evidentira završetak izvoðenja obrade u tablicu COL_PROC.
+     * @param col_pro_id ID obrade
+     * @param count broj zapisa koje je generirala obrada
+     */
+    public void updateColProc(BigDecimal col_pro_id, int count) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.updateColProc");
+
+            #sql [connCtx] {
+                UPDATE col_proc
+                SET col_number = :(count),
+                    proc_ts = CURRENT TIMESTAMP,
+                    proc_status = '1',
+                    user_lock = CURRENT TIMESTAMP
+                WHERE col_pro_id = :(col_pro_id)
+            };
+        }
+        catch(SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska pri evidentiranju zavrsetka izvodjenja obrade u modulu kolaterala! ID obrade = " + col_pro_id, ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.updateColProc");
+        }
+    }
+
+
+    /**
+     * Metoda evidentira datum izraèuna pomoæne tržišne vrijednosti za revalorizaciju.
+     */
+    public void updateLastDate() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO921.updateLastDate");
+
+            int number = 0;
+            #sql [connCtx] {
+                SELECT COUNT(*) INTO :(number) FROM dwh_status WHERE obrada = 'bo92' WITH UR
+            };
+
+            if (number == 0)
+            {
+                #sql [connCtx] {
+                    INSERT INTO dwh_status (obrada, datum, status, user_lock) VALUES ('bo92', CURRENT DATE, '1', CURRENT TIMESTAMP)
+                };
+            }
+            else
+            {
+                #sql [connCtx] {
+                    UPDATE dwh_status SET datum = CURRENT DATE, status = '1', user_lock = CURRENT TIMESTAMP WHERE obrada = 'bo92'
+                };
+            }
+        }
+        catch(Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska pri evidentiranju datuma izracuna pomocne trzisne vrijednosti za revalorizaciju!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO921.updateLastDate");
+        }
+    }
+
+
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

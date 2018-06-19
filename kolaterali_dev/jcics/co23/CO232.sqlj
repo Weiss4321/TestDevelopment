@@ -1,0 +1,86 @@
+package hr.vestigo.modules.collateral.jcics.co23;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoyH.YOYH0;
+import hr.vestigo.modules.collateral.common.yoyH.YOYHData;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Vector;
+
+
+public class CO232
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co23/CO232.sqlj,v 1.1 2014/12/16 12:34:46 hrakis Exp $";
+
+    public DeclCO23 decl = null;
+    
+
+    public CO232(DeclCO23 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        try
+        {
+            ConnCtx connCtx = tc.getContext();
+            
+            #sql [connCtx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+            
+            BigDecimal col_hea_id = decl.collhistoryselectmapping.COL_HEA_ID;
+            tc.debug("CO232.execute: COL_HEA_ID = " + col_hea_id);
+            
+            YOYH0 yoyH0 = new YOYH0(tc);
+            ArrayList list = yoyH0.getHistory(col_hea_id);
+            Iterator iter = list.iterator();
+            
+            while (iter.hasNext())
+            {
+                YOYHData data = (YOYHData)iter.next();
+                
+                Vector row = new Vector();
+                Vector hidden = new Vector();
+                
+                row.add(data.col_num);                      //  10 Šifra kolaterala
+                row.add(data.real_est_estn_valu);           //  20 Procijenjena vrijednost
+                row.add(data.real_est_nm_cur_code_char);    //  30 Valuta procijenjene vrijednosti
+                row.add(data.real_est_euse_name);           //  40 Procijenitelj (tvrtka)
+                row.add(data.buy_sell_value);               //  50 Cijena kupoprodajnog ugovora
+                row.add(data.buy_sell_value_cur_code_char); //  60 Valuta kupoprodajnog ugovora
+                row.add(data.real_est_estn_date);           //  70 Datum procjene
+                row.add(data.real_est_nomi_desc);           //  80 Opis procjene
+                row.add(data.real_est_nomi_date);           //  90 Datum tržišne vrijednosti
+                row.add(data.real_est_nomi_valu);           // 100 Tržišna vrijednost
+                row.add(data.use_name_co);                  // 110 Ime collateral officera koji je prekontrolirao vrijednost kolaterala
+                row.add(data.real_est_nom_type_name);       // 120 Vrsta tržišne vrijednosti
+                row.add(data.use_name);                     // 130 Zapis promijenio
+                row.add(data.user_lock);                    // 140 Datum i vrijeme promjene
+                row.add(data.dfl_ponder);                   // 150 Defaultni ponder
+                row.add(data.mvp_ponder);                   // 160 Kolateral ponder
+                row.add(data.cesp_ponder);                  // 170 CES ponder prijedlog
+                row.add(data.estimate_cus_register_no);     // 180 IM procjenitelja (tvrtka)
+                row.add(data.estimate_cus_name);            // 190 Za tvrtku proc.
+                row.add(data.est_type_name);                // 200 Tip procjenitelja
+                row.add(data.new_build_val);                // 210 NGV
+                row.add(data.real_est_nm_cur_code_char);    // 220 Valuta NGV
+                row.add(data.met_est_1_name);               // 230 Metoda 1
+                row.add(data.met_est_2_name);               // 240 Metoda 2
+                row.add(data.co_ts);                        // 250 Datum kvaèice CO
+                row.add(data.co_use_name);                  // 260 CO verificirao
+                row.add(data.cmnt);                         // 270 Komentar
+                row.add(data.real_est_comment);             // 280 Napomena o nekretnini
+                
+                decl.collhistoryselectmapping.tblCollHistory.addRow(row, hidden);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new VestigoTMException(1, "Transaction CO232: Error selecting from CO_CHG_HISTORY!", "fw_wrn_017", null, ex);
+        }
+    }
+}

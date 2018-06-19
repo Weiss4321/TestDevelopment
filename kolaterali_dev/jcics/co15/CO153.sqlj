@@ -1,0 +1,2180 @@
+package hr.vestigo.modules.collateral.jcics.co15;
+
+    
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.sql.SQLData;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.GCTCData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoy6.YOY64;
+/**
+ * CO153 class select data from COLL_BILL_EXCH and show detail of one fetched row 	
+ *  	
+ */
+
+public class CO153 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co15/CO153.sqlj,v 1.28 2015/04/10 08:51:28 hrazst Exp $";
+	public DeclCO15 decl = null;
+	
+	 
+	
+	java.sql.Timestamp OpeningTs = null;
+	java.sql.Timestamp UserLock = null;
+	TransactionContext tc= null;
+	
+	public CO153 (DeclCO15 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		this.tc=tc;
+		YOY63 SQLhelper = new YOY63(tc);
+		
+				ConnCtx ctx = tc.getContext();
+				#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+				
+				// SELECT IZ coll_bill_exch
+				try{
+					#sql [ctx]  {SELECT	boe_id,
+									boe_type_id,
+									isu_place_id,
+									issue_date,
+									payee_reg_no,
+									payee_cus_id,
+									payee_add_id,
+									payee_accno,
+									payee_code,
+									payee_name,
+									payee_fname,
+									payee_sname,
+									amount,
+									cur_id,
+									add_data1,
+									add_data2,
+									pay_place_id,
+									payment,
+									payment_clause,
+									maturity_clause,
+									maturity_date,
+									protest_clause,
+									fee_clause,
+									indosa_clause,
+									number_boe,
+									number_clause,
+									report_clause,
+									cure_clause,
+									ser_let,
+									ser_no,
+									aval
+						INTO
+									:(decl.collboedetailmapping.CollBoeDialog_BOE_ID),
+									:(decl.collboedetailmapping.CollBoeDialog_BOE_TYPE_ID),
+									:(decl.collboedetailmapping.CollBoeDialog_ISU_PLACE_ID),
+									:(decl.collboedetailmapping.CollBoeDialog_txtIssueDate),
+									:(decl.collboedetailmapping.CollBoeDialog_txtRegNoP),
+									:(decl.collboedetailmapping.CollBoeDialog_P_CUS_ID),
+									:(decl.collboedetailmapping.CollBoeDialog_PAYEE_ADD_ID),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPayeeAccno),
+									:(decl.collboedetailmapping.CollBoeDialog_txtCodeP),
+									:(decl.collboedetailmapping.CollBoeDialog_txtNamePayee),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPayeeFname),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPayeeSname),
+									:(decl.collboedetailmapping.CollBoeDialog_txtAmount),
+									:(decl.collboedetailmapping.CollBoeDialog_CUR_ID),
+									:(decl.collboedetailmapping.CollBoeDialog_txtAddData),
+									:(decl.collboedetailmapping.CollBoeDialog_txtAddData1),
+									:(decl.collboedetailmapping.CollBoeDialog_PAY_PLACE_ID),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPayment),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPaymentClause),
+									:(decl.collboedetailmapping.CollBoeDialog_txtMaturityClause),
+									:(decl.collboedetailmapping.CollBoeDialog_txtMaturityDate),
+									:(decl.collboedetailmapping.CollBoeDialog_txtProtestClause),
+									:(decl.collboedetailmapping.CollBoeDialog_txtFeeClause),
+									:(decl.collboedetailmapping.CollBoeDialog_txtIndosaClause),
+									:(decl.collboedetailmapping.CollBoeDialog_txtNumberBoe),
+									:(decl.collboedetailmapping.CollBoeDialog_txtNumberClause),
+									:(decl.collboedetailmapping.CollBoeDialog_txtReportClause),
+				 					:(decl.collboedetailmapping.CollBoeDialog_txtCureClause),
+									:(decl.collboedetailmapping.CollBoeDialog_txtSerLet),
+				 					:(decl.collboedetailmapping.CollBoeDialog_txtSerNo),
+									:(decl.collboedetailmapping.Kol_txtAval)
+							FROM  coll_bill_exch
+		 					WHERE  col_hea_id=:(decl.collboedetailmapping.CollBoeDialog_COL_HEA_ID)
+						 			
+					};  
+			}catch(java.sql.SQLException se) {
+				this.ispisDeclVarijabli(); 
+				tc.debug ( "......CO003.sqlj select from coll_restate SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO003.sqlj select from coll_restate SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO003.sqlj select from coll_restate SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+				   	throw se;
+			}
+			this.ispisDeclVarijabli(); 			
+			
+			//PODACI REMITENTA SU VEC DOHVACENI IZ COLL_BILL_EXCH
+			//REMITENT				                         
+			//CollBoeDialog_txtRegNoP           
+			//CollBoeDialog_txtCodeP            
+			//CollBoeDialog_txtNamePayee        
+			//CollBoeDialog_P_CUS_ID 
+			////SELECT from  coll_head	
+			try{
+				#sql [ctx]  {SELECT
+			                    col_type_id,
+							  	col_num,
+							  	col_desc, 
+							  	real_est_date_from,
+							  	real_est_date_unti,
+						        cus_id, 		
+			                    real_est_spec_stat,					  	
+							  	use_open_id,   
+							  	use_id,        
+							  	opening_ts,    
+							  	user_lock,     
+							    user_lock,
+                              	eligibility ,
+							  	origin_org_uni_id ,                                      	                                         		
+							    org_uni_id ,                                                                                            
+								use_id_ver,                                              	                                         		
+								use_id_aut,                                                                                         
+								verification_ts ,                                                                                   
+								autorization_ts ,                                                                                   
+								mortgage_status ,                                                                                   
+								collateral_status,
+								workflow_indic,
+								cover_indic,
+								ver_send_ts,
+								basic_data_status,
+								coll_data_status,
+								col_cat_id,
+								use_id_ver_snd,
+								financial_flag,
+			                    rba_eligibility,
+			                    law_eligibility,
+			                    rba_elig_dsc,
+			                    number,
+			                    b1_eligibility,
+			                    b2_irb_elig,
+			                    nd_eligibility,
+			                    crm_hnb,
+			                    b2_irb_insag_elig,
+                                b2_hnb_insag_elig,
+                                contract_type
+							INTO								 
+							:(decl.collboedetailmapping.CollBoeDialog_COL_TYPE_ID),  
+							:(decl.collboedetailmapping.CollBoeDialog_txtColNum),
+							:(decl.collboedetailmapping.CollBoeDialog_txtColDesc),
+ 							:(decl.collboedetailmapping.CollBoeDialog_txtDATE_FROM),
+							:(decl.collboedetailmapping.CollBoeDialog_txtDATE_UNTIL),
+						    :(decl.collboedetailmapping.CUS_ID),   				
+			                :(decl.collboedetailmapping.CollBoeDialog_SpecStatus),			 
+							:( decl.collboedetailmapping.CollBoeDialog_USE_OPEN_ID),
+							:( decl.collboedetailmapping.CollBoeDialog_USE_ID),
+							:( decl.collboedetailmapping.CollBoeDialog_txtOpeningTs),
+							:( decl.collboedetailmapping.CollBoeDialog_txtUserLock),
+							:( decl.collboedetailmapping.CollBoeDialog_USER_LOCK),
+							:(decl.collboedetailmapping.CollBoeDialog_txtEligibility),
+							:(decl.collboedetailmapping.CollBoeDialog_ORIGIN_ORG_UNI_ID),
+							:(decl.collboedetailmapping.CollBoeDialog_ORG_UNI_ID),
+							:(decl.collboedetailmapping.CollBoeDialog_USE_ID_VER),                                                                                           
+							:(decl.collboedetailmapping.CollBoeDialog_USE_ID_AUT),                                           	                                         		
+							:(decl.collboedetailmapping.CollBoeDialog_VERIFICATION_TS),
+							:(decl.collboedetailmapping.CollBoeDialog_AUTORIZATION_TS),
+							:(decl.collboedetailmapping.CollBoeDialog_MortgageStatus),
+							:(decl.collboedetailmapping.CollBoeDialog_CollateralStatus),
+                            :(decl.collboedetailmapping.CollBoeDialog_WorkflowIndic),                                                    
+							:(decl.collboedetailmapping.CollBoeDialog_CoverIndic),                                                                       
+							:(decl.collboedetailmapping.CollBoeDialog_VER_SEND_TS),                                                                          
+							:(decl.collboedetailmapping.CollBoeDialog_BasicDataStatus),                                                                             
+							:(decl.collboedetailmapping.CollBoeDialog_CollDataStatus),
+							:(decl.collboedetailmapping.CollBoeDialog_COL_CAT_ID),
+							:(decl.collboedetailmapping.CollBoeDialog_USE_ID_VER_SND),
+							:(decl.collboedetailmapping.CollBoeDialog_FinancialFlag),
+							:(decl.collboedetailmapping.ColBoeRba_txtEligibility),
+							:(decl.collboedetailmapping.ColBoeLow_txtEligibility),
+							:(decl.collboedetailmapping.Kol_txtRbaEligDsc1),
+						    :(decl.collboedetailmapping.Coll_txtNumOf),
+							:(decl.collboedetailmapping.Coll_txtB1Eligibility1),
+							:(decl.collboedetailmapping.Coll_txtB2IRBEligibility1),
+			                :(decl.collboedetailmapping.Coll_txtNDEligibility), 
+			                :(decl.collboedetailmapping.Kol_txtCRMHnbBoe),
+                            :(decl.collboedetailmapping.Coll_txtB2IRB),
+                            :(decl.collboedetailmapping.Coll_txtB2HNB),
+                            :(decl.collboedetailmapping.Coll_txtContractTypeCode)
+							FROM  coll_head
+	 					   	WHERE col_hea_id = :(decl.collboedetailmapping.CollBoeDialog_COL_HEA_ID)
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from coll_head  SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from coll_head  SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from coll_head  SQL Message " + se.getMessage());
+				se.printStackTrace();
+				
+			}//coll_head
+			decl.collboedetailmapping.Coll_txtB2IRB_OLD=decl.collboedetailmapping.Coll_txtB2IRB;
+			decl.collboedetailmapping.Coll_txtB2HNB_OLD=decl.collboedetailmapping.Coll_txtB2HNB;
+			
+			try{    
+				if (decl.collboedetailmapping.CUS_ID != null){
+			             
+					#sql [ctx] {SELECT register_no, name
+		             			INTO :(decl.collboedetailmapping.Coll_txtCarrierRegisterNo), :(decl.collboedetailmapping.Coll_txtCarrierName)
+		             			FROM CUSTOMER 
+		     	       			WHERE cus_id = :(decl.collboedetailmapping.CUS_ID)};
+		    	}
+		    }catch(SQLException e){
+		    	if (e.getErrorCode()!=100) throw e;
+		    }	 				 
+						
+			if(decl.collboedetailmapping.CollBoeDialog_COL_TYPE_ID != null){
+			//collateral_type   vrsta kolaterala COL_TYPE_ID
+			try{
+				#sql [ctx]  {SELECT
+								coll_type_code,
+								coll_type_name
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtCollTypeCode),
+								:(decl.collboedetailmapping.CollBoeDialog_txtCollTypeName)
+							FROM  collateral_type
+	 					   	WHERE coll_type_id =:(decl.collboedetailmapping.CollBoeDialog_COL_TYPE_ID)
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from collateral_type COL_TYPE_ID SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from collateral_type COL_TYPE_ID SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from collateral_type COL_TYPE_ID SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//COL_TYPE_ID
+			}
+			
+			if(decl.collboedetailmapping.CollBoeDialog_BOE_TYPE_ID != null){
+			//USER_CODE_VALUE   vrsta mjenice BOE_TYPE_ID
+			try{
+				#sql [ctx]  {SELECT
+								use_code_value,
+								use_code_desc
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtBoeTypeUCV),
+								:(decl.collboedetailmapping.CollBoeDialog_txtBoeTypeUCD)
+							FROM  user_code_value
+	 					   	WHERE use_cod_val_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_TYPE_ID)
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from user_code_value BOE_TYPE_ID SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from user_code_value BOE_TYPE_ID SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from user_code_value BOE_TYPE_ID SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//BOE_TYPE_ID
+			}			
+			if(decl.collboedetailmapping.CollBoeDialog_ISU_PLACE_ID != null){
+			//POLITICAL_MAP   ISU_PLACE_ID
+			try{
+				#sql [ctx]  {SELECT
+								code,
+								name
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtIsuPlaCode),
+								:(decl.collboedetailmapping.CollBoeDialog_txtIssuePlace)
+							FROM  political_map
+	 					   	WHERE pol_map_id =:(decl.collboedetailmapping.CollBoeDialog_ISU_PLACE_ID)
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from political_map ISU_PLACE_ID SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from political_map ISU_PLACE_ID SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from political_map ISU_PLACE_ID SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//ISU_PLACE_ID
+			}
+			
+			
+			
+			if(decl.collboedetailmapping.CollBoeDialog_CUR_ID != null){
+			//CURRENCY    CUR_ID
+			try{
+				#sql [ctx]  {SELECT
+								code_char
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtCurIdCodeChar)
+							FROM  currency
+	 					   	WHERE cur_id =:(decl.collboedetailmapping.CollBoeDialog_CUR_ID)
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from currency CUR_ID SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from currency CUR_ID SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from currency CUR_ID SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//CUR_ID
+			}
+			
+			if(decl.collboedetailmapping.CollBoeDialog_PAY_PLACE_ID != null){
+			
+//			//POLITICAL_MAP   PAY_PLACE_ID
+			try{
+				#sql [ctx]  {SELECT
+								code,
+								name
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtPayPlaceCode),
+								:(decl.collboedetailmapping.CollBoeDialog_txtPayPlace)
+							FROM  political_map
+	 					   	WHERE pol_map_id =:(decl.collboedetailmapping.CollBoeDialog_PAY_PLACE_ID)
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from political_map PAY_PLACE_ID SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from political_map PAY_PLACE_ID SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from political_map PAY_PLACE_ID SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) 
+					throw new VestigoTMException(1,"No data found!", "err012", null);
+				else 
+					throw se;
+			}//PAY_PLACE_ID
+			}
+			
+			
+	
+			//COLL_BOE_DEBTOR			TRASANT		1620130003
+
+
+			
+			try{
+				#sql [ctx]  {SELECT
+								register_no,
+								coll_cus_id
+								
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtRegNoT),
+								:(decl.collboedetailmapping.CollBoeDialog_COLL_CUS_ID)
+								
+							FROM  coll_boe_debtor 
+	 					   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+							AND   role_boe_id = 1620130003
+							AND  current date <= date_until
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			TRASANT SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			TRASANT SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			TRASANT SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//TRASANT
+			if(decl.collboedetailmapping.CollBoeDialog_COLL_CUS_ID != null){
+			//TRASANT	
+				//				code_deb,
+				//				name_deb,
+				//				fname_deb,
+				//				sname_deb
+				//				
+				//				:(decl.collboedetailmapping.CollBoeDialog_txtCodeT),
+				//				:(decl.collboedetailmapping.CollBoeDialog_txtNameT),
+				//				:(decl.collboedetailmapping.CollBoeDialog_txtFName),
+				//				:(decl.collboedetailmapping.CollBoeDialog_txtSName)
+				
+				
+				//		TRASANT                        
+				//		CollBoeDialog_txtRegNoT        
+				//		CollBoeDialog_txtCodeT         
+				//		CollBoeDialog_txtNameT         
+				//		CollBoeDialog_txtFName         
+				//		CollBoeDialog_txtSName     
+				
+				
+				//CollBoeDialog_txtAddressT              
+				//CollBoeDialog_txtPlaceAddressT         
+				//                  
+				//CollBoeDialog_txtPostNrT               
+				//CollBoeDialog_txtPostNameT  
+				
+				
+					
+					
+					try{
+						#sql [ctx]  {SELECT
+										name,
+										code
+										
+									INTO
+										:(decl.collboedetailmapping.CollBoeDialog_txtNameT),
+										:(decl.collboedetailmapping.CollBoeDialog_txtCodeT)
+										
+									FROM  customer
+			 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_COLL_CUS_ID)
+									
+						}; 
+					}catch(java.sql.SQLException se) {
+						tc.debug ( "......CO153.sqlj select from customer			TRASANT SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO153.sqlj select from customer			TRASANT SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO153.sqlj select from customer			TRASANT SQL Message " + se.getMessage());
+						se.printStackTrace();
+						if (se.getErrorCode()==100){ 
+							//throw new VestigoTMException(1,"No data found!", "err012", null);
+						}else { 
+							throw se;
+						}
+					}//TRASANT
+					
+					try{
+						#sql [ctx]  {SELECT
+										 name , 
+										 surname
+									INTO
+										:(decl.collboedetailmapping.CollBoeDialog_txtFName),
+										:(decl.collboedetailmapping.CollBoeDialog_txtSName)
+									FROM  citizen
+			 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_COLL_CUS_ID)
+									
+						}; 
+					}catch(java.sql.SQLException se) {
+						tc.debug ( "......CO153.sqlj select from citizen			TRASANT SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO153.sqlj select from citizen			TRASANT SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO153.sqlj select from citizen			TRASANT SQL Message " + se.getMessage());
+						se.printStackTrace();
+						if (se.getErrorCode()==100){ 
+							//throw new VestigoTMException(1,"No data found!", "err012", null);
+						}else { 
+							throw se;
+						}
+					}//TRASANT
+				
+					try{
+						#sql [ctx]  {SELECT
+										 address , 
+										 postoffice , 
+										 city_name
+									INTO
+										:(decl.collboedetailmapping.CollBoeDialog_txtAddressT),
+										:(decl.collboedetailmapping.CollBoeDialog_txtPostNrT),
+										:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressT)
+									FROM  cust_address
+			 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_COLL_CUS_ID)
+									AND add_typ_id = 'MAINADDRESS'  
+									AND date_until = '9999-12-31' 
+									
+						}; 
+					}catch(java.sql.SQLException se) {
+						tc.debug ( "......CO153.sqlj select from cust_address			TRASANT SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO153.sqlj select from cust_address			TRASANT SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO153.sqlj select from cust_address			TRASANT SQL Message " + se.getMessage());
+						se.printStackTrace();
+						if (se.getErrorCode()==100){ 
+							//throw new VestigoTMException(1,"No data found!", "err012", null);
+						}else { 
+							throw se;
+						}
+					}//TRASANT
+				
+			
+				
+				try{
+					#sql [ctx]  {SELECT
+									 pos_off_name
+								INTO
+									:(decl.collboedetailmapping.CollBoeDialog_txtPostNameT)
+								FROM  post_office
+		 					   	WHERE postal_code =:(decl.collboedetailmapping.CollBoeDialog_txtPostNrT)
+								
+								
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from post_office			TRASANT SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from post_office			TRASANT SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from post_office			TRASANT SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+						//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//TRASANT
+			}
+			//COLL_BOE_DEBTOR			TRASAT		1620129003
+				try{
+				#sql [ctx]  {SELECT
+								register_no,
+								coll_cus_id
+								
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtRegNoTR),
+								:(decl.collboedetailmapping.CollBoeDialog_TR_CUS_ID)
+								
+							FROM  coll_boe_debtor 
+	 					   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+							AND   role_boe_id = 1620129003
+							AND  current date <= date_until
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			TRASAT SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			TRASAT SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			TRASAT SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) {
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else {
+					throw se;
+				}
+			}//TRASAT
+			
+			if(decl.collboedetailmapping.CollBoeDialog_TR_CUS_ID != null){
+				//			TRASAT  
+				//CollBoeDialog_txtRegNoTR
+				//CollBoeDialog_txtCodeTR
+				//CollBoeDialog_txtNameTR
+				//CollBoeDialog_txtFNameTR
+				//CollBoeDialog_txtSNameTR
+				//CollBoeDialog_TR_CUS_ID
+				
+				
+				//CollBoeDialog_txtAddressTR              
+				//CollBoeDialog_txtPlaceAddressTR         
+				//                  
+				//CollBoeDialog_txtPostNrTR               
+				//CollBoeDialog_txtPostNameTR   
+				
+				try{
+					#sql [ctx]  {SELECT
+									name,
+									code
+								INTO
+									:(decl.collboedetailmapping.CollBoeDialog_txtNameTR),
+									:(decl.collboedetailmapping.CollBoeDialog_txtCodeTR)
+								FROM  customer
+		 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_TR_CUS_ID)
+								
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from customer			TRASAT SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from customer			TRASAT SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from customer			TRASAT SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+						//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//TRASAT
+				
+				try{
+					#sql [ctx]  {SELECT
+									 name , 
+									 surname
+								INTO
+									:(decl.collboedetailmapping.CollBoeDialog_txtFNameTR),
+									:(decl.collboedetailmapping.CollBoeDialog_txtSNameTR)
+								FROM  citizen
+		 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_TR_CUS_ID)
+								
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from citizen			TRASAT SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from citizen			TRASAT SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from citizen			TRASAT SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+						//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//TRASAT
+			
+				try{
+					#sql [ctx]  {SELECT
+									 address , 
+									 postoffice , 
+									 city_name
+								INTO
+									:(decl.collboedetailmapping.CollBoeDialog_txtAddressTR),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPostNrTR),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressTR)
+								FROM  cust_address
+		 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_TR_CUS_ID)
+								AND add_typ_id = 'MAINADDRESS'  
+								AND date_until = '9999-12-31' 
+								
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from cust_address			TRASAT SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from cust_address			TRASAT SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from cust_address			TRASAT SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+						//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//TRASAT
+			
+		
+			
+			try{
+				#sql [ctx]  {SELECT
+								 pos_off_name
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtPostNameTR)
+							FROM  post_office
+	 					   	WHERE postal_code =:(decl.collboedetailmapping.CollBoeDialog_txtPostNrTR)
+							
+							
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from post_office			TRASAT SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from post_office			TRASAT SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from post_office			TRASAT SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//TRASAT
+			}
+			//			COLL_BOE_DEBTOR			INDOSANT1		1635463003
+			try{
+			#sql [ctx]  {SELECT
+							register_no,
+							coll_cus_id
+							
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtRegNoInd1),
+							:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd1)
+							
+						FROM  coll_boe_debtor 
+ 					   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+						AND   role_boe_id = 1635463003
+						AND  current date <= date_until
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT1 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT1 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT1 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100) {
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else {
+				throw se;
+			}
+		}//INDOSANT1
+		
+		if(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd1 != null){
+			//INDOSANT1
+			//CollBoeDialog_txtRegNoInd1
+			//CollBoeDialog_txtCodeInd1
+			//CollBoeDialog_txtNameInd1
+			//CollBoeDialog_txtFNameInd1
+			//CollBoeDialog_txtSNameInd1
+			//CollBoeDialog_CUS_IDInd1
+			
+			
+			//CollBoeDialog_txtAddressInd1           
+			//CollBoeDialog_txtPlaceAddressInd1         
+			//                  
+			//CollBoeDialog_txtPostNrInd1               
+			//CollBoeDialog_txtPostNameInd1     
+			try{
+				#sql [ctx]  {SELECT
+								name,
+								code
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtNameInd1),
+								:(decl.collboedetailmapping.CollBoeDialog_txtCodeInd1)
+							FROM  customer
+	 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd1)
+							
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT1 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT1 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT1 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//INDOSANT1 name,code
+			
+			try{
+				#sql [ctx]  {SELECT
+								 name , 
+								 surname
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtFNameInd1),
+								:(decl.collboedetailmapping.CollBoeDialog_txtSNameInd1)
+							FROM  citizen
+	 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd1)
+							
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from citizen			INDOSANT1 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from citizen			INDOSANT1 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from citizen			INDOSANT1 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//INDOSANT1
+		
+			try{
+				#sql [ctx]  {SELECT
+								 address , 
+								 postoffice , 
+								 city_name
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtAddressInd1),
+								:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd1),
+								:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressInd1)
+							FROM  cust_address
+	 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd1)
+							AND add_typ_id = 'MAINADDRESS'  
+							AND date_until = '9999-12-31' 
+							
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT1 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT1 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT1 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//INDOSANT1
+		
+  
+		
+		try{
+			#sql [ctx]  {SELECT
+							 pos_off_name
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtPostNameInd1)
+						FROM  post_office
+ 					   	WHERE postal_code =:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd1)
+						
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from post_office			INDOSANT1 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from post_office			INDOSANT1 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from post_office			INDOSANT1 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT1
+		}
+//		COLL_BOE_DEBTOR			INDOSANT2		1635464003
+		try{
+		#sql [ctx]  {SELECT
+						register_no,
+						coll_cus_id
+						
+					INTO
+						:(decl.collboedetailmapping.CollBoeDialog_txtRegNoInd2),
+						:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd2)
+						
+					FROM  coll_boe_debtor 
+					   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+					AND   role_boe_id = 1635464003
+					AND  current date <= date_until
+		}; 
+	}catch(java.sql.SQLException se) {
+		tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT2 SQL ErrorCode " + se.getErrorCode());
+		tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT2 SQL SQLState " + se.getSQLState());
+		tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT2 SQL Message " + se.getMessage());
+		se.printStackTrace();
+		if (se.getErrorCode()==100) {
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+		}else {
+			throw se;
+		}
+	}//INDOSANT2
+	
+	if(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd2 != null){
+		//INDOSANT2
+
+		//CollBoeDialog_txtRegNoInd2
+		//CollBoeDialog_txtCodeInd2
+		//CollBoeDialog_txtNameInd2
+		//CollBoeDialog_txtFNameInd2
+		//CollBoeDialog_txtSNameInd2
+		//CollBoeDialog_CUS_IDInd2
+		
+		
+		//CollBoeDialog_txtAddressInd2          
+		//CollBoeDialog_txtPlaceAddressInd2        
+		//                  
+		//CollBoeDialog_txtPostNrInd2               
+		//CollBoeDialog_txtPostNameInd2     
+		try{
+			#sql [ctx]  {SELECT
+							name,
+							code
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtNameInd2),
+							:(decl.collboedetailmapping.CollBoeDialog_txtCodeInd2)
+						FROM  customer
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd2)
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT2 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT2 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT2 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT2 name,code
+		
+		try{
+			#sql [ctx]  {SELECT
+							 name , 
+							 surname
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtFNameInd2),
+							:(decl.collboedetailmapping.CollBoeDialog_txtSNameInd2)
+						FROM  citizen
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd2)
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT2 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT2 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT2 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT2
+	
+		try{
+			#sql [ctx]  {SELECT
+							 address , 
+							 postoffice , 
+							 city_name
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtAddressInd2),
+							:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd2),
+							:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressInd2)
+						FROM  cust_address
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd2)
+						AND add_typ_id = 'MAINADDRESS'  
+						AND date_until = '9999-12-31' 
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT2 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT2 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT2 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT2
+	try{
+		#sql [ctx]  {SELECT
+						 pos_off_name
+					INTO
+						:(decl.collboedetailmapping.CollBoeDialog_txtPostNameInd2)
+					FROM  post_office
+					   	WHERE postal_code =:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd2)
+		}; 
+	}catch(java.sql.SQLException se) {
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT2 SQL ErrorCode " + se.getErrorCode());
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT2 SQL SQLState " + se.getSQLState());
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT2 SQL Message " + se.getMessage());
+		se.printStackTrace();
+		if (se.getErrorCode()==100){ 
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+		}else { 
+			throw se;
+		}
+	}//INDOSANT2
+
+
+		
+	}
+	
+
+	
+	
+//	COLL_BOE_DEBTOR			INDOSANT3		1635465003
+	try{
+	#sql [ctx]  {SELECT
+					register_no,
+					coll_cus_id
+					
+				INTO
+					:(decl.collboedetailmapping.CollBoeDialog_txtRegNoInd3),
+					:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd3)
+					
+				FROM  coll_boe_debtor 
+				   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+				AND   role_boe_id = 1635465003
+				AND  current date <= date_until
+	}; 
+}catch(java.sql.SQLException se) {
+	tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT3 SQL ErrorCode " + se.getErrorCode());
+	tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT3 SQL SQLState " + se.getSQLState());
+	tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT3 SQL Message " + se.getMessage());
+	se.printStackTrace();
+	if (se.getErrorCode()==100) {
+		//throw new VestigoTMException(1,"No data found!", "err012", null);
+	}else {
+		throw se;
+	}
+}//INDOSANT3
+
+	if(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd3 != null){
+//		INDOSANT3
+
+		//CollBoeDialog_txtRegNoInd3
+		//CollBoeDialog_txtCodeInd3
+		//CollBoeDialog_txtNameInd3
+		//CollBoeDialog_txtFNameInd3
+		//CollBoeDialog_txtSNameInd3
+		//CollBoeDialog_CUS_IDInd3
+		
+		
+		//CollBoeDialog_txtAddressInd3         
+		//CollBoeDialog_txtPlaceAddressInd3       
+		//                  
+		//CollBoeDialog_txtPostNrInd3               
+		//CollBoeDialog_txtPostNameInd3     
+		try{
+			#sql [ctx]  {SELECT
+							name,
+							code
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtNameInd3),
+							:(decl.collboedetailmapping.CollBoeDialog_txtCodeInd3)
+						FROM  customer
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd3)
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT3 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT3 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT3 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT3 name,code
+		
+		try{
+			#sql [ctx]  {SELECT
+							 name , 
+							 surname
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtFNameInd3),
+							:(decl.collboedetailmapping.CollBoeDialog_txtSNameInd3)
+						FROM  citizen
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd3)
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT3 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT3 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT3 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT3
+	
+		try{
+			#sql [ctx]  {SELECT
+							 address , 
+							 postoffice , 
+							 city_name
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtAddressInd3),
+							:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd3),
+							:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressInd3)
+						FROM  cust_address
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd3)
+						AND add_typ_id = 'MAINADDRESS'  
+						AND date_until = '9999-12-31' 
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT3 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT3 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT3 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT3
+	
+
+	
+	try{
+		#sql [ctx]  {SELECT
+						 pos_off_name
+					INTO
+						:(decl.collboedetailmapping.CollBoeDialog_txtPostNameInd3)
+					FROM  post_office
+					   	WHERE postal_code =:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd3)
+					
+					
+		}; 
+	}catch(java.sql.SQLException se) {
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT3 SQL ErrorCode " + se.getErrorCode());
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT3 SQL SQLState " + se.getSQLState());
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT3 SQL Message " + se.getMessage());
+		se.printStackTrace();
+		if (se.getErrorCode()==100){ 
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+		}else { 
+			throw se;
+		}
+	}//INDOSANT3
+
+	
+	}
+
+	
+	
+	
+//	COLL_BOE_DEBTOR			INDOSANT4		1635466003
+	try{
+	#sql [ctx]  {SELECT
+					register_no,
+					coll_cus_id
+					
+				INTO
+					:(decl.collboedetailmapping.CollBoeDialog_txtRegNoInd4),
+					:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd4)
+					
+				FROM  coll_boe_debtor 
+				   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+				AND   role_boe_id = 1635466003
+				AND  current date <= date_until
+	}; 
+}catch(java.sql.SQLException se) {
+	tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT4 SQL ErrorCode " + se.getErrorCode());
+	tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT4 SQL SQLState " + se.getSQLState());
+	tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			INDOSANT4 SQL Message " + se.getMessage());
+	se.printStackTrace();
+	if (se.getErrorCode()==100) {
+		//throw new VestigoTMException(1,"No data found!", "err012", null);
+	}else {
+		throw se;
+	}
+}//INDOSANT4
+
+	if(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd4 != null){
+//		INDOSANT4
+
+		//CollBoeDialog_txtRegNoInd4
+		//CollBoeDialog_txtCodeInd4
+		//CollBoeDialog_txtNameInd4
+		//CollBoeDialog_txtFNameInd4
+		//CollBoeDialog_txtSNameInd4
+		//CollBoeDialog_CUS_IDInd4
+		
+		
+		//CollBoeDialog_txtAddressInd4         
+		//CollBoeDialog_txtPlaceAddressInd4       
+		//                  
+		//CollBoeDialog_txtPostNrInd4               
+		//CollBoeDialog_txtPostNameInd4     
+		try{
+			#sql [ctx]  {SELECT
+							name,
+							code
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtNameInd4),
+							:(decl.collboedetailmapping.CollBoeDialog_txtCodeInd4)
+						FROM  customer
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd4)
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT4 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT4 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select name,code from customer			INDOSANT4 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT4 name,code
+		
+		try{
+			#sql [ctx]  {SELECT
+							 name , 
+							 surname
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtFNameInd4),
+							:(decl.collboedetailmapping.CollBoeDialog_txtSNameInd4)
+						FROM  citizen
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd4)
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT4 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT4 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from citizen			INDOSANT4 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT4
+	
+		try{
+			#sql [ctx]  {SELECT
+							 address , 
+							 postoffice , 
+							 city_name
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtAddressInd4),
+							:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd4),
+							:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressInd4)
+						FROM  cust_address
+ 					   	WHERE cus_id =:(decl.collboedetailmapping.CollBoeDialog_CUS_IDInd4)
+						AND add_typ_id = 'MAINADDRESS'  
+						AND date_until = '9999-12-31' 
+						
+			}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT4 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT4 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from cust_address			INDOSANT4 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else { 
+				throw se;
+			}
+		}//INDOSANT4
+	
+
+	
+	try{
+		#sql [ctx]  {SELECT
+						 pos_off_name
+					INTO
+						:(decl.collboedetailmapping.CollBoeDialog_txtPostNameInd4)
+					FROM  post_office
+					   	WHERE postal_code =:(decl.collboedetailmapping.CollBoeDialog_txtPostNrInd4)
+					
+					
+		}; 
+	}catch(java.sql.SQLException se) {
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT4 SQL ErrorCode " + se.getErrorCode());
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT4 SQL SQLState " + se.getSQLState());
+		tc.debug ( "......CO153.sqlj select from post_office			INDOSANT4 SQL Message " + se.getMessage());
+		se.printStackTrace();
+		if (se.getErrorCode()==100){ 
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+		}else { 
+			throw se;
+		}
+	}//INDOSANT4
+
+	
+	}
+
+
+		
+			
+			
+			
+			
+			//B2 ELIGIBILITY
+			if(decl.collboedetailmapping.CollBoeDialog_txtEligibility != null){
+				//SELECT FROM system_code_value
+				String opisPrihv = null;
+				try{
+					#sql [ctx]  {SELECT		sys_code_desc
+											INTO :opisPrihv
+											FROM  system_code_value
+											WHERE sys_code_value =:(decl.collboedetailmapping.CollBoeDialog_txtEligibility)
+											AND sys_cod_id = 'clt_eligib'
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from system_code_value SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from system_code_value SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from system_code_value SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100) 
+						throw new VestigoTMException(1,"No data found!", "err012", null);
+					else 
+						throw se;
+				}
+				
+				decl.collboedetailmapping.CollBoeDialog_txtEligDesc= opisPrihv.trim();
+				tc.debug ( "......CO153.sqlj txtEligDesc " + decl.collboedetailmapping.CollBoeDialog_txtEligDesc);
+				
+			}
+			
+			 
+//			 RBA prihvatljivost       	
+	        try{ 
+	    		
+				if (decl.collboedetailmapping.ColBoeRba_txtEligibility != null &&  (!decl.collboedetailmapping.ColBoeRba_txtEligibility.trim().equals(""))) {  
+
+					#sql [ctx] {
+	                    SELECT sys_code_desc
+	                        INTO :(decl.collboedetailmapping.ColBoeRba_txtEligibilityDsc)
+	                        FROM system_code_value
+	                        WHERE sys_cod_id = 'clt_eligib' and 
+								  sys_code_value = :(decl.collboedetailmapping.ColBoeRba_txtEligibility)  };  
+				}	
+	       	}catch(java.sql.SQLException e){
+	              if (e.getErrorCode()!=100) throw e;
+	        }		
+	       	
+// B1 prihvatljivost
+	        try{ 
+	    		
+				if (decl.collboedetailmapping.Coll_txtB1Eligibility1 != null &&  (!decl.collboedetailmapping.Coll_txtB1Eligibility1.trim().equals(""))) {  
+
+					#sql [ctx] {
+	                    SELECT sys_code_desc
+	                        INTO :(decl.collboedetailmapping.Coll_txtB1EligDesc1)
+	                        FROM system_code_value
+	                        WHERE sys_cod_id = 'clt_eligib' and 
+								  sys_code_value = :(decl.collboedetailmapping.Coll_txtB1Eligibility1)  };  
+				}	
+	       	}catch(java.sql.SQLException e){
+	              if (e.getErrorCode()!=100) throw e;
+	        }			       	
+// B2 IRB prihvatljivost	       	
+	        try{ 
+	    		
+				if (decl.collboedetailmapping.Coll_txtB2IRBEligibility1 != null &&  (!decl.collboedetailmapping.Coll_txtB2IRBEligibility1.trim().equals(""))) {  
+
+					#sql [ctx] {
+	                    SELECT sys_code_desc
+	                        INTO :(decl.collboedetailmapping.Coll_txtB2IRBEligDesc1)
+	                        FROM system_code_value
+	                        WHERE sys_cod_id = 'clt_eligib' and 
+								  sys_code_value = :(decl.collboedetailmapping.Coll_txtB2IRBEligibility1)  };  
+				}	
+	       	}catch(java.sql.SQLException e){
+	              if (e.getErrorCode()!=100) throw e;
+	        }			       	
+	       	
+            //ND ELIGIBILITY
+            if(decl.collboedetailmapping.Coll_txtNDEligibility != null){
+                //SELECT FROM system_code_value
+                String opisPrihv = null;
+                try{
+                    #sql [ctx]  {SELECT     sys_code_desc
+                                            INTO :opisPrihv
+                                            FROM  system_code_value
+                                            WHERE sys_code_value =:(decl.collboedetailmapping.Coll_txtNDEligibility)
+                                            AND sys_cod_id = 'clt_eligib'
+                    }; 
+                }catch(java.sql.SQLException se) {
+                    tc.debug ( "......CO153.sqlj select from system_code_value SQL ErrorCode " + se.getErrorCode());
+                    tc.debug ( "......CO153.sqlj select from system_code_value SQL SQLState " + se.getSQLState());
+                    tc.debug ( "......CO153.sqlj select from system_code_value SQL Message " + se.getMessage());
+                    se.printStackTrace();
+                    if (se.getErrorCode()==100) 
+                        throw new VestigoTMException(1,"No data found!", "err012", null);
+                    else 
+                        throw se;
+                }
+                
+                decl.collboedetailmapping.Coll_txtNDEligDesc= opisPrihv.trim();
+                tc.debug ( "......CO153.sqlj Coll_txtNDEligibility " + decl.collboedetailmapping.Coll_txtNDEligDesc);
+                
+            }	       	
+//	 misljenje pravne sluzbe       	
+	        try{ 
+				if (decl.collboedetailmapping.ColBoeLow_txtEligibility != null) {  
+
+					#sql [ctx] {
+	                    SELECT sys_code_desc
+	                        INTO :(decl.collboedetailmapping.ColBoeLow_txtEligibilityDesc)
+	                        FROM system_code_value
+	                        WHERE sys_cod_id = 'clt_eligib' and 
+								  sys_code_value = :(decl.collboedetailmapping.ColBoeLow_txtEligibility)  };  
+				}	
+	       	}catch(java.sql.SQLException e){
+	              if (e.getErrorCode()!=100) throw e;
+	        }		           				
+			
+			//Dohvati iz tabele APP_USER
+			
+		if (decl.collboedetailmapping.CollBoeDialog_USE_OPEN_ID != null) {
+			try {
+
+				#sql [ctx] { SELECT login, user_name INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseOpenIdLogin),
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseOpenIdName)
+				FROM app_user WHERE use_id =
+				:(decl.collboedetailmapping.CollBoeDialog_USE_OPEN_ID) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}
+
+		if (decl.collboedetailmapping.CollBoeDialog_USE_ID != null) {
+			try {
+
+				#sql [ctx] { SELECT login, user_name INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdLogin),
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdName) FROM
+				app_user WHERE use_id =
+				:(decl.collboedetailmapping.CollBoeDialog_USE_ID) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}
+
+		if (decl.collboedetailmapping.CollBoeDialog_USE_ID_VER_SND != null) {
+			try {
+
+				#sql [ctx] { SELECT login, user_name INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdSenLogin),
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdSenName)
+				FROM app_user WHERE use_id =
+				:(decl.collboedetailmapping.CollBoeDialog_USE_ID_VER_SND) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}
+
+		if (decl.collboedetailmapping.CollBoeDialog_USE_ID_VER != null) {
+			try {
+
+				#sql [ctx] { SELECT login, user_name INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdVerLogin),
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdVerName)
+				FROM app_user WHERE use_id =
+				:(decl.collboedetailmapping.CollBoeDialog_USE_ID_VER) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}
+
+		if (decl.collboedetailmapping.CollBoeDialog_USE_ID_AUT != null) {
+			try {
+
+				#sql [ctx] { SELECT login, user_name INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdAutLogin),
+				:(decl.collboedetailmapping.CollBoeDialog_txtUseIdAutName)
+				FROM app_user WHERE use_id =
+				:(decl.collboedetailmapping.CollBoeDialog_USE_ID_AUT) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		} 
+	        
+	       String sys_cod_id = null;
+	   
+	    //Dohvat opisa statusa iz SYSTEM_CODE_VALUE
+
+	        
+		if (decl.collboedetailmapping.CollBoeDialog_BasicDataStatus != null) {
+			sys_cod_id = "collateral_code";
+			try {
+
+				#sql [ctx] { SELECT sys_code_desc INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtBasicDataSt)
+				FROM system_code_value WHERE sys_cod_id = :(sys_cod_id) AND
+				sys_code_value =
+				:(decl.collboedetailmapping.CollBoeDialog_BasicDataStatus) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}
+			
+			
+			
+			
+		if (decl.collboedetailmapping.CollBoeDialog_CollDataStatus != null) {
+			sys_cod_id = "collateral_code";
+			try {
+
+				#sql [ctx] { SELECT sys_code_desc INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtCollDataSt) FROM system_code_value
+				WHERE sys_cod_id = :(sys_cod_id) and sys_code_value =
+				:(decl.collboedetailmapping.CollBoeDialog_CollDataStatus) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}
+
+		if (decl.collboedetailmapping.CollBoeDialog_CoverIndic != null) {
+			sys_cod_id = "collateral_code";
+			try {
+
+				#sql [ctx] { SELECT sys_code_desc INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtCoverIn) FROM system_code_value
+				WHERE sys_cod_id = :(sys_cod_id) and sys_code_value =
+				:(decl.collboedetailmapping.CollBoeDialog_CoverIndic) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}
+
+		if (decl.collboedetailmapping.CollBoeDialog_MortgageStatus != null) {
+			sys_cod_id = "collateral_code";
+			try {
+
+				#sql [ctx] { SELECT sys_code_desc INTO
+				:(decl.collboedetailmapping.CollBoeDialog_txtMortgageSt) FROM system_code_value
+				WHERE sys_cod_id = :(sys_cod_id) and sys_code_value =
+				:(decl.collboedetailmapping.CollBoeDialog_MortgageStatus) };
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}	
+			
+			
+			
+	if (decl.collboedetailmapping.CollBoeDialog_FinancialFlag != null) {
+			sys_cod_id = "financial_flag";
+			try {
+
+				#sql [ctx] { 
+							SELECT sys_code_desc 
+							INTO :(decl.collboedetailmapping.CollBoeDialog_txtFinancialFl) 
+							FROM system_code_value
+							WHERE sys_cod_id = :(sys_cod_id) 
+							AND sys_code_value = :(decl.collboedetailmapping.CollBoeDialog_FinancialFlag) 
+				};
+
+			} catch (java.sql.SQLException e) {
+				if (e.getErrorCode() != 100)
+					throw e;
+			}
+		}	 
+
+			
+
+// AVALISTI
+	
+//	SYS_COD_VAL_ID	SYS_COD_ID	SYS_CODE_VALUE
+//	1636798003	clt_role_boe      	AVAL1
+//	1636799003	clt_role_boe      	AVAL2
+//	1636800003	clt_role_boe      	AVAL3
+//	1636801003	clt_role_boe      	AVAL4	
+	
+	
+//	cus_id_aval1
+//	KolBD_txtRegNoAval1	
+
+
+	
+	//			COLL_BOE_DEBTOR			AVALIST 1		1636798003
+		try{
+			#sql [ctx]  {SELECT
+					register_no,
+					coll_cus_id
+					
+				INTO
+					:(decl.collboedetailmapping.KolBD_txtRegNoAval1),
+					:(decl.collboedetailmapping.cus_id_aval1)
+					
+				FROM  coll_boe_debtor 
+				   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+				AND   role_boe_id = 1636798003
+				AND  current date <= date_until
+	}; 
+		}catch(java.sql.SQLException se) {
+			tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST1 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST1 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST1 SQL Message " + se.getMessage());
+			se.printStackTrace();
+			if (se.getErrorCode()==100) {
+		//throw new VestigoTMException(1,"No data found!", "err012", null);
+			}else {
+				throw se;
+			}
+		}//AVALIST 1
+
+		if(decl.collboedetailmapping.cus_id_aval1 != null){
+	//AVALIST 1
+			
+//			cus_id_aval1
+//			KolBD_txtRegNoAval1	
+
+//			KolBD_txtCodeAval1
+//			KolBD_txtNameAval1
+//			KolBD_txtFNameAval1
+//			KolBD_txtSNameAval1
+			
+//CollBoeDialog_txtAddressAv1	
+//CollBoeDialog_txtPlaceAddressAv1
+      
+              
+//			KolBD_txtPostNrAval1
+//			KolBD_txtPostNameAval1
+			try{
+				#sql [ctx]  {SELECT
+						name,
+						code
+					INTO
+						:(decl.collboedetailmapping.KolBD_txtNameAval1),
+						:(decl.collboedetailmapping.KolBD_txtCodeAval1)
+					FROM  customer
+					   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval1)
+					
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST1 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST1 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST1 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//AVALIST1 name,code
+	
+			try{
+				#sql [ctx]  {SELECT
+						 name , 
+						 surname
+					INTO
+						:(decl.collboedetailmapping.KolBD_txtFNameAval1),
+						:(decl.collboedetailmapping.KolBD_txtSNameAval1)
+					FROM  citizen
+					   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval1)
+					
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from citizen			AVALIST1 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from citizen			AVALIST1 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from citizen			AVALIST1 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//AVALIST1
+
+			try{
+				#sql [ctx]  {SELECT
+						 address , 
+						 postoffice , 
+						 city_name
+					INTO
+						:(decl.collboedetailmapping.CollBoeDialog_txtAddressAv1),
+						:(decl.collboedetailmapping.KolBD_txtPostNrAval1),
+						:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressAv1)
+					FROM  cust_address
+					   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval1)
+					AND add_typ_id = 'MAINADDRESS'  
+					AND date_until = '9999-12-31' 
+					
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from cust_address			AVALIST1 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from cust_address			AVALIST1 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from cust_address			AVALIST1 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//AVALIST1
+
+
+
+			try{
+				#sql [ctx]  {SELECT
+					 pos_off_name
+				INTO
+					:(decl.collboedetailmapping.KolBD_txtPostNameAval1)
+				FROM  post_office
+				   	WHERE postal_code =:(decl.collboedetailmapping.KolBD_txtPostNrAval1)
+				
+				
+				}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from post_office			AVALIST1 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from post_office			AVALIST1 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from post_office			AVALIST1 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100){ 
+		//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else { 
+					throw se;
+				}
+			}//AVALIST1
+
+	
+		}
+	
+		
+		//			COLL_BOE_DEBTOR			AVALIST 2		1636799003
+			try{
+				#sql [ctx]  {SELECT
+						register_no,
+						coll_cus_id
+						
+					INTO
+						:(decl.collboedetailmapping.KolBD_txtRegNoAval2),
+						:(decl.collboedetailmapping.cus_id_aval2)
+						
+					FROM  coll_boe_debtor 
+					   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+					AND   role_boe_id = 1636799003
+					AND  current date <= date_until
+		}; 
+			}catch(java.sql.SQLException se) {
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST2 SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST2 SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST2 SQL Message " + se.getMessage());
+				se.printStackTrace();
+				if (se.getErrorCode()==100) {
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+				}else {
+					throw se;
+				}
+			}//AVALIST 1
+
+			if(decl.collboedetailmapping.cus_id_aval2 != null){
+		//AVALIST 1
+				
+//				cus_id_aval2
+//				KolBD_txtRegNoAval2	
+
+//				KolBD_txtCodeAval2
+//				KolBD_txtNameAval2
+//				KolBD_txtFNameAval2
+//				KolBD_txtSNameAval2
+		
+//				CollBoeDialog_txtAddressAv2
+//				CollBoeDialog_txtPlaceAddressAv2		
+           
+         
+		//                  
+//				KolBD_txtPostNrAval2
+//				KolBD_txtPostNameAval2
+				
+				try{
+					#sql [ctx]  {SELECT
+							name,
+							code
+						INTO
+							:(decl.collboedetailmapping.KolBD_txtNameAval2),
+							:(decl.collboedetailmapping.KolBD_txtCodeAval2)
+						FROM  customer
+						   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval2)
+						
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST2 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST2 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST2 SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//AVALIST2 name,code
+		
+				try{
+					#sql [ctx]  {SELECT
+							 name , 
+							 surname
+						INTO
+							:(decl.collboedetailmapping.KolBD_txtFNameAval2),
+							:(decl.collboedetailmapping.KolBD_txtSNameAval2)
+						FROM  citizen
+						   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval2)
+						
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from citizen			AVALIST2 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from citizen			AVALIST2 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from citizen			AVALIST2 SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//AVALIST2
+
+				try{
+					#sql [ctx]  {SELECT
+							 address , 
+							 postoffice , 
+							 city_name
+						INTO
+							:(decl.collboedetailmapping.CollBoeDialog_txtAddressAv2),
+							:(decl.collboedetailmapping.KolBD_txtPostNrAval2),
+							:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressAv2)
+						FROM  cust_address
+						   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval2)
+						AND add_typ_id = 'MAINADDRESS'  
+						AND date_until = '9999-12-31' 
+						
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from cust_address			AVALIST2 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from cust_address			AVALIST2 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from cust_address			AVALIST2 SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//AVALIST1
+
+
+
+				try{
+					#sql [ctx]  {SELECT
+						 pos_off_name
+					INTO
+						:(decl.collboedetailmapping.KolBD_txtPostNameAval2)
+					FROM  post_office
+					   	WHERE postal_code =:(decl.collboedetailmapping.KolBD_txtPostNrAval2)
+					
+					
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from post_office			AVALIST2 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from post_office			AVALIST2 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from post_office			AVALIST2 SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100){ 
+			//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else { 
+						throw se;
+					}
+				}//AVALIST2
+
+		
+			}	
+	
+			
+			//			COLL_BOE_DEBTOR			AVALIST 3		1636800003
+				try{
+					#sql [ctx]  {SELECT
+							register_no,
+							coll_cus_id
+							
+						INTO
+							:(decl.collboedetailmapping.KolBD_txtRegNoAval3),
+							:(decl.collboedetailmapping.cus_id_aval3)
+							
+						FROM  coll_boe_debtor 
+						   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+						AND   role_boe_id = 1636800003
+						AND  current date <= date_until
+			}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST3 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST3 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST3 SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100) {
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else {
+						throw se;
+					}
+				}//AVALIST 3
+
+				if(decl.collboedetailmapping.cus_id_aval3 != null){
+			//AVALIST 1
+					
+//					cus_id_aval3
+//					KolBD_txtRegNoAval3	
+
+//					KolBD_txtCodeAval3
+//					KolBD_txtNameAval3
+//					KolBD_txtFNameAval3
+//					KolBD_txtSNameAval3
+			
+//					CollBoeDialog_txtAddressAv3
+//					CollBoeDialog_txtPlaceAddressAv3			
+                  
+//					KolBD_txtPostNrAval3
+//					KolBD_txtPostNameAval3
+					try{
+						#sql [ctx]  {SELECT
+								name,
+								code
+							INTO
+								:(decl.collboedetailmapping.KolBD_txtNameAval3),
+								:(decl.collboedetailmapping.KolBD_txtCodeAval3)
+							FROM  customer
+							   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval3)
+							
+						}; 
+					}catch(java.sql.SQLException se) {
+						tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST3 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST3 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST3 SQL Message " + se.getMessage());
+						se.printStackTrace();
+						if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+						}else { 
+							throw se;
+						}
+					}//AVALIST3 name,code
+			
+					try{
+						#sql [ctx]  {SELECT
+								 name , 
+								 surname
+							INTO
+								:(decl.collboedetailmapping.KolBD_txtFNameAval3),
+								:(decl.collboedetailmapping.KolBD_txtSNameAval3)
+							FROM  citizen
+							   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval3)
+							
+						}; 
+					}catch(java.sql.SQLException se) {
+						tc.debug ( "......CO153.sqlj select from citizen			AVALIST3 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO153.sqlj select from citizen			AVALIST3 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO153.sqlj select from citizen			AVALIST3 SQL Message " + se.getMessage());
+						se.printStackTrace();
+						if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+						}else { 
+							throw se;
+						}
+					}//AVALIST3
+
+					try{
+						#sql [ctx]  {SELECT
+								 address , 
+								 postoffice , 
+								 city_name
+							INTO
+								:(decl.collboedetailmapping.CollBoeDialog_txtAddressAv3),
+								:(decl.collboedetailmapping.KolBD_txtPostNrAval3),
+								:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressAv3)
+							FROM  cust_address
+							   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval3)
+							AND add_typ_id = 'MAINADDRESS'  
+							AND date_until = '9999-12-31' 
+							
+						}; 
+					}catch(java.sql.SQLException se) {
+						tc.debug ( "......CO153.sqlj select from cust_address			AVALIST3 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO153.sqlj select from cust_address			AVALIST3 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO153.sqlj select from cust_address			AVALIST3 SQL Message " + se.getMessage());
+						se.printStackTrace();
+						if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+						}else { 
+							throw se;
+						}
+					}//AVALIST3
+
+
+
+					try{
+						#sql [ctx]  {SELECT
+							 pos_off_name
+						INTO
+							:(decl.collboedetailmapping.KolBD_txtPostNameAval3)
+						FROM  post_office
+						   	WHERE postal_code =:(decl.collboedetailmapping.KolBD_txtPostNrAval3)
+						
+						
+						}; 
+					}catch(java.sql.SQLException se) {
+						tc.debug ( "......CO153.sqlj select from post_office			AVALIST3 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO153.sqlj select from post_office			AVALIST3 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO153.sqlj select from post_office			AVALIST3 SQL Message " + se.getMessage());
+						se.printStackTrace();
+						if (se.getErrorCode()==100){ 
+				//throw new VestigoTMException(1,"No data found!", "err012", null);
+						}else { 
+							throw se;
+						}
+					}//AVALIST3
+
+			
+				}	
+
+				
+				//			COLL_BOE_DEBTOR			AVALIST 4		1636801003
+				try{
+						#sql [ctx]  {SELECT
+								register_no,
+								coll_cus_id
+								
+							INTO
+								:(decl.collboedetailmapping.KolBD_txtRegNoAval4),
+								:(decl.collboedetailmapping.cus_id_aval4)
+								
+							FROM  coll_boe_debtor 
+							   	WHERE boe_id =:(decl.collboedetailmapping.CollBoeDialog_BOE_ID)
+							AND   role_boe_id = 1636801003
+							AND  current date <= date_until
+					}; 
+				}catch(java.sql.SQLException se) {
+					tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST4 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST4 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO153.sqlj select from COLL_BOE_DEBTOR			AVALIST4 SQL Message " + se.getMessage());
+					se.printStackTrace();
+					if (se.getErrorCode()==100) {
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+					}else {
+						throw se;
+					}
+				}//AVALIST 4
+
+				if(decl.collboedetailmapping.cus_id_aval4 != null){
+				//AVALIST 4
+						
+//						cus_id_aval4
+//						KolBD_txtRegNoAval4	
+
+//						KolBD_txtCodeAval4
+//						KolBD_txtNameAval4
+//						KolBD_txtFNameAval4
+//						KolBD_txtSNameAval4
+				
+//					CollBoeDialog_txtAddressAv1
+//					CollBoeDialog_txtPlaceAddressAv1				
+         
+				//                  
+//						KolBD_txtPostNrAval4
+//						KolBD_txtPostNameAval4
+						try{
+							#sql [ctx]  {SELECT
+									name,
+									code
+								INTO
+									:(decl.collboedetailmapping.KolBD_txtNameAval4),
+									:(decl.collboedetailmapping.KolBD_txtCodeAval4)
+								FROM  customer
+								   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval4)
+								
+							}; 
+						}catch(java.sql.SQLException se) {
+							tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST4 SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST4 SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO153.sqlj select name,code from customer			AVALIST4 SQL Message " + se.getMessage());
+							se.printStackTrace();
+							if (se.getErrorCode()==100){ 
+						//throw new VestigoTMException(1,"No data found!", "err012", null);
+							}else { 
+								throw se;
+							}
+						}//AVALIST4 name,code
+				
+						try{
+							#sql [ctx]  {SELECT
+									 name , 
+									 surname
+								INTO
+									:(decl.collboedetailmapping.KolBD_txtFNameAval4),
+									:(decl.collboedetailmapping.KolBD_txtSNameAval4)
+								FROM  citizen
+								   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval4)
+								
+							}; 
+						}catch(java.sql.SQLException se) {
+							tc.debug ( "......CO153.sqlj select from citizen			AVALIST4 SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO153.sqlj select from citizen			AVALIST4 SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO153.sqlj select from citizen			AVALIST4 SQL Message " + se.getMessage());
+							se.printStackTrace();
+							if (se.getErrorCode()==100){ 
+						//throw new VestigoTMException(1,"No data found!", "err012", null);
+							}else { 
+								throw se;
+							}
+						}//AVALIST4
+
+						try{
+							#sql [ctx]  {SELECT
+									 address , 
+									 postoffice , 
+									 city_name
+								INTO
+									:(decl.collboedetailmapping.CollBoeDialog_txtAddressAv4),
+									:(decl.collboedetailmapping.KolBD_txtPostNrAval4),
+									:(decl.collboedetailmapping.CollBoeDialog_txtPlaceAddressAv4)
+								FROM  cust_address
+								   	WHERE cus_id =:(decl.collboedetailmapping.cus_id_aval4)
+								AND add_typ_id = 'MAINADDRESS'  
+								AND date_until = '9999-12-31' 
+								
+							}; 
+						}catch(java.sql.SQLException se) {
+							tc.debug ( "......CO153.sqlj select from cust_address			AVALIST4 SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO153.sqlj select from cust_address			AVALIST4 SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO153.sqlj select from cust_address			AVALIST4 SQL Message " + se.getMessage());
+							se.printStackTrace();
+							if (se.getErrorCode()==100){ 
+						//throw new VestigoTMException(1,"No data found!", "err012", null);
+							}else { 
+								throw se;
+							}
+						}//AVALIST4
+
+
+
+						try{
+							#sql [ctx]  {SELECT
+								 pos_off_name
+							INTO
+								:(decl.collboedetailmapping.KolBD_txtPostNameAval4)
+							FROM  post_office
+							   	WHERE postal_code =:(decl.collboedetailmapping.KolBD_txtPostNrAval4)
+							
+							
+							}; 
+						}catch(java.sql.SQLException se) {
+							tc.debug ( "......CO153.sqlj select from post_office			AVALIST4 SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO153.sqlj select from post_office			AVALIST4 SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO153.sqlj select from post_office			AVALIST4 SQL Message " + se.getMessage());
+							se.printStackTrace();
+							if (se.getErrorCode()==100){ 
+					//throw new VestigoTMException(1,"No data found!", "err012", null);
+							}else { 
+								throw se;
+							}
+						}//AVALIST4
+
+				  
+		}				
+       
+        BigDecimal colCatId = decl.collboedetailmapping.CollBoeDialog_COL_CAT_ID;
+        BigDecimal colTypId = decl.collboedetailmapping.CollBoeDialog_COL_TYPE_ID;
+        BigDecimal colSubTypId = null;
+        BigDecimal colGroId = null;
+        
+        YOY64 yoy64=new YOY64(tc);
+        GCTCData data=yoy64.getGCTCData(colCatId, colTypId, colSubTypId, colGroId);
+        
+        decl.collboedetailmapping.Coll_txtCollateralGCTCCode = data.gctc_code;
+        decl.collboedetailmapping.Coll_txtCollateralGCTCDesc = data.gctc_desc;
+        decl.collboedetailmapping.Coll_txtObjectTypeGCTCCode = data.object_type_code;
+        decl.collboedetailmapping.Coll_txtObjectTypeGCTCDesc = data.object_type_desc;
+        decl.collboedetailmapping.Coll_txtPropertyTypeGCTCCode = data.property_type_code;
+        decl.collboedetailmapping.Coll_txtPropertyTypeGCTCDesc = data.property_type_desc;
+        decl.collboedetailmapping.Coll_txtEndorsementTypeGCTCCode = data.endorsement_type_code;
+        decl.collboedetailmapping.Coll_txtEndorsementTypeGCTCDesc = data.endorsement_type_desc;
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.collboedetailmapping.CollBoeDialog_COL_HEA_ID);               
+          
+        decl.collboedetailmapping.Kol_txtPonderMVP = cData.MVP_ponder;
+        decl.collboedetailmapping.CollBoeDialog_txtWcaAmountDate = cData.wcov_date;
+        decl.collboedetailmapping.CollBoeDialog_txtWcaAmount = cData.wcov_amount;
+        decl.collboedetailmapping.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+        decl.collboedetailmapping.Coll_txtUsedWCAAmount = cData.wca_amount;
+        decl.collboedetailmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+        decl.collboedetailmapping.Coll_txtRealPonderAmount = cData.real_ponder;
+		         
+        //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja
+        try{ 
+            #sql [ctx] {
+		                    SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+		                    INTO
+		                    :(decl.collboedetailmapping.CollBoe_txtCoConfirm),
+		                    :(decl.collboedetailmapping.CollBoe_txtCoConfirmUserId),
+		                    :(decl.collboedetailmapping.CollBoe_txtCoConfirmUserName),
+		                    :(decl.collboedetailmapping.CollBoe_txtCoConfirmTime)
+		                    FROM co_chg_history as a, app_user as app
+		                    WHERE 
+		                           a.col_hea_id    = :(decl.collboedetailmapping.CollBoeDialog_COL_HEA_ID)
+		                    and    a.co_use_id=app.use_id
+		                    and
+		                            a.co_ind='D'
+		                    and
+		                            a.co_chg_ts is null
+		                    and co_chg_use_id is null
+		                    FETCH FIRST ROWS ONLY
+		                   }; 
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        }  
+	}//execute 
+	  
+   private void ispisDeclVarijabli(){
+       tc.debug("\n.............ISPIS DECL MAPPINGA collboedetailmapping POCETAK............."); 
+        Field[] fields=decl.collboedetailmapping.getClass().getDeclaredFields();
+        StringBuffer var=new StringBuffer();
+        for (int i=0;i<fields.length;i++) {
+            try {               
+                var.append("\n" + fields[i].getName() + "=" + fields[i].get(decl.collboedetailmapping) + ",");
+              } catch ( IllegalAccessException ex ) {
+                tc.debug("Greska pri ispisu decl varijable...");
+              }
+        }
+        tc.debug("DECL collboedetailmapping VARIJABLE=" + var.toString());
+        tc.debug("\n.............ISPIS DECL MAPPINGA collboedetailmapping KRAJ.............");
+    } 
+}

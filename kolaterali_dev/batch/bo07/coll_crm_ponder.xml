@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+		<Data><Parameter Name="datum"/></Data>	
+	</Row>
+	<Row>
+		<Data><Parameter Name="naslov"/></Data>
+	</Row>
+	<Row>
+		<Data><Text>Interni MB komitenta korisnika plasmana</Text></Data>
+		<Data><Text>Naziv komitenta</Text></Data>
+		<Data><Text>Partija plasmana</Text></Data>
+		<Data><Text>Izloženost</Text></Data>
+		<Data><Text>Gotovinski depozit</Text></Data>
+		<Data><Text>Polica osiguranja sa štednom komponentom</Text></Data>
+		<Data><Text>Garancija države</Text></Data>
+		<Data><Text>Garancija druge banke</Text></Data>
+		<Data><Text>Poljop.gospodarstvo,proizvodni objekt</Text></Data>
+		<Data><Text>Posl.stamb.objekt,prodajno uslužni prostor, uredske prostorije</Text></Data>
+		<Data><Text>Sklad., prod. i uredski prostori</Text></Data>
+		<Data><Text>Skladišni prostor</Text></Data>
+		<Data><Text>Stambeni objekt</Text></Data>
+		<Data><Text>Hotel, pansion</Text></Data>
+		<Data><Text>Hotelsko naselje</Text></Data>
+		<Data><Text>Privatni smještaj</Text></Data>
+		<Data><Text>Građevinsko zemljište</Text></Data>
+		<Data><Text>Poljoprivredno zemljište</Text></Data>
+		<Data><Text>Osobni automobili</Text></Data>
+		<Data><Text>Motocikli i ostala vozila</Text></Data>
+		<Data><Text>Kamioni, autobusi, pružna vozila</Text></Data>
+		<Data><Text>Građevinska vozila i građevinski strojevi</Text></Data>
+		<Data><Text>Plovila</Text></Data>
+		<Data><Text>Zrakoplovi</Text></Data>
+		<Data><Text>Strojevi</Text></Data>
+		<Data><Text>Osigurano</Text></Data>
+		<Data><Text>Neosigurano</Text></Data>
+	</Row>
+	<Row>
+	</Row>
+	<Row>
+		<Data><Parameter Name="empty1"/></Data>
+		<Data><Parameter Name="empty2"/></Data>
+		<Data><Parameter Name="empty3"/></Data>
+		<Data><Parameter Name="empty4"/></Data>
+		<Data><Parameter Name="h1"/></Data>
+		<Data><Parameter Name="h2"/></Data>
+		<Data><Parameter Name="h3"/></Data>
+		<Data><Parameter Name="h4"/></Data>
+		<Data><Parameter Name="h5"/></Data>
+		<Data><Parameter Name="h6"/></Data>
+		<Data><Parameter Name="h7"/></Data>
+		<Data><Parameter Name="h8"/></Data>
+		<Data><Parameter Name="h9"/></Data>
+		<Data><Parameter Name="h10"/></Data>
+		<Data><Parameter Name="h11"/></Data>
+		<Data><Parameter Name="h12"/></Data>
+		<Data><Parameter Name="h13"/></Data>
+		<Data><Parameter Name="h14"/></Data>
+		<Data><Parameter Name="h15"/></Data>
+		<Data><Parameter Name="h16"/></Data>
+		<Data><Parameter Name="h17"/></Data>
+		<Data><Parameter Name="h18"/></Data>
+		<Data><Parameter Name="h19"/></Data>
+		<Data><Parameter Name="h20"/></Data>
+		<Data><Parameter Name="h21"/></Data>
+	</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="register_no"/></Data>
+			<Data><Field Name="client_name"/></Data>
+			<Data><Field Name="invest_party"/></Data>
+			<Data><Field Name="exposure"/></Data>
+			<Data><Field Name="cash_deposit"/></Data>
+			<Data><Field Name="assur_policy"/></Data>
+			<Data><Field Name="guaranty_state"/></Data>
+			<Data><Field Name="guaranty_other_bank"/></Data>
+			<Data><Field Name="real_estate1"/></Data>
+			<Data><Field Name="real_estate2"/></Data>
+			<Data><Field Name="real_estate3"/></Data>
+			<Data><Field Name="real_estate4"/></Data>
+			<Data><Field Name="real_estate5"/></Data>
+			<Data><Field Name="real_estate6"/></Data>
+			<Data><Field Name="real_estate7"/></Data>
+			<Data><Field Name="real_estate8"/></Data>
+			<Data><Field Name="real_estate9"/></Data>
+			<Data><Field Name="real_estate10"/></Data>
+			<Data><Field Name="priv_cars"/></Data>
+			<Data><Field Name="other_veh"/></Data>
+			<Data><Field Name="trucks_etc"/></Data>
+			<Data><Field Name="building_veh"/></Data>
+			<Data><Field Name="vessels"/></Data>
+			<Data><Field Name="airplanes"/></Data>
+			<Data><Field Name="machines"/></Data>
+			<Data><Field Name="insured"/></Data>
+			<Data><Field Name="not_insured"/></Data>
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>	

@@ -1,0 +1,59 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+
+select * from batch_log where bat_def_id = 6266762704 ;  -- bfR4
+
+select * from batch_log where bat_def_id = 6259167704 ;  -- bfR3
+
+
+select * from event where eve_id = 6731960601;
+
+-- promijetiti æu value date za eve_id 6,504,951,704  -- bio je 26.11.2013
+
+
+
+select * from event where eve_typ_id = 6259192704;  -- bfR3 iz tablice event
+
+select * from event where eve_typ_id = 6266764704;  -- bfR4 iz tablice event  -- ovaj datum treba ažurirati
+
+select * from event where eve_id = 6505449704 and eve_typ_id = 6266764704;
+
+update event set value_date = '01.11.2013'  where eve_id = 6505449704 and eve_typ_id = 6266764704;
+
+commit;
+
+
+--- ove promete promijieniti i pokušati ih dohvatiti u datoteku
+select * from turnover where process_date > '15.11.2013';
+
+
+
+------------- test 9 12 2013
+
+
+select * from batch_def;
+
+select * from batch_log where bat_def_id = 6259167704 order by recording_time desc ;  -- bfR3
+
+select * from batch_log where bat_def_id = 6266762704 order by recording_time desc ;  -- bfR4
+
+select * from batch_log where eve_id = 6731962601;
+
+select eve_id,eve_typ_id, value_date from event where eve_typ_id = 6259192704;
+
+
+select value_date from event where eve_id = 6731962601 and eve_typ_id = 6259192704;
+
+update event set value_date = '01.11.2013'  where eve_id IN (6730917601,6730899601) and eve_typ_id = 6259192704;
+
+commit;
+
+select * from event where eve_typ_id = 6259192704;  -- bfR3 iz tablice event
+
+select * from event where eve_typ_id = 6266764704;  -- bfR4 iz tablice event  -- ovaj datum treba ažurirati
+
+select value_date from event where eve_id = 6731962601 and eve_typ_id = 6259192704;
+
+update event set value_date = '01.11.2013'  where eve_id IN (6731962601) and eve_typ_id = 6259192704;
+
+commit;

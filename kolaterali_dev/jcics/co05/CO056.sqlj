@@ -1,0 +1,266 @@
+package hr.vestigo.modules.collateral.jcics.co05;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */   
+    
+          
+public class CO056 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co05/CO056.sqlj,v 1.26 2015/01/12 11:54:44 hrazst Exp $";
+	
+	public DeclCO05 decl = null;
+	private YOY63 SQLhelper = null;
+    CollHeadInsertData chd = new CollHeadInsertData();
+    
+	public CO056 (DeclCO05 decl) {
+		this.decl = decl;
+	}
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();	
+		SQLhelper = new YOY63(tc);
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		
+		
+//		najprije provjeriti da li postoji u bazi depozit s istim brojem partije kod iste banke
+		
+		String broj_depozitne_partije = decl.cashdepinsertmapping.Coll_txtDepAcc;
+		String depozitna_institucija = decl.cashdepinsertmapping.Coll_txtCdeRegNo; 
+		
+		if (broj_depozitne_partije != null && !(broj_depozitne_partije.trim().equals("")) &&
+				depozitna_institucija != null && (!depozitna_institucija.trim().equals(""))) { 
+			int broj = 0;			
+			try {
+				#sql [ctx] {SELECT COUNT(*)
+						INTO :broj 
+		    			FROM coll_cashdep a, coll_head b
+		    			WHERE 
+							a.cde_reg_no = :(decl.cashdepinsertmapping.Coll_txtCdeRegNo)
+						AND
+							a.cde_account = :(decl.cashdepinsertmapping.Coll_txtDepAcc)
+						AND
+							a.col_hea_id = b.col_hea_id
+						AND
+							b.collateral_status not in ('4','N') 
+		    	};	    	
+		    	tc.debug ( "...broj: " + broj);
+			} catch (SQLException  sqle) {
+
+				throw  sqle;
+			}
+			if(broj > 0){
+				throw new VestigoTMException(1, "Transaction CO056: Error inserting into coll_cashdep! ","colErr028", null);
+			}			
+		}
+		// insert u COLL_HEAD		
+		YOY40 headIns = new YOY40(tc, chd);
+		
+		// punjenje objekta chd		
+		fillCHDobj();
+		
+		tc.debug("zovem insert u Head : " + chd.recept);
+		
+		headIns.insertIntoCollHead();
+
+		fillDeclFromCHDObj();		
+
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();
+
+		tc.debug("dohvat collateral_id : "+collaterall_id);			
+		
+		decl.cashdepinsertmapping.COL_SEC_ID = collaterall_id;				
+		
+
+ 
+		try{	 
+					#sql [ctx]{
+							INSERT INTO coll_cashdep
+									(	col_cas_id , 
+										col_hea_id , 
+										cde_typ_id , 
+										cde_cus_id ,  
+										cde_reg_no ,
+										cde_swift_add ,
+										cde_bank , 
+										cde_dep_from ,
+										cde_dep_unti ,
+										cde_amount ,
+										cde_cur_id ,
+										cde_period ,
+										cde_prolong ,
+										cde_account,
+		                                cde_dep_unti_final,
+		                                cde_successive
+		                            )
+							VALUES( :(decl.cashdepinsertmapping.COL_SEC_ID),    													                                                
+									:(decl.cashdepinsertmapping.COL_HEA_ID),
+ 									null ,
+									:(decl.cashdepinsertmapping.cde_cus_id), 	
+									:(decl.cashdepinsertmapping.Coll_txtCdeRegNo),                   
+									:(decl.cashdepinsertmapping.Coll_txtCdeSwiftAdd), 
+									:(decl.cashdepinsertmapping.Coll_txtCdeBank),
+									:(decl.cashdepinsertmapping.Coll_txtCdeDepFrom) ,
+                  					:(decl.cashdepinsertmapping.Coll_txtCdeDepUnti) ,
+									:(decl.cashdepinsertmapping.Coll_txtCdeAmount) ,
+									:(decl.cashdepinsertmapping.cd_cur_id) ,
+									:(decl.cashdepinsertmapping.Coll_txtCdePeriod) ,
+									:(decl.cashdepinsertmapping.Coll_txtCdeProlong) ,
+									:(decl.cashdepinsertmapping.Coll_txtDepAcc),
+		                            :(decl.cashdepinsertmapping.Coll_txtCashDepDateUntilFinal),
+		                            :(decl.cashdepinsertmapping.Coll_txtSuccessive)
+		                         )			
+					};			 
+		}catch(SQLException se){
+				
+				tc.debug ( "......CO056.sqlj insert into coll_cashdep SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO056.sqlj insert into coll_cashdep SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO056.sqlj insert into coll_cashdep SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new VestigoTMException(1, "Transaction CO056: Error inserting coll_cashdep! ","err411a", null);
+		}
+					
+		
+		chd.action = "I";		
+		
+// poziv common-a za update prihvatljivosti
+		BigDecimal col_hea_id = decl.cashdepinsertmapping.COL_HEA_ID;
+		YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+
+		yoyg0.azurirajPrihvatljivosti();
+		decl.cashdepinsertmapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.cashdepinsertmapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.cashdepinsertmapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.cashdepinsertmapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost(); 
+        
+        decl.cashdepinsertmapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.cashdepinsertmapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.cashdepinsertmapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.cashdepinsertmapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();            
+   		
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.cashdepinsertmapping.COL_HEA_ID); 
+        decl.cashdepinsertmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip;  
+	}//execute
+ 
+	private void fillCHDobj () {
+
+		chd.Coll_txtAcouBDate = decl.cashdepinsertmapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.cashdepinsertmapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.cashdepinsertmapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.cashdepinsertmapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.cashdepinsertmapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.cashdepinsertmapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.cashdepinsertmapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.cashdepinsertmapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.cashdepinsertmapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.cashdepinsertmapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.cashdepinsertmapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.cashdepinsertmapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.cashdepinsertmapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.cashdepinsertmapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.cashdepinsertmapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtCollTypeCode = decl.cashdepinsertmapping.Coll_txtCollTypeCode;
+		chd.Coll_txtComDoc = decl.cashdepinsertmapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.cashdepinsertmapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.cashdepinsertmapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.cashdepinsertmapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.cashdepinsertmapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.cashdepinsertmapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.cashdepinsertmapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.cashdepinsertmapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.cashdepinsertmapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.cashdepinsertmapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.cashdepinsertmapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.cashdepinsertmapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.cashdepinsertmapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.cashdepinsertmapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.cashdepinsertmapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.cashdepinsertmapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.cashdepinsertmapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.cashdepinsertmapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.cashdepinsertmapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.cashdepinsertmapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.cashdepinsertmapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.cashdepinsertmapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.cashdepinsertmapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.cashdepinsertmapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.cashdepinsertmapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.cashdepinsertmapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.cashdepinsertmapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.cashdepinsertmapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.cashdepinsertmapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.cashdepinsertmapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.cashdepinsertmapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.cashdepinsertmapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.cashdepinsertmapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.cashdepinsertmapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.cashdepinsertmapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.cashdepinsertmapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.cashdepinsertmapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.cashdepinsertmapping.Coll_txtThirdRightInNom;
+		chd.COL_TYPE_ID = decl.cashdepinsertmapping.COL_TYPE_ID;
+		chd.REAL_EST_EUSE_ID = decl.cashdepinsertmapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.cashdepinsertmapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.cashdepinsertmapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.cashdepinsertmapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.cashdepinsertmapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.cashdepinsertmapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.cashdepinsertmapping.COL_PLACE;
+		chd.COL_COUNTY = decl.cashdepinsertmapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.cashdepinsertmapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.cashdepinsertmapping.COL_RESI_QUAR;
+		chd.USE_OPEN_ID = decl.cashdepinsertmapping.USE_OPEN_ID;
+		chd.USE_ID = decl.cashdepinsertmapping.USE_ID;
+		chd.INSPOL_IND = decl.cashdepinsertmapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.cashdepinsertmapping.Coll_txtDesc;	
+		chd.recept = "CLT_CD";  
+		chd.eve_typ_id =  new java.math.BigDecimal("1609347003.0");
+		chd.Coll_txtAcumBuyValue = decl.cashdepinsertmapping.Coll_txtAcumBuyValue;
+		chd.ORIGIN_ORG_UNI_ID = decl.cashdepinsertmapping.ORIGIN_ORG_UNI_ID;
+		chd.ORG_UNI_ID = decl.cashdepinsertmapping.ORG_UNI_ID;
+		chd.COL_CAT_ID = decl.cashdepinsertmapping.col_cat_id;
+		chd.save_ver_aut_flag = decl.cashdepinsertmapping.save_ver_aut_flag;	
+		chd.KolLow_txtEligibility = decl.cashdepinsertmapping.KolLow_txtEligibility;
+		chd.ColRba_txtEligibility = decl.cashdepinsertmapping.ColRba_txtEligibility;
+		chd.Kol_txtRbaEligDsc = decl.cashdepinsertmapping.Kol_txtRbaEligDsc; 
+        chd.SPEC_STATUS = decl.cashdepinsertmapping.SPEC_STATUS;
+        chd.Kol_txtCRMHnb=decl.cashdepinsertmapping.Kol_txtCRMHnb;
+        
+        chd.use_id_co = decl.cashdepinsertmapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.cashdepinsertmapping.Coll_txtTypeTVCode;
+        chd.contract_type=decl.cashdepinsertmapping.Coll_txtContractTypeCode;   
+	}
+
+	private void fillDeclFromCHDObj () {
+		decl.cashdepinsertmapping.COL_HEA_ID = chd.COL_HEA_ID;
+		decl.cashdepinsertmapping.Coll_txtUserLock = chd.Coll_txtUserLock;
+		decl.cashdepinsertmapping.Coll_txtCode = chd.Coll_txtCode;
+		decl.cashdepinsertmapping.STATUS = chd.STATUS;
+		decl.cashdepinsertmapping.Coll_txtOpeningTs = chd.Coll_txtOpeningTs;
+		decl.cashdepinsertmapping.EVE_ID = chd.EVE_ID;
+		decl.cashdepinsertmapping.USER_LOCK = chd.USER_LOCK;
+
+        decl.cashdepinsertmapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.cashdepinsertmapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.cashdepinsertmapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.cashdepinsertmapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.cashdepinsertmapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.cashdepinsertmapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.cashdepinsertmapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.cashdepinsertmapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+	}
+}	 
+			

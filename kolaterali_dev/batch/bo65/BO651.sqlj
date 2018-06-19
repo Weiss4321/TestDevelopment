@@ -1,0 +1,233 @@
+package hr.vestigo.modules.collateral.batch.bo65;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO651
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo65/BO651.sqlj,v 1.1 2011/09/12 08:02:05 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    private final String policy_type_coll = "K";
+    private final String policy_type_inspol = "P";
+    
+    private BigDecimal eve_id;
+    
+    #sql iterator Iter1(
+        BigDecimal policy_id,
+        String ip_code,
+        Date ip_paid_until,
+        Date ip_valid_until,
+        String status,
+        String wrn_status,
+        String col_num,
+        String cus_acc_no,
+        Date due_date,
+        String register_no,
+        String name,
+        String street,
+        String house_no,
+        String city,
+        String postal_code,
+        String post_office_name,
+        String org_uni_code,
+        Timestamp last_status_change,
+        Timestamp last_wrn_status_change
+    );
+
+    public BO651(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa.
+     */
+    public BigDecimal insertIntoEvent() throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            this.eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4729539704"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Izvjesce o promjeni statusa po policama osiguranja");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.debug("Ubacen event.");
+            batchContext.stopStopWatch("insertIntoEvent");
+            return this.eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            throw ex;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o promjenama statusa polica osiguranja.
+     * @param policy_type Vrsta police osiguranja 
+     * @param cust_type Vrsta komitenata
+     * @param ic_id ID osiguravatelja
+     * @param org_uni_id ID organizacijske jedinice
+     * @param status_old Stari status police osiguranja
+     * @param status_new Novi status police osiguranja
+     * @param wrn_status_old Stari status slanja obavijesti/opomene
+     * @param wrn_status_new Novi status slanja obavijesti/opomene
+     * @param date_from Datum promjene od
+     * @param date_until Datum promjene do 
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter1 selectData(String policy_type, String cust_type, BigDecimal ic_id, BigDecimal org_uni_id, String status_old, String status_new, String wrn_status_old, String wrn_status_new, Date date_from, Date date_until) throws SQLException
+    {
+        batchContext.startStopWatch("selectData");
+        Iter1 iter = null;
+        
+        int filterByCustType = isEmpty(cust_type) ? 0 : 1;
+        if("F".equals(cust_type)) filterByCustType = 2;
+        
+        int filterByOrgUni = isEmpty(org_uni_id) ? 0 : 1;
+        int filterByInsuCompany = isEmpty(ic_id) ? 0 : 1;
+        int filterByStatusOld = isEmpty(status_old) ? 0 : 1;
+        int filterByStatusNew = isEmpty(status_new) ? 0 : 1;
+        int filterByWrnStatusOld = isEmpty(wrn_status_old) ? 0 : 1;
+        int filterByWrnStatusNew = isEmpty(wrn_status_new) ? 0 : 1;
+        int filterByDateFrom = isEmpty(date_from) ? 0 : 1;
+        int filterByDateUntil = isEmpty(date_until) ? 0 : 1;
+
+        try
+        {
+            if(policy_type.equals(policy_type_inspol))  // police osiguranja koje osiguravaju kolateral
+            {
+                #sql [connCtx] iter = {
+                    SELECT DISTINCT
+                        a.ip_id             AS policy_id,
+                        i.ip_code           AS ip_code,
+                        i.ip_vali_until     AS ip_paid_until,
+                        i.ip_date_sec_val   AS ip_valid_until,
+                        i.ip_act_noact      AS status,
+                        i.wrn_status        AS wrn_status,
+                        c.col_num           AS col_num,
+                        e.cus_acc_no        AS cus_acc_no,
+                        e.due_date          AS due_date,
+                        cc.register_no      AS register_no,
+                        cc.name             AS name,
+                        cc.xstreet          AS street,
+                        cc.xhouse_no        AS house_no,
+                        cc.xcity            AS city,
+                        p.postal_code       AS postal_code,
+                        p.pos_off_name      AS post_office_name,
+                        o.code              AS org_uni_code,
+                        (SELECT MAX(user_lock) FROM ip_chg_history a2 WHERE a.ip_id = a2.ip_id AND field_name = 'clt_inspolst') AS last_status_change,
+                        (SELECT MAX(user_lock) FROM ip_chg_history a3 WHERE a.ip_id = a3.ip_id AND field_name = 'ip_wrn_status') AS last_wrn_status_change
+                    FROM ip_chg_history a
+                    LEFT OUTER JOIN insurance_policy i ON a.ip_id = i.ip_id
+                    LEFT OUTER JOIN coll_head c ON i.col_hea_id = c.col_hea_id
+                    LEFT OUTER JOIN coll_hf_prior h ON (c.col_hea_id = h.hf_coll_head_id AND h.hf_status = 'A')
+                    LEFT OUTER JOIN loan_beneficiary l ON (h.coll_hf_prior_id = l.coll_hf_prior_id AND l.status = 'A')
+                    LEFT OUTER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                    LEFT OUTER JOIN customer cc ON e.cus_id = cc.cus_id
+                    LEFT OUTER JOIN organization_unit o ON e.org_uni_id = o.org_uni_id
+                    LEFT OUTER JOIN post_office p ON cc.xpos_off_id = p.pos_off_id
+                    WHERE a.ip_id IS NOT NULL
+                      AND (:filterByCustType = 0 OR (:filterByCustType = 1 AND cc.basel_cus_type NOT IN ('1','36')) OR (:filterByCustType = 2 AND cc.basel_cus_type IN ('1','36')))
+                      AND (:filterByOrgUni = 0 OR e.org_uni_id = :(org_uni_id))
+                      AND (:filterByInsuCompany = 0 OR i.ip_ic_id = :(ic_id))
+                      AND (:filterByStatusOld = 0 OR (a.old_value = :(status_old) AND a.field_name = 'clt_inspolst'))
+                      AND (:filterByStatusNew = 0 OR (a.new_value = :(status_new) AND a.field_name = 'clt_inspolst'))
+                      AND (:filterByWrnStatusOld = 0 OR (a.old_value = :(wrn_status_old) AND a.field_name = 'ip_wrn_status'))
+                      AND (:filterByWrnStatusNew = 0 OR (a.new_value = :(wrn_status_new) AND a.field_name = 'ip_wrn_status'))
+                      AND (:filterByDateFrom = 0 OR a.user_lock >= :(date_from))
+                      AND (:filterByDateUntil = 0 OR a.user_lock <= :(date_until))
+                    ORDER BY a.ip_id
+                    WITH UR
+                };
+            }
+            else  // police osiguranja koje su kolateral
+            {
+                #sql [connCtx] iter = {
+                    SELECT DISTINCT
+                        a.col_ins_id        AS policy_id,
+                        i.ip_code           AS ip_code,
+                        i.ip_paid_until     AS ip_paid_until,
+                        i.ip_valid_until    AS ip_valid_until,
+                        i.ip_status         AS status,
+                        i.wrn_status        AS wrn_status,
+                        c.col_num           AS col_num,
+                        e.cus_acc_no        AS cus_acc_no,
+                        e.due_date          AS due_date,
+                        cc.register_no      AS register_no,
+                        cc.name             AS name,
+                        cc.xstreet          AS street,
+                        cc.xhouse_no        AS house_no,
+                        cc.xcity            AS city,
+                        p.postal_code       AS postal_code,
+                        p.pos_off_name      AS post_office_name,
+                        o.code              AS org_uni_code,
+                        (SELECT MAX(user_lock) FROM ip_chg_history a2 WHERE a.col_ins_id = a2.col_ins_id AND field_name = 'clt_inspolst') AS last_status_change,
+                        (SELECT MAX(user_lock) FROM ip_chg_history a3 WHERE a.col_ins_id = a3.col_ins_id AND field_name = 'ip_wrn_status') AS last_wrn_status_change
+                    FROM ip_chg_history a
+                    LEFT OUTER JOIN coll_inspolicy i ON a.col_ins_id = i.col_ins_id
+                    LEFT OUTER JOIN coll_head c ON i.col_hea_id = c.col_hea_id
+                    LEFT OUTER JOIN loan_beneficiary l ON (c.col_hea_id = l.col_hea_id AND l.status = 'A')
+                    LEFT OUTER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                    LEFT OUTER JOIN customer cc ON e.cus_id = cc.cus_id
+                    LEFT OUTER JOIN organization_unit o ON e.org_uni_id = o.org_uni_id
+                    LEFT OUTER JOIN post_office p ON cc.xpos_off_id = p.pos_off_id 
+                    WHERE a.col_ins_id IS NOT NULL
+                      AND (:filterByCustType = 0 OR (:filterByCustType = 1 AND cc.basel_cus_type NOT IN ('1','36')) OR (:filterByCustType = 2 AND cc.basel_cus_type IN ('1','36')))
+                      AND (:filterByOrgUni = 0 OR e.org_uni_id = :(org_uni_id))
+                      AND (:filterByInsuCompany = 0 OR i.ip_cus_id = :(ic_id))
+                      AND (:filterByStatusOld = 0 OR (a.old_value = :(status_old) AND a.field_name = 'clt_inspolst'))
+                      AND (:filterByStatusNew = 0 OR (a.new_value = :(status_new) AND a.field_name = 'clt_inspolst'))
+                      AND (:filterByWrnStatusOld = 0 OR (a.old_value = :(wrn_status_old) AND a.field_name = 'ip_wrn_status'))
+                      AND (:filterByWrnStatusNew = 0 OR (a.new_value = :(wrn_status_new) AND a.field_name = 'ip_wrn_status'))
+                      AND (:filterByDateFrom = 0 OR a.user_lock >= :(date_from))
+                      AND (:filterByDateUntil = 0 OR a.user_lock <= :(date_until))                    
+                    ORDER BY a.col_ins_id
+                    WITH UR
+                };
+            }
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata podataka!", ex);
+            throw ex;
+        }
+        batchContext.debug("Dohvaceni podaci.");
+        batchContext.stopStopWatch("selectData");
+        return iter;
+    }
+    
+    private boolean isEmpty(Object obj)
+    {
+        return (obj == null || obj.equals(""));
+    }
+}

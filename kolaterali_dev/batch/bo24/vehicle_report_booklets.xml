@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Report>
+	<Row>
+		<Data><Parameter Name="naslov"/></Data>
+	</Row>
+	<Row>
+		<Data><Parameter Name="datum"/></Data>
+	</Row>
+	<Row>
+		<Data><Parameter Name="orgUnit"/></Data>
+	</Row>
+	<Row>
+	</Row>
+	<Row>
+		<Data><Text>Redni broj </Text></Data>
+		<Data><Text>OJ</Text></Data>
+		<Data>
+			<Text>Naziv OJ</Text></Data>
+		<Data><Text>Sifra kolaterala</Text></Data>
+		<Data><Text>Omega ID vlasnika kolaterala</Text></Data>
+		<Data><Text>Ime i prezime vlasnika</Text></Data>
+		<Data>
+			<Text>Broj partije plasmana</Text></Data>
+		<Data><Text>Broj zahtijeva za plasman</Text></Data>
+		<Data><Text>Omega ID korisnika plasmana</Text></Data>
+		<Data><Text>Ime i prezime korisnika plasmana</Text></Data>
+		<Data><Text>Adresa korisnika plasmana</Text></Data>
+		<Data><Text>Posta korisnika plasmana</Text></Data>
+		<Data>
+			<Text>Mjesto korisnika plasmana</Text></Data>
+		<Data><Text>Broj sasije</Text></Data>
+		<Data><Text>Broj knjizice vozila</Text></Data>
+		<Data><Text>Datum kada je knjizica vracena vlasniku</Text></Data>
+	</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="nr"/></Data>
+			<Data><Field Name="org_uni"/></Data>
+			<Data>
+				<Field Name="org_uni_name"></Field></Data>
+			<Data><Field Name="col_num"/></Data>
+			<Data><Field Name="register_no_owner"/></Data>
+			<Data><Field Name="name_owner"/></Data>
+			<Data>
+				<Field Name="acc_no"></Field></Data>
+			<Data><Field Name="request_no"/></Data>
+			<Data><Field Name="register_no_user"/></Data>
+			<Data><Field Name="name_user"/></Data>
+			<Data><Field Name="address"/></Data>
+			<Data><Field Name="postoffice"/></Data>
+			<Data>
+				<Field Name="city"></Field></Data>
+			<Data><Field Name="veh_vin_num"/></Data>
+			<Data><Field Name="veh_veh_licence"/></Data>
+			<Data><Field Name="lic_ret_own_dat"/></Data>
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>

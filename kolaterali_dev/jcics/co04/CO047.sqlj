@@ -1,0 +1,132 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+
+/**
+ * CO046 class selects all data from table VESSEL
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+ 
+#sql iterator IterCashDep ( BigDecimal col_hea_id ,         
+							String dep_number ,      
+							String dep_type,
+							String dep_name,
+							String dep_currency,
+							BigDecimal dep_amount,
+							String dep_bank,
+							java.sql.Date dep_open,
+							java.sql.Date dep_close,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id           
+                   );	 
+
+public class CO047 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO047.sqlj,v 1.3 2006/05/08 13:27:58 hramkr Exp $";
+	
+	public DeclCO04 decl = null;
+	
+	private IterCashDep iterCashDep = null;
+	
+	public CO047 (DeclCO04 decl) {
+		this.decl = decl;
+	}
+	
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.cashdeplistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+
+		if(decl.cashdeplistmapping.CUS_ID == null ){
+			#sql [ctx] iterCashDep = {
+							SELECT 	ch.col_hea_id as col_hea_id , ch.col_num as dep_number, ct.coll_type_code as dep_type,
+									ct.coll_type_name as dep_name, cu.code_char as dep_currency, ch.real_est_nomi_valu as dep_amount,
+									cc.cde_bank as dep_bank, cc.cde_dep_from as dep_open, cc.cde_dep_unti as dep_close,
+									ch.real_est_status as status, cc.col_cas_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id          
+							FROM
+									coll_head ch, coll_cashdep cc, collateral_type ct, currency cu 
+							WHERE	ch.col_hea_id = cc.col_hea_id 
+							AND		ch.col_type_id = ct.coll_type_id
+							AND 	ch.real_est_nm_cur_id = cu.cur_id
+							ORDER BY	2							
+							
+			};
+		
+		}
+		
+		if(decl.cashdeplistmapping.CUS_ID != null ){
+			#sql [ctx] iterCashDep = {
+							SELECT 	ch.col_hea_id as col_hea_id , ch.col_num as dep_number, ct.coll_type_code as dep_type,
+									ct.coll_type_name as dep_name, cu.code_char as dep_currency, ch.real_est_nomi_valu as dep_amount,
+									cc.cde_bank as dep_bank, cc.cde_dep_from as dep_open, cc.cde_dep_unti as dep_close,
+									ch.real_est_status as status, cc.col_cas_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id             
+							FROM
+									coll_head ch, coll_cashdep cc, collateral_type ct, currency cu 
+							WHERE	ch.cus_id = :(decl.cashdeplistmapping.CUS_ID)
+							AND		ch.col_hea_id = cc.col_hea_id 
+							AND		ch.col_type_id = ct.coll_type_id
+							AND 	ch.real_est_nm_cur_id = cu.cur_id
+							ORDER BY	2		
+							
+			}; 
+		
+		}
+		//
+		
+		
+		
+	}
+	
+	public boolean next() throws Exception {
+		return iterCashDep.next();
+	}
+    
+	public void close() {
+		if(iterCashDep!=null) {
+			try {
+				iterCashDep.close();
+			} catch (Exception ignored) {}
+		}
+	}  
+     
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+ 		
+		row.add(iterCashDep.dep_number());	
+		row.add(iterCashDep.dep_type());
+		row.add(iterCashDep.dep_name());
+		row.add(iterCashDep.dep_currency());	
+		row.add(iterCashDep.dep_amount());
+		row.add(iterCashDep.dep_bank());
+		row.add(iterCashDep.dep_open());
+		row.add(iterCashDep.dep_close());	
+		row.add(iterCashDep.status());  
+
+		row1.add(iterCashDep.col_hea_id());
+		row1.add(iterCashDep.col_res_id());
+		row1.add(iterCashDep.real_est_nm_cur_id());
+		
+		decl.cashdeplistmapping.tblCashDep.addRow(row,row1);
+		 
+//		decl.cashdeplistmapping.tblCashDep.addRow(row,iterCashDep.col_hea_id());
+    	
+		
+	}
+	
+}

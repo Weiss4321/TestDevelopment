@@ -1,0 +1,274 @@
+package hr.vestigo.modules.collateral.jcics.co18;
+
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+/**
+ * CO184
+ *  	
+ */
+
+#sql iterator Iter4 (
+		String ip_activ_and_pay 
+		); 
+
+public class CO184 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co18/CO184.sqlj,v 1.14 2017/09/22 12:09:05 hrazst Exp $";
+	public DeclCO18 decl = null;
+	
+	public CO184 (DeclCO18 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+	    Iter4 iter4=null;	
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();
+		ConnCtx ctx = tc.getContext();
+		
+		java.sql.Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        
+        todaySQLDate = new java.sql.Date(timeT);
+        java.sql.Date yesterday = backDay(todaySQLDate,1);	
+		
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();		
+
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		  	
+    //set date_until and use_id
+		try{	
+			   
+			#sql [ctx, exCtx]{ 
+			    	DELETE FROM INSURANCE_POLICY
+						WHERE
+			    		ip_id =:(decl.insupolicydialogdeletem.IP_ID)
+			    		AND user_lock =:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtUserLockNF)  
+			    	};
+		    if (exCtx.getUpdateCount() == 0) {
+				throw new VestigoTMException(1,"Transaction CO143: Error deleting INSURANCE_POLICY becouse of user_lock","erruptzst2", null);
+			}
+		}catch(java.sql.SQLException se){
+					tc.debug ( "......CO184.sqlj delete from political_map SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO184.sqlj delete from political_map SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO184.sqlj delete from political_map SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO133: Error deleting row in coll_owners! ","err411a", null);
+		}
+				
+// Milka, mijenjam uvjet, dodajem broj kolaterala u uvjet
+				
+		int brojSaStatusomA = 0; 
+		try {
+		    #sql [ctx] {SELECT COUNT(*) INTO :brojSaStatusomA 
+				    			FROM INSURANCE_POLICY 
+				    			WHERE
+									col_hea_id = :(decl.insupolicydialogdeletem.COL_HEA_ID) and
+									ip_id <> :(decl.insupolicydialogdeletem.IP_ID)
+ 									AND
+										ip_act_noact = 'A'
+									AND
+                                		ip_vali_until >= current date
+
+				    	};	    	
+		    	tc.debug ( " /n/n/n/n/n/n/n");
+		    	tc.debug ( "...brojSaStatusomA: " + brojSaStatusomA);
+		    	tc.debug ( " /n/n/n/n/n/n/n");
+	    } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO184.sqlj select from INSURANCE_POLICY SQL ErrorCode " + sqle.getErrorCode());
+			tc.debug ( "......CO184.sqlj select from INSURANCE_POLICY SQL SQLState " + sqle.getSQLState());
+			tc.debug ( "......CO184.sqlj select from INSURANCE_POLICY SQL Message " + sqle.getMessage());
+			throw new VestigoTMException(1, "Transaction CO184: Error inserting into coll_owners! ","err411a", null);
+        }
+			    
+			      
+// Milka - kada se obrise polica osiguranja postaviti flag "nekretnina osigurana" na D ili N (ako vise nema ni jedne police)
+// Milka 25.08.2008, polica mora imati datum do kada vrijedi veci ili jednak current date			    
+        if(brojSaStatusomA > 0)			
+        	decl.insupolicydialogdeletem.RealEstate_txtInspolInd = "D";			    
+	    else 
+        	decl.insupolicydialogdeletem.RealEstate_txtInspolInd = "N";	
+
+		tc.info ("RealEstate_txtInspolInd" + decl.insupolicydialogdeletem.RealEstate_txtInspolInd);	    
+		
+//				 Milka - 22.11.2006 - napraviti update atributa u COLL_HEAD		
+		  
+		try {
+		    #sql [ctx] {UPDATE COLL_HEAD
+				    			SET inspol_ind = :(decl.insupolicydialogdeletem.RealEstate_txtInspolInd) 
+				    			WHERE COL_HEA_ID =:(decl.insupolicydialogdeletem.COL_HEA_ID) 
+				    	};	    	
+		    	tc.debug ( " /n/n/n/n/n/n/n");
+		    	tc.debug ( "...UPDATE COLL_HEAD: " + decl.insupolicydialogdeletem.COL_HEA_ID+decl.insupolicydialogdeletem.RealEstate_txtInspolInd);
+		    	tc.debug ( " /n/n/n/n/n/n/n");
+	    } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO184.sqlj update from COLL_HEAD SQL ErrorCode " + sqle.getErrorCode());
+			tc.debug ( "......CO184.sqlj update from COLL_HEAD SQL SQLState " + sqle.getSQLState());
+			tc.debug ( "......CO184.sqlj update from COLL_HEAD SQL Message " + sqle.getMessage());
+			throw new VestigoTMException(1, "Transaction CO184: Error update COLL_HEAD! ","err411a", null);
+        }							
+		
+	  //radimo update COLL_VEHICLE tablice po COL_HEA_ID tako da ažuriramo kasko flag
+      //ako u tablici COLL_VEHICLE ne postoji zapis sa COL_HEA_ID onda kolateral nije vozilo i nece se  nista azurirat  
+      try {
+        #sql [ctx] {UPDATE COLL_VEHICLE
+                        SET veh_kasko = :(decl.insupolicydialogdeletem.RealEstate_txtInspolInd)
+                        WHERE COL_HEA_ID =:(decl.insupolicydialogdeletem.COL_HEA_ID) 
+                    };          
+            tc.debug ( "...UPDATE COLL_VEHICLE: " + decl.insupolicydialogdeletem.COL_HEA_ID+ ", veh_kasko = " +decl.insupolicydialogdeletem.RealEstate_txtInspolInd);
+      } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO182.sqlj update from COLL_VEHICLE SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......CO182.sqlj update from COLL_VEHICLE SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......CO182.sqlj update from COLL_VEHICLE SQL Message " + sqle.getMessage());
+      }  
+	    
+
+//				  dohvatiti status police osiguranja i da li je placena premija
+	    decl.insupolicydialogdeletem.ip_activ_and_pay  = "N";
+		
+		#sql[ctx] iter4 = {
+	                 	SELECT ip_act_noact as ip_activ_and_pay
+	  							FROM insurance_policy
+								WHERE col_hea_id = :(decl.insupolicydialogdeletem.COL_HEA_ID)
+								AND
+			    					ip_act_noact = 'A'
+			    				AND
+	                                ip_vali_until >= current date 
+								fetch first row only
+	                              };
+		while (iter4.next()) {
+				
+			decl.insupolicydialogdeletem.ip_activ_and_pay  = iter4.ip_activ_and_pay();
+				
+		} 
+		if(iter4!=null) {
+		       try {
+		           iter4.close();
+		       } catch (Exception ignored) {}
+		}									    
+			    
+				 
+
+    	try{	
+    		#sql [ctx]{	INSERT INTO INSURANCE_POLICY_A
+					          	(IP_ID,
+						  	 	IP_CODE,
+						 	 	IP_TYPE_ID,
+								IP_IC_ID,
+								IP_CONTRACTOR,
+								IP_POL_HOLDER,
+								IP_PLACE,
+								IP_SECU_VAL,
+								IP_CUR_ID,
+								IP_DATE_SEC_VAL,
+								COL_HEA_ID,
+								IP_REPLACE,
+								IP_VALI_FROM,
+								IP_VALI_UNTIL,
+								IP_ACT_NOACT,
+								IP_SPEC_STAT,
+								USE_OPEN_ID,
+								USE_ID,
+								opening_ts,
+								user_lock
+								) 
+			VALUES( :(decl.insupolicydialogdeletem.IP_ID),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtCodeB),
+					:(decl.insupolicydialogdeletem.IP_TYPE_ID_B),   
+					:(decl.insupolicydialogdeletem.IP_IC_ID_B),
+					:(decl.insupolicydialogdeletem.IP_CONTRACTOR_B),
+					:(decl.insupolicydialogdeletem.IP_POL_HOLDER_B),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtPlaceB),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtSecuValB),
+					:(decl.insupolicydialogdeletem.IP_CUR_ID_B),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtDateSecValB),
+					:(decl.insupolicydialogdeletem.COL_HEA_ID),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtReplaceB),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtDateFromB),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtDateUntilB),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtActB),
+					:(decl.insupolicydialogdeletem.IP_SPEC_STAT_B),
+					:(decl.insupolicydialogdeletem.USE_OPEN_ID),
+					:(decl.insupolicydialogdeletem.use_id),
+					:(decl.insupolicydialogdeletem.InsuPolicyDialog_txtOpeningTsNF),
+					current timestamp
+					)
+		 	}; 
+    		  
+    	}catch(java.sql.SQLException se){
+    			tc.debug ( "......CO184.sqlj insert into INSURANCE_POLICY_A SQL ErrorCode " + se.getErrorCode());
+    			tc.debug ( "......CO184.sqlj insert into INSURANCE_POLICY_A SQL SQLState " + se.getSQLState());
+    			tc.debug ( "......CO184.sqlj insert into INSURANCE_POLICY_A SQL Message " + se.getMessage());
+    			throw new VestigoTMException(1, "Transaction CO184: Error inserting INSURANCE_POLICY_A! ","err411a", null);
+    	}	
+        
+//       preracunati ponderiranu i raspolozivu vrijednost           
+     
+        String add_request = decl.insupolicydialogdeletem.RealEstate_txtInspolInd;      
+        
+        kolData.colHeaId = decl.insupolicydialogdeletem.COL_HEA_ID;
+        kolData.colCurId = decl.insupolicydialogdeletem.RealEstate_REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.insupolicydialogdeletem.RealEstate_txtNomiValu;
+        
+        kolData.colCatId = decl.insupolicydialogdeletem.RealEstate_COL_CAT_ID;
+        kolData.colTypId = decl.insupolicydialogdeletem.RealEstate_COL_TYPE_ID;
+        kolData.colSubTypId = decl.insupolicydialogdeletem.RealEstate_REAL_EST_TYPE;
+        kolData.addRequest = add_request;         
+        
+//        kolData.ponder = decl.insupolicydialogdeletem.RealEstate_txtCollMvpPonder;
+
+//        yoye0.getPonderAndRestAmount(kolData);
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+        
+        decl.insupolicydialogdeletem.RealEstate_txtWeighValue = kolData.ponderAmount;
+        decl.insupolicydialogdeletem.RealEstate_txtWeighDate = todaySQLDate;
+        decl.insupolicydialogdeletem.RealEstate_txtAvailValue = kolData.restAmount;
+        decl.insupolicydialogdeletem.RealEstate_txtAvailDate = kolData.coverDate;
+        decl.insupolicydialogdeletem.RealEstate_txtSumPartVal = kolData.exposureAmount;
+        decl.insupolicydialogdeletem.RealEstate_txtSumPartDat = kolData.exposureDate;   
+        decl.insupolicydialogdeletem.RealEstate_txtCollMvpPonderMin = kolData.minPonder;
+        decl.insupolicydialogdeletem.RealEstate_txtCollMvpPonder = kolData.dflPonder;
+        decl.insupolicydialogdeletem.RealEstate_txtCollMvpPonderMax = kolData.maxPonder;
+        decl.insupolicydialogdeletem.RealEstate_txtPonAvailValue =  kolData.restPonAmount;
+        
+// postaviti prihvatljivosti ovisne o polici osiguranja        
+// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.insupolicydialogdeletem.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.insupolicydialogdeletem.Kol_ND =yoyg0.getNDPrihvatljivost();
+        decl.insupolicydialogdeletem.Kol_B2 = yoyg0.getB2StandPrihvatljivost();
+        decl.insupolicydialogdeletem.Kol_HNB = yoyg0.getHNBPrihvatljivost();
+        decl.insupolicydialogdeletem.Kol_B2IRB = yoyg0.getB2IRBPrihvatljivost();   
+        
+        decl.insupolicydialogdeletem.Kol_ND_dsc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.insupolicydialogdeletem.Kol_B2_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.insupolicydialogdeletem.Kol_HNB_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.insupolicydialogdeletem.Kol_B2IRB_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();               
+
+	}//execute
+	
+	 // metoda vraca datum za dan koji je za argNumOfDays dana bio prije danasnjeg dana	
+	 public java.sql.Date backDay(java.sql.Date argNow, int argNumOfDays) {
+
+	        java.util.GregorianCalendar util_date = new java.util.GregorianCalendar();
+
+	        util_date.setTime(argNow);
+	        int day = util_date.get(java.util.GregorianCalendar.DAY_OF_MONTH);
+
+	        util_date.set(java.util.GregorianCalendar.DAY_OF_MONTH, day - argNumOfDays);
+	        int year = util_date.get(java.util.GregorianCalendar.YEAR);
+	        int month = util_date.get(java.util.GregorianCalendar.MONTH) + 1;
+	        int d_new = util_date.get(java.util.GregorianCalendar.DAY_OF_MONTH);
+	        String z_pom = year + "-" + month + "-" + d_new;
+	        java.sql.Date novo3 = java.sql.Date.valueOf(z_pom);
+	        return novo3;
+	}
+}	
+			

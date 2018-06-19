@@ -1,0 +1,220 @@
+package hr.vestigo.modules.collateral.jcics.co28;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import java.util.Vector;
+
+//import hr.vestigo.framework.util.CharUtil;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+
+#sql iterator Iter11 (java.math.BigDecimal cus_acc_id,
+        String cus_acc_no,
+        String cus_acc_status, 
+        String cus_acc_orig_st,
+        String frame_cus_acc_no,
+        String prod_code,
+        String name,
+        BigDecimal exposure_cur_id,
+        String code_char,
+        BigDecimal exposure_balance,
+        Date exposure_date,
+        String request_no,
+        String module_code,
+        String contract_no);  
+  
+public class CO281 extends RemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co28/CO281.sqlj,v 1.15 2011/04/14 08:51:58 hramkr Exp $";
+	private DeclCO28 d = null;
+   	
+	private String ind;
+	   	
+	public CO281(DeclCO28 d) {
+			this.d = d;
+		}
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx connCtx0 = tc.getContext();
+	    Iter11 iter11 = null;     
+       	
+		#sql[connCtx0] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+// broj partije
+
+		if (d.cus_acc_no!= null) {
+			if (d.cus_acc_no.equals("")) {
+				d.cus_acc_no = null;
+			}else{
+				d.cus_acc_no = d.cus_acc_no.replace('*','%');
+			}
+		} 
+  
+			if ((d.cus_id != null) && (d.cus_acc_no == null)) {				
+				#sql [connCtx0] iter11 =	{ SELECT 
+											cuexp.cus_acc_id as cus_acc_id, 
+											cuexp.cus_acc_no as cus_acc_no, 
+											cuexp.cus_acc_status as cus_acc_status,
+											cuexp.cus_acc_orig_st as cus_acc_orig_st,
+			                                cuexp.frame_cus_acc_no as frame_cus_acc_no,
+											cuexp.prod_code as prod_code, 
+											bpt.gps_desc as name, 
+											cuexp.exposure_cur_id as exposure_cur_id,
+											cur.code_char as code_char,
+											cuexp.exposure_balance as exposure_balance,
+											cuexp.exposure_date as exposure_date,
+											cuexp.request_no request_no,
+											cuexp.module_code as module_code,
+			                                cuexp.contract_no as contract_no
+										FROM 	cusacc_exposure cuexp
+										LEFT OUTER JOIN prod_catalog bpt ON substr(rtrim(cuexp.prod_code),1,3) = bpt.pro_code AND
+																			substr(rtrim(cuexp.prod_code),5,3) = bpt.gps_code,
+												currency cur
+										WHERE cus_id = :(d.cus_id) 
+										AND  cuexp.exposure_cur_id = cur.cur_id
+									ORDER BY 3 ASC, 5 DESC, 2 ASC WITH UR
+									};				
+
+  
+			} 
+			if ((d.cus_id != null) && (d.cus_acc_no != null)) {				
+				#sql [connCtx0] iter11 =	{ SELECT 
+											cuexp.cus_acc_id as cus_acc_id, 
+											cuexp.cus_acc_no as cus_acc_no, 
+											cuexp.cus_acc_status as cus_acc_status,
+											cuexp.cus_acc_orig_st as cus_acc_orig_st,
+                                            cuexp.frame_cus_acc_no as frame_cus_acc_no,
+											cuexp.prod_code as prod_code, 
+											bpt.gps_desc as name, 
+											cuexp.exposure_cur_id as exposure_cur_id,
+											cur.code_char as code_char,
+											cuexp.exposure_balance as exposure_balance,
+											cuexp.exposure_date as exposure_date,
+											cuexp.request_no request_no,
+											cuexp.module_code as module_code,
+                                            cuexp.contract_no as contract_no
+										FROM 	cusacc_exposure cuexp
+										LEFT OUTER JOIN prod_catalog bpt ON substr(rtrim(cuexp.prod_code),1,3) = bpt.pro_code AND
+																			substr(rtrim(cuexp.prod_code),5,3) = bpt.gps_code,
+												currency cur
+										WHERE cus_id = :(d.cus_id) 
+										AND cus_acc_no like  :(d.cus_acc_no)
+										AND cuexp.exposure_cur_id = cur.cur_id
+									ORDER BY 3 ASC, 5 DESC, 2 ASC WITH UR
+									};				
+
+			} 
+			
+			if ((d.cus_id == null) && (d.cus_acc_no == null)) {				
+				#sql [connCtx0] iter11 =	{ SELECT 
+											cuexp.cus_acc_id as cus_acc_id, 
+											cuexp.cus_acc_no as cus_acc_no, 
+											cuexp.cus_acc_status as cus_acc_status,
+											cuexp.cus_acc_orig_st as cus_acc_orig_st,
+                                            cuexp.frame_cus_acc_no as frame_cus_acc_no,
+											cuexp.prod_code as prod_code, 
+											bpt.gps_desc as name, 
+											cuexp.exposure_cur_id as exposure_cur_id,
+											cur.code_char as code_char,
+											cuexp.exposure_balance as exposure_balance,
+											cuexp.exposure_date as exposure_date,
+											cuexp.request_no request_no,
+											cuexp.module_code as module_code,
+                                            cuexp.contract_no as contract_no
+										FROM 	cusacc_exposure cuexp
+										LEFT OUTER JOIN prod_catalog bpt ON substr(rtrim(cuexp.prod_code),1,3) = bpt.pro_code AND
+																			substr(rtrim(cuexp.prod_code),5,3) = bpt.gps_code,
+												currency cur
+										WHERE cuexp.exposure_cur_id = cur.cur_id
+									ORDER BY 3 ASC, 5 DESC, 2 ASC WITH UR
+				};				
+
+
+			}   
+			if ((d.cus_id == null) && (d.cus_acc_no != null)) {				
+				#sql [connCtx0] iter11 =	{ SELECT 
+											cuexp.cus_acc_id as cus_acc_id, 
+											cuexp.cus_acc_no as cus_acc_no, 
+											cuexp.cus_acc_status as cus_acc_status,
+											cuexp.cus_acc_orig_st as cus_acc_orig_st,
+                                            cuexp.frame_cus_acc_no as frame_cus_acc_no,
+											cuexp.prod_code as prod_code, 
+											bpt.gps_desc as name, 
+											cuexp.exposure_cur_id as exposure_cur_id,
+											cur.code_char as code_char,
+											cuexp.exposure_balance as exposure_balance,
+											cuexp.exposure_date as exposure_date,
+											cuexp.request_no request_no,
+											cuexp.module_code as module_code,
+                                            cuexp.contract_no as contract_no
+										FROM 	cusacc_exposure cuexp
+										LEFT OUTER JOIN prod_catalog bpt ON substr(rtrim(cuexp.prod_code),1,3) = bpt.pro_code AND
+																			substr(rtrim(cuexp.prod_code),5,3) = bpt.gps_code,
+												currency cur
+										WHERE cus_acc_no like  :(d.cus_acc_no)
+										AND  cuexp.exposure_cur_id = cur.cur_id
+									ORDER BY 3 ASC, 5 DESC, 2 ASC WITH UR
+				};				
+
+
+			}	 
+		
+		int number_of_rows=10;//tc.LOOKUP_FETCH_SIZE;
+		int level=d.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+		int count=0;
+		int count_returned=0;
+		while (iter11.next()){
+			if(start<=count && start+number_of_rows>count){
+
+				Vector row=new Vector();
+				Vector unique = new Vector();
+				
+				
+				row.add(iter11.cus_acc_no());	
+                row.add(iter11.contract_no());
+				row.add(iter11.cus_acc_status());
+				row.add(iter11.cus_acc_orig_st());
+				row.add(iter11.frame_cus_acc_no());
+
+				row.add(iter11.code_char());
+				row.add(iter11.exposure_balance());
+				row.add(iter11.exposure_date());
+				row.add(iter11.request_no());				
+                row.add(iter11.prod_code());
+                row.add(iter11.name());				 
+								
+				unique.add(iter11.cus_acc_id());	
+				unique.add(iter11.exposure_cur_id()); 
+				unique.add(iter11.module_code());
+//				unique.add(iter11.contract_no());
+
+	 			
+				
+				
+				d.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			} 
+			count++;  
+		}
+	
+		if(count_returned==0){
+			throw new VestigoTMException(1, "Transaction CO281: No more data! ","wrn090", null);
+		} 
+		
+		if(iter11 != null) iter11.close();    
+		  		
+			
+	}
+	
+	
+}
+
+
+
+

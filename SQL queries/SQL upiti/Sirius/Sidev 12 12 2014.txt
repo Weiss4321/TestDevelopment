@@ -1,0 +1,376 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from INT_TAX_RECAP_DIST;
+
+select * from POLITICAL_MAP;
+
+select * from political_map where name like  'VR%';
+
+SELECT COUNT(DISTINCT name) FROM POLITICAL_MAP;
+
+select distinct  *  from POLITICAL_MAP  where (distinct name);
+
+select status from CUST_BILL_EXCH where cus_bil_exc_id = 3150338823;
+
+
+select * from CUST_BILL_EXCH order by user_lock desc;
+
+   ------   3150338823
+
+   
+  update CUST_BILL_EXCH set status = 'P' where cus_bil_exc_id = 3150338823;
+
+  commit;
+
+select cus_bill_exch_no, ben_place,ben_address from CUST_BILL_EXCH;
+
+--  (3150972823,3150971823,3150886823,3150885823,3150884823,3150880823,3150774823,3150771823,3150770823,3150769823,
+3150667823,3150631823,3150199823,3150577823,3150570823,3150342823,3150341823,3150340823,3150339823,3150338823,
+3150337823,3150336823,3150335823,3150334823,3150332823,3150331823,3150239823,3150238823,3150237823,3150236823,
+3150235823,3149641823,3149640823,3149639823,3149631823,3149629823,3149626823,3149625823,3149624823,3149620823,
+3149619823,3149618823,3149617823,3149616823,3149615823,3149614823,3149613823,3149537823,3149535823,3149507823,
+3149498823,3149497823,3149496823,3149495823,3149494823,3149493823,3149470823,3149469823,3149468823,3149467823,
+3149466823,3149465823,3149464823,3149463823,3149462823,3149461823,3149460823,3149459823,3149458823,3149457823,
+3149456823,3149428823,3149268823,3149267823,3149259823,3149258823,3149257823,3149256823,3149255823,3149254823,
+3149253823,3149252823,3149248823,3149241823,3149240823,3148766823,3148731823,3148730823,3148639823,3148638823,
+3148637823,3148636823,3148635823,3148634823,3148633823,3148632823,3148197823,3137729823,3137708823,3137587823,
+3137412823,3137406823,3094653823,3093985823,3093984823,3093983823,3093982823,3093981823,3093980823,3093979823,
+3093978823,3093977823,3093940823,3093939823,3093938823,3093937823,3093936823,3093811823)
+
+
+update CUST_BILL_EXCH set chg_stat_reason = '00' where cus_bil_exc_id in (3150972823,3150971823,3150886823,3150885823,3150884823,3150880823,3150774823,3150771823,3150770823,3150769823,
+3150667823,3150631823,3150199823,3150577823,3150570823,3150342823,3150341823,3150340823,3150339823,3150338823,
+3150337823,3150336823,3150335823,3150334823,3150332823,3150331823,3150239823,3150238823,3150237823,3150236823,
+3150235823,3149641823,3149640823,3149639823,3149631823,3149629823,3149626823,3149625823,3149624823,3149620823,
+3149619823,3149618823,3149617823,3149616823,3149615823,3149614823,3149613823,3149537823,3149535823,3149507823,
+3149498823,3149497823,3149496823,3149495823,3149494823,3149493823,3149470823,3149469823,3149468823,3149467823,
+3149466823,3149465823,3149464823,3149463823,3149462823,3149461823,3149460823,3149459823,3149458823,3149457823,
+3149456823,3149428823,3149268823,3149267823,3149259823,3149258823,3149257823,3149256823,3149255823,3149254823,
+3149253823,3149252823,3149248823,3149241823,3149240823,3148766823,3148731823,3148730823,3148639823,3148638823,
+3148637823,3148636823,3148635823,3148634823,3148633823,3148632823,3148197823,3137729823,3137708823,3137587823,
+3137412823,3137406823,3094653823,3093985823,3093984823,3093983823,3093982823,3093981823,3093980823,3093979823,
+3093978823,3093977823,3093940823,3093939823,3093938823,3093937823,3093936823,3093811823);
+
+--commit;
+
+
+
+select * from customer where register_no = '1045';
+
+select tax_number from customer where register_no = '2002114'; -- iz AccountDetailsa proslijediti register_no
+
+select * from cusacc_external where iban_acc_no = '84077929159';
+
+select * from cusacc_external where iban_acc_no is not null;
+
+
+select * from customer;
+
+select user_lock,status,ben_place from CUST_BILL_EXCH where cus_bil_exc_id = 3137406823;
+
+
+select user_lock,status from CUST_BILL_EXCH where cus_bil_exc_id = 3150199823;
+
+--update CUST_BILL_EXCH set user_lock = '2014-12-10 10:56:49.6256' where cus_bil_exc_id = 3150199823;
+
+
+update CUST_BILL_EXCH set status = 'P' where cus_bil_exc_id = 3150199823;
+
+commit;
+
+
+select * from customer_account where cus_acc_no = '3500101270';
+
+select * from customer_account where cus_acc_no = '3205003215';
+
+
+select * from customer ; -- za popuniti adresu i mjesto, ako imam podatak o register no u AccountDetailsLDB iz 
+
+
+
+select * from cusacc_external where iban_acc_no is not null; -- 
+
+select * from customer_account where iban_acc_no = 'HR1824840083205003215'; -- cus_acc_no 
+
+
+
+  				SELECT 
+                        cus_bill_ext_no,
+                        issue_date,
+                        maturity_date,
+                        cus_bill_exch_no,
+                        amount,
+                        payer_reg_no,
+                        payer_tax_number,
+                        payer_address,
+                        ben_iban,
+                        ben_name,
+                        ben_tax_number,
+                        ben_address,
+                        status,
+                        paid_amount,
+                        payer_acc_no,
+                        payment_method,
+                        payer_name,
+                        ben_place
+       from 
+          cust_bill_exch
+            where cus_bil_exc_id = 3149641823;                 
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+			   SELECT
+                          cbe.cus_bil_exc_id,
+                          cbe.cus_bill_exch_no,
+                          cbe.cus_bill_ext_no,
+                          cbe.payer_reg_no,
+                          cbe.payer_name,
+                          cbe.payer_tax_number,
+                          cbe.ben_iban,
+                          cbe.ben_name,
+                          cbe.ben_address,
+                          cbe.ben_place,
+                          cbe.amount,                   
+                          cbe.maturity_date, 
+                          cbe.status, 
+                          cbe.paid_amount,
+                          cbe.order_trn, 
+                          cbe.payment_date,
+                          cbe.order_trn_last,
+                          cbe.payment_date_last,
+                          cbe.cur_id,
+                          cur.code_num
+                      FROM
+                          CUST_BILL_EXCH cbe
+                          LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id              
+                      WHERE
+                          cbe.bank_sign = 'RB'
+                     
+                     AND ( cbe.MATURITY_DATE BETWEEN  '0002-11-30' AND '9999-12-31') 
+                    AND ((1 = 0) OR (cbe.STATUS = 'N'))
+                    AND ((1=0) OR (cbe.PAYER_REG_NO = '2002123'))
+                    AND ((1=0) OR (cbe.PAYER_TAX_NUMBER LIKE 45645646044))   
+                    AND ((1=0) OR (cbe.PAYER_NAME LIKE 'MIKEC ANA'))  
+                     AND ((1=0) OR (cbe.CUS_BILL_EXCH_NO = 'MJ-17/12/2014-4'))
+                     AND ((1=0) OR (cbe.cus_bill_ext_no = '700600'))
+                   AND ((0=0) OR (cbe.BEN_IBAN LIKE 'bla'))
+		
+
+select * from CUST_BILL_EXCH where CUS_BILL_EXCH_NO like 'MJ-17/12/2014-4';
+
+--------------------------------------------------------------------------------------------
+
+   SELECT 
+			            CUS_ACC_ID, 
+			            CUS_ID, 
+			            BAN_PRO_TYP_ID,
+			            PRO_CAT_ID, 
+			            BAN_REL_TYP_ID, 
+			            PUR_CODE, 
+			            ORG_UNI_ID,
+				        CURRENCY_INDICATOR, 
+			            OPENING_DATE, 
+			            CLOSING_DATE, 
+			            CUS_ACC_STATUS, 
+			            CUS_ORG_UNI_ID, 
+			            ACC_CUR_ID,
+				        EXTERNAL_FLAG,
+			            EXT_ACC_TYPE, 
+			            CURRENCY_TYPE, 
+			            PASSBOOK_FLAG, 
+			            P_SCH_ID,
+			            MIN_BALANCE_CUR_ID,
+			            MIN_BALANCE_AMOUNT,
+                        PUR_SUB_ID,
+                        CHG_STAT_REASON,
+			            IBAN_ACC_NO
+                  
+                    FROM  
+			            CUSTOMER_ACCOUNT
+                    WHERE  
+			            cus_acc_no  = 
+
+
+
+  select * from system_code_value order by user_lock desc;
+
+  		SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                           FROM system_code_value 
+                          WHERE sys_cod_id = 'bill_change_stat'
+
+                          	SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                           FROM system_code_value 
+                          WHERE sys_cod_id like 'ch'
+
+	-- chg_stat_reason - 
+ 
+             select * from CUST_BILL_EXCH;    --  
+
+
+                SELECT       
+         		       sys_code_value,           
+                      sys_code_desc                   
+                  FROM
+                    system_code_value                
+                  WHERE
+                    sys_cod_id = 'chg_stat_reason_bi';
+
+
+
+
+		  SELECT   
+                mem.CUS_ID           
+            FROM PROC_MEMBER mem
+            WHERE 
+                mem.PRO_MEM_ID='RB';	     
+
+        --------------  za novi lookup 
+
+         select * from customer_account;
+
+         select * from CUSACC_EXTERNAL; 
+
+       -------------- SQL za lookup
+        SELECT CA.CUS_ACC_ID, CA.CUS_ID, CA.CUS_ACC_NO, C.REGISTER_NO, CA.IBAN_ACC_NO, CA.BANK_SIGN FROM CUSTOMER_ACCOUNT CA, CUSTOMER C
+		WHERE C.CUS_ID= CA.CUS_ID
+		AND CA.IBAN_ACC_NO = 'HR9424840083500101261'
+		AND CA.BANK_SIGN = 'RB'
+    
+      SELECT CA.CUS_ACC_ID, CA.CUS_ID, CA.CUS_ACC_NO, C.REGISTER_NO, CA.IBAN_ACC_NO, CA.BANK_SIGN FROM CUSTOMER_ACCOUNT CA, CUSTOMER C
+		WHERE C.CUS_ID= CA.CUS_ID
+		AND CA.IBAN_ACC_NO = 'HR1824840083205003215'
+		AND CA.BANK_SIGN = 'RB'
+                   
+ -- iban iz cusacc_external - HR4524840081100001234
+
+     select * from cusacc_external where cus_id = 39309275;
+   
+      
+      SELECT CA.CUS_ACC_ID, CA.CUS_ID, CA.CUS_ACC_NO, C.REGISTER_NO, CA.IBAN_ACC_NO, CA.BANK_SIGN FROM CUSTOMER_ACCOUNT CA, CUSTOMER C
+		WHERE C.CUS_ID= CA.CUS_ID
+		AND CA.IBAN_ACC_NO = 'HR4524840081100001234'
+		AND CA.BANK_SIGN = 'RB'
+
+----------------------------------------------------------------------------
+     SELECT CA.CUS_ACC_ID, CA.CUS_ID, CA.CUS_ACC_NO, C.REGISTER_NO, CA.IBAN_ACC_NO, CA.BANK_SIGN, CE.CUS_NAME FROM CUSTOMER_ACCOUNT CA, CUSTOMER C, CUSACC_EXTERNAL CE
+		WHERE C.CUS_ID= CA.CUS_ID
+		AND C.CUS_ID = CE.CUS_ID
+		AND CA.IBAN_ACC_NO = 'HR1824840083205003215'
+		AND CA.BANK_SIGN = 'RB'
+
+
+     select * from customer;
+   
+---------------------------------------------------------------------------- primjer  sa Mikec Annom HR1824840083205003215
+
+     select ca.cus_id,c.name, c.address,  c.tax_number   from customer_account ca, customer c where  CA.IBAN_ACC_NO = 'HR1824840083205003215' AND C.cus_id = CA.cus_id
+      union all
+       select ce.cus_id,ce.cus_name, ce.address,  ce.tax_number  from  CUSACC_EXTERNAL CE  where  CE.IBAN_ACC_NO = 'HR1824840083205003215' with ur;
+
+       
+---------------------------------------------------------------------------------------- primer iz CUSACC_EXTERNAL
+
+    select ca.cus_id,c.name, c.address, c.tax_number   from customer_account ca, customer c where  CA.IBAN_ACC_NO = 'HR1824840083205003215' AND C.cus_id = CA.cus_id
+      union all
+       select ce.cus_id,ce.cus_name, ce.address, ce.tax_number  from  CUSACC_EXTERNAL CE  where  CE.IBAN_ACC_NO = 'HR1824840083205003215'   with ur;
+
+
+		SELECT  ca.cus_id ,c.name, c.address, c.tax_number, ca.iban_acc_no as IBAN FROM customer_account ca, customer c WHERE ca.cus_id = c.cus_id  AND ca.iban_acc_no = 'HR1824840083205003215'
+
+		 SELECT  ca.cus_id ,c.name, c.address, c.tax_number, ca.iban_acc_no as IBAN FROM customer_account ca, customer c WHERE ca.cus_id = c.cus_id  AND ca.iban_acc_no =  HR1824840083205003215
+
+     select * from customer_account;
+
+     select * FROM proc_member;
+
+     select * from CUSACC_EXTERNAL where iban_acc_no is not null;
+
+     select * from CUST_BILL_EXCH order by user_lock desc;
+
+      SELECT  ca.cus_id ,c.name, c.address, c.tax_number, ca.iban_acc_no as IBAN FROM customer_account ca, customer c WHERE ca.cus_id = c.cus_id  AND ca.iban_acc_no = ?  
+      UNION ALL     
+      SELECT  ce.cus_id, ce.cus_name, ce.address, ce.tax_number, CE.iban_acc_no as IBAN FROM  CUSACC_EXTERNAL CE, customer c WHERE  ce.iban_acc_no = 'HR1824840083205003215'
+
+        select * FROM customer;
+
+        SELECT  ca.cus_id ,c.name, c.address, c.tax_number, ca.iban_acc_no as IBAN , c.xcity  FROM customer_account ca, customer c WHERE ca.cus_id = c.cus_id  AND ca.iban_acc_no = 'HR1824840083205003215'
+        UNION ALL SELECT  ce.cus_id, ce.cus_name, ce.address, ce.tax_number, CE.iban_acc_no as IBAN, ce.city  FROM CUSACC_EXTERNAL CE, customer c WHERE  ce.iban_acc_no = 'HR1824840083205003215'
+
+
+
+         SELECT  ca.cus_id ,c.name, c.address, c.tax_number, ca.iban_acc_no as IBAN FROM customer_account ca, customer c WHERE ca.cus_id = c.cus_id  AND ca.iban_acc_no = 'HR1824840083205003215' 
+         UNION ALL SELECT  ce.cus_id, ce.cus_name, ce.address, ce.tax_number, CE.iban_acc_no  FROM CUSACC_EXTERNAL CE, customer c WHERE  ce.iban_acc_no = 'HR1824840083205003215'
+
+
+		
+		 SELECT ca.iban_acc_no, ca.cus_id ,c.name, c.address, c.tax_number FROM customer_account ca, customer c 
+
+-------
+
+						    SELECT
+                          cbe.cus_bil_exc_id,
+                          cbe.cus_bill_exch_no,
+                          cbe.cus_bill_ext_no,
+                          cbe.payer_reg_no,
+                          cbe.payer_name,
+                          cbe.payer_tax_number,
+                          cbe.ben_iban,
+                          cbe.ben_name,
+                          cbe.ben_address,
+                          cbe.ben_place,
+                          cbe.amount,                   
+                          cbe.maturity_date, 
+                          cbe.status, 
+                          cbe.paid_amount,
+                          cbe.order_trn, 
+                          cbe.payment_date,
+                          cbe.order_trn_last,
+                          cbe.payment_date_last,
+                          cbe.cur_id,
+                          cur.code_num
+                      FROM
+                          CUST_BILL_EXCH cbe
+                          LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id              
+                      WHERE
+                          cbe.bank_sign = 'RB'                 
+                     AND ( cbe.MATURITY_DATE BETWEEN  '0002-11-30' AND '9999-12-31')                   
+                   AND ((1=0) OR (cbe.PAYER_REG_NO LIKE '1045%'))
+
+
+
+                    --AND ((:StatusFlag = 0) OR (cbe.STATUS LIKE :Status))
+--                     AND ((:txtOIBFlag=0) OR (cbe.PAYER_TAX_NUMBER LIKE :payer_tax_number))   
+--                     AND ((:txtNazivFlag=0) OR (cbe.PAYER_NAME LIKE :payer_name))  
+--                     AND ((:txtBrojrjesenjaFlag=0) OR (cbe.CUS_BILL_EXCH_NO = ':cus_bill_ext_no'))
+--                     AND ((:txtBrojUgovoraFlag=0) OR (cbe.cus_bill_ext_no = ':cus_bill_exch_no'))
+--                     AND ((:txtAccountFlag=0) OR (cbe.BEN_IBAN LIKE ':ben_iban'))
+     
+
+
+
+ SELECT   cbe.cus_bil_exc_id , cbe.cus_bill_exch_no , cbe.cus_bill_ext_no , cbe.payer_reg_no , cbe.payer_name,  cbe.payer_tax_number,  cbe.ben_iban,  cbe.ben_name,  cbe.ben_address , cbe.ben_place , 
+       cbe.amount,  cbe.maturity_date , cbe.status ,  cbe.paid_amount , cbe.order_trn ,  cbe.payment_date , cbe.order_trn_last , cbe.payment_date_last , cbe.cur_id , cur.code_num FROM  CUST_BILL_EXCH cbe  LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id
+        WHERE  cbe.bank_sign = 'RB'  AND RTRIM(cbe.PAYER_REG_NO) LIKE '1045' AND RTRIM(cbe.PAYER_TAX_NUMBER) LIKE '02902452063' AND RTRIM(cbe.PAYER_NAME) LIKE 'IBM HRVATSKA D.O.O.' AND cbe.MATURITY_DATE BETWEEN '0002-11-30' AND '9999-12-31'
+
+		SELECT   cbe.cus_bil_exc_id , cbe.cus_bill_exch_no , cbe.cus_bill_ext_no , cbe.payer_reg_no , cbe.payer_name,  cbe.payer_tax_number,  cbe.ben_iban,  cbe.ben_name,  cbe.ben_address , cbe.ben_place , cbe.amount,  cbe.maturity_date , cbe.status ,  cbe.paid_amount , cbe.order_trn ,  cbe.payment_date , cbe.order_trn_last , cbe.payment_date_last , cbe.cur_id , cur.code_num FROM  CUST_BILL_EXCH cbe  LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id   WHERE  cbe.bank_sign = 'RB'  AND RTRIM(cbe.PAYER_REG_NO) LIKE '1045' AND RTRIM(cbe.PAYER_TAX_NUMBER) LIKE '02902452063' AND RTRIM(cbe.PAYER_NAME) LIKE 'IBM HRVATSKA D.O.O.' AND cbe.MATURITY_DATE BETWEEN '0002-11-30' AND '9999-12-31'
+
+
+				  SELECT
+                    *
+                                 
+                  FROM
+                    system_code_value   
+
+                                 
+                  WHERE
+                    sys_cod_id = 'pay_method'
+
+                    
+                  AND sys_code_value = :(SysCODEValue) 
+
+				
+				SELECT sys_cod_val_id, sys_code_value, sys_code_desc 
+                           FROM system_code_value 
+                          WHERE sys_cod_id = 'bill_change_stat'
+		
+					

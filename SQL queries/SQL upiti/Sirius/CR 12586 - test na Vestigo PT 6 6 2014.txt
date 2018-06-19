@@ -1,0 +1,20 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+
+  select * from sms_log;
+
+   select * from sms_log where cus_acc_id = 9810207610;
+
+   --------------------  za test 6.6.2014
+    select balance from sms_log where sms_log_id = 12376520610;
+    
+  -- update sms_log set balance = '500003.72' where sms_log_id = 12376520610;  -- bilo je balance = 500002.72
+
+   
+  commit;
+
+   select balance from sms_log where sms_log_id = 12376515610;
+
+   --update sms_log set balance = '1000650.01' where sms_log_id = 12376520610;  -- bilo je balance = 1,000,649.01
+
+    --commit;

@@ -1,0 +1,600 @@
+package hr.vestigo.modules.collateral.batch.bo07;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.batch.bo07.BO07Data;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*;  
+
+public class BO071 {
+	    
+	#sql public iterator Iter1 (
+			BigDecimal cus_id,
+	 		BigDecimal col_hea_id,
+			BigDecimal exp_coll_amount,
+			String register_no,
+			String name,
+			String cus_acc_no,
+			BigDecimal exp_balance_hrk,
+			BigDecimal col_cat_id,
+			BigDecimal col_type_id
+		);	
+	#sql public iterator Iter2 (
+			Date dt,
+			String register_no,
+			String client_name,
+			String invest_party,
+			BigDecimal exposure,
+			BigDecimal cash_deposit,
+			BigDecimal assur_policy,
+			BigDecimal guaranty_state,
+			BigDecimal guaranty_other_bank,
+			BigDecimal real_estate1,
+			BigDecimal real_estate2,
+			BigDecimal real_estate3,
+			BigDecimal real_estate4,
+			BigDecimal real_estate5,
+			BigDecimal real_estate6,
+			BigDecimal real_estate7,
+			BigDecimal real_estate8,
+			BigDecimal real_estate9,
+			BigDecimal real_estate10,
+			BigDecimal priv_cars,
+			BigDecimal other_veh,
+			BigDecimal trucks_etc,
+			BigDecimal building_veh,
+			BigDecimal vessels,
+			BigDecimal airplanes,
+			BigDecimal machines
+	);
+	#sql public iterator Iter3 (
+			BigDecimal cus_id, 
+			BigDecimal col_hea_id, 
+			BigDecimal exp_coll_amount, 
+			String register_no, 
+			String name, 
+			String cus_acc_no, 
+			BigDecimal exp_balance_hrk, 
+			BigDecimal ponder,
+			String col_type_name
+	);
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo07/BO071.sqlj,v 1.42 2009/05/21 09:01:33 hrakis Exp $";
+
+	public Iter1 iter1 = null;	
+	public Iter2 iter2 = null;	
+	public Iter3 iter3 = null;
+	private ConnCtx connCtx;
+    private BigDecimal eve_id = null;
+    private hr.vestigo.framework.remote.batch.BatchContext bc;
+    public final int RBA=0;
+    public final int B1=1;
+    public final int B2=2;
+    public final int B2IRB=3;
+    
+    public BO071(hr.vestigo.framework.remote.batch.BatchContext bc){
+		this.bc = bc;
+		try{
+			this.connCtx = bc.getContext();
+		} catch(SQLException e){
+			//System.out.println("Nema connCtx u podtransakciji!");
+		} 
+	}	
+    
+    public BigDecimal getEveId(){
+    	return this.eve_id;
+    }
+    
+    /**
+     * vraca ponder sa zadanim coll_cat_id-em
+     * */
+    public BigDecimal ponder_one_param(String col_cat_id) throws SQLException {
+    	BigDecimal ponder;
+    try {
+    	#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    	
+    	#sql [connCtx] {
+    					SELECT distinct mvp_dfl INTO :ponder
+    					FROM coll_atr 
+    					WHERE col_cat_id = :(col_cat_id)
+    	};
+    }
+	catch (SQLException sqle) {
+		throw sqle;
+	}
+    	return ponder;
+    }
+    /**
+     * vraca ponder sa zadanim coll_cat_id-em i col_type_id-em
+     * */
+    public BigDecimal ponder_two_param(String col_cat_id,String col_type_id)  throws SQLException{
+    	BigDecimal ponder;
+    try {
+    	#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    	
+    	#sql [connCtx] {
+    					SELECT distinct mvp_dfl INTO :ponder
+    					FROM coll_atr 
+    					WHERE col_cat_id = :(col_cat_id) AND coll_type_id = :(col_type_id) 
+    	};
+    }
+	catch (SQLException sqle) {
+		throw sqle;
+	}
+    	return ponder;
+    }
+    /**
+     * vraca ponder sa zadanim coll_cat_id-em i col_type_id-em i col_sub_id 
+     * */
+    public BigDecimal ponder_three_param(String col_cat_id,String col_type_id,String col_sub_id) throws SQLException {
+    	BigDecimal ponder;
+    try {
+    	#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    	
+    	#sql [connCtx] {
+    					SELECT mvp_dfl INTO :ponder
+    					FROM coll_atr 
+    					WHERE col_cat_id = :(col_cat_id) AND coll_type_id = :(col_type_id) AND col_sub_id = :(col_sub_id)
+    	};
+    }
+	catch (SQLException sqle) {
+		throw sqle;
+	}
+    	return ponder;
+    }
+    
+	public Iter1 fetchData(BO07Data p_data) throws SQLException{//dohvat podataka 
+		//System.out.println("SQL USAO U fetchData(BO07Data Data) ");
+    	boolean ponded="P".equals(p_data.getPonder());
+    	String proc_type=null;
+    	String eligibility=Integer.toString(p_data.getEligibility());
+    	
+    	switch(p_data.getEligibility()){
+			case B1:
+				if(ponded){
+					proc_type="E";
+				}else{
+					proc_type="C";
+				}
+				break;
+			case B2:
+				if(ponded){
+					proc_type="I";
+				}else{
+					proc_type="H";
+				}
+				break;
+			case RBA:
+				if(ponded){
+					proc_type="P";
+				}else{
+					proc_type="N";
+				}
+				break;
+			case B2IRB:
+				if(ponded){
+					proc_type="K";
+				}else{
+					proc_type="J";
+				}
+				break;
+    	}
+    	try {
+    		//System.out.println("ponder- " + p_data.getPonder());
+    		#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    		/**
+    		 * Dodatna provjera da li je zadan datum obrade, te da li 
+    		 * se dohvaca podatke (stvara izvjesce) po svim komitentima koji su pravne osobe ili 
+    		 * za jednog komitenta (ako je zadan register_no)
+    		 */
+    		
+    		if (p_data.getDateOfReport() != null){
+    			
+   		
+    			if(p_data.getRegister_no() != null && !p_data.getRegister_no().trim().equals("")){
+    			//	System.out.println("SQL USAO 1.sql ");
+    				#sql [connCtx] iter1 = {
+							SELECT 
+								a.cus_id as cus_id, 
+								a.col_hea_id as col_hea_id, 
+								a.exp_coll_amount as exp_coll_amount, 
+								c.register_no as register_no, 
+								c.name as name, 
+								b.cus_acc_no as cus_acc_no, 
+								a.exp_balance_hrk as exp_balance_hrk, 
+								d.col_cat_id as col_cat_id, 
+								d.col_type_id as col_type_id
+							FROM 
+								COL_PROC e, 
+								CUSACC_EXP_COLL a left outer join COLL_HEAD d on a.col_hea_id = d.col_hea_id, 
+								CUSTOMER c, 
+								CUSACC_EXPOSURE b
+							WHERE 
+								e.value_date = :(p_data.getDateOfReport()) AND
+								e.proc_type = :(proc_type) AND
+								e.col_pro_id = a.col_pro_id AND
+								c.register_no = :(p_data.getRegister_no()) AND	                  						
+								a.cus_id = c.cus_id AND
+          						a.cus_acc_id = b.cus_acc_id 
+					};
+    	}else{
+    		//System.out.println("SQL USAO 2.sql ");
+    		if (p_data.getClientType().equals("P")){
+    			#sql [connCtx] iter1 = {
+						SELECT 
+							a.cus_id as cus_id, 
+							a.col_hea_id as col_hea_id, 
+							a.exp_coll_amount as exp_coll_amount, 
+							c.register_no as register_no, 
+							c.name as name, 
+							b.cus_acc_no as cus_acc_no, 
+							a.exp_balance_hrk as exp_balance_hrk, 
+							d.col_cat_id as col_cat_id, 
+							d.col_type_id as col_type_id
+						FROM 
+							COL_PROC e,
+							CUSACC_EXP_COLL a left outer join COLL_HEAD d on a.col_hea_id = d.col_hea_id, 
+							CUSTOMER c, 
+							CUSACC_EXPOSURE b
+						WHERE 
+							e.value_date = :(p_data.getDateOfReport()) AND
+							e.proc_type = :(proc_type) AND
+							e.col_pro_id = a.col_pro_id AND
+  							a.cus_id = c.cus_id AND
+  							c.cus_typ_id in (2999,2998,999) AND
+  							a.cus_acc_id = b.cus_acc_id
+				};
+	    	}else {
+	    		#sql [connCtx] iter1 = {
+						SELECT 
+							a.cus_id as cus_id, 
+							a.col_hea_id as col_hea_id, 
+							a.exp_coll_amount as exp_coll_amount, 
+							c.register_no as register_no, 
+							c.name as name, 
+							b.cus_acc_no as cus_acc_no, 
+							a.exp_balance_hrk as exp_balance_hrk, 
+							d.col_cat_id as col_cat_id, 
+							d.col_type_id as col_type_id
+						FROM 
+							COL_PROC e,
+							CUSACC_EXP_COLL a left outer join COLL_HEAD d on a.col_hea_id = d.col_hea_id, 
+							CUSTOMER c, 
+							CUSACC_EXPOSURE b
+						WHERE 
+							e.value_date = :(p_data.getDateOfReport()) AND
+						 	e.proc_type = :(proc_type) AND
+							e.col_pro_id = a.col_pro_id AND
+  							a.cus_id = c.cus_id AND
+  							c.cus_typ_id in (1999,1998) AND
+  							a.cus_acc_id = b.cus_acc_id
+				};		
+    			}
+    			}	
+    		}	
+    		//System.out.println(" select uspjesno izvrsen!");
+    	}
+    	catch (SQLException sqle) {
+    		throw sqle;
+    	}
+    	return iter1;
+	}
+
+	
+	/**
+	 * Dohvat podataka za drugo izvješæe
+	 */
+	public Iter3 fetchData2(BO07Data p_data, String register_no) throws SQLException  
+	{ 
+		boolean ponded = "P".equals(p_data.getPonder());
+    	String proc_type = null;
+
+    	switch(p_data.getEligibility())
+    	{
+			case B1:
+				if(ponded) proc_type="E"; else proc_type="C";
+				break;
+			case B2:
+				if(ponded) proc_type="I"; else proc_type="H";
+				break;
+			case RBA:
+				if(ponded) proc_type="P"; else proc_type="N";
+				break;
+			case B2IRB:
+				if(ponded) proc_type="K"; else proc_type="J";
+				break;
+    	}
+
+		int filterByClientType = 0;
+		if(register_no != null && !register_no.equals("")) filterByClientType = 0;  // jedan komitent
+		else if("P".equals(p_data.getClientType())) filterByClientType = 1;  // pravne osobe
+		else if("F".equals(p_data.getClientType())) filterByClientType = 2;  // fizièke osobe
+
+		try
+		{
+			#sql [connCtx] iter3 = {
+				SELECT 
+					a.cus_id 			AS cus_id, 
+					a.col_hea_id 		AS col_hea_id, 
+					a.exp_coll_amount 	AS exp_coll_amount, 
+					c.register_no 		AS register_no, 
+					c.name 				AS name, 
+					b.cus_acc_no 		AS cus_acc_no, 
+					a.exp_balance_hrk 	AS exp_balance_hrk, 
+					a.mvp_dfl 			AS ponder,
+					g.coll_type_name 	AS col_type_name
+    			FROM 
+					col_proc e, 
+					cusacc_exp_coll a LEFT OUTER JOIN coll_head d ON a.col_hea_id = d.col_hea_id, 
+					customer c, 
+					cusacc_exposure b,
+					collateral_type g
+    			WHERE
+    				e.value_date = :(p_data.getDateOfReport()) AND
+					e.proc_type = :(proc_type) AND
+					e.col_pro_id = a.col_pro_id AND
+					( 	(:filterByClientType = 0 AND c.register_no = :(register_no)) OR
+				  		(:filterByClientType = 1 AND c.cus_typ_id IN (2999,2998,999)) OR
+				  		(:filterByClientType = 2 AND c.cus_typ_id IN (1999,1998))	) AND
+					a.cus_id = c.cus_id AND
+      				a.cus_acc_id = b.cus_acc_id AND
+					d.col_type_id = g.coll_type_id
+    			ORDER BY 6, 9
+				WITH UR
+			};
+		}
+		catch(SQLException ex)
+		{
+			bc.error("Pukla fetchData2 metoda!",ex);
+			throw ex;
+		}
+    	return iter3;
+	}
+
+	
+	public void insertDataAboutSubtype(BO07Data p_data) throws Exception{//dohvat podatka o podtipu
+		//System.out.println("1.11 SQL insertDataAboutSubtype:"+p_data.getCol_hea_id());
+		
+		if ((p_data.getCol_cat_id())==null) return;
+		
+		try {
+			// nekretnine viditi tablicu coll_category
+			if ((p_data.getCol_cat_id()).equals(new BigDecimal("618223")))
+			{
+			//	System.out.println("---->prvi ");
+				#sql [connCtx]  {
+									SELECT 
+										real_est_type 
+									INTO
+										:(p_data.subtype_coll)
+									FROM
+										coll_restate
+									WHERE 
+										col_hea_id = :(p_data.getCol_hea_id())
+								};
+				
+			}
+            //vozila
+			if ((p_data.getCol_cat_id()).equals(new BigDecimal("624223")))
+			{
+			//	System.out.println("---->drugi ");
+				#sql [connCtx]  {
+									SELECT 
+										veh_group_id 
+									INTO
+										:(p_data.subtype_coll)
+									FROM
+										coll_vehicle
+									WHERE 
+										col_hea_id = :(p_data.getCol_hea_id())
+									};
+				
+			}
+            // police osiguranje
+			if ((p_data.getCol_cat_id()).equals(new BigDecimal("616223")))
+			{
+			//	System.out.println("---->treci ");
+				#sql [connCtx]  {
+							SELECT 
+								b.int_pol_type_code
+							INTO
+										:(p_data.subtype_coll_str) 
+							FROM 
+								coll_inspolicy a, 
+								insu_policy_type b
+							WHERE 
+								a.col_hea_id = :(p_data.getCol_hea_id()) AND
+				                a.ip_type_id = b.int_pol_type_id
+
+				};
+				
+		}
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100){
+				System.out.println("SQL select insertDataAboutSubtype  puk'o k'o kokica!!!");	
+				throw e;
+			}
+		
+		}	
+		
+	}
+	
+	
+	public void insertIntoCRMTable(BO07CRMData p_data) throws Exception {
+		BigDecimal zero = new BigDecimal(0);
+		String str = "3";
+		//System.out.println("SQL USAO insertIntoCRMTable(BO07CRMData Data) ");
+		
+	try{
+		#sql [connCtx]  {	
+			INSERT 
+				INTO 
+			CRM_REPORT (
+				PROC_DATE,
+				REPORT_IND,
+				REGISTER_NO,
+				NAME,
+				CUS_ACC_NO,
+				EXPOSURE_BALANCE,
+				AMOUNT_CASH,
+				AMOUNT_POL,
+				AMOUNT_GAR_S,
+				AMOUNT_GAR_B,
+				AMOUNT_NEK,
+				AMOUNT_GZEM,
+				AMOUNT_PZEM,
+				AMOUNT_PHALA,
+				AMOUNT_URED,
+				AMOUNT_HOTEL,
+				AMOUNT_PRIV,
+				AMOUNT_PR_PR,
+				AMOUNT_SK_PR,
+				AMOUNT_HOTEL_NAS,
+				AMOUNT_AUTO,
+				AMOUNT_MOTO,
+				AMOUNT_KAM,
+				AMOUNT_GRV,
+				AMOUNT_PLOV,
+				AMOUNT_ZRAK,
+				AMOUNT_STRO
+				)
+			VALUES (
+				:(p_data.getDateOfReport()),
+				:(str),
+				:(p_data.getRegister_no()),
+				:(p_data.getClient_name()),
+				:(p_data.getInvest_party()),
+				:(p_data.getExposure()),
+				:(p_data.getCash_deposit()),
+				:(p_data.getAssur_policy()),
+				:(p_data.getGuaranty_state()),
+				:(p_data.getGuaranty_other_bank()),
+				:(p_data.getReal_estate1()),
+				:(p_data.getReal_estate2()),
+				:(p_data.getReal_estate3()),
+				:(p_data.getReal_estate4()),
+				:(p_data.getReal_estate5()),
+				:(p_data.getReal_estate6()),
+				:(p_data.getReal_estate7()),
+				:(p_data.getReal_estate8()),
+				:(p_data.getReal_estate9()),
+				:(p_data.getReal_estate10()),
+				:(p_data.getPriv_cars()),
+				:(p_data.getOther_veh()),
+				:(p_data.getTrucks_etc()),
+				:(p_data.getBuilding_veh()),
+				:(p_data.getVessels()),
+				:(p_data.getAirplanes()),
+				:(p_data.getMachines())
+			)
+		};
+		
+
+	
+		}
+		catch(SQLException e) {
+			if (e.getErrorCode()!=100){
+				System.out.println("SQL select insertIntoCRMTable  pukao     !!!" + e.getMessage());	
+				throw e;
+			}
+		}
+   
+	}
+	
+	public Iter2 fetchDataFromCRM() throws SQLException{
+		//System.out.println("SQL USAO U fetchDataFromCRM() ");
+		try{	
+		#sql [connCtx] iter2 =  {
+			SELECT 
+				PROC_DATE as dt,
+				REGISTER_NO as register_no,
+				NAME as client_name,
+				CUS_ACC_NO as invest_party,
+				EXPOSURE_BALANCE as exposure,
+				sum(AMOUNT_CASH) as cash_deposit,
+				sum(AMOUNT_POL) as assur_policy,
+				sum(AMOUNT_GAR_S) as guaranty_state,
+				sum(AMOUNT_GAR_B) as guaranty_other_bank,
+				sum(AMOUNT_NEK) as real_estate1,
+				sum(AMOUNT_GZEM) as real_estate2,
+				sum(AMOUNT_PZEM) as real_estate3,
+				sum(AMOUNT_PHALA) as real_estate4,
+				sum(AMOUNT_URED) as real_estate5,
+				sum(AMOUNT_HOTEL) as real_estate6,
+				sum(AMOUNT_PRIV) as real_estate7,
+				sum(AMOUNT_PR_PR) as real_estate8,
+				sum(AMOUNT_SK_PR) as real_estate9,
+				sum(AMOUNT_HOTEL_NAS) as real_estate10,
+				sum(AMOUNT_AUTO) as priv_cars,
+				sum(AMOUNT_MOTO) as other_veh,
+				sum(AMOUNT_KAM) as trucks_etc,
+				sum(AMOUNT_GRV) as building_veh,
+				sum(AMOUNT_PLOV) as vessels,
+				sum(AMOUNT_ZRAK) as airplanes,
+				sum(AMOUNT_STRO) as machines
+			FROM
+				CRM_REPORT
+			GROUP BY
+				PROC_DATE,REGISTER_NO,NAME,CUS_ACC_NO,EXPOSURE_BALANCE
+			ORDER BY
+				1,4 desc
+			};	
+	}
+	catch (SQLException sqle) {
+		throw sqle;
+	}
+	return iter2;
+	}
+	
+	public void deleteCRMData() throws SQLException{
+	//	System.out.println("SQL USAO U deleteCRMData() ");
+	try{
+		#sql [connCtx]  {	
+			DELETE FROM CRM_REPORT
+		};
+	}
+	catch(SQLException e) {
+		if (e.getErrorCode()!=100){
+			System.out.println("SQL select deleteCRMTableData  puk'o k'o kokica!!!");	
+			throw e;
+			}
+		}	   
+	}
+	public BigDecimal insertIntoEvent(){
+		//System.out.println("sqlj insertIntoEvent");		
+	 	eve_id = null;
+	  	
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(connCtx);			
+		  	eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+   	
+			event.put("eve_id", eve_id);
+			event.put("eve_typ_id", new BigDecimal("1693123003"));
+			event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+			event.put("cmnt", "Izrada izvjesca za CRM");
+			event.put("use_id", bc.getUserID());
+			event.put("ext_event_code", null);
+			event.put("ext_event_num", null);
+			//event.put("org_uni_id", new BigDecimal("53253"));
+			event.put("bank_sign", bc.getBankSign());
+		  	eve1.insertEvent(event);
+		  	bc.updateEveID(eve_id);		
+	  
+	  } catch(Exception e){
+		 // e.printStackTrace();
+		  return null;
+	  }
+	  
+	  return eve_id;
+	}
+	
+	
+	
+}

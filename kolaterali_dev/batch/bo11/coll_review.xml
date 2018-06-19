@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+		<Data><Parameter Name="naslov"/></Data>
+	</Row>
+	<Row>
+		<Data><Parameter Name="datum"/></Data>
+	</Row>
+	<Row>
+	</Row>
+	<Row>
+		<Data><Text>Šifra komitenta (Interni MB) plasmana</Text></Data>
+		<Data><Text>Naziv komitenta plasmana</Text></Data>
+		<Data><Text>Modul plasmana</Text></Data>
+		<Data><Text>Domicilna oj plasmana</Text></Data>
+		<Data><Text>Partija plasmana</Text></Data>
+		<Data><Text>Sektor komitenta plasmana</Text></Data>
+		<Data><Text>B2 asset class komitenta plasmana</Text></Data>
+		<Data><Text>Oznaka komitenta plasmana</Text></Data>
+		<Data><Text>Datum dospijeća plasmana</Text></Data>
+		<Data><Text>Datum ugovora plasmana</Text></Data>
+		<Data><Text>Valutnost plasamana (devizni, VK, kuna)</Text></Data>
+		<Data><Text>Šifra valute plasmana</Text></Data>
+		<Data><Text>Izloženost</Text></Data>
+		<Data><Text>Ukupna izloženost po plasmanu u kunama-bilančno</Text></Data>
+		<Data><Text>Ukupna izloženost po plasmanu u kunama-izvanbilančno</Text></Data>
+		<Data><Text>Gotovinski depozit</Text></Data>
+		<Data><Text>Polica osiguranja sa štednom komponentom</Text></Data>
+		<Data><Text>Garancija države</Text></Data>
+		<Data><Text>Garancija druge banke</Text></Data>
+		<Data><Text>Stambeni objekt</Text></Data>
+		<Data><Text>Građevinsko zemljište</Text></Data>
+		<Data><Text>Poljoprivredno zemljište i šuma</Text></Data>
+		<Data><Text>Proizvodna hala i uslužni prostor</Text></Data>
+		<Data><Text>Uredske prostorije i prodajni prostor</Text></Data>
+		<Data><Text>Hotel, pansion</Text></Data>
+		<Data><Text>Privatni smještaj</Text></Data>
+		
+		<Data><Text>Skladišni prostor</Text></Data>
+		<Data><Text>Osobni automobili</Text></Data>
+		<Data><Text>Motocikli i ostala vozila</Text></Data>
+		<Data><Text>Kamioni, autobusi, pružna vozila</Text></Data>
+		<Data><Text>Građevinska vozila i građevinski strojevi</Text></Data>
+		<Data><Text>Plovila</Text></Data>
+		<Data><Text>Zrakoplovi</Text></Data>
+		<Data><Text>Strojevi</Text></Data>
+		<Data><Text>Osigurano</Text></Data>
+		<Data><Text>Neosigurano</Text></Data>
+		<Data><Text>Cash depoziti u RBA kojima je valuta depozita jednaka valuti plasmana (ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Cash depoziti u RBA kojima je valuta depozita različita valuti plasmana (ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Cash depoziti u drugim bankama kojima je valuta depozita jednaka valuti plasmana (ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Cash depoziti u drugim bankama kojima je valuta depozita različita valuti plasmana (ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Garancije RH (na kojima je izdavatelj komitent koji u bazi komitenata ima sektor 20)-(ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Garancije RF - republički fondovi (na kojima je izdavatelj komitent koji u bazi komitenata ima sektor 201)-(ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Garancije LUF - lokalna uprava i fondovi (na kojima je izdavatelj komitent koji u bazi komitenata ima sektor 22)-(ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Garancije domaćih banaka (na kojima je izdavatelj komitent koji u bazi komitenata ima sektor 11)-(ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Garancije stranih banaka (na kojima je izdavatelj komitent koji u bazi komitenata ima sektor 92)-(ukupan iznos pokrivenosti plasmana kolateralom u kunama)</Text></Data>
+		<Data><Text>Ostale garancije - (na kojima je izdavatelj komitent koji u bazi komitenata nema niti jedan od gore navedenih sektora)</Text></Data>
+	
+		<Data><Text>Šifra kolaterala</Text></Data>
+		<Data><Text>Tržišna vrijednost kolaterala umanjena za terete drugih u valuti</Text></Data>
+		<Data><Text>Valuta u kojoj se vodi kolateral</Text></Data>
+		<Data><Text>Tržišna vrijednost kolaterala umanjena za terete drugih u kunama</Text></Data>
+		<Data><Text>Datum revalorizacije</Text></Data>
+		<Data><Text>Izdavatelj</Text></Data>
+		<Data><Text>MB izdavatelja</Text></Data>
+		<Data><Text>Sektor izdavatelja</Text></Data>
+		<Data><Text>Zemlja rezidentnosti izdavatelja iz baze komitenata</Text></Data>
+		<Data><Text>Datum dospijeća kolaterala</Text></Data>
+		<Data><Text>Interni MB komitenta plasmana</Text></Data>
+		<Data><Text>Naziv komitenta plasmana</Text></Data>
+		<Data><Text>Broj partije plasmana</Text></Data>
+		<Data><Text>Iznos izloženosti po plasmanu u valuti</Text></Data>
+		<Data><Text>Valuta plasmana</Text></Data>
+		<Data><Text>Iznos izloženosti po plasmanu u kunama</Text></Data>
+</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="c1"/></Data>
+			<Data><Field Name="c2"/></Data>
+			<Data><Field Name="c3"/></Data>
+			<Data><Field Name="c4"/></Data>
+			<Data><Field Name="c5"/></Data>
+			<Data><Field Name="c6"/></Data>
+			<Data><Field Name="c7"/></Data>
+			<Data><Field Name="c8"/></Data>
+			<Data><Field Name="c9"/></Data>
+			<Data><Field Name="c10"/></Data>
+			<Data><Field Name="c11"/></Data>
+			<Data><Field Name="c12"/></Data>
+			<Data><Field Name="c13"/></Data>
+			<Data><Field Name="c14"/></Data>
+			<Data><Field Name="c15"/></Data>
+			<Data><Field Name="a1"/></Data>
+			<Data><Field Name="a2"/></Data>
+			<Data><Field Name="a3"/></Data>
+			<Data><Field Name="a4"/></Data>
+			<Data><Field Name="a5"/></Data>
+			<Data><Field Name="a6"/></Data>
+			<Data><Field Name="a7"/></Data>
+			<Data><Field Name="a8"/></Data>
+			<Data><Field Name="a9"/></Data>
+			<Data><Field Name="a10"/></Data>
+			<Data><Field Name="a11"/></Data>
+			<Data><Field Name="a12"/></Data>
+			<Data><Field Name="a13"/></Data>
+			<Data><Field Name="a14"/></Data>
+			<Data><Field Name="a15"/></Data>
+			<Data><Field Name="a16"/></Data>
+			<Data><Field Name="a17"/></Data>
+			<Data><Field Name="a18"/></Data>
+			<Data><Field Name="a19"/></Data>
+			<Data><Field Name="osigurano"/></Data>
+			<Data><Field Name="neosigurano"/></Data>
+			<Data><Field Name="d1"/></Data>
+			<Data><Field Name="d2"/></Data>
+			<Data><Field Name="d3"/></Data>
+			<Data><Field Name="d4"/></Data>
+			<Data><Field Name="g1"/></Data>
+			<Data><Field Name="g2"/></Data>
+			<Data><Field Name="g3"/></Data>
+			<Data><Field Name="g4"/></Data>
+			<Data><Field Name="g5"/></Data>
+			<Data><Field Name="g6"/></Data>
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>	

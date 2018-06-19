@@ -1,0 +1,142 @@
+package hr.vestigo.modules.collateral.jcics.coA9;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+import java.util.Vector;
+import java.math.BigDecimal;
+import sqlj.runtime.ref.*;
+
+#sql iterator IterA9 (
+            BigDecimal loa_cob_id,
+            BigDecimal cus_id,
+            String registerNo,
+            String name,
+            String oib,
+            String loa_cob_role, 
+            String uloga,
+            Date date_until,
+            BigDecimal use_open_id,
+            String open_name,
+            java.sql.Timestamp open_user_lock,
+            BigDecimal use_id,
+            String chg_name,
+            java.sql.Timestamp user_lock
+        ); 
+
+/**
+ * COA91 transakcija za dohvat sudužnika za partiju plasmana
+ *      
+ */
+public class COA91 extends SQLJScrollableRemoteTransaction {
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA9/COA91.sqlj,v 1.3 2012/05/14 07:32:55 hradnp Exp $";
+    
+    public DeclCOA9 decl = null;
+    private IterA9 iter = null;
+    
+    private Date datum = DateUtils.createDateFromString("31.12.9999");
+    private Date datum_do = null;
+    private int flag = 1;
+    
+    public COA91 (DeclCOA9 decl) {
+        this.decl = decl;
+    }
+    
+    // FBPr200016215 - izmjenjen SQL, dodani atributi
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        
+        setLevel(decl.ActionListLevel);
+        ConnCtx ctx = tc.getContext();
+        
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        
+        #sql [ctx] iter = { SELECT   lc.loa_cob_id, c.cus_id, c.register_no as registerNo, c.name, c.tax_number as oib, 
+                                     lc.loa_cob_role, scv.sys_code_desc as uloga, lc.date_until, lc.use_open_id, 
+                                     user_open.user_name as open_name, lc.opening_ts as open_user_lock, lc.use_id, 
+                                     user_chg.user_name as chg_name, lc.user_lock
+                            FROM     loan_coborrower lc
+                            LEFT OUTER JOIN   customer c ON (lc.cus_id=c.cus_id)
+                            LEFT OUTER JOIN   app_user user_open  ON (user_open.use_id = lc.use_open_id)
+                            LEFT OUTER JOIN   app_user user_chg   ON (user_chg.use_id = lc.use_id)
+                            LEFT OUTER JOIN   system_code_value  scv ON (scv.sys_code_value = lc.loa_cob_role AND scv.sys_cod_id = 'loa_cob_role' )
+                            WHERE   (lc.cus_acc_id = :(decl.CUS_ACC_ID) 
+                                     OR   lc.cus_acc_no = :(decl.CoBorrower_txtLBenAccNo)     
+                                     OR   lc.request_no = :(decl.CoBorrower_txtLBenRequestNo)     
+                                     OR   lc.contract_no = :(decl.CONTRACT_NO))
+                          };    
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+        tc.debug ( "......COA91.sqlj select uspješno izvršen");
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+        tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+    }
+
+    public boolean next() throws Exception {
+        return iter.next();
+    }
+    
+    public void close() {
+        if(iter!=null) {
+            try {
+                iter.close();
+            } catch (Exception ignored) {}
+        }
+    }
+    
+    public void populateRowData() throws Exception {
+        
+        Vector row = new Vector();
+        Vector hidden = new Vector();
+        
+        row.add(iter.registerNo());
+        row.add(iter.name());
+        if (iter.oib() != null)
+            row.add(iter.oib());
+        else row.add("");
+      
+        // FBPr200016215 - postavljanje opisa uloge u tablicu
+        if(iter.uloga() != null){
+            row.add(iter.uloga());
+        }else row.add("");
+        
+        // postavljanje statusa u tablicu
+        datum_do = iter.date_until();
+        flag = DateUtils.whoIsOlder(datum_do, datum);
+        if (flag == 0) 
+            row.add("A");
+        else
+            row.add("N");
+        
+       
+        hidden.add(iter.loa_cob_id());   //id veze na CoBorrower
+        hidden.add(iter.cus_id());       //id CoBorrower-a
+        
+        // FBPr200016215 - dodana oznaka uloge sudužnika koja se prenosi na ekran s detaljima
+        if(iter.loa_cob_role()!=null) hidden.add(iter.loa_cob_role());
+        else hidden.add("");
+        
+        hidden.add(iter.date_until());   
+        
+        if(iter.use_open_id()!=null){
+            hidden.add(iter.use_open_id());
+            hidden.add(iter.open_name());
+            hidden.add(iter.open_user_lock());
+        }else{
+            hidden.add("");
+            hidden.add("");
+            hidden.add("");
+        }
+        
+        hidden.add(iter.use_id());         
+        hidden.add(iter.chg_name());               
+        hidden.add(iter.user_lock());      
+        
+        decl.tblCoBorrowerList.addRow(row,hidden);
+    }
+}

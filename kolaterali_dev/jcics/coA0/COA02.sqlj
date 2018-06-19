@@ -1,0 +1,159 @@
+package hr.vestigo.modules.collateral.jcics.coA0;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.math.BigDecimal;
+import java.sql.Date;
+
+/**
+ *  * @author hramkr
+ *  	
+ */ 
+#sql iterator IterA02 (
+        String ip_activ_and_pay
+        );
+    
+    
+public class COA02 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA0/COA02.sqlj,v 1.4 2014/10/07 10:54:19 hrazst Exp $";
+
+	public DeclCOA0 decl = null;
+
+	public COA02 (DeclCOA0 decl) {
+		this.decl = decl;
+	} 
+	   	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        IterA02 iterA02=null;  
+        // provjera da li kolateral ima dodatni uvjet za ponder
+        // provjera da li kolateral ima aktivnu policu za koju je placena premija
+        // dohvatiti status police osiguranja i da li je placena premija        
+		String add_request = "N";   
+        #sql[ctx] iterA02 = {
+		    SELECT ip_act_noact as ip_activ_and_pay
+		    FROM insurance_policy
+            WHERE col_hea_id = :(decl.coponderselectmap.Mvp_col_hea_id)
+                                AND ip_act_noact = 'A' and
+                                    ip_date_sec_val >= current date and
+                                    ip_vali_until >= current date
+                                fetch first row only
+            };
+		while (iterA02.next()) {
+		    add_request = "D";
+        }
+        if(iterA02!=null) {
+            try {
+                iterA02.close();
+            } catch (Exception ignored) {}
+        }   
+        // dohvatiti min i max dozvoljenu vrijednost pondera
+        try {
+            #sql [ctx]{
+                SELECT
+                   min_value, dfl_value, max_value
+                INTO
+                    :(decl.coponderselectmap.Mvp_txtMinValue),
+                    :(decl.coponderselectmap.Mvp_txtDflValue),
+                    :(decl.coponderselectmap.Mvp_txtMaxValue)
+                FROM
+                   dfl_col_ponder
+                WHERE
+                   col_cat_id = :(decl.coponderselectmap.Mvp_col_cat_id)
+               AND
+                   col_typ_id = :(decl.coponderselectmap.Mvp_col_typ_id)
+               AND
+                   (col_sub_id = :(decl.coponderselectmap.Mvp_sub_typ_id) or col_sub_id is null)
+               AND
+                   status = 'A'
+               AND
+                   date_from <= current date
+               AND
+                   date_until >= current date
+               AND
+                   add_request = :add_request };
+        } catch(SQLException e) {
+            if (e.getErrorCode()!=100) throw e;
+            else {
+                #sql [ctx]{
+                    SELECT
+                       min_value, dfl_value, max_value
+                    INTO
+                        :(decl.coponderselectmap.Mvp_txtMinValue),
+                        :(decl.coponderselectmap.Mvp_txtDflValue),
+                        :(decl.coponderselectmap.Mvp_txtMaxValue)
+                    FROM
+                       dfl_col_ponder
+                    WHERE
+                       col_cat_id = :(decl.coponderselectmap.Mvp_col_cat_id)
+                   AND
+                       col_typ_id = :(decl.coponderselectmap.Mvp_col_typ_id)
+                   AND
+                       (col_sub_id = :(decl.coponderselectmap.Mvp_sub_typ_id) or col_sub_id is null)
+                   AND
+                       status = 'A'
+                   AND
+                       date_from <= current date
+                   AND
+                       date_until >= current date
+                   AND
+                       add_request = 'N' };                
+            }
+        }		
+        // ako je col_pon_id <> null - select jednog sloga		
+        // inace dohvatiti vazeci slog sa mvp ponderom za col_hea_id (ako postoji) i vratiti old value pondera
+        // treba i dohvatiti min i max dozvoljeni ponder za kategoriju, tip i podtip kolaterala
+		if (decl.coponderselectmap.Mvp_col_pon_id == null) {
+			try { 
+				#sql [ctx]{
+					SELECT
+						ponder_value
+					INTO
+						:(decl.coponderselectmap.Mvp_txtOldValue)
+					FROM
+						coll_ponder
+					WHERE
+						col_hea_id = :(decl.coponderselectmap.Mvp_col_hea_id) AND ponder_type=:(decl.coponderselectmap.PONDER_TYPE)
+					AND
+						date_from <= current_date
+					AND
+						date_until > current_date
+					AND
+						status = 'A'
+				};  
+
+			} catch(SQLException e) {
+				if (e.getErrorCode()!=100) throw e;
+			}  
+		} else {
+			try {
+				#sql [ctx]{
+					SELECT
+						ponder_value,
+						date_from,
+						date_until
+					INTO
+						:(decl.coponderselectmap.Mvp_txtNewValue),
+						:(decl.coponderselectmap.Mvp_txtFrom),
+						:(decl.coponderselectmap.Mvp_txtUntil)
+					FROM
+						coll_ponder
+					WHERE
+						col_pon_id = :(decl.coponderselectmap.Mvp_col_pon_id)
+				};  
+
+			} catch(SQLException e) {
+				if (e.getErrorCode()!=100) throw e;
+			}	
+			decl.coponderselectmap.Mvp_txtOldValue = decl.coponderselectmap.Mvp_txtNewValue;
+		}
+	} 	  
+}	 
+	

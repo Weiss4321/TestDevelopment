@@ -1,0 +1,438 @@
+package hr.vestigo.modules.collateral.jcics.co08;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//LOAN_ACCOUNT LIST
+
+#sql iterator Iter1 (
+		java.math.BigDecimal la_acc_id , 
+		String acc_no,
+		java.math.BigDecimal module_loan,
+		String moduleloanSCV,
+		String moduleloanSCD,
+		java.math.BigDecimal loan_type,
+		String loantypeSCV,
+		String loantypeSCD,
+		java.math.BigDecimal amount,
+		java.math.BigDecimal cur_id_loan,
+		String curIdLoanCodeC, 
+		java.math.BigDecimal cur_id_loan_ref,
+		String curIdLoanRefCodeC,
+		java.math.BigDecimal exc_rat_ref,
+		java.sql.Date exc_rat_ref_date,
+		java.sql.Date start_date,
+		java.sql.Date payed_date,
+		java.math.BigDecimal balance,
+		java.sql.Date balance_date,
+		java.math.BigDecimal balance_ref,
+		java.math.BigDecimal balance_b,
+		java.sql.Date balance_bdate,
+		java.math.BigDecimal balance_bref,
+		java.math.BigDecimal cus_id,
+		java.sql.Date la_date_from,
+		java.sql.Date la_date_until,
+		String la_status,
+		String la_spec_status,
+		java.math.BigDecimal use_open_id,
+		java.math.BigDecimal use_id,
+		java.sql.Timestamp opening_ts,
+		java.sql.Timestamp user_lock
+		
+);	
+
+
+public class CO081 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co08/CO081.sqlj,v 1.19 2006/02/17 12:12:21 hrasia Exp $";
+	
+	public DeclCO08 decl = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO081 (DeclCO08 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+		String LoanAccountList_txtAccNo = decl.LoanAccountList_txtAccNo;
+		if (!(LoanAccountList_txtAccNo == null)){
+			LoanAccountList_txtAccNo = LoanAccountList_txtAccNo.trim();
+			if(LoanAccountList_txtAccNo.compareTo("")== 0){
+				LoanAccountList_txtAccNo = null;
+			}
+		}
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+			tc.debug("..........O081.sqlj    decl.LoanAccountList_CUS_ID je    " + decl.LoanAccountList_CUS_ID);		
+			tc.debug("..........O081.sqlj    decl.LoanAccountList_txtAccNo je    " + decl.LoanAccountList_txtAccNo);	
+			tc.debug("..........O081.sqlj    decl.LOAN_TYPE je    " + decl.LoanAccountList_LOAN_TYPE);	
+			tc.debug("..........O081.sqlj    decl.MODULE_LOAN je    " + decl.LoanAccountList_MODULE_LOAN);	
+			
+			
+			
+			
+		
+				if((LoanAccountList_txtAccNo == null) && (decl.LoanAccountList_LOAN_TYPE == null) && (decl.LoanAccountList_MODULE_LOAN == null)   ){
+				//000
+					//	:(LoanAccountList_txtAccNo)  
+					//	:(decl.LoanAccountList_LOAN_TYPE)    
+					//	:(decl.LoanAccountList_MODULE_LOAN)	
+					
+					tc.debug("..........SLUCAJ 000    decl.LoanAccountList_CUS_ID je    " + decl.LoanAccountList_CUS_ID);
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						LEFT OUTER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						LEFT OUTER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+						LEFT OUTER JOIN currency curlf    ON loac.cur_id_ref = curlf.cur_id
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+
+						};
+
+					
+				}
+				if((LoanAccountList_txtAccNo == null) && (decl.LoanAccountList_LOAN_TYPE == null) && (decl.LoanAccountList_MODULE_LOAN != null)){
+				//001
+				//	:(LoanAccountList_txtAccNo)  
+				//	:(decl.LoanAccountList_LOAN_TYPE)    
+				//	:(decl.LoanAccountList_MODULE_LOAN)  
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						INNER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						LEFT OUTER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+						LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+						
+						
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+						AND 		loac.module_loan = :(decl.LoanAccountList_MODULE_LOAN)
+
+						};
+					
+				}
+				if((LoanAccountList_txtAccNo == null) && (decl.LoanAccountList_LOAN_TYPE != null) && (decl.LoanAccountList_MODULE_LOAN == null)){
+				//010
+					//	:(decl.LA_ACC_ID)   
+					//	:(decl.LoanAccountList_LOAN_TYPE)    
+					//	:(decl.LoanAccountList_MODULE_LOAN)  
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id
+						LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+						LEFT OUTER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+						AND 	loac.loan_type =   :(decl.LoanAccountList_LOAN_TYPE)   
+						};
+					
+				}
+				if((LoanAccountList_txtAccNo == null) && (decl.LoanAccountList_LOAN_TYPE != null) && (decl.LoanAccountList_MODULE_LOAN != null)){
+				//011
+					//	:(decl.LA_ACC_ID)   
+					//	:(decl.LoanAccountList_LOAN_TYPE)    
+					//	:(decl.LoanAccountList_MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						INNER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+						LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+						AND		loac.loan_type =   :(decl.LoanAccountList_LOAN_TYPE)        
+						AND 	loac.module_loan = :(decl.LoanAccountList_MODULE_LOAN)      
+ 
+						};
+					
+						
+				}
+				if((LoanAccountList_txtAccNo != null) && (decl.LoanAccountList_LOAN_TYPE == null) && (decl.LoanAccountList_MODULE_LOAN == null)){
+				//100
+					//	:(decl.LA_ACC_ID)  
+					//	:(decl.LoanAccountList_LOAN_TYPE)    
+					//	:(decl.LoanAccountList_MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+						LEFT OUTER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						LEFT OUTER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+						AND 	loac.acc_no = :(LoanAccountList_txtAccNo)
+						};
+							
+				}
+				if((LoanAccountList_txtAccNo != null) && (decl.LoanAccountList_LOAN_TYPE != null) && (decl.LoanAccountList_MODULE_LOAN == null)){
+				//110
+					//	:(decl.LA_ACC_ID)   
+					//	:(decl.LoanAccountList_LOAN_TYPE)    
+					//	:(decl.LoanAccountList_MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+						LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+						LEFT OUTER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+						AND 			loac.acc_no = :(LoanAccountList_txtAccNo)
+						AND				loac.loan_type =   :(decl.LoanAccountList_LOAN_TYPE)   
+						};
+							
+								
+				}
+				if((LoanAccountList_txtAccNo != null) && (decl.LoanAccountList_LOAN_TYPE == null) && (decl.LoanAccountList_MODULE_LOAN != null)){
+				//101
+					//	:(decl.LA_ACC_ID)  
+					//	:(decl.LoanAccountList_LOAN_TYPE)    
+					//	:(decl.LoanAccountList_MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						INNER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+						
+						LEFT OUTER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+						AND 	loac.acc_no = :(LoanAccountList_txtAccNo)
+						AND 	loac.module_loan = :(decl.LoanAccountList_MODULE_LOAN) 
+
+						};
+							
+									
+				}
+				if((LoanAccountList_txtAccNo != null) && (decl.LoanAccountList_LOAN_TYPE != null) && (decl.LoanAccountList_MODULE_LOAN != null)){
+				//111
+					//	:(decl.LA_ACC_ID)   
+					//	:(decl.LoanAccountList_LOAN_TYPE)    
+					//	:(decl.LoanAccountList_MODULE_LOAN)  	
+					#sql [ctx] iter1 = {   
+						SELECT  
+							loac.la_acc_id as la_acc_id, loac.acc_no as acc_no, 
+							loac.module_loan as module_loan, scv1.sys_code_value as moduleloanSCV, scv1.sys_code_desc as moduleloanSCD,
+							loac.loan_type as loan_type, scv2.sys_code_value as loantypeSCV, scv2.sys_code_desc as loantypeSCD,
+							loac.amount as amount , loac.cur_id as  cur_id_loan , curlo.code_char as curIdLoanCodeC, 
+							loac.cur_id_ref as cur_id_loan_ref , curlf.code_char as curIdLoanRefCodeC,
+							loac.exc_rat_ref as exc_rat_ref , loac.exc_rat_ref_date as exc_rat_ref_date,
+							loac.start_date as start_date, loac.payed_date as payed_date,
+							loac.balance as balance , loac.balance_date  as balance_date, loac.balance_ref as balance_ref ,
+							loac.balance_b as balance_b, loac.balance_bdate as balance_bdate, loac.balance_bref as balance_bref,
+							loac.cus_id as cus_id,
+							loac.la_date_from as la_date_from, 	loac.la_date_until as la_date_until,
+							loac.la_status as la_status, loac.la_spec_status as la_spec_status,
+							loac.use_open_id as use_open_id, loac.use_id as use_id ,
+							loac.opening_ts as opening_ts, 	loac.user_lock as user_lock
+						FROM 	loan_account loac 	
+						INNER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+						INNER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+						INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+						INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+						INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+						LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+						WHERE  	loac.cus_id = :(decl.LoanAccountList_CUS_ID)
+						AND 		  loac.acc_no = :(LoanAccountList_txtAccNo)
+						AND			  loac.loan_type =   :(decl.LoanAccountList_LOAN_TYPE)   
+						AND 		  loac.module_loan = :(decl.LoanAccountList_MODULE_LOAN) 
+						};
+				}
+				
+				LoanAccountList_txtAccNo = null;	
+			
+	}
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+						java.util.Vector row = new java.util.Vector();
+						java.util.Vector row1 = new java.util.Vector();
+
+							//LA_ACC_ID                                                       
+							//10 Partija plas.					acc_no								loan_account    
+							//10 Tip plas.						loan_type							loan_account    
+							//10 Modul							module_loan						loan_account    
+							//10 Uk.sta.pla.					balance								loan_account		
+							//10 Dat.sta.pla.					balance_date					loan_account    
+							//10 Val.plas.						cur_id								loan_account    
+							//10 Izn.u ref.val.					balance_ref						loan_account    
+							//10 Ref.val.plas.					cur_id_ref						loan_account    
+
+
+	
+								row.add(iter1.acc_no());           				    
+								row.add(iter1.loantypeSCD());   
+								row.add(iter1.moduleloanSCD());  
+								row.add(iter1.balance());  
+								row.add(iter1.balance_date());  
+								row.add(iter1.curIdLoanCodeC());  
+								row.add(iter1.balance_ref());
+								row.add(iter1.curIdLoanRefCodeC());
+	
+								row1.add(iter1.la_acc_id ());  
+	  							row1.add(iter1.loan_type()); 
+	  							row1.add(iter1.loantypeSCV());   
+								row1.add(iter1.module_loan());
+								row1.add(iter1.moduleloanSCV());  
+								row1.add(iter1.cur_id_loan()); 
+								row1.add(iter1.cur_id_loan_ref());
+		 						row1.add(iter1.amount ());                      
+ 								row1.add(iter1.exc_rat_ref ());                 
+ 								row1.add(iter1.exc_rat_ref_date ());            
+ 								row1.add(iter1.start_date ());                  
+ 								row1.add(iter1.payed_date());                   
+ 								row1.add(iter1.balance_b ());                   
+ 								row1.add(iter1.balance_bdate  ());              
+ 								row1.add(iter1.balance_bref ());                
+ 								row1.add(iter1.cus_id ());                      
+ 								row1.add(iter1.la_date_from ());   	            
+ 								row1.add(iter1.la_date_until());                
+ 								row1.add(iter1.la_status ());                   
+ 								row1.add(iter1.la_spec_status());               
+ 								row1.add(iter1.use_open_id ());                 
+ 								row1.add(iter1.use_id ());                      
+ 								row1.add(iter1.opening_ts ());                  
+ 								row1.add(iter1.user_lock ());                   
+
+		    
+		 				
+		decl.tblLoanAccountList.addRow(row,row1);
+    			
+	}
+	
+}

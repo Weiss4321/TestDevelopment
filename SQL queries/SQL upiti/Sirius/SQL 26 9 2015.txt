@@ -1,0 +1,35 @@
+ SET CURRENT_SCHEMA = 'SIDEV'
+
+
+		select * from currency;
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 3137830823 AND ba.cus_id = 26738352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 3137830823 AND cb.cus_id = 26738352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '24.09.2015' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+ 	select * from CUST_BILL_EXCH order by user_lock desc
+
+
+ 	  select * from CUST_LETT_DELIVERY
+			     where cus_let_id in (select cus_let_id from cust_letter
+	                                    where cus_let_typ_id = 529999) with ur;
+
+
+	    select * from customer_account where cus_acc_no = '1135003393';   338,852,326
+
+
+	     SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 338852326
+                   AND pro_typ_id IN (42999, 36999) 
+
+				   
+				   
+				   

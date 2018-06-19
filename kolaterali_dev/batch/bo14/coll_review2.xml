@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+		<Data><Text>Šifra kolaterala</Text></Data>
+		<Data><Text>Tržišna vrijednost kolaterala umanjena za terete drugih u valuti</Text></Data>
+		<Data><Text>Valuta u kojoj se vodi kolateral</Text></Data>
+		<Data><Text>Tržišna vrijednost kolaterala umanjena za terete drugih u kunama</Text></Data>
+		<Data><Text>Datum revalorizacije</Text></Data>
+		<Data><Text>Izdavatelj</Text></Data>
+		<Data><Text>MB izdavatelja</Text></Data>
+		<Data><Text>Sektor izdavatelja</Text></Data>
+		<Data><Text>Zemlja rezidentnosti izdavatelja iz baze komitenata</Text></Data>
+		<Data><Text>Datum dospijeća kolaterala</Text></Data>
+		<Data><Text>Interni MB komitenta plasmana</Text></Data>
+		<Data><Text>Naziv komitenta plasmana</Text></Data>
+		<Data><Text>Broj partije plasmana</Text></Data>
+		<Data><Text>Iznos izloženosti po plasmanu u valuti</Text></Data>
+		<Data><Text>Valuta plasmana</Text></Data>
+		<Data><Text>Iznos izloženosti po plasmanu u kunama</Text></Data>
+	</Row>
+	<Row>
+	</Row>
+<Detail>
+	<Row>
+		<Data><Parameter Name="h1"/></Data>
+		<Data><Parameter Name="h2"/></Data>
+		<Data><Parameter Name="h3"/></Data>
+		<Data><Parameter Name="h4"/></Data>
+		<Data><Parameter Name="h5"/></Data>
+		<Data><Parameter Name="h6"/></Data>
+		<Data><Parameter Name="h7"/></Data>
+		<Data><Parameter Name="h8"/></Data>
+		<Data><Parameter Name="h9"/></Data>
+		<Data><Parameter Name="h10"/></Data>
+		<Data><Parameter Name="h11"/></Data>
+		<Data><Parameter Name="h12"/></Data>
+		<Data><Parameter Name="h13"/></Data>
+		<Data><Parameter Name="h14"/></Data>
+		<Data><Parameter Name="h15"/></Data>
+		<Data><Parameter Name="h16"/></Data>
+	</Row>
+</Detail>
+	<Row>
+	</Row>
+</Report>	

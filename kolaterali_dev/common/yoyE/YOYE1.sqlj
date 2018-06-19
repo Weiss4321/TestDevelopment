@@ -1,0 +1,660 @@
+package hr.vestigo.modules.collateral.common.yoyE;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+
+import java.math.BigDecimal;
+
+import java.util.HashMap;
+import java.util.Vector;
+
+import java.sql.SQLException;
+import java.sql.Date;
+    
+/**
+ * SQLJ class used for data retrieval by YOYEO
+ * @author hramkr
+ *
+ */
+
+#sql iterator Iter (
+        BigDecimal exposure_cur_id, 
+        BigDecimal exposure_amount 
+);
+
+#sql iterator Iter_ponder (
+        BigDecimal min_ponder, 
+        BigDecimal dfl_ponder,
+        BigDecimal max_ponder 
+);
+
+#sql iterator Iter_rba_neponder (
+        BigDecimal np_exp_col_amount 
+);
+
+#sql iterator Iter_rba_ponder (
+        BigDecimal p_exp_col_amount 
+);
+
+#sql iterator no_rba_hf_prior_Iter (
+        BigDecimal coll_hf_prior_id,
+        BigDecimal hf_own_cus_id,
+        String hf_priority,
+        BigDecimal hf_rec_lop_id,
+        BigDecimal amount_ref,
+        BigDecimal cur_id_ref
+);
+
+#sql iterator rba_hf_prior_Iter (
+        BigDecimal cur_id_ref,
+        BigDecimal amount_ref
+);
+
+#sql iterator rba_last_hf_prior_Iter (
+        BigDecimal amount_ref,
+        Date hf_date_hfc_until
+);
+
+public class YOYE1 {
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyE/YOYE1.sqlj,v 1.14 2017/12/21 14:04:06 hrazst Exp $";
+
+    private String bank_sign=null;
+    private ConnCtx ctx=null;
+    private RemoteContext rc=null;
+  
+    public YOYE1(RemoteContext rc) throws Exception {
+        this.ctx = rc.getContext();
+        this.bank_sign = rc.getBankSign();
+        this.rc=rc;
+    }
+     
+      
+//find ukupnu izlozenost
+/**
+* Method dohvaca izlozenost po valuti za kolateral
+*/
+    protected Iter getCollExposure(YOYE0Data kolData) throws Exception{        
+        Iter iter = null;
+        boolean empty_iter = true;
+        #sql[ctx] iter={SELECT
+                            c.exposure_cur_id as exposure_cur_id, 
+                            sum(c.exposure_balance) as exposure_amount
+                        FROM
+                            coll_hf_prior a,
+                            loan_beneficiary b,
+                            cusacc_exposure c
+                        WHERE 
+                            a.hf_coll_head_id = :(kolData.colHeaId)
+                        AND
+                            a.hf_status = 'A'
+                        AND
+                            a.coll_hf_prior_id = b.coll_hf_prior_id 
+                        AND
+                            b.status = 'A'
+                        AND
+                            (b.la_acc_id = c.cus_acc_id or b.acc_no = c.cus_acc_no or b.request_no=c.request_no)
+                        AND
+                            c.cus_acc_status = 'A' 
+                        GROUP BY c.exposure_cur_id 
+ 
+        };
+
+        if (iter != null) {
+            while (iter.next()) {
+
+               empty_iter = false;
+               rc.debug("--------DOHVAT PREKO HIPOTEKE ---------- "+kolData.colHeaId+empty_iter);
+                
+            }
+        }
+        
+        if (empty_iter) {
+            rc.debug("--------DOHVAT bez HIPOTEKE ---------- "+kolData.colHeaId+empty_iter);            
+            #sql[ctx] iter={SELECT
+                    c.exposure_cur_id as exposure_cur_id, 
+                    sum(c.exposure_balance) as exposure_amount
+                FROM
+                    loan_beneficiary b,
+                    cusacc_exposure c
+                WHERE 
+                    b.col_hea_id = :(kolData.colHeaId)
+                AND
+                    b.status = 'A'
+                AND
+                    (b.la_acc_id = c.cus_acc_id or b.acc_no = c.cus_acc_no and b.request_no=c.request_no)
+                AND
+                    c.cus_acc_status = 'A' 
+                GROUP BY c.exposure_cur_id 
+
+            };
+        } else {
+            #sql[ctx] iter={SELECT
+                    c.exposure_cur_id as exposure_cur_id, 
+                    sum(c.exposure_balance) as exposure_amount
+                FROM
+                    coll_hf_prior a,
+                    loan_beneficiary b,
+                    cusacc_exposure c
+                WHERE 
+                    a.hf_coll_head_id = :(kolData.colHeaId)
+                AND
+                    a.hf_status = 'A'
+                AND
+                    a.coll_hf_prior_id = b.coll_hf_prior_id 
+                AND
+                    b.status = 'A'
+                AND
+                    (b.la_acc_id = c.cus_acc_id or b.acc_no = c.cus_acc_no and b.request_no=c.request_no)
+                AND
+                    c.cus_acc_status = 'A' 
+                GROUP BY c.exposure_cur_id 
+
+            };            
+        }
+        return iter;
+
+    }
+     
+    /**
+     * Method dohvaca zadnji datum izlozenosti
+     */    
+     public Date getExposureDate() throws SQLException{
+         Date exposureDate = null;
+         try{
+             #sql[ctx] {
+                 SELECT max(exposure_date)
+                 INTO :exposureDate
+                 FROM cusacc_exposure
+             };
+         } catch (SQLException sqle) {
+             if (sqle.getErrorCode() != 100) {
+                 throw sqle;
+             }
+         }
+         
+         return exposureDate;
+     }    
+    
+    /**
+    * Method dohvaca srednji tecaj za valutu
+    */    
+    public BigDecimal getMiddRate(BigDecimal cur_id) throws SQLException{
+        BigDecimal midd_rate = null;
+        try{
+            #sql[ctx] {
+                SELECT midd_rate
+                INTO :midd_rate
+                FROM exchange_rate e
+                WHERE cur_id = :(cur_id)
+                AND current date between date_from and date_until
+                AND bank_sign=:(bank_sign)
+            };
+        } catch (SQLException sqle) {
+            if (sqle.getErrorCode() != 100) {
+                throw sqle;
+            }
+        }
+        
+        return midd_rate;
+    }
+    
+     
+    /**
+    * Method dohvaca pondere 
+    */
+    protected Iter_ponder getCollMvpPonder(YOYE0Data kolData) throws Exception{        
+        Iter_ponder iter = null;
+        boolean empty_iter = true;
+        #sql[ctx] iter={
+                            SELECT min_value as min_ponder,   
+                                   dfl_value as dfl_ponder, 
+                                   max_value as max_ponder
+                          FROM dfl_col_ponder
+                        WHERE 
+                              col_cat_id = :(kolData.colCatId)
+                          AND
+                              col_typ_id = :(kolData.colTypId)
+                          AND
+                              (col_sub_id = :(kolData.colSubTypId) or col_sub_id is null)
+                          AND
+                              status = 'A'
+                          AND
+                              date_from <= current date
+                          AND
+                              date_until >= current date
+                          AND
+                              add_request = :(kolData.addRequest) 
+     
+            };
+
+        if (iter != null) {
+            while (iter.next()) {
+
+               empty_iter = false;
+               rc.debug("--------DOHVAT PREKO DODATNOG UVJETA ---------- "+kolData.colHeaId+empty_iter);
+                
+            }
+        }
+        
+        if (empty_iter) {
+            rc.debug("--------DOHVAT bez DODATNOG UVJETA ---------- "+kolData.colHeaId+empty_iter);            
+            #sql[ctx] iter={
+                    SELECT min_value as min_ponder,   
+                           dfl_value as dfl_ponder, 
+                           max_value as max_ponder
+                  FROM dfl_col_ponder
+                WHERE 
+                      col_cat_id = :(kolData.colCatId)
+                  AND
+                      col_typ_id = :(kolData.colTypId)
+                  AND
+                      (col_sub_id = :(kolData.colSubTypId) or col_sub_id is null)
+                  AND
+                      status = 'A'
+                  AND
+                      date_from <= current date
+                  AND
+                      date_until >= current date
+                  AND
+                      add_request = 'N'
+
+            };
+        } else {
+            #sql[ctx] iter={
+                    SELECT min_value as min_ponder,   
+                           dfl_value as dfl_ponder, 
+                           max_value as max_ponder
+                  FROM dfl_col_ponder
+                WHERE 
+                      col_cat_id = :(kolData.colCatId)
+                  AND
+                      col_typ_id = :(kolData.colTypId)
+                  AND
+                      (col_sub_id = :(kolData.colSubTypId) or col_sub_id is null)
+                  AND
+                      status = 'A'
+                  AND
+                      date_from <= current date
+                  AND
+                      date_until >= current date
+                  AND
+                      add_request = :(kolData.addRequest) 
+
+            };
+        }
+        return iter;
+
+    }    
+
+    /**
+     * Method dohvaca CO ponder
+     */    
+     public BigDecimal getCoMvpPonder(YOYE0Data kolData) throws SQLException{
+         BigDecimal co_dfl_ponder = null;
+         try{
+             #sql[ctx] {
+                 SELECT ponder_value
+                 INTO :co_dfl_ponder
+                 FROM coll_ponder
+                 WHERE 
+                     col_hea_id = :(kolData.colHeaId)
+                 AND 
+                     ponder_type = 'MVP'
+                 AND 
+                     status = 'A'
+             };
+         } catch (SQLException sqle) {
+             if (sqle.getErrorCode() != 100) {
+                 throw sqle;
+             }
+         }
+         
+         return co_dfl_ponder;
+     }    
+
+/**
+* Method dohvaca iskoristeno iz zadnjeg izracuna neponderirane RBA prihvatljivosti u valuti kolaterala
+*/
+     protected Iter_rba_neponder getCollNeponderAmount(YOYE0Data kolData) throws Exception{        
+         Iter_rba_neponder iter = null;
+//         boolean empty_iter = true;
+         
+         #sql[ctx] iter={SELECT
+             sum(b.coll_fc_amount) as np_exp_col_amount
+         FROM
+             col_proc a,
+             cusacc_exp_coll b
+         WHERE 
+             a.proc_type = 'N'
+         AND
+             a.value_date = (select max(c.value_date) from col_proc c where proc_type = 'N' and proc_status = '1')
+         AND
+             a.col_pro_id = b.col_pro_id
+         AND
+             b.col_hea_id = :(kolData.colHeaId)
+         };
+
+         return iter;
+
+     }       
+  
+     /**
+     * Method dohvaca iskoristeno iz zadnjeg izracuna ponderirane RBA prihvatljivosti u valuti kolaterala
+     * ZA NOVA POLJA KOLATERALA - vise se ne uzima RBA nego ND pokrivenost (Change Request 13831)<br/>
+     * <i>
+     * Raspoloživa ponderirana vrijednost : Ovo je postojeæe polje na treæem ekranu nekretnina koje izraèunava raspoloživu vrijednost nekretnine i 
+     * do sada se raèunalo na osnovi RBA izraèuna pokrivenosti.<br/>
+       Potrebno je napraviti izmjenu da se raèuna na osnovi ND pond. izr. pokrivenosti.  Raspoloživa vrijednost = tržišna vrijednost - WCA.
+     * </i>
+     */
+      protected Iter_rba_ponder getCollPonderAmount(YOYE0Data kolData) throws Exception{        
+          Iter_rba_ponder iter = null;
+//          boolean empty_iter = true;
+          
+          #sql[ctx] iter={SELECT
+                  sum(b.coll_fc_amount) as p_exp_col_amount
+              FROM
+                  col_proc a,
+                  cusacc_exp_coll b
+              WHERE 
+                  a.proc_type = 'M'
+              AND
+                  a.value_date = (select max(c.value_date) from col_proc c where proc_type = 'M' and proc_status = '1')
+              AND
+                  a.col_pro_id = b.col_pro_id
+              AND
+                  b.col_hea_id = :(kolData.colHeaId)
+              };
+              return iter;    
+      }   
+      
+      /**
+       * Method dohvaca zadnji datum izracuna pokrivenosti za ND ponderiranu 
+       */    
+       public Date getNDCoverDate() throws SQLException{
+           Date coverDate = null;
+           try{
+               #sql[ctx] {
+                   SELECT max(value_date)
+                   INTO :coverDate
+                   FROM col_proc
+                   WHERE 
+                       proc_type = 'M'
+                   and
+                       proc_status = '1'
+               };
+           } catch (SQLException sqle) {
+               if (sqle.getErrorCode() != 100) {
+                   throw sqle;
+               }
+           }           
+           return coverDate;
+       }  
+      
+      /**
+       * Method dohvaca zadnji datum izracuna pokrivenosti za RBA neponderiranu
+       */    
+       public Date getCoverDate() throws SQLException{
+           Date coverDate = null;
+           try{
+               #sql[ctx] {
+                   SELECT max(value_date)
+                   INTO :coverDate
+                   FROM col_proc
+                   WHERE 
+                       proc_type = 'N'
+                   and
+                       proc_status = '1'
+               };
+           } catch (SQLException sqle) {
+               if (sqle.getErrorCode() != 100) {
+                   throw sqle;
+               }
+           }
+           
+           return coverDate;
+       }  
+       
+       
+       /**
+        * Method dohvaca sumu svih tudjih hipoteka
+        */           
+       public BigDecimal getMortgagesSum(BigDecimal col_hea_id, BigDecimal col_cur_id) throws SQLException{
+           BigDecimal result=new BigDecimal(0);    
+           no_rba_hf_prior_Iter mortgageIter=null;
+           BigDecimal rbaMortgage= new BigDecimal(1602772003);
+            
+           
+           rc.debug("YOYE --------DOHVAT TUDJIH HIPOTEKA ---------- "+col_hea_id);
+           
+           try{
+               #sql [ctx] mortgageIter = {
+                   SELECT
+                       coll_hf_prior_id,
+                       hf_own_cus_id,
+                       hf_priority,
+                       hf_rec_lop_id,
+                       amount_ref,
+                       cur_id_ref
+                   FROM
+                       coll_hf_prior
+                   WHERE
+                       hf_coll_head_id=:(col_hea_id) and
+                       hf_status='A' 
+               };  
+               if(mortgageIter!=null){
+                   while(mortgageIter.next()){
+                       if( rbaMortgage.compareTo(mortgageIter.hf_rec_lop_id())==0){
+//                           break;
+                       } else {
+                           rc.debug("YOYE iznos "+mortgageIter.amount_ref() + "VALUTA KOLATERALA " + col_cur_id + "valuta hipoteke "+mortgageIter.cur_id_ref());
+                           result=result.add(exchange(mortgageIter.cur_id_ref(), col_cur_id, mortgageIter.amount_ref()));
+                           rc.debug("YOYE iznos "+result);
+                       }
+                   }
+                   mortgageIter.close();
+               }
+               
+           }catch(SQLException sqle) {
+               
+               result=null;
+           }   
+           rc.debug("YOYE --------DOHVAT TUDJIH HIPOTEKA ---------- "+result);
+           
+           return result;
+       }       
+ 
+       /**
+        * Method dohvaca sumu tudjih hipoteka do prve RBA
+        */           
+       public BigDecimal getMortgagesSumToFirstRba(BigDecimal col_hea_id, BigDecimal col_cur_id) throws SQLException{
+           BigDecimal result=new BigDecimal(0);    
+           no_rba_hf_prior_Iter mortgageIter=null;
+           BigDecimal rbaMortgage= new BigDecimal(1602772003);
+            
+           
+           rc.debug("YOYE --------DOHVAT TUDJIH HIPOTEKA do prve RBA ---------- "+col_hea_id);
+           
+           try{
+               #sql [ctx] mortgageIter = {
+                   SELECT
+                       coll_hf_prior_id,
+                       hf_own_cus_id,
+                       hf_priority,
+                       hf_rec_lop_id,
+                       amount_ref,
+                       cur_id_ref
+                   FROM
+                       coll_hf_prior
+                   WHERE
+                       hf_coll_head_id=:(col_hea_id) and
+                       hf_status='A' 
+               ORDER BY hf_priority
+               };  
+               if(mortgageIter!=null){
+                   while(mortgageIter.next()){
+                       if( rbaMortgage.compareTo(mortgageIter.hf_rec_lop_id())==0){
+                           break;
+                       } else {
+                           rc.debug("YOYE iznos "+mortgageIter.amount_ref() + "VALUTA KOLATERALA " + col_cur_id + "valuta hipoteke "+mortgageIter.cur_id_ref());
+                           result=result.add(exchange(mortgageIter.cur_id_ref(), col_cur_id, mortgageIter.amount_ref()));
+                           rc.debug("YOYE iznos "+result);
+                       }
+                   }
+                   mortgageIter.close();
+               }
+               
+           }catch(SQLException sqle) {
+               
+               result=null;
+           }   
+           rc.debug("YOYE --------DOHVAT TUDJIH HIPOTEKA do prve RBA---------- "+result);
+           
+           return result;
+       }       
+       
+       
+       /**
+        * Method dohvaca sumu RBA hipoteka
+        */           
+       public BigDecimal getRBAMortgagesSum(BigDecimal col_hea_id, BigDecimal col_cur_id) throws SQLException{
+           BigDecimal result=new BigDecimal(0);    
+           rba_hf_prior_Iter mortgageIter=null;
+           BigDecimal rbaMortgage= new BigDecimal(1602772003);
+           
+           rc.debug("YOYE --------DOHVAT RBA HIPOTEKA ---------- "+col_hea_id);
+           
+           try{
+               #sql [ctx] mortgageIter = {
+                   SELECT
+                       cur_id_ref as cur_id_ref,
+                       sum(amount_ref) as amount_ref
+                   FROM
+                       coll_hf_prior
+                   WHERE
+                       hf_coll_head_id=:(col_hea_id) and
+                       hf_status='A' and
+                       hf_rec_lop_id = :rbaMortgage 
+                   GROUP BY 
+                       cur_id_ref
+               };
+               if(mortgageIter!=null){
+                   while(mortgageIter.next()){
+                       rc.debug("YOYE iznos  "+mortgageIter.amount_ref()+ "VALUTA KOLATERALA " + col_cur_id + "valuta hipoteke "+mortgageIter.cur_id_ref());
+                       result=result.add(exchange(mortgageIter.cur_id_ref(), col_cur_id, mortgageIter.amount_ref()));
+                       rc.debug("YOYE --------DOHVAT RBA HIPOTEKA ---------- "+result);
+                   }
+                   mortgageIter.close();
+               }
+           }catch(SQLException sqle) {
+               result=null;
+           }   
+           rc.debug("YOYE --------DOHVAT RBA HIPOTEKA ---------- "+result);
+           return result;
+       }       
+       
+       /**
+        * Method dohvaca zadnju vazecu RBA hipoteku
+        */           
+       
+       public Vector getLastRBAMortgage(BigDecimal col_hea_id) throws SQLException{
+
+           Vector row=new Vector();
+
+           BigDecimal rbaMortgage= new BigDecimal(1602772003);
+           BigDecimal amount_ref = new BigDecimal("0.00");
+           Date hf_date_hfc_until = null;
+           
+            
+           rc.debug("YOYE --------DOHVAT zadnje RBA HIPOTEKE ---------- "+col_hea_id);
+           try{
+           #sql [ctx] {
+                   SELECT 
+                       amount_ref,
+                       hf_date_hfc_until
+                   INTO 
+                       :amount_ref,
+                       :hf_date_hfc_until
+                   FROM
+                       coll_hf_prior
+                   WHERE
+                       hf_coll_head_id=:(col_hea_id) and
+                       hf_status='A' and
+                       hf_rec_lop_id = :rbaMortgage 
+                   ORDER BY  
+                       hf_priority desc 
+                   FETCH first row only
+               };
+           } catch (SQLException sqle) {
+               if (sqle.getErrorCode() != 100) {
+                   throw sqle;
+               } 
+           }
+
+           row.add(amount_ref);
+           row.add(hf_date_hfc_until);
+           
+           return row;
+       }  
+       
+       private BigDecimal exchange(BigDecimal from_cur_id,BigDecimal to_cur_id,BigDecimal value){
+           if((value==null)||(to_cur_id==null)||(from_cur_id==null)) return new BigDecimal(0);
+           BigDecimal result=value;    
+           BigDecimal rate=null;
+           
+           if(from_cur_id.equals(to_cur_id)){
+               return result;
+           }
+           
+// tecaj za from_cur_id
+           try{
+               rate=getMiddRate(from_cur_id);
+               result=result.multiply(rate);
+// tecaj za to_cur_id           
+               rate=getMiddRate(to_cur_id);
+               result = result.divide(rate, 2, BigDecimal.ROUND_HALF_UP); 
+          }catch(SQLException sqle) {
+               
+           }   
+            
+           return result;
+           
+       }      
+         
+       /**
+        * Method dohvaca trzisnu vrijednost kolaterala na dan izracuna pokrivenosti
+        */    
+       public BigDecimal getMarketValueOnExposureDate(BigDecimal col_hea_id) throws SQLException{
+            BigDecimal result=new BigDecimal(0);    
+            try{
+                #sql[ctx] {
+                    SELECT coll_amount
+                    INTO :result
+                    FROM
+                        col_proc a,
+                        cusacc_exp_coll b
+                    WHERE 
+                        a.proc_type = 'N'
+                    AND
+                        a.value_date = (select max(c.value_date) from col_proc c where proc_type = 'N' and proc_status = '1')
+                    AND
+                        a.col_pro_id = b.col_pro_id
+                    AND
+                        b.col_hea_id = :(col_hea_id)
+                    FETCH first row only
+                    }; 
+            } catch (SQLException sqle) {
+                if (sqle.getErrorCode() != 100) {
+                    throw sqle;
+                } 
+            }
+            if(result==null) result=new BigDecimal(0); 
+            return result;
+       }         
+}
+        
+        
+        
+        

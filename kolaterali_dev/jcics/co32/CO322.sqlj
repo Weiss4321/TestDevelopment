@@ -1,0 +1,793 @@
+package hr.vestigo.modules.collateral.jcics.co32;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+
+
+  
+#sql iterator Iter2 (
+					BigDecimal fra_agr_id,
+					BigDecimal cus_id,
+					String agreement_no,
+					BigDecimal amount,
+					BigDecimal cur_id,
+					String code_char,
+					String proc_status,
+					String hipo_status,
+					String loan_status,
+					String workflow_indic,
+					String financial_flag,
+					BigDecimal use_id,
+					String user_name,
+					Timestamp user_lock,
+					String status
+					);
+  
+ 
+    
+ 
+public class CO322 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co32/CO322.sqlj,v 1.5 2010/02/10 10:15:34 hramkr Exp $";
+	public DeclCO32 d=null;
+	private Iter2 iter=null;
+	
+	public CO322 (DeclCO32 d) {
+		this.d = d;  
+	} 
+          
+	public void executeScrollable(TransactionContext tc) throws Exception {
+		tc.info("poceo CO322 : "); 		
+		String screen_entry_param=d.agrlistqbe.ScreenEntryParam;
+
+		String lista="";
+		Vector vec=new Vector();
+		String proc_status="";
+
+		int i=0;
+		int j=screen_entry_param.indexOf(".");
+		int k=0;
+		tc.info("screen_entry_param : "+screen_entry_param);
+		while(j>0){
+			vec.add(k++, screen_entry_param.substring(i,j));
+			screen_entry_param=screen_entry_param.substring(j+1);
+			tc.debug("screen_entry_param : "+screen_entry_param);
+			j=screen_entry_param.indexOf(".");
+		}
+	
+		if(vec==null) throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+
+		if(vec.elementAt(1)!=null && !((String)vec.elementAt(1)).trim().equals("")) lista=(String)vec.elementAt(1);
+		else throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+
+
+		tc.info("LISTA : "+lista);
+		
+		
+		setLevel(d.agrlistqbe.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx connCtx0 = tc.getContext();
+		
+// dodati listu sa koje ulazim u qbe
+// lista = 0 - referentska lista za unos
+//		1 - verifikacijska lista
+//		2 - lista aktivnih
+//		M - monitoring lista
+//		I - lista neaktivnih
+//		D - lista odbijenih		
+		
+		if (d.agrlistqbe.Agr_txtAgrNoQBE != null) {
+			d.agrlistqbe.Agr_txtAgrNoQBE = d.agrlistqbe.Agr_txtAgrNoQBE.replace('*','%');
+		} else d.agrlistqbe.Agr_txtAgrNoQBE ="%";
+		
+		if (d.agrlistqbe.Agr_txtAgrNoQBE.equals("")) d.agrlistqbe.Agr_txtAgrNoQBE ="%";		
+		 
+		
+// zadan broj ugovora
+
+
+		
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+ 		if(lista!=null) {
+  			
+  			if (lista.trim().equals("0")) {
+  				proc_status="0";
+  			} else if (lista.trim().equals("1")) { 
+  				proc_status="1";
+  			} else if (lista.trim().equals("2")) {
+  				proc_status="2";
+  			} else if (lista.trim().equals("M")) {
+//  				proc_status in ('0','1')
+  			} else if (lista.trim().equals("I")) {
+  				proc_status="2";
+  			} else if (lista.trim().equals("D")) {
+  				proc_status = "D"; 
+  			}
+  			
+ 		} else { 
+ 			throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+ 		}
+		
+// imam 5 slucajeva:
+// lista = 0 		
+// lista = 1 		
+// lista in (2,D)
+// lista = M
+// lista = I  			
+		tc.debug("lista : "+lista);
+		tc.debug("proc_status : "+proc_status);
+		tc.debug("use_id : "+d.agrlistqbe.use_id);
+		tc.debug("org_uni_id : "+d.agrlistqbe.org_uni_id);		
+		tc.debug("ugovor : "+d.agrlistqbe.Agr_txtAgrNoQBE);
+		tc.debug("komitent : "+d.agrlistqbe.cus_id_qbe);
+		if (lista.trim().equals("0")) {
+//			 zadan komitent		
+			if (d.agrlistqbe.cus_id_qbe != null) {
+				tc.debug("1- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+					AND
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status = :(proc_status)
+					AND
+  						fa.use_id = :(d.agrlistqbe.use_id)
+ 					AND
+						fa.org_uni_id = :(d.agrlistqbe.org_uni_id) 
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  
+
+			} else  {
+				tc.debug("2- tu sam : ");
+//		 zadan i broj ugovora i komitent
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status = :(proc_status)
+					AND
+  						fa.use_id = :(d.agrlistqbe.use_id)
+ 					AND
+						fa.org_uni_id = :(d.agrlistqbe.org_uni_id) 
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  			
+			}			
+
+		} else if (lista.trim().equals("1")) {
+//			 zadan komitent		
+			if (d.agrlistqbe.cus_id_qbe != null) {
+				tc.debug("3- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+					AND
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status = :(proc_status)
+ 					AND
+						fa.org_uni_id = :(d.agrlistqbe.org_uni_id) 
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  
+
+			} else  {
+//		 zadan i broj ugovora i komitent
+				tc.debug("4- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status = :(proc_status)
+ 					AND
+						fa.org_uni_id = :(d.agrlistqbe.org_uni_id) 
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  			
+			}						
+		} else if (lista.trim().equals("2")) {
+// lista aktivnih 			
+//		 zadan komitent		
+			if (d.agrlistqbe.cus_id_qbe != null) {
+				tc.debug("5- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+					AND
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status = :(proc_status)
+	 			 	AND 
+	 			 		fa.status = 'A' 
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  
+/*                #sql [connCtx0] iter = {
+                        SELECT
+                            fa.fra_agr_id,
+                            fa.cus_id,
+                            fa.agreement_no,
+                            fa.amount,
+                            fa.cur_id,
+                            cu.code_char,
+                            fa.proc_status,
+                            fa.hipo_status,
+                            fa.loan_status,
+                            fa.workflow_indic,
+                            fa.financial_flag,
+                            fa.use_id,
+                            au.user_name,
+                            fa.user_lock,
+                            fa.status
+                        FROM frame_agreement fa,
+                             currency cu,
+                             app_user au
+
+                        where
+                            fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+                        AND
+                            fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+                        AND
+                            fa.proc_status = :(proc_status)
+                        AND 
+                            (fa.status = 'A' AND fa.date_until >= current date)
+                        AND
+                            fa.cur_id = cu.cur_id
+                        AND
+                            fa.use_id = au.use_id
+                        ORDER BY                                                
+                                fa.workflow_indic desc, fa.fra_agr_id asc                                               
+                    };  */
+			} else  {
+//		 zadan i broj ugovora i komitent
+				tc.debug("6- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au  
+
+					where
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status = :(proc_status)
+	 			 	AND 
+	 			 		fa.status = 'A' 
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				}; 
+				
+/*                #sql [connCtx0] iter = {
+                        SELECT
+                            fa.fra_agr_id,
+                            fa.cus_id,
+                            fa.agreement_no,
+                            fa.amount,
+                            fa.cur_id,
+                            cu.code_char,
+                            fa.proc_status,
+                            fa.hipo_status,
+                            fa.loan_status,
+                            fa.workflow_indic,
+                            fa.financial_flag,
+                            fa.use_id,
+                            au.user_name,
+                            fa.user_lock,
+                            fa.status
+                        FROM frame_agreement fa,
+                             currency cu,
+                             app_user au  
+
+                        where
+                            fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+                        AND
+                            fa.proc_status = :(proc_status)
+                        AND 
+                            (fa.status = 'A' AND fa.date_until >= current date)
+                        AND
+                            fa.cur_id = cu.cur_id
+                        AND
+                            fa.use_id = au.use_id
+                        ORDER BY                                                
+                                fa.workflow_indic desc, fa.fra_agr_id asc                                               
+                    };  */            				
+				
+			}
+		} else if (lista.trim().equals("D")) {
+//			 zadan komitent		
+				if (d.agrlistqbe.cus_id_qbe != null) {
+					tc.debug("5a- tu sam : ");
+					#sql [connCtx0] iter = {
+						SELECT
+							fa.fra_agr_id,
+							fa.cus_id,
+							fa.agreement_no,
+							fa.amount,
+							fa.cur_id,
+							cu.code_char,
+							fa.proc_status,
+							fa.hipo_status,
+							fa.loan_status,
+							fa.workflow_indic,
+							fa.financial_flag,
+							fa.use_id,
+							au.user_name,
+							fa.user_lock,
+							fa.status
+						FROM frame_agreement fa,
+							 currency cu,
+							 app_user au
+
+						where
+							fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+						AND
+							fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+						AND
+							fa.proc_status = :(proc_status)
+						AND
+							fa.cur_id = cu.cur_id
+						AND
+							fa.use_id = au.use_id
+						ORDER BY												
+								fa.workflow_indic desc, fa.fra_agr_id asc 												
+					};  
+
+				} else  {
+//			 zadan i broj ugovora i komitent
+					tc.debug("6a- tu sam : ");
+					#sql [connCtx0] iter = {
+						SELECT
+							fa.fra_agr_id,
+							fa.cus_id,
+							fa.agreement_no,
+							fa.amount,
+							fa.cur_id,
+							cu.code_char,
+							fa.proc_status,
+							fa.hipo_status,
+							fa.loan_status,
+							fa.workflow_indic,
+							fa.financial_flag,
+							fa.use_id,
+							au.user_name,
+							fa.user_lock,
+							fa.status
+						FROM frame_agreement fa,
+							 currency cu,
+							 app_user au
+
+						where
+							fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+						AND
+							fa.proc_status = :(proc_status)
+						AND
+							fa.cur_id = cu.cur_id
+						AND
+							fa.use_id = au.use_id
+						ORDER BY												
+								fa.workflow_indic desc, fa.fra_agr_id asc 												
+					};  			
+				}			
+		} else if (lista.trim().equals("M")) {
+//			 zadan komitent		
+			if (d.agrlistqbe.cus_id_qbe != null) {
+				tc.debug("7- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+					AND
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status in ('0','1')
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  
+
+			} else  {
+//		 zadan i broj ugovora i komitent
+				tc.debug("8- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+						fa.proc_status in ('0','1')
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  			
+			}			
+		} else if (lista.trim().equals("I")) {
+//			 zadan komitent		
+			if (d.agrlistqbe.cus_id_qbe != null) {
+				tc.debug("9- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where
+						fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+					AND
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+	 					fa.proc_status = :(proc_status)
+	 			 	AND 
+	 			 		fa.status = 'N'
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  
+				
+/*                #sql [connCtx0] iter = {
+                        SELECT
+                            fa.fra_agr_id,
+                            fa.cus_id,
+                            fa.agreement_no,
+                            fa.amount,
+                            fa.cur_id,
+                            cu.code_char,
+                            fa.proc_status,
+                            fa.hipo_status,
+                            fa.loan_status,
+                            fa.workflow_indic,
+                            fa.financial_flag,
+                            fa.use_id,
+                            au.user_name,
+                            fa.user_lock,
+                            fa.status
+                        FROM frame_agreement fa,
+                             currency cu,
+                             app_user au
+
+                        where
+                            fa.cus_id = :(d.agrlistqbe.cus_id_qbe)
+                        AND
+                            fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+                        AND
+                            fa.proc_status = :(proc_status)
+                        AND 
+                            ((fa.status = 'N') OR
+                            (fa.status = 'A' AND fa.date_until < current date))
+                        AND
+                            fa.cur_id = cu.cur_id
+                        AND
+                            fa.use_id = au.use_id
+                        ORDER BY                                                
+                                fa.workflow_indic desc, fa.fra_agr_id asc                                               
+                    };  */				
+
+			} else  {
+//		 zadan i broj ugovora i komitent
+				tc.debug("10- tu sam : ");
+				#sql [connCtx0] iter = {
+					SELECT
+						fa.fra_agr_id,
+						fa.cus_id,
+						fa.agreement_no,
+						fa.amount,
+						fa.cur_id,
+						cu.code_char,
+						fa.proc_status,
+						fa.hipo_status,
+						fa.loan_status,
+						fa.workflow_indic,
+						fa.financial_flag,
+						fa.use_id,
+						au.user_name,
+						fa.user_lock,
+						fa.status
+					FROM frame_agreement fa,
+						 currency cu,
+						 app_user au
+
+					where  
+						fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+					AND
+	 					fa.proc_status = :(proc_status)
+	 			 	AND 
+	 			 		fa.status = 'N'
+					AND
+						fa.cur_id = cu.cur_id
+					AND
+						fa.use_id = au.use_id
+					ORDER BY												
+							fa.workflow_indic desc, fa.fra_agr_id asc 												
+				};  	
+				
+/*                #sql [connCtx0] iter = {
+                        SELECT
+                            fa.fra_agr_id,
+                            fa.cus_id,
+                            fa.agreement_no,
+                            fa.amount,
+                            fa.cur_id,
+                            cu.code_char,
+                            fa.proc_status,
+                            fa.hipo_status,
+                            fa.loan_status,
+                            fa.workflow_indic,
+                            fa.financial_flag,
+                            fa.use_id,
+                            au.user_name,
+                            fa.user_lock,
+                            fa.status
+                        FROM frame_agreement fa,
+                             currency cu,
+                             app_user au
+
+                        where  
+                            fa.agreement_no like :(d.agrlistqbe.Agr_txtAgrNoQBE)
+                        AND
+                            fa.proc_status = :(proc_status)
+                        AND 
+                            ((fa.status = 'N') OR
+                            (fa.status = 'A' AND fa.date_until < current date))
+                        AND
+                            fa.cur_id = cu.cur_id
+                        AND
+                            fa.use_id = au.use_id
+                        ORDER BY                                                
+                                fa.workflow_indic desc, fa.fra_agr_id asc                                               
+                    };   */           				
+				
+			}						
+		}
+	}
+ 	 
+	public boolean next() throws Exception {
+		return iter.next();
+	}
+    
+	public void close() {
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}
+	}
+ 
+	  
+	public void populateRowData() throws Exception {
+					
+		Vector row=new Vector();
+		
+		row.add(iter.workflow_indic());
+		row.add(iter.proc_status());
+		row.add(iter.agreement_no());
+		row.add(iter.code_char());
+		row.add(iter.amount());
+		row.add(iter.hipo_status());
+		row.add(iter.loan_status());
+		row.add(iter.financial_flag());  
+		row.add(iter.user_name());
+
+			
+		Vector unique = new Vector();
+		
+		unique.add(iter.fra_agr_id());
+		unique.add(iter.cus_id());
+		unique.add(iter.cur_id());
+		unique.add(iter.use_id());
+		unique.add(iter.user_lock());
+		unique.add(iter.status());
+
+  
+
+		d.agrlistqbe.tblAgreementList.addRow(row, unique);
+		
+		
+
+
+		
+	}
+}

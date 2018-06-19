@@ -1,0 +1,60 @@
+package hr.vestigo.modules.collateral.jcics.coA6;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;   
+
+  
+public class COA66 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA6/COA66.sqlj,v 1.2 2013/04/18 10:12:36 hramkr Exp $";
+
+    public DeclCOA6 decl;
+    
+    public COA66(DeclCOA6 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        try
+        {
+                
+            #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+       
+            #sql [ctx]
+            {
+                SELECT 
+                    c.register_no,
+                    c.name
+                INTO
+                    :(decl.collcashdepexceptionownerm.CollCashDepExceptionDialog_txtRegisterNo),
+                    :(decl.collcashdepexceptionownerm.CollCashDepExceptionDialog_txtName)
+                FROM
+                    coll_cashdep a, coll_owner b, customer c
+                WHERE
+                    a.cde_account = :(decl.collcashdepexceptionownerm.CollCashDepExceptionDialog_txtCus_Acc_No)
+                and
+                    a.col_hea_id = b.col_hea_id
+                and
+                    b.date_until = '9999-12-31'
+                and
+                    b.cus_id = c.cus_id
+                fetch first row only
+
+            };
+         }
+             catch(SQLException ex)
+         {
+                 if (tc.getSQLExHandler().isEmptyRowset(ex)) {
+                     throw new VestigoTMException(1, "Transaction COA66: Error select cashdep owner!","wrnclt187", null);
+                 } 
+                 else 
+                     throw new VestigoTMException(1, "Transaction COA66: Error select cashdep owner!","err411a", null);
+         }
+    }
+} 

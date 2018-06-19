@@ -1,0 +1,111 @@
+package hr.vestigo.modules.collateral.batch.bo59;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO591
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo59/BO591.sqlj,v 1.2 2011/04/27 12:42:23 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator Iter1(
+        String status,
+        String comment,
+        String cus_acc_no,
+        String contract_no,
+        String register_no,
+        String name,
+        String user_name
+    );
+
+    public BO591(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4454986254"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Slobodne partije iz okvira / Visestruko dodane partije");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa potrebne podatke za izvješæe.
+     * @param exception_type Vrsta izuzetka
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter1 selectData(String exception_type)
+    {
+        batchContext.startStopWatch("selectData");
+        Iter1 iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT
+                    f.status         AS status,
+                    f.comment        AS comment,
+                    e.cus_acc_no     AS cus_acc_no,
+                    e.contract_no    AS contract_no,
+                    c.register_no    AS register_no,
+                    c.name           AS name,
+                    u.user_name      AS user_name
+                FROM frame_acc_exception f
+                INNER JOIN cusacc_exposure e ON f.cus_acc_id = e.cus_acc_id
+                INNER JOIN customer c ON e.cus_id = c.cus_id
+                INNER JOIN app_user u ON f.use_id = u.use_id
+                WHERE f.exception_type = :(exception_type)
+                ORDER BY c.register_no, e.cus_acc_no
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja podataka za izvjesce!", ex);
+        }
+        batchContext.stopStopWatch("selectData");
+        return iter;
+    }
+}

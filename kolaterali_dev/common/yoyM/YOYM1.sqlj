@@ -1,0 +1,118 @@
+package hr.vestigo.modules.collateral.common.yoyM;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+
+
+#sql iterator GcmTypeIterator (
+    BigDecimal col_gcm_typ_id,
+    String map_code,
+    Integer ord_no,
+    String code,
+    String name,
+    String name_add,
+    String param_value,
+    String param_indic
+);
+
+#sql iterator GcmTypeMappingIterator (
+    BigDecimal col_cat_id,
+    BigDecimal col_typ_id,
+    BigDecimal col_sub_id,
+    BigDecimal col_gro_id,
+    BigDecimal col_gcm_typ_id
+);
+
+
+/**
+ * SQLJ za common YOYM.
+ */
+public class YOYM1
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyM/YOYM1.sqlj,v 1.2 2015/04/10 06:42:40 hrakis Exp $";
+
+    private ConnCtx connCtx;
+    private RemoteContext rc;
+    
+    
+    public YOYM1(RemoteContext rc) throws SQLException
+    {
+        this.rc = rc;
+        this.connCtx = rc.getContext();
+    }
+    
+
+    /**
+     * Metoda koja za zadanu vrtsu mapiranja dohvaæa sve moguæe stavke na koje se mogu mapirati kolaterali. 
+     * @param map_code Oznaka vrste mapiranja
+     * @param value_date Datum važenja podataka
+     * @return iterator s podacima
+     */
+    public GcmTypeIterator selectGcmTypes(String map_code, Date value_date) throws SQLException
+    {
+        try
+        {
+            GcmTypeIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.col_gcm_typ_id    AS col_gcm_typ_id,
+                    a.map_code          AS map_code,
+                    a.ord_no            AS ord_no,
+                    a.code              AS code,
+                    a.name              AS name,
+                    a.name_add          AS name_add,
+                    a.param_value       AS param_value,
+                    a.param_indic       AS param_indic
+                FROM coll_gcm_type a
+                WHERE a.map_code = :(map_code)
+                  AND :(value_date) BETWEEN a.date_from AND a.date_until
+                ORDER BY a.ord_no
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            rc.error("Dogodila se nepredvidjena greska kod dohvata stavki na koje se mogu mapirati kolaterali (MAP_CODE=" + map_code + ", VALUE_DATE=" + value_date + ")!", ex);
+            throw ex;
+        }
+    }
+
+
+    /**
+     * Metoda koja za zadanu vrstu mapiranja dohvaæa sva mapiranja RBA kategorija/vrsta/podvrsta kolaterala.
+     * @param map_code Oznaka vrste mapiranja
+     * @param value_date Datum važenja podataka
+     * @return iterator s podacima
+     */
+    public GcmTypeMappingIterator selectGcmTypeMappings(String map_code, Date value_date) throws SQLException
+    {
+        try
+        {
+            GcmTypeMappingIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.col_cat_id AS col_cat_id,
+                    a.col_typ_id AS col_typ_id,
+                    a.col_sub_id AS col_sub_id,
+                    a.col_gro_id AS col_gro_id,
+                    a.col_gcm_typ_id AS col_gcm_typ_id
+                FROM coll_gcm_type_map a
+                INNER JOIN coll_gcm_type b ON a.col_gcm_typ_id = b.col_gcm_typ_id
+                WHERE b.map_code = :(map_code)
+                  AND :(value_date) BETWEEN b.date_from AND b.date_until
+                  AND :(value_date) BETWEEN a.date_from AND a.date_until
+                ORDER BY b.ord_no, a.col_gcm_typ_map_id
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            rc.error("Dogodila se nepredvidjena greska kod dohvata mapiranja (MAP_CODE=" + map_code + ", VALUE_DATE=" + value_date + ")!", ex);
+            throw ex;
+        }
+    }
+}

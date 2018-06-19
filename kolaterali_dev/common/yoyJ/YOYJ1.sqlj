@@ -1,0 +1,446 @@
+package hr.vestigo.modules.collateral.common.yoyJ;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+import java.lang.Short;
+
+public class YOYJ1{
+    
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyJ/YOYJ1.sqlj,v 1.5 2017/05/24 07:37:43 hrazst Exp $";
+    private RemoteContext rc=null;
+    private ConnCtx connCtx;
+    
+    private BigDecimal use_id=null;
+    private BigDecimal org_uni_id=null;
+    private String bank_sign=null;
+
+    private YOY00 primary=null;
+    
+    private YOYM0 yoym_gctc;
+    private YOYM0 yoym_object;
+    private YOYM0 yoym_property;
+    private YOYM0 yoym_endorsement;
+    
+    public YOYJ1(RemoteContext rc,BigDecimal default_use_id,BigDecimal default_org_uni_id) throws Exception{        
+        primary = new YOY00(rc);
+        this.rc=rc;
+        this.connCtx=rc.getContext();
+        this.use_id=default_use_id;
+        this.org_uni_id=default_org_uni_id;
+        this.bank_sign="RB";
+        
+        Date today=new Date(System.currentTimeMillis());
+        yoym_gctc = new YOYM0(rc, "gctc", today);
+        yoym_object = new YOYM0(rc, "object_type", today);
+        yoym_property = new YOYM0(rc, "property_type", today);
+        yoym_endorsement = new YOYM0(rc, "endorsement_type", today);
+    }
+    
+    public BigDecimal getCusId(String register_no) throws Exception{
+        BigDecimal id = null;
+        String reg_no = register_no.trim();
+        try {
+            #sql [connCtx]{select cus_id into :(id) from customer where register_no = :(reg_no) with ur};
+        } catch (Exception e) {
+            throw e;
+        }        
+        return id;
+    }
+    
+    public BigDecimal getCurId(String cur_code_num) throws Exception{
+        BigDecimal id = null;
+        try {
+            #sql [connCtx]{select cur_id into :(id) from currency where code_num = :(cur_code_num) with ur};
+        } catch (Exception e) {
+            throw e;
+        }        
+        return id;
+    }
+      
+    public BigDecimal getColCatId(String code) throws Exception{
+        BigDecimal result = null;
+        
+        #sql [connCtx]{
+            select 
+                col_cat_id
+            into
+                :(result)
+            from 
+                COLL_CATEGORY 
+            where 
+                code =:(code)
+            };                            
+        
+        return result;
+    }   
+    
+    public BigDecimal getColTypeId(String code) throws Exception{
+        BigDecimal result = null;
+        
+        #sql [connCtx]{
+            select 
+                coll_type_id
+            into
+                :(result)
+            from 
+                COLLATERAL_TYPE
+            where 
+                coll_type_code =:(code)
+            };                            
+        
+        return result;
+    } 
+  
+    
+    public BigDecimal insertCollHead(BigDecimal col_type_id, BigDecimal col_cat_id, BigDecimal eve_id, BigDecimal cus_id, String col_num, String collateral_status, Short number) throws Exception{        
+        try{
+            rc.debug("insertCollHead: ");
+            BigDecimal col_hea_id=primary.getNewId();   
+            rc.debug("col_hea_id: "+col_hea_id);   
+            
+            BigDecimal gctc_id = null, endorsement_type_id = null, object_type_id = null, property_type_id = null;
+            GcmTypeData gtd;
+            gtd = yoym_gctc.resolve(col_cat_id, col_type_id, null, null);
+            if (gtd != null) gctc_id = gtd.col_gcm_typ_id;
+            gtd = yoym_endorsement.resolve(col_cat_id, col_type_id, null, null);
+            if (gtd != null) endorsement_type_id = gtd.col_gcm_typ_id;
+            gtd = yoym_object.resolve(col_cat_id, col_type_id, null, null);
+            if (gtd != null) object_type_id = gtd.col_gcm_typ_id;
+            gtd = yoym_property.resolve(col_cat_id, col_type_id, null, null);
+            if (gtd != null) property_type_id = gtd.col_gcm_typ_id; 
+            
+            
+            #sql [connCtx]{
+                insert into COLL_HEAD
+                    (col_hea_id,                                
+                    col_type_id,
+                    col_num,
+                    real_est_nomi_date,     
+                    cus_id,
+                    coll_cus_id,
+                    real_est_date_from,
+                    real_est_date_unti,
+                    real_est_status,
+                    real_est_spec_stat,
+                    use_open_id,
+                    use_id,
+                    opening_ts,
+                    user_lock,
+                    eve_id,
+                    bank_sign,
+                    eligibility,
+                    origin_org_uni_id,
+                    org_uni_id,
+                    use_id_ver,
+                    use_id_aut,
+                    verification_ts,
+                    autorization_ts,    
+                    mortgage_status,
+                    collateral_status,
+                    workflow_indic,
+                    cover_indic,
+                    ver_send_ts,
+                    basic_data_status,
+                    coll_data_status,
+                    col_cat_id,
+                    use_id_ver_snd,
+                    financial_flag,
+                    law_eligibility,
+                    rba_eligibility,
+                    b1_eligibility,
+                    b2_irb_elig,
+                    number,
+                    nd_eligibility,
+                    crm_hnb,
+                    gctc_id, 
+                    endorsement_type_id,
+                    object_type_id,
+                    property_type_id,
+                    contract_type
+                ) VALUES (
+                    :(col_hea_id),                          
+                    :(col_type_id),            
+                    :(col_num),                
+                    current date,         
+                    :(cus_id),                 
+                    :(cus_id),            
+                    current date,     
+                    '9999-12-31',     
+                    'A',        
+                    'D',     
+                    :(use_id),            
+                    :(use_id),                 
+                    current timestamp,             
+                    current timestamp,              
+                    :(eve_id),                 
+                    :(bank_sign),              
+                    'N',            
+                    :(org_uni_id),      
+                    :(org_uni_id),             
+                    :(use_id),             
+                    :(use_id),             
+                    current timestamp,        
+                    current timestamp,        
+                    'X',        
+                    :(collateral_status),      
+                    '0',         
+                    '2',            
+                    current timestamp,            
+                    '3',      
+                    '2',       
+                    :(col_cat_id),             
+                    :(use_id),         
+                    'X',         
+                    'D', 
+                    'D',
+                    'N',         
+                    'N',                          
+                    :(number),
+                    'N',
+                    'D',
+                    :(gctc_id), 
+                    :(endorsement_type_id),
+                    :(object_type_id),
+                    :(property_type_id),
+                    '9'
+                    )
+                };
+            return col_hea_id;
+        }catch (SQLException e){
+            rc.debug("insertCollHead.... "+e.getMessage());
+            e.printStackTrace();
+            throw(e);
+        }   
+    }
+    
+    /**
+    *
+    * Insert u tablicu coll_loanstock
+    *
+    * @param col_hea_id col_hea_id
+    * @return col_loa_id identity
+    * @throws Exception
+    */
+    public BigDecimal insertCollLoanstock(BigDecimal col_hea_id) throws Exception{
+        try{
+            BigDecimal col_loa_id= primary.getNewId();
+            
+            #sql [connCtx]{
+                insert into coll_loanstock
+                    (col_loa_id,    
+                    col_hea_id
+                ) values (
+                    :(col_loa_id),    
+                    :(col_hea_id))  
+                };
+            return col_loa_id;
+        }catch (Exception e){
+            rc.debug("insertCollLoanstock.... "+e.getMessage());
+            e.printStackTrace();
+            throw(e);
+        }       
+    }
+    
+    /**
+    *
+    * Insert u tablicu coll_bill_exch
+    *
+    * @param col_hea_id col_hea_id
+    * @return boe_id identity
+    * @throws Exception
+    */
+    public BigDecimal insertCollBillExch(BigDecimal col_hea_id, Short amount) throws Exception{
+        try{
+            BigDecimal boe_id= primary.getNewId();
+            
+            #sql [connCtx]{
+                insert into coll_bill_exch
+                    (boe_id,    
+                    col_hea_id,
+                    number_boe,
+                    payee_reg_no,
+                    payee_code,
+                    payee_cus_id,
+                    payee_name
+                ) values (
+                    :(boe_id),    
+                    :(col_hea_id),
+                    :(amount),
+                    '910000',
+                    '00901717',
+                    8218251,
+                    'RAIFFEISENBANK AUSTRIA D.D. ZAGREB'
+                    )  
+                };
+            return boe_id;
+        }catch (Exception e){
+            rc.debug("insertCollBillExch.... "+e.getMessage());
+            e.printStackTrace();
+            throw(e);
+        }       
+    }
+   
+    /**
+     * 
+     * Insert u tablicu loan_beneficiary
+     * 
+     * @param data mapa s podacima:
+     * <br>BigDecimal col_hea_id
+     * <br>BigDecimal cus_id
+     * <br>BigDecimal cus_acc_id
+     * <br>String bill_owner
+     * <br>String acc_no
+     * <br>String request_no
+     * 
+     * 
+     * @throws Exception
+     */
+    public BigDecimal insertLoanBeneficiary(String register_no, BigDecimal cus_id, String acc_no, BigDecimal col_hea_id, BigDecimal use_id,String aps_no) throws Exception{      
+        BigDecimal loan_ben_id = primary.getNewId();        
+
+        rc.debug("col_hea_id:"+ col_hea_id);
+        rc.debug("register_no:"+ register_no);
+        rc.debug("cus_id:"+ cus_id);
+        rc.debug("acc_no:"+ acc_no);
+        BigDecimal cus_acc_id=null;   
+        String request_no=null;        
+        String inspol_ind = null;
+        BigDecimal ip_cus_id = null;      
+        
+        try{
+            #sql [connCtx]{
+                insert into loan_beneficiary (
+                    loan_ben_id,
+                    register_no,
+                    cus_id, 
+                    acc_no,
+                    la_acc_id,
+                    col_hea_id,
+                    ser_num,
+                    date_from,
+                    date_until,
+                    status,
+                    spec_status,
+                    use_open_id,
+                    use_id,
+                    opening_ts,
+                    user_lock,
+                    request_no,
+                    krad_admin_ind,
+                    kred_admin_use_id,
+                    kred_admin_ts,
+                    INSPOL_IND,
+                    IP_CUS_ID,
+                    APS_RQST_NO
+                ) values (              
+                    :(loan_ben_id),
+                    :(register_no),
+                    :(cus_id),
+                    :(acc_no),
+                    :(cus_acc_id),
+                    :(col_hea_id),
+                    1,
+                    current date,
+                    '9999-12-31',
+                    'A',
+                    '00',
+                    :(use_id),
+                    :(use_id),
+                    current timestamp,
+                    current timestamp,
+                    :(request_no),
+                    'D',
+                    :(use_id),
+                    current timestamp,
+                    :(inspol_ind),
+                    :(ip_cus_id),
+                    :(aps_no)
+                )
+            };
+            return loan_ben_id;
+        }catch (Exception e){
+            rc.debug("insertLoanBeneficiary.... "+e.getMessage());
+            e.printStackTrace();
+            throw(e);
+        }       
+    }
+    
+    public BigDecimal insertCollListQ(BigDecimal col_lis_typ_id,BigDecimal col_hea_id,String action_type) throws Exception{       
+        try{
+            
+            BigDecimal col_lis_q_id=primary.getNewId();
+            
+            #sql [connCtx]{
+                insert into coll_list_q (
+                    col_lis_q_id,                                                           
+                    col_lis_typ_id,                                                         
+                    col_hea_id,                                                         
+                    status,                                                         
+                    income_time,                                                                                                                        
+                    bank_sign,                                                                                                                      
+                    action_type                                                     
+                ) values (                                                                                                                                              
+                    :(col_lis_q_id),                                                            
+                    :(col_lis_typ_id),                                                          
+                    :(col_hea_id),                                                          
+                    '0',                                                            
+                    current timestamp,                                                                                                                      
+                    :(bank_sign),                                                                                                                       
+                    :(action_type)                                                      
+                )
+            };
+            return col_lis_q_id;
+        }catch (Exception e){
+            rc.debug("insertCollListQ.... "+e.getMessage());
+            e.printStackTrace();
+            throw(e);
+        }       
+    }
+    
+    /**
+     * Insert u tablicu evenata
+     * @param eve_typ_id tip dogadaja
+     * @param org_uni_id id OJ-a
+     * @throws Exception
+     */
+    public BigDecimal insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id, String cmt) throws Exception{
+        rc.debug("sqlj insertIntoEvent");       
+         
+        try{            
+            YXYB0 eve1 = new YXYB0(rc);
+            YXYD0 genId = new YXYD0(rc);   
+            //generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+            BigDecimal eve_id = genId.getNewId();
+            HashMap event = new HashMap();
+            event.put("eve_id",eve_id);
+            event.put("eve_typ_id", eve_typ_id);
+            event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+            event.put("cmnt", cmt); 
+            event.put("use_id", this.use_id);
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null); 
+            event.put("bank_sign", rc.getBankSign());
+            event.put("org_uni_id", org_uni_id); 
+            rc.debug("eve_id " + event.get("eve_id"));
+
+            eve1.insertEvent(event); 
+            return eve_id;
+      } catch(Exception e){
+          throw e;
+      }
+    }
+   
+}

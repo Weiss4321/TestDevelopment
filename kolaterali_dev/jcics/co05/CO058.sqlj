@@ -1,0 +1,259 @@
+package hr.vestigo.modules.collateral.jcics.co05;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */   
+   
+    
+public class CO058 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co05/CO058.sqlj,v 1.24 2015/01/12 11:54:44 hrazst Exp $";
+	
+	public DeclCO05 decl = null;
+	private YOY63 SQLhelper = null;
+	
+	public CO058 (DeclCO05 decl) {
+		this.decl = decl;
+	}  
+	 
+	CollHeadInsertData chd = new CollHeadInsertData();	
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();
+		SQLhelper = new YOY63(tc);
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		// insert u COLL_HEAD		
+		YOY40 headIns = new YOY40(tc, chd);
+		
+		// punjenje objekta chd		
+		fillCHDobj();
+		
+		tc.debug("zovem insert u Head : " + chd.recept);
+		
+		headIns.insertIntoCollHead();
+
+		fillDeclFromCHDObj();		
+
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();
+
+		tc.debug("dohvat collateral_id : "+collaterall_id);
+		decl.collguarantinsertmapping.COL_SEC_ID = collaterall_id;	
+ 
+		try{	
+
+					#sql [ctx]{
+							INSERT INTO coll_guarantee
+									(	col_gua_id , 
+										col_hea_id , 
+										guar_issuer_id ,
+										guar_iss_regno ,
+										guar_issuer ,
+										guar_cou_id ,
+										cocunut ,
+										rating ,
+										guar_no ,
+										cur_ind ,
+										int_fee_ind ,
+										amort_ind , 
+										respiro ,
+										respiro_date ,
+										guar_datn_from ,
+										guar_datn_unti ,
+										guar_exp_per ,
+										guar_add_data ,
+										guar_amount ,
+										guar_cur_id,  
+										first_call,
+		                                ext_rating,
+		                                ext_rating_dsc,
+		                                INIT_GUAR_AMOUNT, 
+                                        GUAR_PERCENT,
+		                                pos_analyst_opinion,
+                                        guarantor_perc,
+                                        guar_amo_exp_flg
+		                    )
+							VALUES( :(decl.collguarantinsertmapping.COL_SEC_ID),    													                                                
+									:(decl.collguarantinsertmapping.COL_HEA_ID),
+ 									:(decl.collguarantinsertmapping.guar_issuer_id),       
+									:(decl.collguarantinsertmapping.Coll_txtGuarIssRegNo),
+									:(decl.collguarantinsertmapping.Coll_txtGuarIssuer),
+									:(decl.collguarantinsertmapping.guar_cou_id), 	
+									:(decl.collguarantinsertmapping.Kol_txtCocunut), 
+									:(decl.collguarantinsertmapping.Kol_txtRating), 
+									:(decl.collguarantinsertmapping.Kol_txtGuarNo), 
+									:(decl.collguarantinsertmapping.Kol_txtCurInd), 
+									:(decl.collguarantinsertmapping.Kol_txtIntFeeInd), 
+									:(decl.collguarantinsertmapping.Kol_txtAmortInd), 
+									:(decl.collguarantinsertmapping.Kol_txtRespiro), 
+									:(decl.collguarantinsertmapping.Kol_txtRespiroDate), 
+									:(decl.collguarantinsertmapping.Coll_txtGuarDatnFrom),
+									:(decl.collguarantinsertmapping.Coll_txtGuarDatnUnti),
+									:(decl.collguarantinsertmapping.Coll_txtGuarExpPeriod),                   
+									:(decl.collguarantinsertmapping.Coll_txtGuarAddData),
+									:(decl.collguarantinsertmapping.Kol_txtGuarAmount),
+									:(decl.collguarantinsertmapping.guar_cur_id),
+									:(decl.collguarantinsertmapping.Kol_txtFirstCall),
+		                            :(decl.collguarantinsertmapping.Coll_txtExtRating),
+		                            :(decl.collguarantinsertmapping.Coll_txtExtRatingDsc),
+		                            :(decl.collguarantinsertmapping.txt_inicijalni_iznos_garancije),
+		                            :(decl.collguarantinsertmapping.txt_postotak_garantranja),
+		                            :(decl.collguarantinsertmapping.Coll_txtPosAnalystOpinion),
+		                            :(decl.collguarantinsertmapping.Coll_txtPercentageByGuarantor),
+		                            :(decl.collguarantinsertmapping.Coll_txtAmountHeightPlacement)
+		                    )
+					};
+				 
+			 
+		}catch(SQLException se){
+				
+				tc.debug ( "......CO058.sqlj insert into coll_guarantee SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO058.sqlj insert into coll_guarantee SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO058.sqlj insert into coll_guarantee SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new VestigoTMException(1, "Transaction CO058: Error inserting coll_guarantee! ","err411a", null);
+		}
+					 
+		chd.action = "I";		
+ 
+// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collguarantinsertmapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collguarantinsertmapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.collguarantinsertmapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collguarantinsertmapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.collguarantinsertmapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();     
+
+        decl.collguarantinsertmapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collguarantinsertmapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collguarantinsertmapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collguarantinsertmapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.collguarantinsertmapping.COL_HEA_ID); 
+        decl.collguarantinsertmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip;  
+	}//execute
+ 
+	private void fillCHDobj () {
+
+		chd.Coll_txtAcouBDate = decl.collguarantinsertmapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.collguarantinsertmapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.collguarantinsertmapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.collguarantinsertmapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.collguarantinsertmapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.collguarantinsertmapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.collguarantinsertmapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.collguarantinsertmapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.collguarantinsertmapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.collguarantinsertmapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.collguarantinsertmapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.collguarantinsertmapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.collguarantinsertmapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.collguarantinsertmapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.collguarantinsertmapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtCollTypeCode = decl.collguarantinsertmapping.Coll_txtCollTypeCode;
+		chd.Coll_txtComDoc = decl.collguarantinsertmapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.collguarantinsertmapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.collguarantinsertmapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.collguarantinsertmapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.collguarantinsertmapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.collguarantinsertmapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.collguarantinsertmapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.collguarantinsertmapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.collguarantinsertmapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.collguarantinsertmapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.collguarantinsertmapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.collguarantinsertmapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.collguarantinsertmapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.collguarantinsertmapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.collguarantinsertmapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.collguarantinsertmapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.collguarantinsertmapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.collguarantinsertmapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.collguarantinsertmapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.collguarantinsertmapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.collguarantinsertmapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.collguarantinsertmapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.collguarantinsertmapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.collguarantinsertmapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.collguarantinsertmapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.collguarantinsertmapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.collguarantinsertmapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.collguarantinsertmapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.collguarantinsertmapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.collguarantinsertmapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.collguarantinsertmapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.collguarantinsertmapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.collguarantinsertmapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.collguarantinsertmapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.collguarantinsertmapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.collguarantinsertmapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.collguarantinsertmapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.collguarantinsertmapping.Coll_txtThirdRightInNom;
+		chd.COL_TYPE_ID = decl.collguarantinsertmapping.COL_TYPE_ID;
+		chd.REAL_EST_EUSE_ID = decl.collguarantinsertmapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.collguarantinsertmapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.collguarantinsertmapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.collguarantinsertmapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.collguarantinsertmapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.collguarantinsertmapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.collguarantinsertmapping.COL_PLACE;
+		chd.COL_COUNTY = decl.collguarantinsertmapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.collguarantinsertmapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.collguarantinsertmapping.COL_RESI_QUAR;
+		chd.USE_OPEN_ID = decl.collguarantinsertmapping.USE_OPEN_ID;
+		chd.USE_ID = decl.collguarantinsertmapping.USE_ID;
+		chd.INSPOL_IND = decl.collguarantinsertmapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.collguarantinsertmapping.Coll_txtDesc;	
+		chd.recept = "CLT_LG";  
+		chd.eve_typ_id =  new java.math.BigDecimal("1609373003.0");
+		chd.Coll_txtAcumBuyValue = decl.collguarantinsertmapping.Coll_txtAcumBuyValue;
+		chd.ORIGIN_ORG_UNI_ID = decl.collguarantinsertmapping.ORIGIN_ORG_UNI_ID;
+		chd.ORG_UNI_ID = decl.collguarantinsertmapping.ORG_UNI_ID;
+		chd.COL_CAT_ID = decl.collguarantinsertmapping.col_cat_id;	
+		chd.save_ver_aut_flag = decl.collguarantinsertmapping.save_ver_aut_flag;
+		chd.KolLow_txtEligibility = decl.collguarantinsertmapping.KolLow_txtEligibility;
+		chd.ColRba_txtEligibility = decl.collguarantinsertmapping.ColRba_txtEligibility;		
+		chd.Kol_txtRbaEligDsc = decl.collguarantinsertmapping.Kol_txtRbaEligDsc; 	
+        chd.SPEC_STATUS = decl.collguarantinsertmapping.SPEC_STATUS;     
+        chd.Kol_txtCRMHnb=decl.collguarantinsertmapping.Kol_txtCRMHnb;
+        
+        chd.use_id_co = decl.collguarantinsertmapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.collguarantinsertmapping.Coll_txtTypeTVCode;
+        chd.contract_type=decl.collguarantinsertmapping.Coll_txtContractTypeCode;   
+	}
+
+	private void fillDeclFromCHDObj () {
+		decl.collguarantinsertmapping.COL_HEA_ID = chd.COL_HEA_ID;
+		decl.collguarantinsertmapping.Coll_txtUserLock = chd.Coll_txtUserLock;
+		decl.collguarantinsertmapping.Coll_txtCode = chd.Coll_txtCode;
+		decl.collguarantinsertmapping.STATUS = chd.STATUS;
+		decl.collguarantinsertmapping.Coll_txtOpeningTs = chd.Coll_txtOpeningTs;
+		decl.collguarantinsertmapping.EVE_ID = chd.EVE_ID;		
+		decl.collguarantinsertmapping.USER_LOCK = chd.USER_LOCK;
+		
+        decl.collguarantinsertmapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.collguarantinsertmapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.collguarantinsertmapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.collguarantinsertmapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.collguarantinsertmapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.collguarantinsertmapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.collguarantinsertmapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.collguarantinsertmapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+	}
+  
+	
+}	 
+			

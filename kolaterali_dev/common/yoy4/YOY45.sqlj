@@ -1,0 +1,524 @@
+package hr.vestigo.modules.collateral.common.yoy4;
+  
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+import java.sql.SQLException;
+   
+  
+#sql iterator Iter1 (BigDecimal col_id,
+					 String register_no);
+
+#sql iterator Iter2 (BigDecimal loa_ben_id);
+ 
+
+public class YOY45 { 
+ 
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy4/YOY45.sqlj,v 1.18 2010/08/02 10:37:23 hramkr Exp $";
+
+	private String bank_sign=null;
+	private ConnCtx ctx=null;
+	private RemoteContext rc=null;
+	private Iter1 iter=null;
+	private Iter2 iter2=null;
+	private BigDecimal hf_id = null;
+
+//	 Milka, 03.03.2007 - za okvirni sporazum
+	private int countMortgageFrame = 0; // broj hipoteka koje su dio sporazuma
+	private int countMortgage = 0;   // broj hipoteka na jednom kolateralu
+	
+	public YOY45(RemoteContext rc) throws Exception {
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc=rc;
+
+	}  
+  
+//	public boolean checkInputData(CollCheckData chkObj) throws Exception{
+	public CollCheckData checkInputData(CollCheckData chkObj) throws Exception{		
+ 		boolean reply = true;
+ 		String ind = "0";
+ 		String agreement_flag = "N";
+//	ind = 0 - sve upisano
+//	ind = 1 - nije upisano pokrice
+//	ind = 2 - nisu upisani vlasnici (spada pod osnovne podatke)
+//  ind = 3 - nije upisana ni jedna hipoteka u korist RBA
+//  ind = 4 - nije knjizeno 		
+
+ 		
+ 		int i = 0;
+ 		
+ 		int j = 0;
+ 		
+ 		
+		rc.debug("poceo YOY45");
+
+		rc.debug(".COL_HEA_ID : "+chkObj.col_hea_id);
+		rc.debug("COLL_CODE: " + chkObj.code);
+		rc.debug ( ".........IND" + " "+ ind + " " + reply);
+
+ 		
+//  Milka 23.09.2006 - citam svu potrebnu parametrizaciju za col_hea_id koji saljem dalje sa referentske liste
+		try {
+			#sql [ctx]{
+				SELECT  d.coll_data_status,	
+						d.financial_flag,
+						b.col_cat_id,
+						b.code,  
+						b.accounting_indic,
+						c.ver_ind,
+						c.aut_ind
+				INTO	:(chkObj.coll_data_status_from_coll_head),
+						:(chkObj.financial_flag),
+						:(chkObj.col_cat_id),
+						:(chkObj.code),
+						:(chkObj.accounting_indic),
+						:(chkObj.ver_ind),
+						:(chkObj.aut_ind)
+				FROM	coll_head d, coll_category b, coll_category_prm c
+				WHERE	d.col_hea_id = :(chkObj.col_hea_id)
+				AND
+						d.col_cat_id = b.col_cat_id 
+				AND
+						b.col_cat_id = c.col_cat_id 
+				AND
+						d.origin_org_uni_id = c.org_uni_id
+			};
+	
+		}catch(SQLException sqle){ 
+
+		}					
+		
+// predmet po parametrizaciji ne ide kod coll.off.
+		
+		if (chkObj.aut_ind.equalsIgnoreCase("0")) {
+			
+///////////////////////////////////////   provjera unosa podataka - POCETAK 		
+			
+			rc.debug ( "....NASAO CODE.....IND,pocinje provjera unosa" + chkObj.code);
+			rc.debug ( "....AUTORIZACIJA....." + chkObj.aut_ind);
+			// kontrola pokrica 		
+			if ((chkObj.code).equalsIgnoreCase("ZADU") || (chkObj.code).equalsIgnoreCase("MJEN") || 
+				(chkObj.code).equalsIgnoreCase("INSP") || 
+				(chkObj.code).equalsIgnoreCase("UMJE") ||
+				(chkObj.code).equalsIgnoreCase("ZLAT") || (chkObj.code).equalsIgnoreCase("GARA") ||
+				(chkObj.code).equalsIgnoreCase("CESI")) {
+				// 			rc.debug ( "....TU SAM....ZADU MJEN"); 	// provjera pokrica 	
+				try{			
+					#sql [ctx] iter = {SELECT	loan_ben_id as col_id,
+					register_no as register_no
+					FROM	loan_beneficiary
+					WHERE	col_hea_id = :(chkObj.col_hea_id)
+					AND		status = 'A'
+					AND		date_from <= current date
+					AND		date_until = '9999-12-31'
+					FETCH FIRST 1 ROWS ONLY
+					};
+				}catch(SQLException sqle){
+					
+				}   
+				i = 0;
+				while (iter.next()) {     
+					i++;
+				}
+				
+				if (i == 0)
+					ind="1";  // nije upisano pokrice
+				
+				rc.debug ( "....TU SAM....ZADU MJEN....pokrice" + ind); 	
+// za cesije provjeriti i vlasnika 				
+                if ((chkObj.code).equalsIgnoreCase("CESI")) {
+                    try{            
+                        #sql [ctx] iter = {SELECT   coll_own_id as col_id,
+                        register_no as register_no
+                        FROM    coll_owner
+                        WHERE   col_hea_id = :(chkObj.col_hea_id)
+                        AND     date_from <= current date
+                        AND     date_until = '9999-12-31'
+                        FETCH FIRST 1 ROWS ONLY
+                        };
+                    }catch(SQLException sqle){
+                        
+                    }   
+                    i = 0;
+                    while (iter.next()) {
+                        i++;  
+                    }
+
+                    if (i == 0)
+                        ind="2";   // nisu upisani osnovni podaci
+                    rc.debug ( "....TU SAM....CESIJE....osnovni podaci" + ind);                         
+                }
+			} else if ((chkObj.code).equalsIgnoreCase("CASH") || (chkObj.code).equalsIgnoreCase("NEKR") || 
+					   (chkObj.code).equalsIgnoreCase("VOZI") || (chkObj.code).equalsIgnoreCase("PLOV") ||
+					   (chkObj.code).equalsIgnoreCase("POKR") || (chkObj.code).equalsIgnoreCase("ZALI") ||
+					   (chkObj.code).equalsIgnoreCase("DION") || (chkObj.code).equalsIgnoreCase("OBVE") ||
+					   (chkObj.code).equalsIgnoreCase("UDJE") || (chkObj.code).equalsIgnoreCase("ZAPI") ||
+					   (chkObj.code).equalsIgnoreCase("UDJP")) {				
+				// 			rc.debug ( "....TU SAM....CASH NEKR.....1");  // za osnovne podatke			
+				try{			
+					#sql [ctx] iter = {SELECT	coll_own_id as col_id,
+					register_no as register_no
+					FROM	coll_owner
+					WHERE	col_hea_id = :(chkObj.col_hea_id)
+					AND		date_from <= current date
+					AND		date_until = '9999-12-31'
+					FETCH FIRST 1 ROWS ONLY
+					};
+				}catch(SQLException sqle){
+					
+				}	
+				i = 0;
+				while (iter.next()) {
+					i++;  
+				}
+
+				if (i == 0)
+					ind="2";   // nisu upisani osnovni podaci
+				rc.debug ( "....TU SAM....CASH NEKR1....osnovni podaci" + ind); 	 			
+				
+				// 			rc.debug ( "....TU SAM....CASH NEKR.....2");  // provjera hipoteke
+// dohvacam sve aktivne hipoteke				
+				try{			
+					#sql [ctx] iter = {SELECT
+							coll_hf_prior_id as col_id,
+							agreement as register_no
+					FROM	coll_hf_prior
+					WHERE	hf_coll_head_id = :(chkObj.col_hea_id)
+					AND		hf_status = 'A'
+					AND 	hf_own_cus_id = 8218251
+					};
+				}catch(SQLException sqle){
+					
+				} 
+				
+				i = 0;
+				countMortgage = 0;
+				countMortgageFrame = 0;
+				
+				while (iter.next()) {
+					i++;
+// svaka aktivna hipoteka mora biti vezana na barem jedan aktivan plasman ako nije dio okvirnog sporazuma
+// ako je hipoteka dio okvirnog sporazuma ne mora biti vezana na plasman	
+// brojim sve hipoteke i one koje su dio OS, ako je taj broj isti ni jedna ne treba biti vezana za plasman		
+					countMortgage = countMortgage + 1;
+					agreement_flag = iter.register_no();
+					hf_id = iter.col_id();
+					if (agreement_flag != null && agreement_flag.equalsIgnoreCase("D"))  {
+// dio okvirnog sporazuma i ne mora biti vezana za plasman 		
+						countMortgageFrame = countMortgageFrame +1;
+					} else {
+//	nije dio okvirnog sporazuma i mora biti vezana za plasman
+//	dohvacam aktivne plasmane za svaku aktivnu hipoteku		
+
+						j = 0;
+						try{			
+							#sql [ctx] iter2 = {SELECT	loan_ben_id as loa_ben_id
+												FROM
+													loan_beneficiary 
+												WHERE
+													coll_hf_prior_id = :hf_id
+												AND
+													status = 'A'
+
+							};
+						}catch(SQLException sqle){
+							
+						} 
+						
+						while (iter2.next()) {
+							j++;
+						}						
+//	zatvori iterator
+						if(iter2!=null) {
+							try {
+								iter2.close();
+							} catch (Exception ignored) {}
+						}	
+						
+						if (j == 0) {
+							ind="1";  // hipoteka nije povezana s plasmanom
+						
+						}
+						rc.debug ( "....TU SAM....CASH NEKR.....veza na plasman 4"+ j + " - " + ind);  // pokrice							
+					}
+
+				} 
+//	zatvori iterator
+				if(iter!=null) {
+					try {
+						iter.close();
+					} catch (Exception ignored) {}
+				} 		
+				
+				  
+				
+				if (i == 0)
+					ind="3"; 
+				rc.debug ( "....TU SAM....CASH NEKR2....hipoteka " + i + " - " + ind);  	// nema niti jedne aktivne hipoteke		
+				
+
+
+			} else {
+				ind = "0";
+			} 
+
+//			 provjera da li je predmet knjizen ako se po parametrizaciji knjizi
+			if (chkObj.accounting_indic.equalsIgnoreCase("X")) {  // ne knjizi se
+				
+			} else {
+				if (chkObj.financial_flag.equalsIgnoreCase("0")) {
+					ind = "4";
+				}		
+			}
+			
+			  
+			if (!(ind.equals("0")))
+				reply = false;
+			
+			rc.debug ( "....TU SAM....KRAJ3....."+ind+reply); 		
+
+///////////////////////////////////////   provjera unosa podataka - KRAJ
+			
+		} else 	if (chkObj.aut_ind.equalsIgnoreCase("1")) {
+// predmet po parametrizaciji ide kod col.off.
+			rc.debug ( "....NASAO CODE.....IND,pocinje provjera unosa" + chkObj.code);
+			rc.debug ( "....AUTORIZACIJA....." + chkObj.aut_ind);
+			rc.debug ( "....COLL OFF....." + chkObj.coll_data_status_from_coll_head);			
+
+// prvi unos, nisu jos upisani podaci coll.off.: moraju biti upisani samo osnovni podaci, ne mora biti knjizen
+			if ((chkObj.coll_data_status_from_coll_head).equalsIgnoreCase("0")) {
+//				 kontrola osnovnih podataka
+				if ((chkObj.code).equalsIgnoreCase("CASH") || (chkObj.code).equalsIgnoreCase("NEKR") || 
+					(chkObj.code).equalsIgnoreCase("VOZI") || (chkObj.code).equalsIgnoreCase("PLOV") ||
+					(chkObj.code).equalsIgnoreCase("POKR") || (chkObj.code).equalsIgnoreCase("ZALI") ||
+					(chkObj.code).equalsIgnoreCase("DION") || (chkObj.code).equalsIgnoreCase("OBVE") ||
+					(chkObj.code).equalsIgnoreCase("UDJE") || (chkObj.code).equalsIgnoreCase("ZAPI") ||
+					(chkObj.code).equalsIgnoreCase("UDJP") || (chkObj.code).equalsIgnoreCase("CESI")) {								
+					try{			
+						#sql [ctx] iter = {SELECT	coll_own_id as col_id,
+						register_no as register_no
+						FROM	coll_owner
+						WHERE	col_hea_id = :(chkObj.col_hea_id)
+						AND		date_from <= current date
+						AND		date_until = '9999-12-31'
+						FETCH FIRST 1 ROWS ONLY
+						};
+					}catch(SQLException sqle){
+						
+					}	
+					i = 0;
+					while (iter.next()) {
+						i++;
+					}
+
+										 
+					if (i == 0)
+						ind="2";   // nisu upisani osnovni podaci
+					rc.debug ( "....TU SAM....CASH NEKR1....osnovni podaci" + ind); 				
+				} else {
+					ind = "0";
+				}
+			} else if ((chkObj.coll_data_status_from_coll_head).equalsIgnoreCase("2")) {  
+// podaci col.off. upisani I AUTORIZIRANI
+// moraju biti upisani svi podaci i mora biti knjizen				
+///////////////////////////////////////   provjera unosa podataka - POCETAK 		
+				
+				// kontrola pokrica 		
+				if ((chkObj.code).equalsIgnoreCase("ZADU") || (chkObj.code).equalsIgnoreCase("MJEN") || 
+					(chkObj.code).equalsIgnoreCase("INSP") || 
+					(chkObj.code).equalsIgnoreCase("UMJE") ||
+					(chkObj.code).equalsIgnoreCase("ZLAT") || (chkObj.code).equalsIgnoreCase("GARA") ||
+					(chkObj.code).equalsIgnoreCase("CESI")) {
+					// 			rc.debug ( "....TU SAM....ZADU MJEN"); 	// provjera pokrica 	
+					try{			
+						#sql [ctx] iter = {SELECT	loan_ben_id as col_id,
+						register_no as register_no
+						FROM	loan_beneficiary
+						WHERE	col_hea_id = :(chkObj.col_hea_id)
+						AND		status = 'A'
+						AND		date_from <= current date
+						AND		date_until = '9999-12-31'
+						FETCH FIRST 1 ROWS ONLY
+						};
+					}catch(SQLException sqle){
+						 
+					}
+					i = 0;
+					while (iter.next()) {
+						i++;
+					}
+										
+					if (i == 0)
+						ind="1";  // nije upisano pokrice
+					
+					rc.debug ( "....TU SAM....ZADU MJEN....pokrice" + ind); 			
+					// za cesije provjeriti i vlasnika              
+	                if ((chkObj.code).equalsIgnoreCase("CESI")) {
+	                    try{            
+	                        #sql [ctx] iter = {SELECT   coll_own_id as col_id,
+	                        register_no as register_no
+	                        FROM    coll_owner
+	                        WHERE   col_hea_id = :(chkObj.col_hea_id)
+	                        AND     date_from <= current date
+	                        AND     date_until = '9999-12-31'
+	                        FETCH FIRST 1 ROWS ONLY
+	                        };
+	                    }catch(SQLException sqle){
+	                        
+	                    }   
+	                    i = 0;
+	                    while (iter.next()) {
+	                        i++;  
+	                    }
+
+	                    if (i == 0)
+	                        ind="2";   // nisu upisani osnovni podaci
+	                    rc.debug ( "....TU SAM....CESIJE....osnovni podaci" + ind);                         
+	                }				
+
+				} else if ((chkObj.code).equalsIgnoreCase("CASH") || (chkObj.code).equalsIgnoreCase("NEKR") || 
+						   (chkObj.code).equalsIgnoreCase("VOZI") || (chkObj.code).equalsIgnoreCase("PLOV") ||
+						   (chkObj.code).equalsIgnoreCase("POKR") || (chkObj.code).equalsIgnoreCase("ZALI") ||
+						   (chkObj.code).equalsIgnoreCase("DION") || (chkObj.code).equalsIgnoreCase("OBVE") ||
+						   (chkObj.code).equalsIgnoreCase("UDJE") || (chkObj.code).equalsIgnoreCase("ZAPI") ||
+						   (chkObj.code).equalsIgnoreCase("UDJP")) {								
+					// 			rc.debug ( "....TU SAM....CASH NEKR.....1");  // za osnovne podatke			
+					try{			
+						#sql [ctx] iter = {SELECT	coll_own_id as col_id,
+						register_no as register_no
+						FROM	coll_owner
+						WHERE	col_hea_id = :(chkObj.col_hea_id)
+						AND		date_from <= current date
+						AND		date_until = '9999-12-31'
+						FETCH FIRST 1 ROWS ONLY
+						};
+					}catch(SQLException sqle){
+						
+					}	
+					i = 0;
+					while (iter.next()) {
+						i++;
+					}
+										
+					if (i == 0)
+						ind="2";   // nisu upisani osnovni podaci
+					rc.debug ( "....TU SAM....CASH NEKR1....osnovni podaci" + ind); 	 			
+					
+					// 			rc.debug ( "....TU SAM....CASH NEKR.....2");  // provjera hipoteke
+//					 dohvacam sve aktivne hipoteke				
+					try{			
+						#sql [ctx] iter = {SELECT
+								coll_hf_prior_id as col_id,
+								agreement as register_no
+						FROM	coll_hf_prior
+						WHERE	hf_coll_head_id = :(chkObj.col_hea_id)
+						AND		hf_status = 'A'
+						AND 	hf_own_cus_id = 8218251
+						};
+					}catch(SQLException sqle){
+						
+					} 
+					
+					i = 0;
+					countMortgage = 0;
+					countMortgageFrame = 0;
+					
+					while (iter.next()) {
+						i++;
+//	 svaka aktivna hipoteka mora biti vezana na barem jedan aktivan plasman ako nije dio okvirnog sporazuma
+//	 ako je hipoteka dio okvirnog sporazuma ne mora biti vezana na plasman	
+//	 brojim sve hipoteke i one koje su dio OS, ako je taj broj isti ni jedna ne treba biti vezana za plasman		
+						countMortgage = countMortgage + 1;
+						agreement_flag = iter.register_no();
+						hf_id = iter.col_id();
+						if (agreement_flag != null && agreement_flag.equalsIgnoreCase("D"))  {
+//	 dio okvirnog sporazuma i ne mora biti vezana za plasman 		
+							countMortgageFrame = countMortgageFrame +1;
+						} else {
+//		nije dio okvirnog sporazuma i mora biti vezana za plasman
+//		dohvacam aktivne plasmane za svaku aktivnu hipoteku		
+
+
+
+							j = 0;
+							try{			
+								#sql [ctx] iter2 = {SELECT	loan_ben_id as loa_ben_id
+													FROM
+														loan_beneficiary 
+													WHERE
+														coll_hf_prior_id = :hf_id
+													AND
+														status = 'A'
+
+								};
+							}catch(SQLException sqle){
+								
+							} 
+							
+							while (iter2.next()) {
+								j++;
+							}						
+//		zatvori iterator
+							if(iter2!=null) {
+								try {
+									iter2.close();
+								} catch (Exception ignored) {}
+							}	
+							
+							if (j == 0) {
+								ind="1";  // hipoteka nije povezana s plasmanom
+							
+							}
+							rc.debug ( "....TU SAM....CASH NEKR.....veza na plasman 4"+ j + " - " + ind);  // pokrice							
+						}
+
+					} 
+//		zatvori iterator
+					if(iter!=null) {
+						try {
+							iter.close();
+						} catch (Exception ignored) {}
+					}		
+					
+					
+					
+					if (i == 0)
+						ind="3"; 
+					rc.debug ( "....TU SAM....CASH NEKR2....hipoteka " + i + " - " + ind);  	// nema niti jedne aktivne hipoteke	
+					
+				} else {
+					ind = "0";
+				} 
+
+//				 provjera da li je predmet knjizen ako se po parametrizaciji knjizi
+				if (chkObj.accounting_indic.equalsIgnoreCase("X")) {  // ne knjizi se
+					
+				} else {
+					if (chkObj.financial_flag.equalsIgnoreCase("0")) {
+						ind = "4";
+					}		
+				}		
+				
+				
+				if (!(ind.equals("0")))
+					reply = false;
+				
+				rc.debug ( "....TU SAM....KRAJ3....."+ind+reply); 						
+			}
+			
+		}
+		
+		chkObj.ind = ind;	 		
+		return chkObj;
+	}	
+
+}  
+ 
+	  			
+		 	
+		
+		

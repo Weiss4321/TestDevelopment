@@ -1,0 +1,120 @@
+SET CURRENT sqlid = 'SIDEV'
+
+select * from batch_log where bat_def_id = 1731666003
+
+
+select * from batch_def where bat_def_name like '%bx36%';
+
+
+select * from due_term_table;
+
+select * from batch_log where bat_def_id = 1731666003 order by recording_time desc;
+
+
+
+
+
+
+SELECT
+ej.cus_id AS cusId,
+ej.initiator AS initiator,
+ej.domicil AS domicil,
+ej.eve_jou_id AS eveJouId,
+ej.sys_timestamp AS sysTimestamp,
+ej.value_date AS valueDate,
+ej.cus_acc_no AS cusAccNo,
+ej.trx_code AS trxCode,
+ej.trx_desc AS trxDesc,
+ej.use_login AS userLogin,
+ej.cash_desk_no AS cashDeskNo,
+ej.delivery_channel AS deliveryChannel,
+ej.eve_id AS eveId,
+ej.ext_event_num AS extEventNum,
+ej.reversed AS reversed,
+ej.cur_id AS curId,
+ej.fc_amount AS fcAmount,
+ej.debit_amount AS debitAmount,
+ej.credit_amount AS creditAmount,
+CURRENT TIMESTAMP AS currentTimeStamp,
+ej.financial AS financial,
+ca.cus_acc_status AS cusAccStatus
+FROM event_journal AS ej LEFT OUTER
+JOIN customer_account ca ON ej.cus_acc_id = ca.cus_acc_id
+WHERE ej.bank_sign = ? null
+AND ej.sys_timestamp BETWEEN ej.date_from = ?
+AND ej.date_until = ?
+AND ej.delivery_channel = ?
+AND ej.financial = ?
+ORDER BY sysTimestamp DESC
+
+
+
+select * from event_journal 
+where event_date between  '2012-03-01' and '2013-03-01';
+
+
+SELECT
+ej.cus_id AS cusId,
+ej.initiator AS initiator,
+ej.domicil AS domicil,
+ej.eve_jou_id AS eveJouId,
+ej.sys_timestamp AS sysTimestamp,
+ej.value_date AS valueDate,
+ej.cus_acc_no AS cusAccNo,
+ej.trx_code AS trxCode,
+ej.trx_desc AS trxDesc,
+ej.use_login AS userLogin,
+ej.cash_desk_no AS cashDeskNo,
+ej.delivery_channel AS deliveryChannel,
+ej.eve_id AS eveId,
+ej.ext_event_num AS extEventNum,
+ej.reversed AS reversed,
+ej.cur_id AS curId,
+ej.fc_amount AS fcAmount,
+ej.debit_amount AS debitAmount,
+ej.credit_amount AS creditAmount,
+--CURRENT TIMESTAMP AS currentTimeStamp,  
+ej.financial AS financial,
+ca.cus_acc_status AS cusAccStatus
+FROM event_journal AS ej LEFT OUTER
+JOIN customer_account ca ON ej.cus_acc_id = ca.cus_acc_id
+WHERE ej.bank_sign = 'HT'
+AND ej.value_date BETWEEN '01-02-2012'
+AND '01-04-2014'
+AND ej.delivery_channel = 'BOS';
+
+
+AND ej.financial = '1'
+ORDER BY sysTimestamp DESC;
+
+
+
+
+
+select * from event_journal  ej
+WHERE ej.bank_sign = 'RB'
+AND ej.value_date BETWEEN '2013-02-01'
+AND '2013-04-01'
+AND ej.delivery_channel = 'BOS'
+AND ej.financial = '1';
+
+select * FROM event_journal  ej LEFT OUTER
+JOIN customer_account ca ON ej.cus_acc_id = 5907610;
+
+
+select * from event_journal ej
+WHERE ej.bank_sign = 'RB'
+AND ej.event_date BETWEEN '01-02-2012' AND '01-04-2014'
+AND ej.delivery_channel = 'BOS';
+
+
+select * from event_journal ej
+where ej.value_date BETWEEN '2013-02-01' AND '2013-04-01';
+
+
+select register_no from customer;
+
+
+
+
+

@@ -1,0 +1,248 @@
+package hr.vestigo.modules.collateral.jcics.co05;
+
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+/**
+ *  * @author hramkr
+ *  	
+ */
+      
+public class CO051 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co05/CO051.sqlj,v 1.36 2015/04/10 08:51:28 hrazst Exp $";
+	
+	public DeclCO05 decl = null;
+
+	public CO051 (DeclCO05 decl) {
+		this.decl = decl;
+	}
+	
+	CollHeadInsertData chd = new CollHeadInsertData();	
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();	
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};		
+		
+		BigDecimal long_rating_id = null;
+		BigDecimal short_rating_id = null;
+		
+		//insert u COLL_HEAD		
+		YOY40 headIns = new YOY40(tc, chd);		
+		//punjenje objekta chd		
+		fillCHDobj();	
+		headIns.insertIntoCollHead();
+		fillDeclFromCHDObj();		
+
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();
+
+		tc.debug("dohvat collateral_id : "+collaterall_id);					
+
+		decl.COL_SEC_ID = collaterall_id;				
+
+		try{	  
+						
+				#sql [ctx]{  
+							INSERT INTO coll_vrp
+									(	col_vrp_id , 
+										col_hea_id , 
+										col_in2_id , 
+										nom_cur_id ,
+										one_nom_amo,
+										one_nom_amo_kn , 
+										one_mar_amo , 
+										one_mar_amo_kn , 
+										one_mar_amo_per ,
+										num_of_sec , 
+										nominal_amount , 
+										market_amount , 
+										nominal_amount_kn , 
+										market_amount_kn , 
+										stop_sell_ind ,
+										stop_sell_period ,
+										sto_mar_id ,
+										price_date ,
+										currency_clause,
+										iss_cus_id,
+										tem_kap_per,
+		                                margin_granica, 
+		                                margin_omjer,
+		                                custody_acc_no)
+							VALUES( :(decl.COL_SEC_ID),    													                                                
+									:(decl.COL_HEA_ID),  
+									:(decl.ISIN_ID),
+									:(decl.REAL_EST_NM_CUR_ID),
+									:(decl.Coll_txtNominalAmount),
+									:(decl.Coll_txtNominalAmountKn),
+									:(decl.Coll_txtMarketPrice),
+									:(decl.Coll_txtMarketPriceKn),
+									:(decl.Coll_txtMarketPriceFo),
+									:(decl.Coll_txtNumOfSec),
+									:(decl.Coll_txtNominalAmountTot),
+									:(decl.Coll_txtTotalMarketValue),
+									:(decl.Coll_txtNominalAmountTotKn),
+									:(decl.Coll_txtTotalMarketValueKn),
+									:(decl.Vrp_txtStopSell),
+									:(decl.Vrp_txtPeriodStopSell),
+									:(decl.MARKET_TYPE),
+									:(decl.Coll_txtMarketPriceDate),
+									:(decl.Vrp_txtValutnaKlauzula),
+									:(decl.ISSUER_ID),
+									:(decl.Vrp_txtUdjeliUPod),
+		                            :(decl.Kol_txtMarginGranica),
+		                            :(decl.Kol_txtMarginOmjer),
+		                            :(decl.Vrp_txtCustodyAccountNumber)    
+		                           )
+				};  
+			 
+		}catch(java.sql.SQLException se){  
+			 	
+		    tc.debug ( "......CO051.sqlj insert into coll_security SQL ErrorCode " + se.getErrorCode());
+		    tc.debug ( "......CO051.sqlj insert into coll_security SQL SQLState " + se.getSQLState());
+		    tc.debug ( "......CO051.sqlj insert into coll_security SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO051: Error inserting coll_security! ","err411a", null);
+		}
+		
+		chd.action = "I";		
+			
+		// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);    
+        yoyg0.setOdrediHNBPrihvatljivost(false);
+        yoyg0.azurirajPrihvatljivosti();
+        decl.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();
+
+        decl.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti(); 
+	}  //execute
+	
+	
+	private void fillCHDobj () {
+		chd.Coll_txtAcouBDate = decl.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.Coll_txtCollRzbPonder;
+		chd.Coll_txtCollTypeCode = decl.Coll_txtCollTypeCode;
+		chd.Coll_txtComDoc = decl.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.Coll_txtRevaCoefMan; 
+		chd.Coll_txtRevaDate = decl.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.Coll_txtThirdRightInNom;
+		chd.COL_TYPE_ID = decl.COL_TYPE_ID;
+		chd.REAL_EST_EUSE_ID = decl.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.CUS_ID;
+		chd.COLL_CUS_ID = decl.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.COL_PLACE;
+		chd.COL_COUNTY = decl.COL_COUNTY;
+		chd.COL_DISTRICT = decl.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.COL_RESI_QUAR;
+		chd.USE_OPEN_ID = decl.USE_OPEN_ID;
+		chd.USE_ID = decl.USE_ID;
+		chd.INSPOL_IND = decl.INSPOL_IND;
+		chd.Coll_txtDesc = decl.Coll_txtDesc;	
+		chd.recept = "CLT_SE";  
+		chd.eve_typ_id =  new java.math.BigDecimal("1603307003.0");
+		chd.Coll_txtEligibility = decl.Coll_txtEligibility;
+		chd.Coll_txtAcumBuyValue = decl.Coll_txtAcumBuyValue;
+		chd.ORIGIN_ORG_UNI_ID = decl.ORIGIN_ORG_UNI_ID;
+		chd.ORG_UNI_ID = decl.ORG_UNI_ID;
+		chd.COL_CAT_ID = decl.col_cat_id;
+		chd.save_ver_aut_flag = decl.save_ver_aut_flag;
+		chd.KolLow_txtEligibility = decl.KolLow_txtEligibility;
+		chd.ColRba_txtEligibility = decl.ColRba_txtEligibility;
+		chd.Kol_txtRbaEligDsc = decl.Kol_txtRbaEligDsc; 
+		chd.Coll_txtB1Eligibility = decl.Coll_txtB1Eligibility;
+		chd.Coll_txtB2IRBEligibility = decl.Coll_txtB2IRBEligibility;
+        chd.SPEC_STATUS = decl.SPEC_STATUS;  
+        chd.Kol_txtCRMHnb = decl.Kol_txtCRMHnb;
+                
+        chd.use_id_co = decl.USE_ID_CO;
+        chd.real_est_nom_type = decl.Coll_txtTypeTVCode;
+        chd.contract_type=decl.Coll_txtContractTypeCode;   
+        chd.COL_SUB_ID=null;
+        chd.COL_GRO_ID=null;
+	}   
+     
+	private void fillDeclFromCHDObj () {
+		decl.COL_HEA_ID = chd.COL_HEA_ID;
+		decl.Coll_txtUserLock = chd.Coll_txtUserLock;
+		decl.Coll_txtCode = chd.Coll_txtCode;
+		decl.STATUS = chd.STATUS;
+		decl.Coll_txtOpeningTs = chd.Coll_txtOpeningTs;
+		decl.EVE_ID = chd.EVE_ID;
+		decl.USER_LOCK = chd.USER_LOCK;
+		
+	    decl.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+	} 
+
+}	  
+			

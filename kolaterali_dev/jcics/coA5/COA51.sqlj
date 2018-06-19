@@ -1,0 +1,100 @@
+package hr.vestigo.modules.collateral.jcics.coA5;
+
+import hr.vestigo.framework.common.TableData;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoyG.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0.Uvjet;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Vector;
+
+
+public class COA51
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA5/COA51.sqlj,v 1.2 2011/11/08 13:42:12 hrakis Exp $";
+    public DeclCOA5 decl = null;
+    
+    public COA51(DeclCOA5 decl)
+    {
+        this.decl = decl;
+    }
+               
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+
+        BigDecimal col_hea_id;
+        
+        try
+        {
+            #sql [ctx] {
+                SELECT col_hea_id
+                INTO :(col_hea_id) 
+                FROM coll_head
+                WHERE col_num = :(decl.CollEligDetails_txtColNum) 
+            };          
+        }
+        catch (SQLException sqle)
+        {
+            throw new VestigoTMException(1, "Transaction COA51: Error selecting from COLL_HEAD!", "err383", null);
+        }
+        
+        try
+        {
+            YOYG0 yoyG0 = new YOYG0(tc,col_hea_id);
+            yoyG0.setSpremiPromjene(false);
+            yoyG0.azurirajPrihvatljivosti();
+            
+            if(yoyG0.getHNBPrihvatljivost() != null)
+            {
+                decl.CollEligDetails_txtHNB = yoyG0.getHNBPrihvatljivost();
+                decl.CollEligDetails_txtHNB_desc = yoyG0.getOpisHNBPrihvatljivosti();
+                fillTable(decl.tblHNB, yoyG0.getUvjetiZaHNB());
+            }
+            
+            if(yoyG0.getB2StandPrihvatljivost() != null)
+            {
+                decl.CollEligDetails_txtB2Stand = yoyG0.getB2StandPrihvatljivost();
+                decl.CollEligDetails_txtB2Stand_desc = yoyG0.getOpisB2StandPrihvatljivosti();
+                fillTable(decl.tblB2Stand, yoyG0.getUvjetiZaB2Stand());
+            }
+            
+            if(yoyG0.getB2IRBPrihvatljivost() != null)
+            {
+                decl.CollEligDetails_txtB2IRB = yoyG0.getB2IRBPrihvatljivost();
+                decl.CollEligDetails_txtB2IRB_desc = yoyG0.getOpisB2IRBPrihvatljivosti();
+                fillTable(decl.tblB2IRB, yoyG0.getUvjetiZaB2IRB());
+            }
+            
+            if(yoyG0.getNDPrihvatljivost() != null)
+            {
+                decl.CollEligDetails_txtND = yoyG0.getNDPrihvatljivost();
+                decl.CollEligDetails_txtND_desc = yoyG0.getOpisNDPrihvatljivosti();
+                fillTable(decl.tblND, yoyG0.getUvjetiZaND());
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA51: Error executing YOYG0!", "err411a", null);
+        }
+    }
+    
+    private void fillTable(TableData table, LinkedHashMap map)
+    {
+        for (Iterator iter = map.keySet().iterator(); iter.hasNext(); )
+        {
+            Vector row = new Vector();
+            Vector unique = new Vector();
+            Uvjet uvjet = (Uvjet)iter.next();
+            Boolean vrijednost = (Boolean)map.get(uvjet);
+            row.add(uvjet.toString());
+            row.add(vrijednost.equals(Boolean.TRUE) ? "D" : "N");
+            table.addRow(row,unique);
+        }
+    }
+}

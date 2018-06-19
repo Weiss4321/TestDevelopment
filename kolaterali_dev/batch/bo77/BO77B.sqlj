@@ -1,0 +1,215 @@
+package hr.vestigo.modules.collateral.batch.bo77;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.ExcelUtils;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+
+
+/**
+ * Klasa za kreiranje izvještaja 3.1 Main Value Changes
+ * @author hrakis
+ */
+public class BO77B
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo77/BO77B.sqlj,v 1.2 2013/09/11 13:22:16 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private Date value_date;
+
+    private YOYM0 mapping_3_1;
+    private YOYM0 mapping_gctc;
+
+    private Workbook workbook;
+    private ExcelStyleData styles;
+    private Sheet sheet1;
+    private int rowIndex = 0;
+    
+    private final BigDecimal zero = new BigDecimal("0.00");
+    private final BigDecimal one = new BigDecimal("1.00");
+    private final BigDecimal hundred = new BigDecimal("100.00");
+    private final BigDecimal minus_hundred = new BigDecimal("-100.00");
+    private final BigDecimal change_trigger = new BigDecimal("10");
+
+    
+    /**
+     * Konstruktor klase.
+     * @param batchContext Kontekst u kojem se izvršava obrada
+     * @param value_date Datum valute (datum za koji se radi izvještaj)
+     */
+    public BO77B(BatchContext batchContext, Date value_date) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+        this.value_date = value_date;
+
+        // mapiranja
+        this.mapping_3_1 = new YOYM0(bc, "3.1", value_date);    // kolaterali koji ulaze u izvještaj 3.1
+        this.mapping_gctc = new YOYM0(bc, "gctc", value_date);  // GCTC kodovi
+
+        // kreiraj workbook
+        this.workbook = new SXSSFWorkbook(100);
+        this.styles = ExcelStyleData.createStyles(workbook);
+
+        // kreiraj sheet
+        this.sheet1 = workbook.createSheet("Main value changes");
+        ExcelUtils.setColumnWidths(sheet1, new int[] { 85, 285, 75, 180, 160, 200, 90, 100, 110, 110, 75, 65, 90 });
+
+        // kreiraj naslov izvještaja
+        Row row = sheet1.createRow(rowIndex);
+        ExcelUtils.createCell(row, 0, "3.1", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "MAIN VALUE CHANGES", styles.titleStyle);
+        rowIndex += 4;
+
+        // kreiraj header izvještaja
+        row = sheet1.createRow(rowIndex);
+        ExcelUtils.createCell(row, 0, "Customer ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 1, "Customer Name", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 2, "Customer Rating", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 3, "Relationship manager", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 4, "Collateral ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 5, "Collateral type", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 6, "Last evaluation", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 7, "Latest evaluator", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 8, "WCOV current", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 9, "WCOV previously", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 10, "WCOV %-change", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 11, "Eligibility", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 12, "Expiry date", styles.headingWrapAllBordersStyle);
+        rowIndex++;
+    }
+
+    
+    /**
+     * Metoda koja provjerava ulazi li zadani kolateral u izvještaj i stvara redak u izlaznoj datoteci za njega (ako on u isti ulazi).
+     * @param collateral Objekt s podacima o kolateralu
+     * @param date Datum za koji vrijede dani podaci
+     */
+    public void processCollateral(CollateralData collateral, Date date) throws Exception
+    {
+        // ako datum nije jednak datumu valute, preskoèi ovaj kolateral
+        if (date.compareTo(value_date) != 0) return;
+
+        // provjeri da li kolateral ulazi u izvještaj 3.1
+        if (mapping_3_1.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id) == null)
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 3.1.");
+            return;
+        }
+        
+        // mapiraj kolateral na pripadajuæi tip
+        GcmTypeData type = mapping_gctc.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        if (type == null)
+        {
+            bc.warning("...Greska u parametrizaciji - nije definiran GCTC kod. Kolateral ne ulazi u izvjestaj 3.1.");
+            return;
+        }
+        
+        // provjeri da li su postojali podaci prije 7 dana
+        if (collateral.week_before_collateral == null)
+        {
+            bc.debug("...Za kolateral nema podataka od prije 7 dana. Kolateral ne ulazi u izvjestaj 3.1.");
+            return;
+        }
+        
+        // provjeri da li su WCOV vrijednosti prazne ili nula
+        if (isNullOrZero(collateral.week_before_collateral.wcov) && isNullOrZero(collateral.wcov))
+        {
+            bc.debug("...WCOV vrijednost od prije 7 dana i trenutna je " + collateral.week_before_collateral.wcov + ". Kolateral ne ulazi u izvjestaj 3.1.");
+            return;
+        }
+        
+        // izraèunaj promjenu u postotcima        
+        BigDecimal wcov_change = zero;
+        if (isNullOrZero(collateral.week_before_collateral.wcov) && !isNullOrZero(collateral.wcov))
+        {
+            wcov_change = hundred;
+        }
+        else if (!isNullOrZero(collateral.week_before_collateral.wcov) && isNullOrZero(collateral.wcov))
+        {
+            wcov_change = minus_hundred;
+        }
+        else
+        {
+            wcov_change = collateral.wcov.divide(collateral.week_before_collateral.wcov, 20, RoundingMode.HALF_UP).subtract(one).multiply(hundred).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        bc.debug("...WCOV_CHANGE = " + wcov_change + "%");
+        
+        // provjeri da li je promjena dovoljno velika da kolateral uðe u izvještaj
+        if (wcov_change.abs().compareTo(change_trigger) <= 0)
+        {
+            bc.debug("...Promjena WCOV vrijednosti u odnosu na prosli tjedan nije veca od " + change_trigger + "%. Kolateral ne ulazi u izvjestaj 3.1.");
+            return;
+        }
+
+        // upisivanje podatka u izvještaj 3.1
+        Row row = sheet1.createRow(rowIndex);
+        ExcelUtils.createCell(row, 0, collateral.placement_owner_register_no, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 1, collateral.placement_owner_name, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 2, collateral.placement_owner_rating, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 3, collateral.relationship_manag_name, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 4, collateral.col_num, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 5, type.name, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 6, collateral.last_evaluation, styles.normalDateAllBordersStyle);
+        ExcelUtils.createCell(row, 7, collateral.latest_evaluator, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 8, collateral.wcov, styles.normalNumericAllBordersStyle);
+        ExcelUtils.createCell(row, 9, collateral.week_before_collateral.wcov, styles.normalNumericAllBordersStyle);
+        ExcelUtils.createCell(row, 10, wcov_change, styles.normalNumericAllBordersStyle);
+        ExcelUtils.createCell(row, 11, collateral.b2_irb_eligibility, styles.normalCenterAllBordersStyle);
+        ExcelUtils.createCell(row, 12, collateral.coll_exp_date, styles.normalDateAllBordersStyle);
+        rowIndex++;
+        bc.debug("...Kolateral zapisan u izvjestaj 3.1.");
+    }
+    
+    
+    private boolean isNullOrZero(BigDecimal bd)
+    {
+        return (bd == null || bd.compareTo(zero) == 0);
+    }
+    
+    
+    /**
+     * Metoda koja sprema kreirani izvještaj. 
+     */
+    public void createReport() throws Exception
+    {
+        // spremi izvještaj
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
+        String fileName = bc.getOutDir() + "/" + "Main_Value_Change" + "_" + dateFormat.format(value_date) + ".xlsx";
+        FileOutputStream fileOut = new FileOutputStream(fileName);
+        workbook.write(fileOut);
+        fileOut.close();
+        dispose();
+
+        // kreiraj marker datoteku
+        new File(fileName + ".marker").createNewFile();
+        
+        bc.info("Uspjesno kreiran izvjestaj 3.1.");
+    }
+
+    
+    /**
+     * Metoda koja briše privremene datoteke koje se stvaraju za vrijeme kreiranja izvještaja.
+     */
+    public void dispose()
+    {
+        if (workbook instanceof SXSSFWorkbook) ((SXSSFWorkbook)workbook).dispose();
+    }
+}

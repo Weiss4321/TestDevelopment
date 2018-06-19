@@ -1,0 +1,91 @@
+package hr.vestigo.modules.collateral.jcics.coA2;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.framework.util.CharUtil;
+
+import java.sql.SQLException;  
+import java.math.BigDecimal;
+import java.util.Vector;
+import java.sql.Date;
+ 
+#sql iterator IterColGcmTypes (
+    BigDecimal col_gcm_typ_id,
+    String map_code,    
+    Integer ord_no,
+    String code,
+    String name,    
+    String name_add,
+    String param_value,
+    String param_indic    
+);  
+
+public class COA24 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA2/COA24.sqlj,v 1.1 2017/04/14 10:17:31 hraziv Exp $";
+    private DeclCOA2 d = null;
+
+    public COA24(DeclCOA2 d) {
+        this.d = d;
+    }
+    
+    public void execute (TransactionContext tc) throws Exception {
+        ConnCtx ctx = tc.getContext();
+        System.out.println("COA24_1");
+        String map_code = d.collgcmtyplookupmapping.map_code.replace("*", "%");
+        String code = d.collgcmtyplookupmapping.code.replace("*", "%");
+        String name = d.collgcmtyplookupmapping.name.replace("*", "%");        
+        Date currentDate = d.collgcmtyplookupmapping.currentDate;
+        System.out.println("COA24_2");
+        System.out.println("map_code:" + map_code + "!");
+        System.out.println("code:" + code + "!");
+        System.out.println("name:" + name + "!");
+        System.out.println("currentDate:" + currentDate + "!");
+        if(map_code.equals("")) map_code="%";
+        if(code.equals("")) code="%";
+        if(name.equals("")) name="%";        
+        
+        IterColGcmTypes iter=null;
+        
+        #sql [ctx] iter = {
+                   SELECT COL_GCM_TYP_ID, MAP_CODE, ORD_NO, CODE, NAME, NAME_ADD, PARAM_VALUE, PARAM_INDIC, DATE_FROM, DATE_UNTIL 
+                   FROM coll_gcm_type
+                   WHERE 
+                   :(currentDate) BETWEEN date_from AND date_until 
+                   AND 
+                   trim(map_code) LIKE :(map_code) 
+                   AND trim(code) LIKE :(code)
+                   AND trim(name) LIKE :(name)  
+                   WITH UR
+        };           
+        
+        int number_of_rows=TransactionContext.LOOKUP_FETCH_SIZE;
+        int level=d.collgcmtyplookupmapping.LookUpLevel.intValue();
+        int start=number_of_rows*level;
+
+        
+        int count=0;
+        int count_returned=0;
+        while (iter.next()){
+            System.out.println("count_returned:" + count_returned + "!");
+            if(start<=count && start+number_of_rows>count){
+                Vector row=new Vector();
+                Vector unique = new Vector();               
+                                 
+                unique.add(iter.col_gcm_typ_id());
+                row.add(iter.map_code());
+                row.add(iter.code());
+                row.add(iter.name());                
+                
+                d.collgcmtyplookupmapping.LookUpTableData.addRow(row,unique);
+                count_returned++;
+            }else if(count>=(start+number_of_rows)) {
+                break;
+            }
+            count++;
+        }
+        
+        if(iter != null) iter.close();
+    }
+}

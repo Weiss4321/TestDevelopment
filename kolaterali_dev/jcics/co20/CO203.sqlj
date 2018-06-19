@@ -1,0 +1,104 @@
+package hr.vestigo.modules.collateral.jcics.co20;
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.*;	
+
+//ovo u import OBAVEZNO (tako mora biti po nareðenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+/**
+ * CO203 class update data  into table RE_SUB_TYPE
+ *  
+ */
+public class CO203 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co20/CO203.sqlj,v 1.3 2006/06/14 07:53:53 hraamh Exp $";
+    public DeclCO20 decl = null;
+	
+	public CO203 (DeclCO20 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+		
+			 //provjerava da li vec postoji isti vlasnik
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			 		
+    
+			
+			try{	
+		    	#sql [ctx]{  insert into re_sub_type_a (
+		    					RE_SUB_TYPE_ID,
+		    					RE_SUB_TYPE_CODE,
+		    					RE_SUB_TYPE_DESC,
+		    					RE_TYPE_ID,
+		    					RE_SUB_STATUS,
+		    					RE_SUB_SPEC_STAT,
+		    					USE_OPEN_ID,
+		    					USE_ID,
+		    					OPENING_TS,
+		    					USER_LOCK,
+		    					BANK_SIGN
+		    					)
+		    				VALUES (
+			    				:(decl.resubtypeupdatem.RE_SUB_TYPE_ID_a), 
+								:(decl.resubtypeupdatem.RE_SUB_TYPE_CODE_a), 
+								:(decl.resubtypeupdatem.RE_SUB_TYPE_DESC_a),
+								:(decl.resubtypeupdatem.RE_TYPE_ID_a),
+								:(decl.resubtypeupdatem.RE_SUB_STATUS_a),
+		    					:(decl.resubtypeupdatem.RE_SUB_SPEC_STAT_a),
+								:(decl.resubtypeupdatem.USE_OPEN_ID_a),
+								:(decl.resubtypeupdatem.USE_ID_a),
+								:(decl.resubtypeupdatem.OPENING_TS_a),
+								:(decl.resubtypeupdatem.USER_LOCK_a),
+								:(tc.getBankSign())
+		    						)
+     		        	};
+     		        	
+		}catch(java.sql.SQLException se){
+					tc.debug ( "......CO203.sqlj insert into inserting re_sub_type_a SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO203.sqlj insert into inserting re_sub_type_a SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO203.sqlj insert into inserting re_sub_type_a SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO203: Error inserting re_sub_type_a! ","err411a", null);
+		}
+			
+			
+			
+			
+			
+	
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n......CO203.sqlj code " + decl.resubtypeupdatem.ReSubTypeD_txtCode);
+			tc.debug ( "\n......CO203.sqlj desc " + decl.resubtypeupdatem.ReSubTypeD_txtName);
+			tc.debug ( "\n......CO203.sqlj status " + decl.resubtypeupdatem.STATUS);
+			tc.debug ( "\n......CO203.sqlj use_id " + decl.resubtypeupdatem.use_id);
+			tc.debug ( "\n......CO203.sqlj re_sub_type_id " + decl.resubtypeupdatem.RE_SUB_TYPE_ID);
+			tc.debug ( "\n......CO203.sqlj user_lock " + decl.resubtypeupdatem.USER_LOCK);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			
+			//UPDATE re_sub_type
+			try{	
+			    #sql [ctx]{ UPDATE re_sub_type
+					SET
+					re_sub_type_code	= :(decl.resubtypeupdatem.ReSubTypeD_txtCode),
+					re_sub_type_desc	= :(decl.resubtypeupdatem.ReSubTypeD_txtName),
+					re_sub_status		= :(decl.resubtypeupdatem.STATUS),
+					use_id				= :(decl.resubtypeupdatem.use_id),		
+    				user_lock			= current timestamp
+					WHERE
+					re_sub_type_id		= :(decl.resubtypeupdatem.RE_SUB_TYPE_ID) 
+					AND
+					user_lock			= :(decl.resubtypeupdatem.USER_LOCK)
+		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO203.sqlj update re_sub_type SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO203.sqlj update re_sub_type SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO203.sqlj update re_sub_type SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO203: Error updating re_sub_type! ","err411a", null);
+				}
+		}
+}	
+			

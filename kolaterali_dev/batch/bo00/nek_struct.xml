@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+		<Data><Parameter Name="naslov"/></Data>	
+	</Row>	
+	<Row>
+		<Data><Parameter Name="datum"/></Data>	
+	</Row>	
+	<Row>
+		<Data><Parameter Name="orgUnit"/></Data>	
+	</Row>	
+	<Row>
+	</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="c0"/></Data>
+			<Data><Field Name="c1"/></Data>
+			<Data><Field Name="c2"/></Data>
+			<Data><Field Name="c3"/></Data>
+			<Data><Field Name="c4"/></Data>
+			<Data><Field Name="c5"/></Data>
+			<Data><Field Name="c6"/></Data>
+			<Data><Field Name="c7"/></Data>
+			<Data><Field Name="c8"/></Data>
+			<Data><Field Name="c9"/></Data>
+			<Data><Field Name="c10"/></Data>
+			<Data><Field Name="c11"/></Data>
+			<Data><Field Name="c12"/></Data>
+			<Data><Field Name="c13"/></Data>
+			<Data><Field Name="c14"/></Data>
+			<Data><Field Name="c15"/></Data>
+			<Data><Field Name="c16"/></Data>
+			<Data><Field Name="c17"/></Data>
+			<Data><Field Name="c18"/></Data>
+			<Data><Field Name="c19"/></Data>
+			<Data><Field Name="c20"/></Data>
+			<Data><Field Name="c21"/></Data>
+			<Data><Field Name="c22"/></Data>
+			<Data><Field Name="c23"/></Data>
+			<Data><Field Name="c24"/></Data>
+			<Data><Field Name="c25"/></Data>
+			<Data><Field Name="c26"/></Data>
+			<Data><Field Name="c27"/></Data>
+			<Data><Field Name="c28"/></Data>
+			<Data><Field Name="c29"/></Data>
+			<Data><Field Name="c30"/></Data>
+			<Data><Field Name="c31"/></Data>
+			<Data><Field Name="c32"/></Data>
+			<Data><Field Name="c33"/></Data>
+			<Data><Field Name="c34"/></Data>
+			<Data><Field Name="c35"/></Data>
+			<Data><Field Name="c36"/></Data>
+			<Data><Field Name="c37"/></Data>
+			<Data><Field Name="c38"/></Data>
+			<Data><Field Name="c39"/></Data>
+			<Data><Field Name="c40"/></Data>
+			<Data><Field Name="c41"/></Data>
+			<Data><Field Name="c42"/></Data>
+			<Data><Field Name="c43"/></Data>
+			<Data><Field Name="c44"/></Data>
+			<Data><Field Name="c45"/></Data>
+			<Data><Field Name="c46"/></Data>
+			<Data><Field Name="c47"/></Data>
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>	

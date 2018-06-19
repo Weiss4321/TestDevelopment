@@ -1,0 +1,266 @@
+package hr.vestigo.modules.collateral.batch.bo77;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.ExcelUtils;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Iterator;
+
+import org.apache.poi.hssf.util.CellReference;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+
+
+/**
+ * Klasa za generiranje izvještaja RE Location and Concentration (1.5)
+ * @author hrakis
+ */
+public class BO776
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo77/BO776.sqlj,v 1.2 2013/09/11 13:21:31 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private Date value_date;
+    
+    private YOYM0 mapping_re_loc_conc;
+    private YOYM0 mapping_locations;
+    
+    private HashMap data;
+    
+    private Workbook workbook;
+
+    
+    /**
+     * Konstruktor klase.
+     * @param batchContext Kontekst u kojem se izvršava obrada
+     * @param value_date Datum valute (datum za koji se radi izvještaj)
+     */
+    public BO776(BatchContext batchContext, Date value_date) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+        this.value_date = value_date;
+        
+        // mapiranja
+        this.mapping_re_loc_conc = new YOYM0(bc, "re_loc_conc", value_date);    // kolaterali koji ulaze u izvještaj 1.5
+        this.mapping_locations = new YOYM0(bc, "re_locations", value_date);     // lokacije kolaterala
+        
+        // kreiraj strukturu u kojoj æe se èuvati podaci - HashMap u kojem je kljuè lokacija kolaterala, a vrijednost HashMap kojem je kljuè tip kolaterala, a vrijednost sumarni podaci za tip
+        this.data = new HashMap();
+        Iterator iterLoc = mapping_locations.getGcmTypes().iterator();
+        while (iterLoc.hasNext())
+        {
+            GcmTypeData location = (GcmTypeData)iterLoc.next();
+            HashMap map = new HashMap();
+            Iterator iterType = mapping_re_loc_conc.getGcmTypes().iterator();
+            while (iterType.hasNext())
+            {
+                GcmTypeData type = (GcmTypeData)iterType.next();
+                map.put(type, new SummaryData(type));
+            }
+            data.put(location, map);
+        }
+    }
+
+    
+    /**
+     * Metoda koja provjerava ulazi li zadani kolateral u izvještaj, mapira ga na pripadajuæi tip i pribraja vrijednosti u sumarne podatke tog tipa.
+     * @param collateral Objekt s podacima o kolateralu
+     * @param date Datum za koji vrijede dani podaci
+     */
+    public void processCollateral(CollateralData collateral, Date date) throws Exception
+    {
+        // ako datum nije jednak datumu valute, preskoèi ovaj kolateral
+        if (date.compareTo(value_date) != 0) return;
+        
+        // provjeri da li kolateral ulazi u izvještaj i mapiraj kolateral na pripadajuæi tip
+        GcmTypeData type = mapping_re_loc_conc.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        if (type == null)
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 1.5.");
+            return;
+        }
+        
+        // dohvati ID grada i županije u kojem se nalazi nekretnina
+        selectCityAndDistrictId(collateral);
+        
+        // za svaku lokaciju provjeri da li se nekretnina nalazi na njoj (moguæe je da nekretnina ulazi u više lokacija)     
+        Iterator iterLoc = mapping_locations.getGcmTypes().iterator();
+        while (iterLoc.hasNext())
+        {
+            GcmTypeData location = (GcmTypeData)iterLoc.next();             // lokacija
+            BigDecimal location_id = new BigDecimal(location.param_value);  // ID lokacije (ID grada ili županije)
+            
+            // ako je lokacija grad, provjeri grad u kojem se nalazi kolateral; ako je lokacija županija, provjeri županiju u kojoj se nalazi kolateral
+            if( ("CITY".equalsIgnoreCase(location.param_indic) && location_id.equals(collateral.city_id)) || ("DISTRICT".equalsIgnoreCase(location.param_indic) && location_id.equals(collateral.district_id)) )
+            {
+                HashMap map = (HashMap)data.get(location);          // dohvati mapu sa sumarnim podacima za svaki tip
+                SummaryData summary = (SummaryData)map.get(type);   // dohvati sumarne podatke za tip kolaterala kojemu pripada nekretnina
+                summary.ncv_sum = summary.ncv_sum.add(collateral.ncv);
+                summary.wcov_sum = summary.wcov_sum.add(collateral.wcov);
+                summary.wcv_sum = summary.wcv_sum.add(collateral.wcv);
+                summary.count++;
+                bc.debug("...Kolateral pribrojen u izvjestaj 1.5. u regiju " + location.name_add + " pod tipom " + type.name + ".");
+            }
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa ID grada i županije u kojem je smještena nekretnina.
+     * @param collateral objekt s podacima o kolateralu
+     */
+    public void selectCityAndDistrictId(CollateralData collateral) throws SQLException
+    {
+        try
+        {    
+            bc.startStopWatch("selectCityAndDistrictId");
+            #sql[connCtx] {
+                SELECT b.pol_map_id, d.pol_map_id
+                INTO :(collateral.city_id), :(collateral.district_id)
+                FROM coll_restate a
+                LEFT OUTER JOIN political_map b ON a.pol_map_id_ad = b.pol_map_id
+                LEFT OUTER JOIN political_map c ON b.parent_pol_map_id = c.pol_map_id
+                LEFT OUTER JOIN political_map d ON c.parent_pol_map_id = d.pol_map_id
+                WHERE a.col_hea_id = :(collateral.col_hea_id)
+                WITH UR
+            };
+            bc.debug("...CITY_ID = " + collateral.city_id);
+            bc.debug("...DISTRICT_ID = " + collateral.district_id);
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata grada i zupanije nekretnine! (COL_HEA_ID=" + collateral.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCityAndDistrictId");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja na temelju prikupljenih podataka kreira izvještaj u obliku Excel datoteke. 
+     */
+    public void createReport() throws Exception
+    {
+        // kreiraj workbook
+        this.workbook = new SXSSFWorkbook(100);
+        ExcelStyleData styles = ExcelStyleData.createStyles(workbook);
+
+        // kreiraj sheet
+        Sheet sheet = workbook.createSheet("RE location and concentration");
+        int[] firstColumns = new int[] { 35, 54, 250, 200 };
+        int[] allColumns = new int[26];
+        for (int colIdx = 0; colIdx < allColumns.length; colIdx++) allColumns[colIdx] = 100;
+        System.arraycopy(firstColumns, 0, allColumns, 0, firstColumns.length);
+        ExcelUtils.setColumnWidths(sheet, allColumns);
+
+        // kreiraj naslov izvještaja
+        int rowIndex = 0;
+        Row row = sheet.createRow(rowIndex);
+        ExcelUtils.createCell(row, 0, "1.5", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "RE Location and Concentration", styles.titleStyle);
+        rowIndex += 3;
+        
+        // kreiraj header izvještaja
+        row = sheet.createRow(rowIndex);
+        Row row2 = sheet.createRow(rowIndex + 1);
+        Iterator iterType = mapping_re_loc_conc.getGcmTypes().iterator();
+        int columnIndex = 4;
+        while (iterType.hasNext())  // svaki tip ima NCV i WCV kolonu
+        {
+            GcmTypeData type = (GcmTypeData)iterType.next();
+            ExcelUtils.createCell(row, columnIndex, type.name, styles.headingWrapAllBordersStyle);
+            ExcelUtils.createCell(row, columnIndex + 1, "", styles.headingWrapAllBordersStyle);
+            sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex, columnIndex, columnIndex + 1));
+            ExcelUtils.createCell(row2, columnIndex, "NCV", styles.headingWrapAllBordersStyle);
+            ExcelUtils.createCell(row2, columnIndex + 1, "WCV", styles.headingWrapAllBordersStyle);
+            columnIndex += 2;
+        }
+        ExcelUtils.createCell(row, columnIndex, "Sum", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, columnIndex + 1, "", styles.headingWrapAllBordersStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex, columnIndex, columnIndex + 1));
+        ExcelUtils.createCell(row2, columnIndex, "NCV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row2, columnIndex + 1, "WCV", styles.headingWrapAllBordersStyle);
+        columnIndex += 2;
+        
+        rowIndex += 3;
+        
+        // kreiraj red za svaku lokaciju
+        Iterator iterLoc = mapping_locations.getGcmTypes().iterator();
+        while (iterLoc.hasNext())
+        {
+            GcmTypeData location = (GcmTypeData)iterLoc.next(); // lokacija
+            HashMap types = (HashMap)data.get(location);        // mapa svih tipova za lokaciju
+            
+            row = sheet.createRow(rowIndex);
+            ExcelUtils.createCell(row, 1, location.code, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 2, location.name, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 3, location.name_add, styles.normalNumericAllBordersStyle);
+            
+            columnIndex = 4;
+            
+            String ncv_sum_formula = "SUM(";  // formula za æeliju koja sadrži ukupnu sumu NCV
+            String wcv_sum_formula = "SUM(";  // formula za æeliju koja sadrži ukupnu sumu WCV
+            
+            // kreiraj kolone za svaki tip
+            iterType = mapping_re_loc_conc.getGcmTypes().iterator();
+            while (iterType.hasNext())
+            {
+                GcmTypeData type = (GcmTypeData)iterType.next();        // tip kolaterala
+                SummaryData summary = (SummaryData)types.get(type);     // sumarni podaci za tip kolaterala
+                ncv_sum_formula += "," + CellReference.convertNumToColString(columnIndex) + (rowIndex+1);
+                ExcelUtils.createCell(row, columnIndex++, summary.ncv_sum, styles.normalNumericAllBordersStyle);
+                wcv_sum_formula += "," + CellReference.convertNumToColString(columnIndex) + (rowIndex+1);
+                ExcelUtils.createCell(row, columnIndex++, summary.wcv_sum, styles.normalNumericAllBordersStyle);
+            }
+            ncv_sum_formula = ncv_sum_formula.replaceFirst(",", "") + ")";
+            wcv_sum_formula = wcv_sum_formula.replaceFirst(",", "") + ")";
+            ExcelUtils.createCell(row, columnIndex++, (BigDecimal)null, styles.normalNumericAllBordersStyle).setCellFormula(ncv_sum_formula);
+            ExcelUtils.createCell(row, columnIndex++, (BigDecimal)null, styles.normalNumericAllBordersStyle).setCellFormula(wcv_sum_formula);
+
+            rowIndex++;
+        }
+
+        // spremi izvještaj
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
+        String fileName = bc.getOutDir() + "/" + "RE_Location_and_Concentration" + "_" + dateFormat.format(value_date) + ".xlsx";
+        FileOutputStream fileOut = new FileOutputStream(fileName);
+        workbook.write(fileOut);
+        fileOut.close();
+        dispose();
+        
+        // kreiraj marker datoteku
+        new File(fileName + ".marker").createNewFile();
+        
+        bc.info("Uspjesno kreiran izvjestaj 1.5.");
+    }
+    
+    
+    /**
+     * Metoda koja briše privremene datoteke koje se stvaraju za vrijeme kreiranja izvještaja.
+     */
+    public void dispose()
+    {
+        if (workbook instanceof SXSSFWorkbook) ((SXSSFWorkbook)workbook).dispose();
+    }
+}

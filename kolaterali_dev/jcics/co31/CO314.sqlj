@@ -1,0 +1,174 @@
+package hr.vestigo.modules.collateral.jcics.co31;
+
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO314
+ *  	
+ */
+
+ 
+
+public class CO314 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co31/CO314.sqlj,v 1.2 2006/11/08 12:37:31 hrazst Exp $";
+	public DeclCO31 decl = null;
+	
+	public CO314 (DeclCO31 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();		
+	
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			String ocode=null;
+			String ocode_cad_reg=null;
+			BigDecimal oparent_cad_map_id=null;
+			BigDecimal ocad_map_typ_id=null;
+			String oname=null;
+			String oname_sc=null;
+			BigDecimal opol_map_id=null;
+			BigDecimal oco_id=null;
+			BigDecimal ocou_id=null;
+			String obank_sign=null;
+			Timestamp ouser_lock=null;
+			BigDecimal ouse_open_id=null;
+			BigDecimal ouse_id=null;
+			Timestamp oopen_ts=null;
+			
+			try {
+			    #sql [ctx] {SELECT code, code_cad_reg, parent_cad_map_id, cad_map_typ_id, name, name_sc, pol_map_id, 
+									co_id, cou_id, bank_sign, user_lock, use_open_id, use_id, open_ts
+							INTO :ocode, :ocode_cad_reg, :oparent_cad_map_id, :ocad_map_typ_id, :oname,	:oname_sc, :opol_map_id,	
+									:oco_id, :ocou_id, :obank_sign, :ouser_lock, :ouse_open_id,	:ouse_id, :oopen_ts	
+			    			FROM CADASTRE_MAP 
+			    			WHERE 
+								cad_map_id=:(decl.cadastremapdialogdeletem.CAD_MAP_ID) 
+			    	};
+
+		    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO313.sqlj select old data cadastre_map SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO313.sqlj select old data cadastre_map SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO313.sqlj select old data cadastre_map SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO313: Error inserting into cadastre_map! ","err411a", null);
+            }
+			
+       		try{	
+				   
+				#sql [ctx, exCtx]{ 
+			    	DELETE FROM CADASTRE_MAP
+						WHERE
+			    		cad_map_id =:(decl.cadastremapdialogdeletem.CAD_MAP_ID)
+			    		AND user_lock =:(decl.cadastremapdialogdeletem.USER_LOCK)  
+			    	};
+				
+			    	if (exCtx.getUpdateCount() == 0) {
+						throw new VestigoTMException(1,"Transaction CO314: Error deleting cadastre_map becouse of user_lock","erruptzst2", null);
+					}
+				}catch(java.sql.SQLException se){
+						tc.debug ( "......CO314.sqlj delete from cadastre_map SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO314.sqlj delete from cadastre_map SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO314.sqlj delete from cadastre_map SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO314: Error deleting row in coll_owners! ","err411a", null);
+				}
+				try{	
+						#sql [ctx]{	INSERT INTO CADASTRE_MAP_A
+			    					          	(CAD_MAP_ID, 
+												CODE,
+												CODE_CAD_REG,
+												PARENT_CAD_MAP_ID,
+												CAD_MAP_TYP_ID,
+												NAME, 
+												NAME_SC, 
+												POL_MAP_ID, 		
+												CO_ID, 
+												COU_ID,
+												BANK_SIGN,		
+												USER_LOCK,
+												STATUS,
+												USE_OPEN_ID,
+												USE_ID, 
+												OPEN_TS 
+			    								) 
+			    							VALUES(:(decl.cadastremapdialogdeletem.CAD_MAP_ID),
+													:ocode,
+													:ocode_cad_reg,
+													:oparent_cad_map_id,
+													:ocad_map_typ_id,
+													:oname,
+													:oname_sc,
+													:opol_map_id,
+													:oco_id,
+													:ocou_id,
+													:obank_sign,
+													:ouser_lock,
+													'D',
+													:ouse_open_id,			
+													:ouse_id,
+													:oopen_ts
+			    							)
+			 	}; 
+					
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO314.sqlj insert into cadastre_map_A SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO314.sqlj insert into cadastre_map_A SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO314.sqlj insert into cadastre_map_A SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO314: Error inserting cadastre_map_A! ","err411a", null);
+			}	
+			try{	
+				#sql [ctx]{	INSERT INTO CADASTRE_MAP_A
+		          			(CAD_MAP_ID, 
+							CODE,
+							CODE_CAD_REG,
+							PARENT_CAD_MAP_ID,
+							CAD_MAP_TYP_ID,
+							NAME, 
+							NAME_SC, 
+							POL_MAP_ID, 		
+							CO_ID, 
+							COU_ID,
+							BANK_SIGN,		
+							USER_LOCK,
+							STATUS,
+							USE_OPEN_ID,
+							USE_ID, 
+							OPEN_TS 
+						) 
+						VALUES(:(decl.cadastremapdialogdeletem.CAD_MAP_ID),
+							:ocode,
+							:ocode_cad_reg,
+							:oparent_cad_map_id,
+							:ocad_map_typ_id,
+							:oname,
+							:oname_sc,
+							:opol_map_id,
+							:oco_id,
+							:ocou_id,
+							:obank_sign,
+							current timestamp,
+							'D',
+							:ouse_open_id,			
+							:(decl.cadastremapdialogdeletem.use_id),
+							:oopen_ts
+					)
+				}; 
+				
+		}catch(java.sql.SQLException se){
+					tc.debug ( "......CO314.sqlj insert into cadastre_map_A SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO314.sqlj insert into cadastre_map_A SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO314.sqlj insert into cadastre_map_A SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO314: Error inserting cadastre_map_A! ","err411a", null);
+		}	
+
+	}//execute
+
+}	
+			

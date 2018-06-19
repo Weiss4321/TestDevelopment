@@ -1,0 +1,266 @@
+package hr.vestigo.modules.collateral.jcics.co16;
+
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.*;
+import java.math.BigDecimal;
+import hr.vestigo.framework.remote.transaction.*;
+
+
+#sql iterator Iter161a (
+    String acc_no,
+    String register_no,
+    String dwh_status,
+    String status,
+    String name,
+    BigDecimal loan_ben_id,
+    BigDecimal la_acc_id,
+    BigDecimal cus_id,
+    BigDecimal coll_hf_prior_id,
+    BigDecimal col_hea_id,
+    String request_no,
+    String aps_rqst_no,
+    String contract_no,
+    BigDecimal rvrd,
+    BigDecimal rvod
+);	
+
+/**
+ * CO161 class selects all data from table LOAN_BENEFICIARY
+ * into list screen and puts this data into vectors LDB.
+ */
+public class CO166 extends SQLJScrollableRemoteTransaction
+{
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co16/CO166.sqlj,v 1.10 2014/10/06 11:39:15 hraskd Exp $";
+	
+	public DeclCO16 decl = null;
+	
+	private Iter161a iter1 = null;
+	
+	public CO166 (DeclCO16 decl)
+	{
+		this.decl = decl;
+	}  
+	
+	public void executeScrollable(TransactionContext tc) throws Exception
+	{
+		setLevel(decl.loanbeneficiarynewlistmapp.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+		tc.debug( "......CO161.sqlj     decl.loanbeneficiarynewlistmapp.LBen_COLL_HF_PRIOR_ID   HIPOTEKA" +  decl.loanbeneficiarynewlistmapp.LBen_COLL_HF_PRIOR_ID);
+		tc.debug( "......CO161.sqlj     decl.loanbeneficiarynewlistmapp.LBen_COLL_HEA_ID        GLAVA   " +  decl.loanbeneficiarynewlistmapp.LBen_COLL_HEA_ID);
+		tc.debug( "......CO161.sqlj     decl.loanbeneficiarynewlistmapp.LBen_fra_agr_id         SPORAZUM" +  decl.loanbeneficiarynewlistmapp.LBen_fra_agr_id);
+
+		// prikaz plasmana preko hipoteke
+		// hipoteke vezane na plasman (nisu dio okvirnog sporazuma)
+		if(decl.loanbeneficiarynewlistmapp.LBen_COLL_HF_PRIOR_ID != null && decl.loanbeneficiarynewlistmapp.LBen_fra_agr_id == null)
+		{		 	
+            // Plasmani za hipoteku, fiduciju ili sporazum
+		    // ako je hipoteka dio okvirnog sporazuma
+			if ("D".equalsIgnoreCase(decl.loanbeneficiarynewlistmapp.LBen_AgreementFlag))
+			{
+				#sql [ctx] iter1 = { 
+			        SELECT DISTINCT 	
+			            loben.acc_no             AS acc_no,
+			            loben.register_no        AS register_no,
+			            a.cus_acc_status         AS dwh_status,
+			            a.cus_acc_orig_st        AS status,
+			            cust.name                AS name,
+			            loben.loan_ben_id        AS loan_ben_id,
+			            loben.la_acc_id          AS la_acc_id,
+			            loben.cus_id             AS cus_id,
+			            loben.coll_hf_prior_id   AS coll_hf_prior_id,
+			            loben.col_hea_id         AS col_hea_id,
+			            loben.request_no         AS request_no,
+			            loben.aps_rqst_no        AS aps_rqst_no,
+			            loben.acc_no_old         AS contract_no,
+			            loben.rvrd               AS rvrd,
+			            loben.rvod               AS rvod,
+			            CASE 
+                            WHEN a.cus_acc_status IN ('A') THEN 0
+                            WHEN a.cus_acc_status IN ('C') AND a.cus_acc_orig_st IN ('SS', '94','95','T','NM') THEN 1 
+                            ELSE 99 
+                        END AS flag_order1,
+                        CASE WHEN substr(COALESCE(substr(loben.acc_no_old,1,2),'00'),1,1) IN ('0','1') THEN COALESCE(substr(loben.acc_no_old,1,2),'00') ELSE '00' END AS flag_order2
+				    FROM loan_beneficiary loben 
+			        LEFT OUTER JOIN cusacc_exposure a ON (loben.la_acc_id = a.cus_acc_id OR loben.acc_no = a.cus_acc_no OR loben.request_no = a.request_no)
+			        INNER JOIN customer cust ON loben.cus_id = cust.cus_id
+				    WHERE loben.coll_hf_prior_id = :(decl.loanbeneficiarynewlistmapp.LBen_COLL_HF_PRIOR_ID)
+			          AND loben.fra_agr_id IS NOT NULL
+				      AND loben.status = 'A'
+				      AND loben.date_from <= CURRENT DATE 
+			          AND loben.date_until = '9999-12-31'
+			        ORDER BY flag_order1, flag_order2 DESC
+			        WITH UR
+			    };
+			}
+			else
+			{	  
+			    #sql [ctx] iter1 = {
+			        SELECT DISTINCT	
+			            loben.acc_no             AS acc_no,
+			            loben.register_no        AS register_no,
+			            a.cus_acc_status         AS dwh_status,
+			            a.cus_acc_orig_st        AS status,
+			            cust.name                AS name,
+			            loben.loan_ben_id        AS loan_ben_id,
+			            loben.la_acc_id          AS la_acc_id,
+			            loben.cus_id             AS cus_id,
+			            loben.coll_hf_prior_id   AS coll_hf_prior_id,
+			            loben.col_hea_id         AS col_hea_id,
+			            loben.request_no         AS request_no,
+			            loben.aps_rqst_no        AS aps_rqst_no,
+			            loben.acc_no_old         AS contract_no,
+                        loben.rvrd               AS rvrd,
+                        loben.rvod               AS rvod,
+                        CASE 
+                            WHEN a.cus_acc_status IN ('A') THEN 0
+                            WHEN a.cus_acc_status IN ('C') AND a.cus_acc_orig_st IN ('SS', '94','95','T','NM') THEN 1 
+                            ELSE 99 
+                        END AS flag_order1,
+                        CASE WHEN substr(COALESCE(substr(loben.acc_no_old,1,2),'00'),1,1) IN ('0','1') THEN COALESCE(substr(loben.acc_no_old,1,2),'00') ELSE '00' END AS flag_order2
+			        FROM loan_beneficiary loben 
+			        LEFT OUTER JOIN cusacc_exposure a ON (loben.la_acc_id = a.cus_acc_id OR loben.acc_no = a.cus_acc_no OR loben.request_no = a.request_no)
+			        INNER JOIN customer cust ON loben.cus_id = cust.cus_id
+			        WHERE loben.coll_hf_prior_id = :(decl.loanbeneficiarynewlistmapp.LBen_COLL_HF_PRIOR_ID)
+			          AND loben.fra_agr_id IS NULL
+			          AND loben.status = 'A'
+			          AND loben.date_from <= CURRENT DATE 
+			          AND loben.date_until = '9999-12-31'
+                    ORDER BY flag_order1, flag_order2 DESC
+			        WITH UR
+			    };
+			}
+		}
+	  	  
+		    
+		// kolateral vezan za plasman		
+		if(decl.loanbeneficiarynewlistmapp.LBen_COLL_HEA_ID != null)
+		{
+		    #sql [ctx] iter1 = { 
+		        SELECT DISTINCT 	
+		            loben.acc_no              AS acc_no,
+		            loben.register_no         AS register_no,
+		            a.cus_acc_status          AS dwh_status,
+		            a.cus_acc_orig_st         AS status,
+		            cust.name                 AS name,
+		            loben.loan_ben_id         AS loan_ben_id,
+		            loben.la_acc_id           AS la_acc_id,
+		            loben.cus_id              AS cus_id,
+		            loben.coll_hf_prior_id    AS coll_hf_prior_id,
+		            loben.col_hea_id          AS col_hea_id,
+		            loben.request_no          AS request_no,
+		            loben.aps_rqst_no         AS aps_rqst_no,
+		            loben.acc_no_old          AS contract_no,
+                    loben.rvrd                AS rvrd,
+                    loben.rvod                AS rvod,
+                    CASE 
+                        WHEN a.cus_acc_status IN ('A') THEN 0
+                        WHEN a.cus_acc_status IN ('C') AND a.cus_acc_orig_st IN ('SS', '94','95','T','NM') THEN 1 
+                        ELSE 99 
+                    END AS flag_order1,
+                    CASE WHEN substr(COALESCE(substr(loben.acc_no_old,1,2),'00'),1,1) IN ('0','1') THEN COALESCE(substr(loben.acc_no_old,1,2),'00') ELSE '00' END AS flag_order2
+		        FROM loan_beneficiary loben
+		        LEFT OUTER JOIN cusacc_exposure a ON (loben.la_acc_id = a.cus_acc_id OR loben.acc_no = a.cus_acc_no OR loben.request_no = a.request_no)
+		        INNER JOIN customer cust ON loben.cus_id = cust.cus_id 
+		        WHERE loben.col_hea_id = :(decl.loanbeneficiarynewlistmapp.LBen_COLL_HEA_ID)
+  				  AND loben.status = 'A'
+		          AND loben.date_from <= CURRENT DATE 
+		          AND loben.date_until = '9999-12-31'
+		        ORDER BY flag_order1, flag_order2 DESC
+		        WITH UR
+		    };
+		}
+  
+		
+		// plasmani vezani za okvirni sporazum	
+		if (decl.loanbeneficiarynewlistmapp.LBen_fra_agr_id != null)
+		{	
+		    #sql [ctx] iter1 = {
+		        SELECT DISTINCT	
+		            loben.acc_no      AS acc_no,
+		            loben.register_no AS register_no,
+		            a.cus_acc_status  AS dwh_status,
+		            a.cus_acc_orig_st AS status,
+		            cust.name         AS name,
+		            0                 AS loan_ben_id,
+		            loben.la_acc_id   AS la_acc_id,
+		            loben.cus_id      AS cus_id,
+		            0                 AS coll_hf_prior_id,
+		            0                 AS col_hea_id,
+		            loben.request_no  AS request_no,
+		            ''                AS aps_rqst_no,
+		            loben.acc_no_old  AS contract_no,
+		            null              AS rvrd,
+		            null              AS rvod,
+		            CASE 
+		                WHEN a.cus_acc_status IN ('A') THEN 0
+                        WHEN a.cus_acc_status IN ('C') AND a.cus_acc_orig_st IN ('SS', '94','95','T','NM') THEN 1 
+                        ELSE 99 
+                    END AS flag_order1,
+                    CASE WHEN substr(COALESCE(substr(loben.acc_no_old,1,2),'00'),1,1) IN ('0','1') THEN COALESCE(substr(loben.acc_no_old,1,2),'00') ELSE '00' END AS flag_order2
+		        FROM loan_beneficiary loben
+		        LEFT OUTER JOIN cusacc_exposure a ON (loben.la_acc_id = a.cus_acc_id OR loben.acc_no = a.cus_acc_no OR loben.request_no = a.request_no)
+		        INNER JOIN customer cust ON loben.cus_id = cust.cus_id
+		        WHERE loben.fra_agr_id = :(decl.loanbeneficiarynewlistmapp.LBen_fra_agr_id)
+		          AND loben.status = 'A'
+		          AND loben.date_from <= CURRENT DATE 
+		          AND loben.date_until = '9999-12-31'
+		        ORDER BY flag_order1, flag_order2 DESC
+		        WITH UR
+		    };
+		}
+	}
+	  
+	public boolean next() throws Exception
+	{
+		return iter1.next();
+	}
+    
+	public void close()
+	{
+		if(iter1!=null)
+		{
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	
+	public void populateRowData() throws Exception
+	{
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redoslijed dodavanja u row da bude kao u tablici!!!
+		//tblLoanBeneficiary   
+		
+	    row.add(iter1.request_no());	
+        row.add(iter1.acc_no());    
+	    row.add(iter1.dwh_status());	
+	 	row.add(iter1.status());	
+        row.add(iter1.contract_no());		 	
+		row.add(iter1.register_no());
+		row.add(iter1.name());
+		row.add(iter1.aps_rqst_no());
+		
+		DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+		symbols.setDecimalSeparator(',');
+		symbols.setGroupingSeparator('.');
+		DecimalFormat decimalFormat = new DecimalFormat("###,##0.00", symbols);
+		if (iter1.rvrd() == null) row.add("N/A"); else row.add(decimalFormat.format(iter1.rvrd()));
+		if (iter1.rvod() == null) row.add("N/A"); else row.add(decimalFormat.format(iter1.rvod()));
+	
+		row1.add(iter1.loan_ben_id());
+		row1.add(iter1.la_acc_id());
+		row1.add(iter1.cus_id());	    
+		row1.add(iter1.coll_hf_prior_id());
+		row1.add(iter1.col_hea_id());
+	
+		//Punjenje tablice
+		decl.loanbeneficiarynewlistmapp.tblLoanBeneficiary.addRow(row,row1);
+	}
+	
+}

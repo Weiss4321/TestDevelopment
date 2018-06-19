@@ -1,0 +1,1052 @@
+package hr.vestigo.modules.collateral.batch.bo76;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+public class BO761
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo76/BO761.sqlj,v 1.9 2016/07/06 11:24:00 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private final BigDecimal real_estate_col_cat_id = new BigDecimal("618223");
+    private final BigDecimal vehicle_col_cat_id = new BigDecimal("624223");
+    private final BigDecimal vessel_col_cat_id = new BigDecimal("620223");
+    private final BigDecimal movable_col_cat_id = new BigDecimal("621223");
+    private final BigDecimal inspolicy_col_cat_id = new BigDecimal("616223");
+    
+    private final BigDecimal zero = new BigDecimal("0.00");
+
+    
+    #sql iterator CollateralIterator (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_cat_id,
+        BigDecimal col_typ_id,
+        BigDecimal real_est_nomi_valu,
+        BigDecimal real_est_nm_cur_id,
+        String inspol_ind
+    );
+
+    #sql iterator CollateralFromDailyBatchIterator (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_cat_id,
+        BigDecimal col_typ_id,
+        BigDecimal real_est_nomi_valu,
+        BigDecimal real_est_nm_cur_id,
+        BigDecimal ncv,
+        BigDecimal ponder,
+        BigDecimal real_ponder,
+        BigDecimal wcov,
+        BigDecimal wcv,
+        Date earliest_exp_date,
+        Date latest_exp_date,
+        BigDecimal insurance_sum,
+        Date insurance_exp_date
+    );
+    
+    #sql iterator MortgageIterator (
+        BigDecimal coll_hf_prior_id,
+        String hf_priority,
+        BigDecimal amount_ref,
+        BigDecimal cur_id_ref,
+        BigDecimal hf_own_cus_id,
+        Date hf_date_hfc_until,
+        BigDecimal fra_agr_id
+    );
+    
+    #sql iterator InsuranceIterator (
+        Date ip_vali_until,
+        BigDecimal ip_secu_val,
+        BigDecimal ip_cur_id,
+        String ip_act_noact
+    );
+    
+    #sql iterator PlacementIterator (
+        BigDecimal cus_acc_id,
+        Date due_date
+    );
+  
+
+    public BO761(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+    
+    
+
+    /**
+     * Metoda koja dohvaæa ID obrade.
+     * Provjerava se da li je za zadani datum i vrstu obrade veæ puštena obrada. Ako obrada nije puštana, dodaje se novi zapis u COL_PROC i vraæa se njegov ID.
+     * Ako je obrada puštana i nije završila do kraja, vraæa se ID nedovršene obrade. Ako je obrada završila do kraja, ispisuje se greška i vraæa se null. 
+     * @param value_date Datum valute (datum za koji se vrši punjenje podataka)
+     * @param proc_type Vrsta obrade
+     * @return ID obrade. Vraæa null ako obrada za zadani datum postoji i uredno je završena.
+     */
+    public BigDecimal selectColProId(Date value_date, String proc_type) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("selectColProId");
+            BigDecimal col_pro_id = null;
+            String proc_status = null;
+            #sql [connCtx] {
+                SELECT col_pro_id, proc_status
+                INTO :(col_pro_id), :(proc_status)
+                FROM col_proc 
+                WHERE value_date = :(value_date)
+                AND proc_type = :(proc_type)
+                WITH UR
+            };
+            bc.stopStopWatch("selectColProId");
+            if ("1".equals(proc_status))  // ako obrada iste vrste za zadani datum postoji i uredno je završena, ispisuje se greška i prekida se daljnji tijek
+            {
+                bc.error("Za datum " + value_date + " obrada " + proc_type + " je pustena i uredno zavrsila!", new String[]{});
+                return null;
+            }
+            else  // ako obrada iste vrste za zadani datum postoji ali nije uredno završena, vrati ID te obrade
+            {
+                return col_pro_id;
+            }
+        }
+        catch (SQLException ex)
+        {
+            bc.stopStopWatch("selectColProId");
+            if (bc.getSQLExHandler().isEmptyRowset(ex))  // ako obrada za zadani datum ne postoji, unesi novi zapis o zapoèetoj obradi
+            {
+                return insertIntoColProc(value_date, proc_type);
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata ID obrade! (VALUE_DATE=" + value_date + ",PROC_TYPE=" + proc_type + ")", ex);
+                throw ex;
+            }
+        }
+    }
+    
+    
+    /** 
+     * Metoda koja evidentira poèetak izvoðenja obrade ubacujuæi novi zapis u tablicu COL_PROC.
+     * @param value_date Datum valute
+     * @param proc_type Identifikator vrste obrade
+     * @return ID zapisa iz tablice COL_PROC
+     */
+    public BigDecimal insertIntoColProc(Date value_date, String proc_type) throws Exception
+    {
+        try
+        {
+            BigDecimal col_pro_id = generateNewCollateralId();
+
+            bc.startStopWatch("insertIntoColProc");
+            bc.beginTransaction();
+            #sql [connCtx] {
+                INSERT INTO col_proc (
+                    col_pro_id,
+                    proc_date,
+                    value_date,
+                    proc_type,
+                    proc_way,
+                    proc_status,
+                    col_number,
+                    org_uni_id,
+                    use_id,
+                    user_lock )
+                VALUES (
+                    :(col_pro_id),
+                    CURRENT DATE,
+                    :(value_date),
+                    :(proc_type),
+                    'A',
+                    '0',
+                    0,
+                    53253,
+                    1,
+                    CURRENT TIMESTAMP )
+            };
+            bc.commitTransaction();
+            bc.stopStopWatch("insertIntoColProc");
+            return col_pro_id;
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod evidentiranja pocetka izvodjenja obrade! (VALUE_DATE=" + value_date + ",PROC_TYPE=" + proc_type + ")", ex);
+            throw ex;
+        }
+    }
+
+    
+    /**
+     * Metoda koja generira novi ID u modulu Collateral.
+     * @return generirani ID
+     */
+    public BigDecimal generateNewCollateralId() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("generateNewCollateralId");
+            YOY00 yoy00 = new YOY00(connCtx);
+            BigDecimal col_pro_id = yoy00.getNewId();
+            return col_pro_id;
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod generiranja novog ID-a u modulu Collateral!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("generateNewCollateralId");            
+        }
+    }
+    
+    
+    /**
+     * Metoda koja vraæa ID zadnje obrade koja je izvršila ND ponderirani izraèun pokrivenosti prije zadanog datuma.
+     * @param value_date Datum valute (datum za koji se vrši punjenje podataka)
+     * @return ID obrade; null ako obrada ne postoji 
+     */
+    public BigDecimal selectAllocColProId(Date value_date) throws SQLException
+    {
+        try
+        {    
+            bc.startStopWatch("selectAllocColProId");
+            BigDecimal col_pro_id = null;
+            #sql[connCtx] {
+                SELECT col_pro_id
+                INTO :(col_pro_id)
+                FROM col_proc
+                WHERE proc_type = 'M'
+                  AND proc_status = '1'
+                  AND value_date <= :(value_date)
+                ORDER BY value_date DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return col_pro_id;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("ND ponderirani izracun pokrivenosti ne postoji za datum manji od " + value_date + "!", ex);
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata ID-a zadnjeg ND ponderiranog izracuna pokrivenosti! (VALUE_DATE=" + value_date + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectAllocColProId");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa sve kolaterale aktivne na zadani datum.
+     * @param value_date Datum valute (datum za koji se vrši punjenje podataka)
+     * @return iterator s podacima o kolateralima
+     */
+    public CollateralIterator selectCollaterals(Date value_date) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectCollaterals");
+            CollateralIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    a.col_hea_id            AS col_hea_id,
+                    a.col_num               AS col_num,
+                    a.col_cat_id            AS col_cat_id,
+                    a.col_type_id           AS col_typ_id,
+                    a.real_est_nomi_valu    AS real_est_nomi_valu,
+                    a.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    a.inspol_ind            AS inspol_ind
+                FROM coll_head_d a
+                WHERE :(value_date) BETWEEN a.load_date_from AND a.load_date_until
+                  AND a.collateral_status = '3'
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata kolaterala! (VALUE_DATE=" + value_date + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollaterals");
+        }
+    }
+    
+
+    /**
+     * Metoda koja vraæa ID dnevne obrade koja je izvršila punjenje podataka za zadani datum.
+     * @param value_date Datum valute (datum za koji se izvršilo punjenje podataka)
+     * @return ID dnevne obrade 
+     */
+    public BigDecimal selectRefDailyColProId(Date value_date) throws SQLException
+    {
+        try
+        {    
+            bc.startStopWatch("selectRefDailyColProId");
+            BigDecimal col_pro_id = null;
+            #sql[connCtx] {
+                SELECT col_pro_id
+                INTO :(col_pro_id)
+                FROM col_proc
+                WHERE proc_type = 'GCD'
+                  AND proc_status = '1'
+                  AND value_date = :(value_date)
+                WITH UR
+            };
+            return col_pro_id;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Za datum " + value_date + " nije se izvrsila dnevna obrada za punjenje podataka za GCM!", ex);
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata ID-a dnevne obrade koja je izvrsila punjenje podataka! (VALUE_DATE=" + value_date + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectRefDailyColProId");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o kolateralima koje je priredila dnevna obrada za punjenje podataka.
+     * @param value_date Datum za koji vrijede podaci
+     * @param ref_daily_col_pro_id ID dnevne obrade za punjenje podataka 
+     * @return iterator s podacima
+     */
+    public CollateralFromDailyBatchIterator selectCollateralsFromDailyBatch(Date value_date, BigDecimal ref_daily_col_pro_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectCollateralsFromDailyBatch");
+            CollateralFromDailyBatchIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    a.col_hea_id            AS col_hea_id,
+                    a.col_num               AS col_num,
+                    a.col_cat_id            AS col_cat_id,
+                    a.col_type_id           AS col_typ_id,
+                    a.real_est_nomi_valu    AS real_est_nomi_valu,
+                    a.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    b.ncv                   AS ncv,
+                    b.ponder                AS ponder,
+                    b.real_ponder           AS real_ponder,
+                    b.wcov                  AS wcov,
+                    b.wcv                   AS wcv,
+                    b.earliest_exp_date     AS earliest_exp_date,
+                    b.latest_exp_date       AS latest_exp_date,
+                    b.insurance_sum         AS insurance_sum,
+                    b.insurance_exp_date    AS insurance_exp_date
+                FROM coll_gcm_data b
+                INNER JOIN coll_head_d a ON b.col_hea_id = a.col_hea_id
+                WHERE b.col_pro_id = :(ref_daily_col_pro_id)
+                  AND :(value_date) BETWEEN a.load_date_from AND a.load_date_until
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata kolaterala! (VALUE_DATE=" + value_date + ",REF_DAILY_COL_PRO_ID=" + ref_daily_col_pro_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollateralsFromDailyBatch");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja za zadani kolateral dohvaæa ponder koji definira referent kolaterala.
+     * @param value_date važeæi datum
+     * @param col_hea_id ID kolaterala
+     * @return ponder collateral officera ako postoji, inaèe vraæa null
+     */
+    public BigDecimal selectPonderCo(Date value_date, BigDecimal col_hea_id) throws SQLException
+    {
+        try
+        {    
+            bc.startStopWatch("selectPonderCo");
+            BigDecimal ponder_co = null;
+            #sql[connCtx] {
+                SELECT ponder_value
+                INTO :(ponder_co)
+                FROM coll_ponder
+                WHERE col_hea_id = :(col_hea_id)
+                  AND ponder_type = 'MVP'
+                  AND :(value_date) BETWEEN date_from AND date_until
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return ponder_co;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata pondera CO! (COL_HEA_ID=" + col_hea_id + ",VALUE_DATE=" + value_date + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectPonderCo");
+        }
+    }
+
+    
+    /**
+     * Metoda koja dohvaæa defaultni ponder definiran za zadanu kategoriju, vrstu i podvrstu kolaterala, te dodatni uvjet.
+     * @param value_date važeæi datum
+     * @param col_cat_id ID kategorije kolaterala
+     * @param col_typ_id ID vrste kolaterala
+     * @param col_sub_id ID podvrste kolaterala
+     * @param add_request Dodatni uvjet
+     * @return defaultni ponder ako postoji, inaèe vraæa null
+     */
+    public BigDecimal selectPonderDfl(Date value_date, BigDecimal col_cat_id, BigDecimal col_typ_id, BigDecimal col_sub_id, String add_request) throws SQLException
+    {
+        try
+        {    
+            bc.startStopWatch("selectPonderDfl");
+            BigDecimal ponder_dfl = null;
+            #sql[connCtx] {
+                SELECT dfl_value
+                INTO :ponder_dfl
+                FROM dfl_col_ponder
+                WHERE col_cat_id = :(col_cat_id)
+                  AND col_typ_id = :(col_typ_id)
+                  AND (col_sub_id = :(col_sub_id) OR col_sub_id IS NULL)
+                  AND add_request = :(add_request)
+                  AND ponder_type = 'MVP'
+                  AND :(value_date) BETWEEN date_from AND date_until
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return ponder_dfl;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata defaultnog pondera! (COL_CAT_ID=" + col_cat_id + ",COL_TYP_ID=" + col_typ_id + ",COL_SUB_ID=" + col_sub_id + ",ADD_REQUEST=" + add_request + ",VALUE_DATE=" + value_date + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectPonderDfl");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa realan ponder zadanog kolaterala.
+     * @param col_hea_id ID kolaterala
+     * @param alloc_col_pro_id ID obrade izraèuna pokrivenosti
+     * @return realan ponder kolaterala
+     */
+    public BigDecimal selectRealPonder(BigDecimal col_hea_id, BigDecimal alloc_col_pro_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectRealPonder");
+            BigDecimal real_ponder = null;
+            #sql [connCtx] {
+                SELECT real_ponder
+                INTO :(real_ponder)
+                FROM cusacc_exp_coll a
+                WHERE a.col_hea_id = :(col_hea_id)
+                  AND a.col_pro_id = :(alloc_col_pro_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return real_ponder;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata realnog pondera kolaterala! (COL_HEA_ID=" + col_hea_id + ",ALLOC_COL_PRO_ID=" + alloc_col_pro_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectRealPonder");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa ID podvrste zadanog kolaterala.
+     * @param col_hea_id ID kolaterala
+     * @param col_cat_id ID kategorije kolaterala
+     * @return ID podvrste kolaterala ako kolateral ima podvrstu, inaèe null
+     */
+    public BigDecimal selectCollSubtypeID(BigDecimal col_hea_id, BigDecimal col_cat_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectCollSubtypeID");
+            BigDecimal subtype_id = null;
+            
+            if (real_estate_col_cat_id.equals(col_cat_id))  // Nekretnine
+            {
+                #sql [connCtx]
+                { 
+                    SELECT a.real_est_type
+                    INTO :(subtype_id)
+                    FROM coll_restate a
+                    WHERE a.col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (vehicle_col_cat_id.equals(col_cat_id))  // Vozila
+            {
+                #sql [connCtx]
+                { 
+                    SELECT a.veh_group_id
+                    INTO :(subtype_id)
+                    FROM coll_vehicle a
+                    WHERE a.col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (vessel_col_cat_id.equals(col_cat_id))  // Plovila
+            {
+                #sql [connCtx]
+                { 
+                    SELECT a.ves_typ_id
+                    INTO :(subtype_id)
+                    FROM coll_vessel a
+                    WHERE a.col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            else if(movable_col_cat_id.equals(col_cat_id))   // Pokretnine
+            {
+                #sql [connCtx]
+                { 
+                    SELECT a.mov_typ_id
+                    INTO :(subtype_id)
+                    FROM coll_movable a
+                    WHERE a.col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (inspolicy_col_cat_id.equals(col_cat_id))   // Police osiguranja
+            {
+                #sql [connCtx]
+                { 
+                    SELECT a.ip_type_id
+                    INTO :(subtype_id)
+                    FROM coll_inspolicy a
+                    WHERE a.col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            
+            return subtype_id;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podvrste kolaterala! (COL_HEA_ID = " + col_hea_id + ",COL_CAT_ID = " + col_cat_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollSubtypeID");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja za zadani kolateral dohvaæa podatke o hipotekama.
+     * @param value_date Datum valute
+     * @param col_hea_id ID kolaterala
+     * @return iterator s podacima o hipotekama
+     */
+    public MortgageIterator selectMortgages(Date value_date, BigDecimal col_hea_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectMortgages");
+            MortgageIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    c.coll_hf_prior_id      AS coll_hf_prior_id,
+                    c.hf_priority           AS hf_priority,
+                    c.amount_ref            AS amount_ref,
+                    c.cur_id_ref            AS cur_id_ref,
+                    c.hf_own_cus_id         AS hf_own_cus_id,
+                    c.hf_date_hfc_until     AS hf_date_hfc_until,
+                    c.fra_agr_id            AS fra_agr_id
+                FROM coll_hf_prior_d c
+                WHERE c.hf_coll_head_id = :(col_hea_id)
+                  AND c.hf_status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                ORDER BY c.hf_priority
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata hipoteka za kolateral! (COL_HEA_ID" + col_hea_id + ",VALUE_DATE=" + value_date + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectMortgages");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja vraæa datum do kada vrijedi zadani okvirni sporazum.
+     * @param value_date Datum valute
+     * @param fra_agr_id ID okvirnog sporazuma
+     * @return datum do kada vrijedi sporazum
+     */
+    public Date selectFrameAgreementDateUntil(Date value_date, BigDecimal fra_agr_id) throws SQLException
+    {
+        try
+        {    
+            bc.startStopWatch("selectFrameAgreementDateUntil");
+            Date date_until = null;
+            #sql[connCtx] {
+                SELECT date_until
+                INTO :(date_until)
+                FROM frame_agreement_d a
+                WHERE a.fra_agr_id = :(fra_agr_id)
+                  AND :(value_date) BETWEEN a.load_date_from AND a.load_date_until
+                WITH UR
+            };
+            return date_until;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata datuma do kad vrijedi okvirni sporazum! (FRA_AGR_ID=" + fra_agr_id + ",VALUE_DATE=" + value_date + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectFrameAgreementDateUntil");
+        }
+    }
+
+
+    /**
+     * Metoda koja dohvaæa podatke o policama osiguranja koje osiguravaju zadani kolateral.
+     * Police osiguranja su poredane po datumu do kada vrijede - od najranijeg datuma do najdaljeg.
+     * @param col_hea_id ID kolaterala
+     * @return iterator s podacima o policama osiguranja
+     */
+    public InsuranceIterator selectInsurancePolicies(BigDecimal col_hea_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectInsurancePolicies");
+            InsuranceIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    a.ip_vali_until AS ip_vali_until,
+                    a.ip_secu_val   AS ip_secu_val,
+                    a.ip_cur_id     AS ip_cur_id,
+                    a.ip_act_noact  AS ip_act_noact
+                FROM insurance_policy a
+                WHERE a.col_hea_id = :(col_hea_id)
+                ORDER BY a.ip_vali_until
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata polica osiguranja za kolateral! (COL_HEA_ID=" + col_hea_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectInsurancePolicies");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o plasmanima koje pokriva zadani kolateral.
+     * Plasmani su poredani po datumu dospijeæa od najdaljeg do najranijeg.
+     * @param col_hea_id ID kolaterala
+     * @param value_date Datum valute
+     * @return iterator s podacima
+     */
+    public PlacementIterator selectCollateralPlacements(Date value_date, BigDecimal col_hea_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectCollateralPlacements");
+            
+            PlacementIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT DISTINCT
+                    b.cus_acc_id    AS cus_acc_id,
+                    b.due_date      AS due_date
+                FROM coll_head_d e
+                    INNER JOIN coll_hf_prior_d d ON d.hf_coll_head_id = e.col_hea_id
+                    INNER JOIN loan_beneficiary_d c ON c.coll_hf_prior_id = d.coll_hf_prior_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE e.col_hea_id = :(col_hea_id)
+                  AND :(value_date) BETWEEN e.load_date_from AND e.load_date_until
+                  AND d.hf_status = 'A'
+                  AND :(value_date) BETWEEN d.load_date_from AND d.load_date_until
+                  AND c.status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND (b.cus_acc_status='A' OR
+                         (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR  
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                         )
+                      )
+
+                UNION
+
+                SELECT DISTINCT
+                    b.cus_acc_id    AS cus_acc_id,
+                    b.due_date      AS due_date
+                FROM coll_head_d e
+                    INNER JOIN loan_beneficiary_d c ON c.col_hea_id = e.col_hea_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE e.col_hea_id = :(col_hea_id)
+                  AND :(value_date) BETWEEN e.load_date_from AND e.load_date_until
+                  AND c.status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND (b.cus_acc_status='A' OR
+                         (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                         )
+                      )
+
+                ORDER BY 2 DESC
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata plasmana koje pokriva kolateral! (COL_HEA_ID=" + col_hea_id + ",VALUE_DATE=" + value_date + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollateralPlacements");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa datum do kada vrijedi zadani kolateral.
+     * @param col_hea_id ID kolaterala
+     * @param coll_exp_type Vrsta odreðivanja datuma
+     * @return datum do kada vrijedi kolateral
+     */
+    public Date selectCollExpiryDate(BigDecimal col_hea_id, String coll_exp_type) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectCollExpiryDate");
+            Date coll_exp_date = null;
+            
+            if (coll_exp_type.equalsIgnoreCase("exp_dat_dep"))  // Do krajnjeg datuma dospijeæa depozita
+            {
+                #sql [connCtx] {
+                    SELECT cde_dep_unti_final 
+                    INTO :(coll_exp_date)
+                    FROM coll_cashdep
+                    WHERE col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (coll_exp_type.equalsIgnoreCase("exp_dat_gara"))  // Dat. respiro perioda; ako je prazan - dat. do kada vrijedi gar.
+            {
+                Date respiro_date = null, guar_datn_unti = null;
+                #sql [connCtx] {
+                    SELECT respiro_date, guar_datn_unti
+                    INTO :(respiro_date), :(guar_datn_unti)
+                    FROM coll_guarantee
+                    WHERE col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+                if (respiro_date != null) coll_exp_date = respiro_date; else coll_exp_date = guar_datn_unti;
+            }
+            else if (coll_exp_type.equalsIgnoreCase("exp_dat_pol"))  // Datum "važenje police do" 
+            {
+                #sql [connCtx] {
+                    SELECT ip_valid_until
+                    INTO :(coll_exp_date)
+                    FROM coll_inspolicy
+                    WHERE col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            else if (coll_exp_type.equalsIgnoreCase("exp_dat_obv") || coll_exp_type.equalsIgnoreCase("exp_dat_zap"))  // Do datuma dospijeæa obveznice || Do datuma dospijeæa zapisa
+            {
+                #sql [connCtx] {
+                    SELECT b.maturity_date
+                    INTO :(coll_exp_date)
+                    FROM coll_vrp a
+                    LEFT OUTER JOIN coll_in2 b ON a.col_in2_id = b.col_in2_id 
+                    WHERE a.col_hea_id = :(col_hea_id)
+                    WITH UR
+                };
+            }
+            
+            return coll_exp_date;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata datuma do kada vrijedi kolateral! (COL_HEA_ID=" + col_hea_id + ",COLL_EXP_TYPE=" + coll_exp_type + ")", ex);
+                throw ex;                
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollExpiryDate");
+        }
+    }
+
+
+    /**
+     * Metoda koja dohvaæa alociranu vrijednost zadanog kolaterala.
+     * @param col_hea_id ID kolaterala
+     * @param alloc_col_pro_id ID obrade izraèuna pokrivenosti
+     * @return alocirana vrijednost kolaterala izražena u HRK
+     */
+    public BigDecimal selectCollateralAllocatedValueHRK(BigDecimal col_hea_id, BigDecimal alloc_col_pro_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectCollateralAllocatedValueHRK");
+            BigDecimal exp_coll_amount = null;
+            #sql [connCtx] {
+                SELECT SUM(exp_coll_amount)
+                INTO :(exp_coll_amount)
+                FROM cusacc_exp_coll a
+                WHERE a.col_hea_id = :(col_hea_id)
+                  AND a.col_pro_id = :(alloc_col_pro_id)
+                WITH UR
+            };
+            if (exp_coll_amount == null) exp_coll_amount = zero; 
+            return exp_coll_amount;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata alocirane vrijednosti kolaterala! (COL_HEA_ID=" + col_hea_id + ",ALLOC_COL_PRO_ID=" + alloc_col_pro_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollateralAllocatedValueHRK");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa izloženost zadanog plasmana.
+     * @param cus_acc_id ID plasmana
+     * @param alloc_col_pro_id ID obrade izraèuna pokrivenosti
+     * @return iznos izloženosti plasmana izražena u HRK
+     */
+    public BigDecimal selectPlacementExposureBalanceHRK(BigDecimal cus_acc_id, BigDecimal alloc_col_pro_id) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectPlacementExposureBalanceHRK");
+            BigDecimal exp_balance_hrk = null;
+            #sql [connCtx] {
+                SELECT exp_balance_hrk
+                INTO :(exp_balance_hrk)
+                FROM cusacc_exp_coll a
+                WHERE a.cus_acc_id = :(cus_acc_id) 
+                  AND a.col_pro_id = :(alloc_col_pro_id) 
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            if (exp_balance_hrk == null) exp_balance_hrk = zero; 
+            return exp_balance_hrk;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return zero;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata izlozenosti plasmana! (CUS_ACC_ID=" + cus_acc_id + ",ALLOC_COL_PRO_ID=" + alloc_col_pro_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectPlacementExposureBalanceHRK");
+        }
+    }
+    
+    
+    /**
+     * Metoda zapisuje podatke o zadanom kolateralu u bazu podataka.
+     * @param col_pro_id ID obrade
+     * @param value_date Datum valute
+     * @param collateral Objekt s podacima o kolateralu
+     */
+    public void insertIntoCollGcmData(BigDecimal col_pro_id, Date value_date, CollateralData collateral) throws Exception
+    {
+        try
+        {
+            BigDecimal col_gcm_dat_id = generateNewCollateralId();
+            
+            bc.startStopWatch("insertIntoCollGcmData");    
+            #sql [connCtx] {
+                INSERT INTO coll_gcm_data (
+                    col_gcm_dat_id,
+                    col_pro_id,
+                    value_date,
+                    col_hea_id,
+                    ncv,
+                    ponder,
+                    wcov,
+                    wcv,
+                    earliest_exp_date,
+                    latest_exp_date,
+                    cus_acc_id,
+                    placement_due_date,
+                    ltv,
+                    insurance_sum,
+                    insurance_exp_date,
+                    coll_exp_date,
+                    real_ponder
+                ) VALUES (
+                    :(col_gcm_dat_id),
+                    :(col_pro_id),
+                    :(value_date),
+                    :(collateral.col_hea_id),
+                    :(collateral.ncv),
+                    :(collateral.ponder),
+                    :(collateral.wcov),
+                    :(collateral.wcv),
+                    :(collateral.earliest_exp_date),
+                    :(collateral.latest_exp_date),
+                    :(collateral.cus_acc_id),
+                    :(collateral.placement_due_date),
+                    :(collateral.ltv),
+                    :(collateral.insurance_sum),
+                    :(collateral.insurance_exp_date),
+                    :(collateral.coll_exp_date),
+                    :(collateral.real_ponder)
+                )
+            };
+            bc.stopStopWatch("insertIntoCollGcmData");
+        }
+        catch(SQLException ex)
+        {
+            bc.error("Greska kod zapisivanja kolaterala u bazu podataka!" + collateral, ex);
+            throw ex;
+        }
+    }
+    
+    
+    /**
+     * Metoda koja evidentira završetak izvoðenja obrade u tablicu COL_PROC.
+     * @param col_pro_id ID obrade
+     * @param count broj zapisa koje je generirala obrada
+     */
+    public void updateColProc(BigDecimal col_pro_id, int count) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("updateColProc");
+            #sql [connCtx] {
+                UPDATE col_proc
+                SET col_number = :(count),
+                    proc_ts = CURRENT TIMESTAMP,
+                    proc_status = '1'
+                WHERE col_pro_id = :(col_pro_id)
+            };
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Greska kod evidentiranja zavrsetka izvodjenja obrade! (COL_PRO_ID=" + col_pro_id + ",COUNT=" + count + ")" , ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("updateColProc");
+        }
+    }
+}

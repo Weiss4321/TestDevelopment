@@ -1,0 +1,297 @@
+package hr.vestigo.modules.collateral.jcics.co05;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyF.YOYF0;
+import hr.vestigo.modules.collateral.common.yoyF.YOYFData;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */     
+   
+     
+public class CO057 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co05/CO057.sqlj,v 1.30 2015/04/10 08:51:28 hrazst Exp $";
+	
+	public DeclCO05 decl = null;
+	private YOY63 SQLhelper = null;
+	CollHeadInsertData chd = new CollHeadInsertData();
+
+	public CO057 (DeclCO05 decl) {
+		this.decl = decl;
+	} 
+	 
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();	
+		SQLhelper = new YOY63(tc);
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+//	najprije provjeriti da li postoji u bazi polica kod istog osiguravatelja, iste vrste i istog broja police
+		int broj = 0;			
+		try {
+		    #sql [ctx] {SELECT COUNT(*)
+						INTO :broj 
+		    			FROM coll_inspolicy a, coll_head b
+		    			WHERE 
+							a.ip_code = :(decl.collinspolinsertmapping.Coll_txtInsPolNumber)
+						AND
+							a.ip_type_id = :(decl.collinspolinsertmapping.SEC_TYP_ID)
+						AND
+							a.ip_cus_id = :(decl.collinspolinsertmapping.IP_CUS_ID)
+ 						AND
+							a.col_hea_id = b.col_hea_id
+						AND
+							b.collateral_status <> '4' 
+						
+		    	};	    	
+		    	tc.debug ( "...broj: " + broj);
+	    } catch (java.sql.SQLException  sqle) {
+			throw sqle;
+        }
+	    //SE klijente i mikro klijenti mogu imati police sa istim brojem
+        if(broj > 0 && !(decl.collinspolinsertmapping.COL_TYPE_ID.equals(new BigDecimal("91777"))
+                || decl.collinspolinsertmapping.COL_TYPE_ID.equals(new BigDecimal("93777"))))
+        {
+		    throw new VestigoTMException(1, "Transaction CO055: Error inserting into coll_inspolicy! ","colErr029", null);
+		}
+			
+		
+        //insert u COLL_HEAD		
+		YOY40 headIns = new YOY40(tc, chd);
+		  
+		//punjenje objekta chd		
+		fillCHDobj();
+		
+		tc.debug("zovem insert u Head : " + chd.recept);
+		
+		headIns.insertIntoCollHead();
+
+		fillDeclFromCHDObj();		
+
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();
+
+		tc.debug("dohvat collateral_id : "+collaterall_id);			
+		
+		decl.collinspolinsertmapping.COL_SEC_ID = collaterall_id;	
+		
+		tc.debug(" COL_HEA_ID : "+decl.collinspolinsertmapping.COL_HEA_ID);	
+		tc.debug(" ip_type_id : "+decl.collinspolinsertmapping.SEC_TYP_ID);	
+		tc.debug(" con_cus_id : "+decl.collinspolinsertmapping.CON_CUS_ID);	
+		tc.debug(" INS_CUS_ID : "+decl.collinspolinsertmapping.INS_CUS_ID);	
+		
+		tc.debug(" OSIGURAVATELJ , ip_cus_id: "+decl.collinspolinsertmapping.IP_CUS_ID);	
+		tc.debug(" VALUTA POLICE , IP_NOM_CUR_ID: "+decl.collinspolinsertmapping.IP_NOM_CUR_ID);			
+		tc.debug(" VALUTA PREMIJE , IP_AMO_CUR_ID: "+decl.collinspolinsertmapping.IP_AMO_CUR_ID);	
+	 
+ 
+		try{	
+					#sql [ctx]{
+							INSERT INTO coll_inspolicy
+									(	col_ins_id , 
+										col_hea_id , 
+										ip_type_id , 
+										con_cus_id ,
+										con_reg_no ,
+										con_code ,
+										con_data ,
+										ins_cus_id ,
+										ins_reg_no ,
+										ins_code ,
+										ins_data ,
+										ip_code ,  
+										ip_cus_id ,
+										ip_issue_date ,
+										ip_valid_from ,
+										ip_valid_until ,
+										ip_nom_cur_id ,
+										ip_nom_value ,
+										ip_amount ,
+										ip_paid_from ,
+										ip_paid_until ,
+										ip_status ,
+										ip_amo_cur_id ,
+										ip_spec_stat,
+		                                wrn_status,
+		                                kmt_status
+									)
+							VALUES( :(decl.collinspolinsertmapping.COL_SEC_ID),    													                                                
+									:(decl.collinspolinsertmapping.COL_HEA_ID),
+ 									:(decl.collinspolinsertmapping.SEC_TYP_ID),
+									:(decl.collinspolinsertmapping.CON_CUS_ID),
+									:(decl.collinspolinsertmapping.Coll_txtIpConRegNo),
+									:(decl.collinspolinsertmapping.Coll_txtIpConCode),
+									:(decl.collinspolinsertmapping.Coll_txtIpConData),
+									:(decl.collinspolinsertmapping.INS_CUS_ID),
+									:(decl.collinspolinsertmapping.Coll_txtIpInsRegNo),
+									:(decl.collinspolinsertmapping.Coll_txtIpInsCode),
+									:(decl.collinspolinsertmapping.Coll_txtIpInsData),
+									:(decl.collinspolinsertmapping.Coll_txtInsPolNumber),
+									:(decl.collinspolinsertmapping.IP_CUS_ID),
+									:(decl.collinspolinsertmapping.Coll_txtIpIssueDate),
+									:(decl.collinspolinsertmapping.Coll_txtIpValiFrom),
+									:(decl.collinspolinsertmapping.Coll_txtIpValiUntil),
+									:(decl.collinspolinsertmapping.IP_NOM_CUR_ID),
+									:(decl.collinspolinsertmapping.Coll_txtIpNomValue),
+									:(decl.collinspolinsertmapping.Coll_txtIpAmount),
+									:(decl.collinspolinsertmapping.Coll_txtIpPaidFrom),
+									:(decl.collinspolinsertmapping.Coll_txtIpPaidUntil),
+									:(decl.collinspolinsertmapping.Coll_txtIpStatus),
+									:(decl.collinspolinsertmapping.IP_AMO_CUR_ID),
+									:(decl.collinspolinsertmapping.Coll_txtIpSpecStatus),
+		                            :(decl.collinspolinsertmapping.Coll_txtWrnStatusCode),
+		                            :(decl.collinspolinsertmapping.Coll_txtKmtStatusCode)
+		                    )
+					};
+		}catch(SQLException se){
+				
+				tc.debug ( "......CO057.sqlj insert into coll_inspolicy SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO057.sqlj insert into coll_inspolicy SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO057.sqlj insert into coll_inspolicy SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new VestigoTMException(1, "Transaction CO057: Error inserting coll_inspolicy! ","err411a", null);
+		}
+					
+	
+		chd.action = "I";		
+
+// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collinspolinsertmapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);              
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collinspolinsertmapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.collinspolinsertmapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collinspolinsertmapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.collinspolinsertmapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();  
+        
+        decl.collinspolinsertmapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collinspolinsertmapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collinspolinsertmapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collinspolinsertmapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();
+		
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.collinspolinsertmapping.COL_HEA_ID); 
+        decl.collinspolinsertmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip;  
+	}//execute
+  
+	private void fillCHDobj () {
+
+		chd.Coll_txtAcouBDate = decl.collinspolinsertmapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.collinspolinsertmapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.collinspolinsertmapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.collinspolinsertmapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.collinspolinsertmapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.collinspolinsertmapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.collinspolinsertmapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.collinspolinsertmapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.collinspolinsertmapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.collinspolinsertmapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.collinspolinsertmapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.collinspolinsertmapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.collinspolinsertmapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.collinspolinsertmapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.collinspolinsertmapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtCollTypeCode = decl.collinspolinsertmapping.Coll_txtCollTypeCode;
+		chd.Coll_txtComDoc = decl.collinspolinsertmapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.collinspolinsertmapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.collinspolinsertmapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.collinspolinsertmapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.collinspolinsertmapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.collinspolinsertmapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.collinspolinsertmapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.collinspolinsertmapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.collinspolinsertmapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.collinspolinsertmapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.collinspolinsertmapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.collinspolinsertmapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.collinspolinsertmapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.collinspolinsertmapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.collinspolinsertmapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.collinspolinsertmapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.collinspolinsertmapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.collinspolinsertmapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.collinspolinsertmapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.collinspolinsertmapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.collinspolinsertmapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.collinspolinsertmapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.collinspolinsertmapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.collinspolinsertmapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.collinspolinsertmapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.collinspolinsertmapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.collinspolinsertmapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.collinspolinsertmapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.collinspolinsertmapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.collinspolinsertmapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.collinspolinsertmapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.collinspolinsertmapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.collinspolinsertmapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.collinspolinsertmapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.collinspolinsertmapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.collinspolinsertmapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.collinspolinsertmapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.collinspolinsertmapping.Coll_txtThirdRightInNom;
+		chd.COL_TYPE_ID = decl.collinspolinsertmapping.COL_TYPE_ID;
+		chd.REAL_EST_EUSE_ID = decl.collinspolinsertmapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.collinspolinsertmapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.collinspolinsertmapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.collinspolinsertmapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.collinspolinsertmapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.collinspolinsertmapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.collinspolinsertmapping.COL_PLACE;
+		chd.COL_COUNTY = decl.collinspolinsertmapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.collinspolinsertmapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.collinspolinsertmapping.COL_RESI_QUAR;
+		chd.USE_OPEN_ID = decl.collinspolinsertmapping.USE_OPEN_ID;
+		chd.USE_ID = decl.collinspolinsertmapping.USE_ID;
+		chd.INSPOL_IND = decl.collinspolinsertmapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.collinspolinsertmapping.Coll_txtDesc;	
+		chd.recept = "CLT_IP";  
+		chd.eve_typ_id =  new java.math.BigDecimal("1609216003.0");
+		chd.Coll_txtAcumBuyValue = decl.collinspolinsertmapping.Coll_txtAcumBuyValue;
+		chd.ORIGIN_ORG_UNI_ID = decl.collinspolinsertmapping.ORIGIN_ORG_UNI_ID;
+		chd.ORG_UNI_ID = decl.collinspolinsertmapping.ORG_UNI_ID;
+		chd.COL_CAT_ID = decl.collinspolinsertmapping.col_cat_id;
+		chd.save_ver_aut_flag = decl.collinspolinsertmapping.save_ver_aut_flag;
+		chd.KolLow_txtEligibility = decl.collinspolinsertmapping.KolLow_txtEligibility;
+		chd.ColRba_txtEligibility = decl.collinspolinsertmapping.ColRba_txtEligibility;
+		chd.Kol_txtRbaEligDsc = decl.collinspolinsertmapping.Kol_txtRbaEligDsc; 	
+        chd.SPEC_STATUS = decl.collinspolinsertmapping.SPEC_STATUS;    
+        chd.Kol_txtCRMHnb=decl.collinspolinsertmapping.Kol_txtCRMHnb;
+        
+        chd.use_id_co = decl.collinspolinsertmapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.collinspolinsertmapping.Coll_txtTypeTVCode;
+        chd.contract_type=decl.collinspolinsertmapping.Coll_txtContractTypeCode;   
+        chd.COL_SUB_ID=decl.collinspolinsertmapping.SEC_TYP_ID;
+        chd.COL_GRO_ID = null;
+	}
+
+	private void fillDeclFromCHDObj () {
+		decl.collinspolinsertmapping.COL_HEA_ID = chd.COL_HEA_ID;
+		decl.collinspolinsertmapping.Coll_txtUserLock = chd.Coll_txtUserLock;
+		decl.collinspolinsertmapping.Coll_txtCode = chd.Coll_txtCode;
+		decl.collinspolinsertmapping.STATUS = chd.STATUS;
+		decl.collinspolinsertmapping.Coll_txtOpeningTs = chd.Coll_txtOpeningTs;
+		decl.collinspolinsertmapping.EVE_ID = chd.EVE_ID;		
+		decl.collinspolinsertmapping.USER_LOCK = chd.USER_LOCK;
+		
+        decl.collinspolinsertmapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.collinspolinsertmapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.collinspolinsertmapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.collinspolinsertmapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.collinspolinsertmapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.collinspolinsertmapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.collinspolinsertmapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.collinspolinsertmapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+	}
+
+}	 
+			

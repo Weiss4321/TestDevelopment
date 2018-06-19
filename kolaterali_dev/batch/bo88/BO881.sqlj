@@ -1,0 +1,94 @@
+package hr.vestigo.modules.collateral.batch.bo88;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.math.BigDecimal;
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+
+public class BO881 {
+    
+    #sql iterator Iter1(
+            BigDecimal cas_exc_id,
+            String cde_account,
+            String status,
+            Date date_from,
+            Date date_until,
+            String user_login,
+            String user_name,
+            Timestamp user_lock,
+            String interni_mb,
+            String naziv
+        );
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo88/BO881.sqlj,v 1.4 2014/05/16 07:51:14 hraaks Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    private Iter1 iter = null;
+    //
+    public BO881(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+    
+    public String selectMailAddresses(){
+        try
+        {
+            String address = null;
+            #sql [connCtx] {
+                SELECT dest_mail_address 
+                INTO   :address
+                FROM   report_def 
+                WHERE  rpt_code = 'xls667'
+            };
+            if(address == null) bc.error("Nije definirana e-mail adresa na koju se salje izvjesce (REPORT_DEF.DEST_MAIL_ADDRESS=NULL)!", new String[]{""});
+            return address;
+        }
+        catch(SQLException ex){
+            bc.error("Greska kod dohvata mail liste!", ex);
+            return null;
+        }
+    }
+    
+    public Iter1 getData(){
+        
+       
+        try {
+            
+      
+        #sql [connCtx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+        
+        #sql [connCtx] iter = {
+            SELECT distinct
+                a.cas_exc_id        AS cas_exc_id,
+                a.cde_account       AS cde_account,
+                a.status            AS status,
+                a.date_from         AS date_from,
+                a.date_until        AS date_until,
+                ec.login            AS user_login,
+                ec.user_name        AS user_name,
+                a.user_lock         AS user_lock,
+                d.register_no       AS interni_mb,
+                d.name              AS naziv
+            FROM
+                cashdep_exception a
+                    LEFT OUTER JOIN app_user ec ON a.use_id = ec.use_id
+                    left outer join coll_cashdep c on a.cde_account = c.cde_account
+                    left outer join coll_owner e on c.col_hea_id = e.col_hea_id
+                    left outer join customer d on e.cus_id = d.cus_id
+             ORDER BY a.status, d.name asc
+        };
+        } catch (Exception e) {
+           bc.debug("bo88: getData-->"+ e.toString());
+        }
+        
+        return iter;
+    }
+
+    
+    
+
+}

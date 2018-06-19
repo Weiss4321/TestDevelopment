@@ -1,0 +1,45 @@
+package hr.vestigo.modules.collateral.jcics.co39;
+
+
+/**
+ * mapping getCollateralLifeInsuranceByNaturalKey
+ *
+*/
+public class CO395 extends AbstractLoxonRunnerData{
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co39/CO395.sqlj,v 1.6 2008/05/21 11:39:08 hraamh Exp $";
+	
+	
+	public CO395(DeclCO39 decl){
+		this.decl=decl;
+	}
+	
+	public void run() throws Exception{
+		
+		String ip_code= decl.getcollaterallifeinsurancebynaturalkey.insuranceContrNumb.trim();
+		String ic_code=decl.getcollaterallifeinsurancebynaturalkey.insuranceCompanyID.trim();
+		
+		CollHeaIdIter iter=null;
+		#sql [connCtx] iter={
+			select 
+				a.col_hea_id 
+			from coll_inspolicy a, insu_company b 
+			where 
+				a.ip_code=:(ip_code) and 
+				a.ip_cus_id = b.ic_id and 
+				b.ic_code=:(ic_code)
+		};
+		
+		if(iter!=null){
+			while(iter.next()){
+				getRunner().gatherByColHeaId(iter.col_hea_id());
+			}
+		}
+	}
+	
+	protected  DeclLoxonMappingInterface getMappingDecl(){
+		return (decl.getcollaterallifeinsurancebynaturalkey);
+	}
+	
+	
+}

@@ -1,0 +1,330 @@
+package hr.vestigo.modules.collateral.batch.bo40;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.customer.common.yky0.YKY00;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+/**
+ * @author 
+          _______  _______  _______  _______ _________
+|\     /|(  ____ )(  ___  )/ ___   )(  ____ \\__   __/
+| )   ( || (    )|| (   ) |\/   )  || (    \/   ) (
+| (___) || (____)|| (___) |    /   )| (_____    | |
+|  ___  ||     __)|  ___  |   /   / (_____  )   | |
+| (   ) || (\ (   | (   ) |  /   /        ) |   | |
+| )   ( || ) \ \__| )   ( | /   (_/\/\____) |   | |
+|/     \||/   \__/|/     \|(_______/\_______)   )_(
+
+ *
+ * TODO To change the template for this generated type comment go to
+ * Window - Preferences - Java - Code Style - Code Templates
+ */
+  
+public class BO401 {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo40/BO401.sqlj,v 1.7 2009/06/03 10:45:31 hrazst Exp $";
+
+    private BatchContext bc = null;
+    private ConnCtx ctx = null;
+    private ConnCtx ctx1 = null;
+    private BigDecimal eve_id = null;    
+
+    #sql iterator IteratorAccounts with (holdability = true) ( 
+        BigDecimal cus_acc_id
+    ); 
+    
+    #sql iterator IteratorBalanceData (
+                BigDecimal cusacc_bal_id,
+                BigDecimal cus_acc_id,
+                BigDecimal acc_num_id,
+                BigDecimal cus_id,
+                String account,
+                String ban_rel_type,
+                String amo_type,
+                BigDecimal pro_typ_id,
+                Date balance_date,
+                BigDecimal cur_id,
+                BigDecimal debit_total,
+                BigDecimal credit_total,
+                BigDecimal balance,
+                BigDecimal clause_balance
+        );
+   
+    public BO401(BatchContext bc) {
+        this.bc = bc;       
+        try {            
+            this.ctx = bc.getContext();
+            this.ctx1 = new ConnCtx(bc.getNewConnection());
+       }
+        catch (SQLException e) {
+            bc.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    public void insertIntoEvent() throws Exception{  
+         
+        try{            
+            YXYB0 eve1 = new YXYB0(bc);
+            YXYD0 genId = new YXYD0(ctx);           
+            
+            //generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+            this.eve_id = genId.getNewId();
+        
+            HashMap event = new HashMap();
+            event.put("eve_id",this.eve_id);
+            event.put("eve_typ_id", new BigDecimal("2795546003"));
+            event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+            event.put("cmnt", "bo40: Revalorizacija teèaja na kraju mjeseca."); 
+            event.put("use_id", bc.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null); 
+            event.put("bank_sign", bc.getBankSign());
+            bc.debug("eve_id " + event.get("eve_id"));
+
+            eve1.insertEvent(event);            
+            bc.updateEveID(this.eve_id);             
+      } catch(Exception e){
+          throw e;
+      }
+    } 
+    
+    public BigDecimal getEveId(){
+        return this.eve_id;
+    }  
+    
+    /**Dohvaca iterator u kojem su pohranjeni account_id-evi za koje se treba radit revalorizacija
+     * @return
+     * @throws SQLException
+     */
+    public IteratorAccounts fetchAccounts() throws SQLException{
+        IteratorAccounts iterator_pom = null;
+        
+        try{
+            #sql [ctx1] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx1] iterator_pom={
+                            SELECT cus_acc_id 
+                            FROM account_number
+                            WHERE amo_type='425' AND ban_rel_type='919'
+
+                };
+        }catch(SQLException sqle){
+            bc.info("Greska u metodi fetchAccounts");
+            sqle.printStackTrace();
+            throw sqle;
+        }
+        return iterator_pom;        
+    }
+    
+/**Zapis pocetka obrade u COL_PROC tablicu. 
+     * @param revaDate
+     * @return
+     * @throws Exception
+     */    
+    public BigDecimal insertIntoColProc(Date processDate) throws Exception{
+        bc.debug("sqlj insertIntoColProc."); 
+        BigDecimal coll_id=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+             
+            //generator id-a za modul Collateral
+            YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+            coll_id = id_generator.getNewId();
+            
+            #sql [ctx]{ INSERT INTO COL_PROC 
+                    (
+                        COL_PRO_ID,
+                        PROC_DATE,
+                        VALUE_DATE,
+                        PROC_TYPE,
+                        PROC_WAY,
+                        PROC_STATUS,
+                        COL_NUMBER,
+                        PROC_TS,
+                        ORG_UNI_ID,
+                        USE_ID,
+                        USER_LOCK
+                    ) 
+                    VALUES( 
+                        :coll_id,
+                        current date,
+                        :processDate,
+                        'REV',
+                        'A',
+                        '0',
+                        0,
+                        null,
+                        53253,
+                        1,
+                        current timestamp
+                    )
+            };  
+            
+        }catch(SQLException sqle){
+            bc.info("insertIntoColProc=" + sqle.getErrorCode());
+            bc.info("insertIntoColProc=" + sqle.getSQLState());
+            sqle.printStackTrace();
+        }catch(Exception e1){
+            bc.info("insertIntoColProc");
+            bc.info(e1.toString());
+        }        
+        bc.debug("sqlj insertIntoColProc gotov.");
+        return coll_id;        
+    } 
+
+    /** Update zapisa o zavrsetku kolateral obrade u tablicu col_proc.
+     * @param colProId - id obrade
+     * @param colNumber - broj obradenih zapisa
+     * @throws Exception
+     */
+    public void updateColProc(BigDecimal colProId, BigDecimal colNumber) throws Exception{
+        bc.debug("sqlj updateIntoColProc."); 
+    
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+            
+            #sql [ctx]{ UPDATE COL_PROC 
+                    SET
+                        PROC_STATUS='1',
+                        COL_NUMBER=:colNumber,
+                        PROC_TS=current timestamp
+                    WHERE
+                        col_pro_id=:colProId
+            };  
+            
+        }catch(SQLException sqle){
+            bc.info("updateIntoColProc=" + sqle.getErrorCode());
+            bc.info("updateIntoColProc=" + sqle.getSQLState());
+            sqle.printStackTrace();
+        }catch(Exception e1){
+            bc.info("updateIntoColProc");
+            bc.info(e1.toString());
+        }        
+        bc.debug("sqlj updateIntoColProc gotov.");      
+    } 
+    /** Dohvacanje potrebnih podataka o partiji komitenta 
+     * @param cusAccId - id partije
+     * @return CustomerAccountData blok
+     * @throws Exception 
+     */
+    public CustomerAccountData getCustomerAccountDetails(BigDecimal cusAccId) throws Exception {
+        CustomerAccountData cad = new CustomerAccountData();
+        try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx] { 
+                SELECT cus_acc_no, org_uni_id, currency_type, cus_id, ban_pro_typ_id, pro_cat_id, cus_acc_status
+                    INTO :(cad.cus_acc_no), :(cad.org_uni_id), :(cad.currency_type), 
+                            :(cad.cus_id), :(cad.ban_pro_typ_id), :(cad.pro_cat_id), :(cad.status)
+                FROM customer_account
+                WHERE cus_acc_id = :cusAccId
+            };
+        } catch (SQLException se) {
+              throw se;      
+        }  
+        return cad;
+    }
+    
+    /**Dohvaca iterator balanca za neku partiju za max_datum koji je manji ili jednak process_date<br>
+     * @param cusAccId - id partije
+     * @param processDate - datum za koji se dohvaca balance, tj. datum do kojeg se gleda maksimalni balance_date
+     * @return
+     * @throws SQLException
+     */
+    public IteratorBalanceData fetchBalanceData(BigDecimal cusAccId, Date processDate) throws SQLException{
+        IteratorBalanceData iterator_pom = null;
+        
+        try{
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx] iterator_pom={
+                    SELECT cb.cusacc_bal_id, cb.cus_acc_id, cb.acc_num_id, cb.cus_id, cb.account,
+                            cb.ban_rel_type, cb.amo_type, cb.pro_typ_id, cb.balance_date, cb.cur_id, debit_total, credit_total,
+                            cb.balance, cb.clause_balance
+                    FROM   cusacc_balance cb
+                    WHERE cb.balance_date = (SELECT MAX(balance_date) 
+                                             FROM cusacc_balance cusb 
+                                             WHERE cusb.acc_num_id = cb.acc_num_id AND balance_date<=:processDate)
+                    AND cb.cus_acc_id = :cusAccId
+                    ORDER BY decimal(account) ASC 
+                 };
+        }catch(SQLException sqle){
+            bc.info("Greska u metodi fetchBalanceData");
+            sqle.printStackTrace();
+            throw sqle;
+        }
+        return iterator_pom;        
+    } 
+    
+
+    /**Dohvaca sifru organizacijske jedinice preko code<br>
+     * @param orgCode - numericka sifra organizacijske jedinice
+     * @return id organizacijske jedinica
+     * @throws SQLException
+     */   
+    public BigDecimal getOrgId(String orgCode) throws SQLException{
+        BigDecimal orgUniId=null;
+        try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ 
+                        SELECT  org_uni_id
+                        INTO    :orgUniId
+                        FROM    organization_unit
+                        WHERE   code = :orgCode
+            };
+        }catch(SQLException sqle){
+            bc.debug ( "getOrgId SQL ErrorCode = " + sqle.toString());
+            throw sqle;
+        }           
+        return orgUniId;
+
+    }
+    
+    /**
+     * Vraca Id tipa transakcije za dani Id dogadaja iz tablice event_description
+     * 
+     * <br>
+     * select tra_typ_id from event_description 
+     * where eve_typ_id=1:eventTypeId and bank_sign='RB'
+     * @param eventTypeCode kod dogadaja
+     * @return id dogadaja
+    */
+    public BigDecimal selectTransactionTypeId(BigDecimal eventTypeId){
+        bc.debug("selectTransactionTypeId poceo");
+        BigDecimal transactionTypeId = null; 
+        try{
+            #sql [ctx]{
+                    select tra_typ_id 
+                    into :(transactionTypeId)
+                    from event_description 
+                    where eve_typ_id= (:eventTypeId)
+                    and bank_sign='RB'
+            };                            
+        }catch(SQLException e){
+            bc.debug(".....selectTransactionTypeId        Message  : " + e.getMessage());
+            bc.debug(".....selectTransactionTypeId      Error code : " + e.getErrorCode());
+            bc.debug(".....selectTransactionTypeId        SQLState : " + e.getSQLState());
+            e.printStackTrace();
+            if ((e.getErrorCode() == 100)){
+                 bc.debug("selectTransactionTypeId: nije nadjen tra_typ_id za eve_typ_id = "+ eventTypeId + " !");
+                 throw new VestigoTMException(1,"YFWL1: selectTransactionTypeId: tra_typ_id doesn't exist for eve_typ_id = "+ eventTypeId + " !","fin_err413", null);
+                 
+            }else{
+                throw new VestigoTMException(1, "SQL error " + e.getErrorCode() + 
+                        " in event_description while fetching tra_typ_id for: " +
+                        " eve_typ_id = " + eventTypeId+ "! ","errA08", null);
+            }
+        }     
+        bc.debug("selectTransactionTypeId kraj");
+        return transactionTypeId;
+    }
+    
+}

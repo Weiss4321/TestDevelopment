@@ -1,0 +1,208 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+			  SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   c.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CUSTOMER c,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id        AND cl.process_date =   '13.07.2015')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X') 
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+                AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) ) OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '01.01.2015') ) )
+                AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= 5  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+		UNION ALL
+		  SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id      AND cl.process_date =   '13.07.2015')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >='01.01.2015') ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= 5 )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1'
+                with ur
+				
+				
+				
+				
+				
+				SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   c.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CUSTOMER c,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id        AND cl.process_date =   '13.07.2015')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X') 
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+                AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) ) OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '01.01.2015') ) )
+                AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= 5  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+		UNION ALL
+		  SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id      AND cl.process_date =   '13.07.2015')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >='01.01.2015') ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= 5 )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1'
+                with ur
+		
+                

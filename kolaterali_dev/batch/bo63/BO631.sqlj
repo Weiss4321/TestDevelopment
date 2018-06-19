@@ -1,0 +1,256 @@
+package hr.vestigo.modules.collateral.batch.bo63;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO631
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo63/BO631.sqlj,v 1.6 2017/03/14 12:32:55 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    private final String policy_type_coll = "K";
+    private final String policy_type_inspol = "P";
+    
+    #sql iterator Iter1(
+        BigDecimal ins_war_not_id,
+        String wrn_status,
+        String candidate_status,
+        String ip_code,
+        Date ip_paid_until,
+        String ic_name,
+        BigDecimal col_hea_id,
+        String col_num,
+        String cus_acc_no,
+        Date due_date,
+        Date usage_date,
+        String cus_acc_orig_st,
+        String register_no,
+        String name,
+        String customer_status,
+        String org_uni_code,
+        BigDecimal new_build_val,
+        String street,
+        String housenr,
+        String real_es_type_desc,
+        String city,
+        String postal_code
+    );
+
+    public BO631(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4668829704"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Lista kandidata za slanje obavijesti i opomena po isteklim policama osiguranja");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch (Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa potrebne podatke za izvješæe.
+     * @return Iterator.
+     */
+    public Iter1 selectData(String policy_type, String cust_type) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BO631.selectData");
+            
+            Iter1 iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.ins_war_not_id    AS ins_war_not_id,
+                    a.wrn_status        AS wrn_status,
+                    s.sys_code_desc     AS candidate_status,
+                    i.ip_code           AS ip_code,
+                    i.ip_vali_until     AS ip_paid_until,
+                    ic.ic_name          AS ic_name,
+                    c.col_hea_id        AS col_hea_id,
+                    c.col_num           AS col_num,
+                    e.cus_acc_no        AS cus_acc_no,
+                    e.due_date          AS due_date,
+                    e.usage_date        AS usage_date,
+                    e.cus_acc_orig_st   AS cus_acc_orig_st,
+                    cc.register_no      AS register_no,
+                    cc.name             AS name,
+                    s2.sys_code_desc    AS customer_status,
+                    o.code              AS org_uni_code,
+                    r.new_build_val     AS new_build_val,
+                    r.street            AS street,
+                    r.housenr           AS housenr,
+                    t.real_es_type_desc AS real_es_type_desc,
+                    m.name              AS city,
+                    p.postal_code       AS postal_code
+                FROM ip_warning_notes a
+                LEFT OUTER JOIN system_code_value s ON (s.sys_cod_id = 'ip_candidate_stat' AND a.candidate_status = s.sys_code_value)
+                LEFT OUTER JOIN insurance_policy i ON a.ip_id = i.ip_id
+                LEFT OUTER JOIN insu_company ic ON i.ip_ic_id = ic.ic_id
+                LEFT OUTER JOIN coll_head c ON i.col_hea_id = c.col_hea_id
+                LEFT OUTER JOIN coll_hf_prior h ON (c.col_hea_id = h.hf_coll_head_id AND h.hf_status = 'A' AND h.hf_own_cus_id = 8218251)
+                LEFT OUTER JOIN loan_beneficiary l ON (h.coll_hf_prior_id = l.coll_hf_prior_id AND l.status = 'A')
+                LEFT OUTER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                LEFT OUTER JOIN customer cc ON e.cus_id = cc.cus_id
+                LEFT OUTER JOIN system_code_value s2 ON (s2.sys_cod_id = 'status' AND cc.status = s2.sys_code_value)
+                LEFT OUTER JOIN organization_unit o ON e.org_uni_id = o.org_uni_id
+                LEFT OUTER JOIN coll_restate r ON c.col_hea_id = r.col_hea_id
+                LEFT OUTER JOIN real_estate_type t ON r.real_est_type = t.real_es_type_id
+                LEFT OUTER JOIN political_map m ON r.pol_map_id_ad = m.pol_map_id
+                LEFT OUTER JOIN post_office p ON r.pos_off_id_ad = p.pos_off_id
+                WHERE a.ip_id IS NOT NULL
+                  AND a.candidate_status IN ('K','N','A')
+                  AND cc.basel_cus_type IN ('1','36')
+                ORDER BY c.col_num, e.cus_acc_no
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja podataka za izvjesce!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO631.selectData");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o glavnom vlasniku zadanog kolaterala.
+     * @param col_hea_id ID kolaterala
+     * @return HashMap s podacima o vlasniku kolaterala
+     */
+    public HashMap selectCollOwnerData(BigDecimal col_hea_id) throws Exception
+    {
+        HashMap map = new HashMap();
+        
+        try
+        {
+            batchContext.startStopWatch("BO631.selectCollOwnerData");
+            
+            BigDecimal cus_id = null;
+            String register_no = null, name = null, tax_number = null, status = null;
+            #sql [connCtx] {
+                SELECT b.cus_id, b.register_no, b.name, b.tax_number, s.sys_code_desc
+                INTO :(cus_id), :(register_no), :(name), :(tax_number), :(status)
+                FROM coll_owner a
+                INNER JOIN customer b ON a.cus_id = b.cus_id
+                LEFT OUTER JOIN system_code_value s ON (s.sys_cod_id = 'status' AND b.status = s.sys_code_value)
+                WHERE a.col_hea_id = :(col_hea_id) 
+                  AND a.main_owner = 'D'
+                  AND CURRENT DATE BETWEEN a.date_from AND a.date_until 
+                FETCH FIRST ROW ONLY 
+                WITH UR
+            };
+            
+            map.put("register_no", register_no);
+            map.put("name", name);
+            map.put("tax_number", tax_number);
+            map.put("status", status);
+            
+            String street = null, house_no = null, city_name = null, postoffice = null;
+            try
+            {
+                #sql [connCtx] {
+                    SELECT street, house_no, city_name, postoffice
+                    INTO :(street), :(house_no), :(city_name), :(postoffice)
+                    FROM cust_address 
+                    WHERE cus_id = :(cus_id)
+                      AND add_typ_id = 'COMMONCONTACTADDR' 
+                      AND CURRENT DATE BETWEEN date_from AND date_until 
+                    FETCH FIRST ROW ONLY
+                    WITH UR
+                };
+            }
+            catch (SQLException ex2)
+            {
+                if (batchContext.getSQLExHandler().isEmptyRowset(ex2))
+                {
+                    #sql [connCtx] {
+                        SELECT street, house_no, city_name, postoffice
+                        INTO :(street), :(house_no), :(city_name), :(postoffice)
+                        FROM cust_address 
+                        WHERE cus_id = :(cus_id)
+                          AND add_typ_id = 'MAINADDRESS' 
+                          AND CURRENT DATE BETWEEN date_from AND date_until 
+                        FETCH FIRST ROW ONLY
+                        WITH UR
+                    };
+                }
+                else
+                {
+                    throw ex2;
+                }
+            }
+            
+            map.put("street", street);
+            map.put("house_no", house_no);
+            map.put("city_name", city_name);
+            map.put("postoffice", postoffice);
+            
+            return map;
+        }
+        catch (SQLException ex)
+        {
+            if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return map;
+            }
+            else
+            {
+                batchContext.error("Greska kod dohvata podataka o vlasniku kolaterala (COL_HEA_ID = " + col_hea_id + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO631.selectCollOwnerData");
+        }
+    }
+}

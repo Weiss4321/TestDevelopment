@@ -1,0 +1,160 @@
+package hr.vestigo.modules.collateral.batch.bo87;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.sql.*;
+import sqlj.runtime.ref.*;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+
+
+public class BO871 {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo87/BO871.sqlj,v 1.2 2014/04/22 08:08:07 hraziv Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    public BO871(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+    
+    #sql iterator AllocationIterator (
+        String category_code,
+        String category_name,
+        String type_code,
+        String type_name,
+        String sub_type_code,
+        String sub_type_name,
+        String uvjet,
+        String ponder_type,
+        BigDecimal min_value,
+        BigDecimal dfl_value,
+        BigDecimal max_value,
+        String status,
+        Date date_from,
+        Date date_until,
+        String oj_unosa,
+        String referent_unosa,
+        Timestamp vrijeme_unosa
+       
+    );
+
+    /**
+     * Metoda koja dohvaæa unešene defaultne pondere po kategorijama, tipovima i vrstama
+     * @return iterator s podacima
+     */
+    public AllocationIterator selectData() throws Exception
+    {   
+        bc.startStopWatch("BO871.selectData");
+        
+        
+        AllocationIterator iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                    SELECT
+                    cc.code                  AS category_code,
+                    cc.name                  AS category_name,
+                    ct.coll_type_code        AS type_code,
+                    ct.coll_type_name        AS type_name,
+                    coalesce(vrsta.code,'')  AS sub_type_code, 
+                    coalesce(vrsta.name,'')  AS sub_type_name, 
+                    dcp.add_request          AS uvjet,
+                    dcp.ponder_type          AS ponder_type,
+                    dcp.min_value            AS min_value,
+                    dcp.dfl_value            AS dfl_value,
+                    dcp.max_value            AS max_value,
+                    dcp.status               AS status,
+                    dcp.date_from            AS date_from,
+                    dcp.date_until           AS date_until,
+                    ou.code                  AS oj_unosa,
+                    au.user_name            AS referent_unosa,
+                    dcp.create_ts           AS vrijeme_unosa
+                    FROM dfl_col_ponder dcp
+                    LEFT OUTER JOIN organization_unit ou ON dcp.org_uni_id = ou.org_uni_id
+                    LEFT OUTER JOIN app_user au ON dcp.use_id = au.use_id
+                    INNER JOIN coll_category cc on (dcp.col_cat_id=cc.col_cat_id)
+                    INNER JOIN collateral_type ct on (dcp.col_typ_id=ct.coll_type_id)
+                    LEFT OUTER JOIN (
+                        SELECT 
+                        real_es_type_id     AS col_sub_id,
+                        real_es_type_code   AS code,
+                        real_es_type_desc   AS name
+                        FROM real_estate_type
+                        UNION
+                        SELECT
+                        veh_gro_id      AS col_sub_id,
+                        veh_gro_code    AS code,
+                        veh_gro_desc    AS name
+                        FROM vehicle_group
+                        UNION
+                        SELECT
+                        ves_typ_id  AS col_sub_id,
+                        ves_code    AS code,
+                        ves_dsc     AS name
+                        FROM vessel_type
+                        UNION
+                        SELECT
+                        mov_typ_id      AS col_sub_id,
+                        mov_typ_code    AS code,
+                        mov_typ_dsc     AS name
+                        FROM movable_type ) vrsta on (dcp.col_sub_id=vrsta.col_sub_id)
+                ORDER BY 2, 3   
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata unešenih defaultnih pondera po kategorijama, tipovima i vrstama!", ex);
+        }
+        
+        bc.stopStopWatch("BO871.selectData");
+        return iter;
+    }
+    
+    public String selectMailAddresses() throws Exception
+    {
+        
+        bc.startStopWatch("BO871.selectMailAddresses");
+        String adresses = null;
+        try
+        {
+            String address = null;
+            #sql [connCtx] {
+                SELECT dest_mail_address 
+                INTO   :address
+                FROM   report_def 
+                WHERE  rpt_code = 'csvb087'
+            };
+            if(address == null) 
+            {    
+                //bc.error("Nije definirana e-mail adresa na koju se salje izvjesce (REPORT_DEF.DEST_MAIL_ADDRESS=NULL)!", new String[]{""});
+                bc.userLog("Nije definirana e-mail adresa na koju se salje izvjesce (REPORT_DEF.DEST_MAIL_ADDRESS=NULL)!");
+            }
+            return address;
+        }
+        catch(SQLException ex){
+            error("Greska kod dohvata mail liste!", ex);
+            return null;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO871.selectMailAddresses ");
+        }        
+        
+    }
+    
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

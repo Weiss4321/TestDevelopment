@@ -1,0 +1,190 @@
+package hr.vestigo.modules.collateral.jcics.co03;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+
+//COLL_HF_PRIOR_LIST
+
+#sql iterator Iter1 (	BigDecimal coll_hf_prior_id,
+						BigDecimal hf_hfc_id,
+						String HfHfcIdSCV,
+						String HfHfcSCD,
+						BigDecimal hf_own_cus_id,
+						String hf_register_no,
+						String hf_own_code,
+						BigDecimal hf_amount,
+						BigDecimal hf_cur_id,
+						String HfCurIdCChar,
+						Date hf_date_hfc_from,
+						Date hf_date_hfc_until,
+						BigDecimal hf_avail_amo,
+						String hf_priority,
+						BigDecimal hf_coll_head_id, 
+						BigDecimal cus_id_placem,
+						BigDecimal how_cover,
+						String rec_lop,
+						String agreement,
+                        String agreement_no
+					 );
+
+//java.sql.Date hf_date_extract,
+
+
+/**
+ * CO031 class selects all data from table COLL_HF_PRIOR
+ * into list screen and puts this data into vectors LDB.
+ */
+public class CO031 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co03/CO031.sqlj,v 1.18 2017/11/13 14:27:57 hrakis Exp $";
+	
+	public DeclCO03 decl = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO031 (DeclCO03 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+		
+		tc.debug("..........decl.CollHfPrior_HF_COLL_HEAD_ID    " + decl.CollHfPrior_HF_COLL_HEAD_ID);	
+		tc.debug("..........decl.HF_FRA_AGR_ID " + decl.HF_FRA_AGR_ID);
+			  
+//		if(decl.CollHfPrior_HF_COLL_HEAD_ID != null ){
+		if(decl.CollHfPrior_HF_COLL_HEAD_ID != null && decl.HF_FRA_AGR_ID == null) {			
+			#sql [ctx] iter1 = {
+				 SELECT 	chp.coll_hf_prior_id     AS coll_hf_prior_id, 
+                            chp.hf_hfc_id            AS hf_hfc_id, 
+						    scv.sys_code_value       AS HfHfcIdSCV,
+						    scv.sys_code_desc        AS HfHfcSCD,
+						    chp.hf_own_cus_id        AS hf_own_cus_id,
+						    cu.register_no           AS hf_register_no,
+						    cu.code                  AS hf_own_code,
+ 						    chp.hf_amount            AS hf_amount, 
+							chp.hf_cur_id            AS hf_cur_id,
+							cur.code_char            AS HfCurIdCChar,
+							chp.hf_date_hfc_from     AS hf_date_hfc_from,
+							chp.hf_date_hfc_until    AS hf_date_hfc_until, 
+							chp.hf_avail_amo         AS hf_avail_amo,
+							chp.hf_priority	         AS hf_priority,
+							chp.hf_coll_head_id      AS hf_coll_head_id, 
+							coh.cus_id               AS cus_id_placem,
+							chp.how_cover            AS how_cover,
+							chp.rec_lop              AS rec_lop,
+							chp.agreement            AS agreement,
+		                    fa.agreement_no          AS agreement_no
+		        FROM coll_head coh 
+		        INNER JOIN coll_hf_prior chp          ON coh.col_hea_id = chp.hf_coll_head_id
+		        INNER JOIN system_code_value scv      ON chp.hf_hfc_id = scv.sys_cod_val_id
+		        INNER JOIN customer cu                ON chp.hf_own_cus_id = cu.cus_id
+		        INNER JOIN currency cur               ON chp.hf_cur_id = cur.cur_id
+		        LEFT OUTER JOIN frame_agreement fa    ON chp.fra_agr_id = fa.fra_agr_id
+				WHERE coh.col_hea_id = :(decl.CollHfPrior_HF_COLL_HEAD_ID)
+		        AND hf_status <> 'D'
+				ORDER BY hf_priority ASC
+			};
+		} else if (decl.CollHfPrior_HF_COLL_HEAD_ID == null && decl.HF_FRA_AGR_ID != null) {
+// Milka, 11.11.2009 - za DS prikazati samo aktivne hipoteke            
+			#sql [ctx] iter1 = {
+				SELECT 	chp.coll_hf_prior_id    AS coll_hf_prior_id, 
+                        chp.hf_hfc_id           AS hf_hfc_id, 
+						scv.sys_code_value      AS HfHfcIdSCV,
+						scv.sys_code_desc       AS HfHfcSCD,
+						chp.hf_own_cus_id       AS hf_own_cus_id,
+						cu.register_no          AS hf_register_no,
+						cu.code                 AS hf_own_code,
+						chp.hf_amount           AS hf_amount, 
+						chp.hf_cur_id           AS hf_cur_id,
+						cur.code_char           AS HfCurIdCChar,
+						chp.hf_date_hfc_from    AS hf_date_hfc_from,
+						chp.hf_date_hfc_until   AS hf_date_hfc_until, 
+						chp.hf_avail_amo        AS hf_avail_amo,
+						chp.hf_priority	        AS hf_priority,
+						chp.hf_coll_head_id     AS hf_coll_head_id, 
+						coh.cus_id              AS cus_id_placem, 
+						chp.how_cover           AS how_cover,
+						chp.rec_lop             AS rec_lop,
+						chp.agreement           AS agreement,
+                        fa.agreement_no         AS agreement_no
+				FROM coll_hf_prior chp 
+		        INNER JOIN system_code_value scv   ON chp.hf_hfc_id = scv.sys_cod_val_id
+		        INNER JOIN customer cu             ON chp.hf_own_cus_id = cu.cus_id
+		        INNER JOIN currency cur            ON chp.hf_cur_id = cur.cur_id
+		        INNER JOIN coll_head coh           ON chp.hf_coll_head_id = coh.col_hea_id
+				LEFT OUTER JOIN frame_agreement fa ON chp.fra_agr_id = fa.fra_agr_id	
+				WHERE chp.fra_agr_id  = :(decl.HF_FRA_AGR_ID)
+				AND chp.agreement = 'D'
+		        AND chp.hf_status = 'A'
+		        AND coh.collateral_status IN ('0','1','2','3')
+				ORDER BY hf_priority ASC
+		    };
+		}
+		
+		//chp.hf_coll_head_id, cup.register_no, cup.name
+		//kljuc od coll_head i korisnik plasmana ( nositelj kolaterala )
+		//		chp.hf_date_extract AS hf_date_extract,		
+	}
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}  
+      
+	
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+        //prioritet
+		//ID hipoteke
+		//vrsta
+		//u korist - interni MB
+		//u korist - eksterni MB
+		//datum ZK izvatka
+		//iznos tereta
+		//valuta tereta
+		//teret vrijedi od
+		//teret vrijedi do
+		//preostali iznos tereta
+		
+	    row.add(iter1.hf_priority());
+	    if (iter1.agreement_no() == null) row.add(iter1.coll_hf_prior_id().toString()); else row.add(iter1.agreement_no()); 
+		row.add(iter1.HfHfcSCD());	
+		row.add(iter1.hf_register_no());
+		row.add(iter1.hf_own_code());
+//		row.add(iter1.hf_date_extract());	
+		row.add(iter1.hf_amount());
+		row.add(iter1.HfCurIdCChar());
+		row.add(iter1.hf_date_hfc_from());	
+		row.add(iter1.hf_date_hfc_until());
+		row.add(iter1.hf_avail_amo());
+		
+		row1.add(iter1.coll_hf_prior_id());
+		row1.add(iter1.hf_coll_head_id());
+		row1.add(iter1.cus_id_placem());
+		row1.add(iter1.how_cover());
+		row1.add(iter1.rec_lop());
+		row1.add(iter1.agreement());
+				
+		decl.tblCollHfPrior.addRow(row,row1);
+	}
+}

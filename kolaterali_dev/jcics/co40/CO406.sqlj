@@ -1,0 +1,2503 @@
+package hr.vestigo.modules.collateral.jcics.co40;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.sql.Connection;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy9.YOY90;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyG.YXYG0;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+#sql iterator Iter611(BigDecimal coll_hf_prior_id);
+#sql iterator Iter621(BigDecimal loan_ben_id);
+#sql iterator Iter622(BigDecimal loan_ben_id);
+#sql iterator Iter63(BigDecimal ip_id);
+#sql iterator Iter64(BigDecimal col_lis_q_id,
+                    BigDecimal col_lis_typ_id,
+                    BigDecimal col_hea_id,
+                    String status,
+                    Timestamp income_time,
+                    BigDecimal use_id,
+                    Timestamp release_time,
+                    String bank_sign,
+                    String cmnt,
+                    String action_type,
+                    BigDecimal org_uni_id);
+
+#sql iterator Iter65(BigDecimal col_pon_id,
+        BigDecimal col_hea_id,
+        String ponder_type,
+        BigDecimal ponder_value,
+        String status,
+        Date date_from,
+        Date date_until,
+        BigDecimal org_uni_id,
+        BigDecimal use_id,
+        Timestamp create_ts);
+
+public class CO406 extends RemoteTransaction  {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co40/CO406.sqlj,v 1.17 2017/06/05 07:16:45 hrazst Exp $";
+    private DeclCO40 decl = null;
+    private ConnCtx ctx=null;
+    private TransactionContext tc=null;
+    private Iter611 iter1=null;
+    private Iter621 iter2=null;
+    private Iter622 iter2b=null; //kad nema hipoteke
+    private Iter63 iter3=null;
+    private Iter64 iter4=null;
+    private Iter65 iter5=null;
+    final Date current_date = new java.sql.Date(System.currentTimeMillis());
+    public String mortage_status="0";
+    public String financial_flag="0";
+    public String rba_eligibility="";
+    public String status_new="4";  
+    public String status_old="A";
+    public String new_priority="NA";
+    public String account_indic="";
+    java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+    long timeT = calendar.getTime().getTime();
+    private Timestamp CREATE_DATE_TIME  = new java.sql.Timestamp(timeT);
+    
+    private CollHeadNewOwnerData chno=new CollHeadNewOwnerData();
+    private String bank_sign=null;
+    private YOY00 idGen=null;
+    private YXYG0 sifraGen=null;
+    private YXYB0 eventGen=null;
+ 
+
+    
+
+
+    public CO406(DeclCO40 decl) { 
+        this.decl = decl;
+    } 
+    
+    public void  execute(TransactionContext tc) throws Exception {
+        
+        boolean check_flag=true;
+        boolean coll_hf_prior_check= true;
+        boolean check_ins_pol=true;
+ 
+
+        this.tc=tc;
+        ConnCtx ctx=tc.getContext();
+        this.bank_sign = tc.getBankSign();
+        this.idGen=new YOY00(tc);
+        this.sifraGen=new YXYG0(tc);
+        this.eventGen=new YXYB0(tc);
+
+      
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        tc.debug ("nakon set transaction iso level");
+        chno.COL_HEA_ID=decl.inspoldeactownermapping.col_hea_id;
+        chno.COL_TYPE_ID=decl.inspoldeactownermapping.COL_TYPE_ID;
+        
+        tc.debug ( "Preuzeti COL_HEA_ID......chno.COL_HEA_ID " + chno.COL_HEA_ID);
+        selectCollHead(ctx,chno.COL_HEA_ID);
+        
+        tc.debug ( "chno.COL_CAT_ID poslije select colhead" + chno.COL_CAT_ID); 
+        tc.debug ( "chno.COL_TYPE_ID" + chno.COL_TYPE_ID); 
+        
+        //Kod polica se knjize samo tip police 7PLK-polica zivotnog osiguranja lombardni kredit
+        
+        check_flag=checkPosting(ctx,chno.COL_CAT_ID,chno.COL_TYPE_ID);
+        tc.debug ("check_flag"+check_flag);
+        
+        tc.debug ("check_flag"+check_flag);
+//      dohvat svih hipoteka
+        //- insert satelit (coll_vehicle), coll_hf_prior,loan_beneficiary
+
+        if(check_flag) {
+            //kolateral se knjizi
+            //insert u COLL_HEAD  
+            
+            //punjenje objekta chno atributa s drugacijim statusima od dohvacenog
+            fillChno(ctx);
+            tc.debug("zovem insert u COLL_HEAD : " );
+            insertIntoCollHead(ctx); 
+            tc.debug("prije select u coll_inspolicy : " );
+            selectCollInsPolicy(ctx,chno.COL_HEA_ID);
+            tc.debug("poslije select u coll_inspolicy : " );
+            //insert u satelit - COLL_INSPOLICY
+            insertIntoCollInspolicy(ctx);
+            tc.debug("poslije inserta u coll_inspolicy : " );
+            
+            //prebacivanje povijesti obrade kolaterala
+            
+            //dohvat povijest obrada starog kolaterala
+            iter4=selectCollListQ(ctx, chno.COL_HEA_ID);
+            //za svaki slog u coll_list_q insert novog sloga s novim coll_hea_id
+            while(iter4.next()){
+                
+                //postavljanje vrijednosti za insert
+                
+                YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+                BigDecimal collaterall_id = id_generator.getNewId();
+
+                tc.debug("dohvat collateral_id : "+collaterall_id);
+                chno.col_lis_q_id=collaterall_id;
+                tc.debug("chno.col_lis_q_id" +chno.col_lis_q_id);
+                chno.col_lis_typ_id=iter4.col_lis_typ_id();
+                chno.col_hea_id_clq=chno.COL_HEA_ID_NEW;//insert s col_hea_id novog kolaterala
+                chno.status=iter4.status();
+                chno.income_time=iter4.income_time();
+                chno.use_id_clq=iter4.use_id();
+                chno.release_time=iter4.release_time();
+                chno.bank_sign=iter4.bank_sign();
+                chno.cmnt=iter4.cmnt();
+                chno.action_type=iter4.action_type();
+                chno.org_uni_id=iter4.org_uni_id();
+                
+                insertIntoCollListQ(ctx);
+                
+            }
+            
+            // slanje novog kolaterala na referentsku listu listu
+            
+            
+            YOY60 col_new=new YOY60(tc);
+
+            CollListQData plq_new=new CollListQData();   
+
+            plq_new.col_hea_id=chno.COL_HEA_ID_NEW;   
+            plq_new.status="1";
+            plq_new.income_time = chno.CREATE_DATE_TIME;
+            plq_new.use_id=decl.inspoldeactownermapping.use_id;    
+            plq_new.release_time = chno.CREATE_DATE_TIME;
+            plq_new.cmnt="RADI PROMJENE VLASNIKA";
+            plq_new.action_type="KREIRAJ";        
+            plq_new.org_uni_id =decl.inspoldeactownermapping.org_uni_id;
+            plq_new.source_list = "700223";   
+            plq_new.status_source_list = "1";
+            plq_new.target_list = "697223"; 
+            plq_new.status_target_list = "0";
+
+            plq_new.target_list_use_id = null;
+            plq_new.target_list_org_uni_id = null;
+
+            col_new.update_insert_CollListQ(plq_new); 
+
+            
+            chno.COL_HEA_ID=decl.inspoldeactownermapping.col_hea_id;
+            
+            //kontrola da li ima hipoteku 
+            coll_hf_prior_check=checkCollHfPrior(ctx,chno.COL_HEA_ID);
+            tc.debug("coll_hf_prior : "+coll_hf_prior_check );
+            tc.debug("Provjera da li polica ima hipoteku");
+            if(coll_hf_prior_check){
+                
+                //dohvat svih hipoteka
+                try{ 
+                    #sql [ctx] iter1 = {
+                    SELECT coll_hf_prior_id
+                    FROM coll_hf_prior
+                    WHERE hf_coll_head_id=:(chno.COL_HEA_ID)
+                    };
+                } catch(SQLException sqle){
+                    tc.debug("Iter1 nije nista dohvatio!");
+                    throw sqle;
+                }
+                
+                //za svaku hipoteku deaktivirati vezane plasmane
+                while(iter1.next()){
+                    BigDecimal pom_coll_hf_prior_id=null;
+                    
+                   
+                    //dohvaceni id hipoteke u coll_hf_prior
+                    pom_coll_hf_prior_id=iter1.coll_hf_prior_id();
+                    tc.debug("WHILE ITER1 pom_id=iter1.coll_hf_prior_id()"+pom_coll_hf_prior_id);
+                    //dohvat cijelog sloga u chno
+                    
+                    try {
+                        #sql [ctx] { SELECT
+                        coll_hf_prior_id , 
+                        hf_table_id ,      
+                        hf_ref_id , 
+                        hf_coll_head_id,
+                        hf_own_cus_id ,    
+                        hf_register_no,    
+                        hf_own_code,       
+                        hf_own_fname,      
+                        hf_own_lname,      
+                        hf_hfc_id ,        
+                        hf_priority ,      
+                        hf_notary_agr,     
+                        hf_notary_place_id,
+                        hf_notary_date ,   
+                        hf_notary,         
+                        hf_not_fname,      
+                        hf_not_lname,      
+                        hf_date_reciv ,    
+                        hf_court_decis,    
+                        hf_date_extract,  
+                        land_regn,
+                        land_regn_new,
+                        judge_id,
+                        judge_fname,
+                        judge_lname,
+                        court_id,
+                        hf_offi_lrd ,      
+                        hf_offilrd_fname,  
+                        hf_offilrd_lname , 
+                        hf_rec_lop_id,
+                        hf_add_data ,          
+                        hf_amount,        
+                        hf_cur_id , 
+                        amount_ref ,            
+                        cur_id_ref ,            
+                        exc_rat_ref ,     
+                        exc_rat_ref_date ,
+                        hf_draw_amo,
+                        hf_date_hfc_from ,
+                        hf_date_hfc_until,
+                        hf_avail_amo , 
+                        hf_draw_amo_ref,
+                        avail_amo_ref,
+                        hf_avail_dat,
+                        draw_bamo,    
+                        avail_bamo ,    
+                        draw_bamo_ref ,  
+                        avail_bamo_ref , 
+                        avail_bdat , 
+                        val_date_turn,    
+                        val_date_proc,    
+                        hf_status ,       
+                        hf_spec_stat,     
+                        hf_date_from ,    
+                        hf_date_until,    
+                        use_open_id,      
+                        use_id ,          
+                        opening_ts,       
+                        user_lock ,       
+                        eve_id ,          
+                        bank_sign ,
+                        how_cover,
+                        is_part_agreem,
+                        rem_re_nomi_valu,
+                        rec_lop,
+                        date_to_lop,
+                        date_rec_lop,
+                        veh_con_num,
+                        agreement, 
+                        fra_agr_id,
+                        reg_ins ,
+                        reg_place ,
+                        con_num ,
+                        con_date ,
+                        reg_cou_id,
+                        sindic_ind,
+                        hbor_loan,
+                        rba_arang_sindic,
+                        rba_sindic_part,
+                        other_sindic_part,
+                        rba_sindic_amount,
+                        other_sindic_amount,
+                        sindic_desc,
+                        other_syndicate_cus_id,
+                        total_sindic_amount
+                        INTO  
+                        :(chno.COLL_HF_PRIOR_ID),
+                        :(chno.HF_TABLE_ID),           
+                        :(chno.HF_REF_ID),
+                        :(chno.HF_COLL_HEAD_ID),
+                        :(chno.HF_OWN_CUS_ID),
+                        :(chno.CollHfPriorDialog_txtHfRegisterNo),
+                        :(chno.CollHfPriorDialog_txtHfOwnCode),  
+                        :(chno.CollHfPriorDialog_txtHfOwnFname),        
+                        :(chno.CollHfPriorDialog_txtHfOwnLname),
+                        :(chno.HF_HFC_ID),
+                        :(chno.maxPriority), 
+                        :(chno.CollHfPriorDialog_txtHfNotaryAgr),  
+                        :(chno.HF_NOTARY_PLACE_ID),
+                        :(chno.CollHfPriorDialog_txtHfNotaryDate),    
+                        :(chno.HF_NOTARY),   
+                        :(chno.CollHfPriorDialog_txtHfNotFname),  
+                        :(chno.CollHfPriorDialog_txtHfNotLname), 
+                        :(chno.CollHfPriorDialog_txtHfDateReciv), 
+                        :(chno.CollHfPriorDialog_txtHfCourtDecis), 
+                        :(chno.CollHfPriorDialog_txtHfDateExtract),
+                        :(chno.CollHfPriorDialog_txtLandRegn),
+                        :(chno.CollHfPriorDialog_txtLandRegnNew),
+                        :(chno.CollHfPriorDialog_JUDGE_ID),
+                        :(chno.CollHfPriorDialog_txtJudgeFname),
+                        :(chno.CollHfPriorDialog_txtJudgeLname),
+                        :(chno.CollHfPriorDialog_COURT_ID),
+                        :(chno.HF_OFFI_LRD), 
+                        :(chno.CollHfPriorDialog_txtHfOffildFname),  
+                        :(chno.CollHfPriorDialog_txtHfOffildLname),
+                        :(chno.HF_REC_LOP_ID),
+                        :(chno.CollHfPriorDialog_txtHfAddData),
+                        :(chno.CollHfPriorDialog_txtHfAmount),   
+                        :(chno.HF_CUR_ID),
+                        :(chno.CollHfPriorDialog_txtAmountRef),
+                        :(chno.CUR_ID_REF),
+                        :(chno.CollHfPriorDialog_txtExcRatRef),
+                        :(chno.CollHfPriorDialog_txtExcRatRefDate),
+                        :(chno.HF_DRAW_AMO),
+                        :(chno.CollHfPriorDialog_txtHfDateHfcFrom),   
+                        :(chno.CollHfPriorDialog_txtHfDateHfcUntil),   
+                        :(chno.Hf_Avail_Amount), 
+                        :(chno.Hf_Draw_Amo_Ref),
+                        :(chno.AvailAmoRef),
+                        :(chno.AvailDat),
+                        :(chno.Draw_Bamo),
+                        :(chno.AvailBAmo),
+                        :(chno.DrawBAmoRef),
+                        :(chno.HfAvailBAmoRef),
+                        :(chno.AvailBDat),
+                        :(chno.Val_Date_Turn),
+                        :(chno.Val_Date_Proc),
+                        :(chno.Hf_status),
+                        :(chno.Hf_spec_stat),
+                        :(chno.DateFrom),         
+                        :(chno.DateUntil), 
+                        :(chno.USE_OPEN_ID_HF),
+                        :(chno.USE_ID_HF),
+                        :(chno.Opening_Ts),
+                        :(chno.User_Lock),
+                        :(chno.Eve_id),
+                        :(chno.Bank_sign),
+                        :(chno.CollHfPrior_HOW_COVER),         
+                        :(chno.CollHfPrior_txtIsPartAgreem),
+                        :(chno.residuecollWorthCO),
+                        :(chno.CollHFP_txtRecLop),
+                        :(chno.CollHFP_txtDateToLop),
+                        :(chno.CollHFP_txtDateRecLop),
+                        :(chno.CollHFP_txtVehConNum),
+                        :(chno.Kol_txtFrameAgr),
+                        :(chno.fra_agr_id),
+                        :(chno.REG_INS),
+                        :(chno.HfPror_txtRegPlace),
+                        :(chno.HfPror_txtConcNum),
+                        :(chno.HfPror_txtConcDate),
+                        :(chno.REG_COU_ID),
+                        :(chno.sindic_ind),
+                        :(chno.hbor_loan),
+                        :(chno.rba_arang_sindic),
+                        :(chno.rba_sindic_part),
+                        :(chno.other_sindic_part),
+                        :(chno.rba_sindic_amount),
+                        :(chno.other_sindic_amount),
+                        :(chno.sindic_desc),
+                        :(chno.other_syndicate_cus_id),
+                        :(chno.total_sindic_amount)
+                        FROM coll_hf_prior
+                        WHERE coll_hf_prior_id = :(pom_coll_hf_prior_id) };                     
+                    }catch(java.sql.SQLException se){  
+                        tc.debug ( ".XXXXXXX.....CO406.sqlj select coll_hf_prior SQL ErrorCode " + se.getErrorCode());
+                        tc.debug ( "XXXXXXXX......CO406.sqlj select coll_hf_prior SQL SQLState " + se.getSQLState());
+                        tc.debug ( "XXXXXXXXXx......CO406.sqlj select coll_hf_prior SQL Message " + se.getMessage());
+                        throw new VestigoTMException(1, "Transaction CO40: Error select coll_hf_prior! ","err411a", null);
+                    }
+
+                    
+                    //insert novog-prepisanog sloga u coll_hf_prior
+                    insertIntoCollHfPrior(ctx); 
+                    
+                     //dohvat svih slogova iz LOAN_BENEFICIARY
+                    try{
+                        #sql [ctx] iter2 = {
+                        SELECT loan_ben_id
+                        FROM loan_beneficiary
+                        WHERE coll_hf_prior_id=:(pom_coll_hf_prior_id)
+                        };
+                    }catch(SQLException sqle){
+                        tc.debug("Iter2 nije nista dohvatio!");
+                        throw sqle;
+                    }
+
+                    //za svaki slog(veza hipoteka-plasman) insertiram novi slog
+                    while(iter2.next()){
+                        BigDecimal pom_loan_ben_id=null;
+                        pom_loan_ben_id=iter2.loan_ben_id();
+                        tc.debug("pom_id_lb=iter2.loan_ben_id()"+pom_loan_ben_id);
+                        //select svih slogova iz loan_beneficiary
+
+                     try{
+                            #sql [ctx]{
+                            SELECT
+                            loan_ben_id,
+                            register_no,
+                            cus_id,
+                            acc_no,
+                            la_acc_id,
+                            coll_hf_prior_id,
+                            col_hea_id,
+                            ser_num,
+                            date_from,
+                            date_until,
+                            status,
+                            spec_status,
+                            use_open_id,
+                            use_id,
+                            opening_ts,
+                            user_lock,
+                            request_no,
+                            priority_no,
+                            acc_no_old,
+                            fra_agr_id,
+                            aps_rqst_no,
+                            inspol_ind,
+                            ip_cus_id,
+                            krad_admin_ind,
+                            kred_admin_use_id,
+                            kred_admin_ts
+                            INTO
+                            :(chno.loan_ben_id),
+                            :(chno.register_no),
+                            :(chno.cus_id),
+                            :(chno.acc_no),
+                            :(chno.la_acc_id),
+                            :(chno.coll_hf_prior_id),
+                            :(chno.COL_HEA_ID),
+                            :(chno.ser_num),
+                            :(chno.date_from),
+                            :(chno.date_until),
+                            :(chno.status),
+                            :(chno.spec_status),
+                            :(chno.use_open_id),
+                            :(chno.use_id),
+                            :(chno.opening_ts),
+                            :(chno.user_lock),
+                            :(chno.request_no),
+                            :(chno.priority_no),
+                            :(chno.acc_no_old),
+                            :(chno.fra_agr_id),
+                            :(chno.aps_rqst_no),
+                            :(chno.inspol_ind),
+                            :(chno.ip_cus_id),
+                            :(chno.krad_admin_ind),
+                            :(chno.kred_admin_use_id),
+                            :(chno.kred_admin_ts)
+                            FROM loan_beneficiary
+                            WHERE loan_ben_id= :(pom_loan_ben_id) };
+                        }catch(java.sql.SQLException se){  
+                            tc.debug ( "......CO406.sqlj select  loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+                            tc.debug ( "......CO406.sqlj  select  loan_beneficiarySQL SQLState " + se.getSQLState());
+                            tc.debug ( "......CO406.sqlj i select  loan_beneficiary SQL Message " + se.getMessage());
+                            throw new VestigoTMException(1, "Transaction CO40: Error  select  loan_beneficiary! ","err411c", null);
+
+                        } 
+//                      INSERT LOAN_BENEFICIARY
+                        //dohvaceni slog insertiram ponovno u coll_hf_prior ali s  drugim id!
+                        insertIntoLoanBeneficiaryCHFP(ctx);      
+                        
+                        tc.debug("pom_coll_hf_prior_id:"+pom_coll_hf_prior_id);
+                        tc.debug("pom_loan_ben_id:"+pom_loan_ben_id);
+                       
+                    }//end while (iter21.next())                  
+                   
+
+/*                    //za svaku hipoteku deaktivirati na nju vezane plasmane
+                    #sql[ctx]{UPDATE loan_beneficiary
+                    SET
+                    date_until=:(current_date),
+                    status=:(status_new)
+                    WHERE coll_hf_prior_id=:(pom_coll_hf_prior_id)
+                    AND status=:(status_old)
+                    };
+                    */
+                    
+                } //end while (iter1.next())
+                
+                //deaktivacija svih hipoteka
+                updateColHfPrior(ctx,chno.COL_HEA_ID);
+
+            }else{//kolateral nema hipoteku
+                
+              /*  //insert: satelit, LOAN_BENEFICIARY
+
+                selectCollRestate(ctx,chno.COL_HEA_ID);
+                //INSERT COLL_RESTATE
+                insertIntoCollRestate(ctx);*/
+ 
+
+                //INSERT LOAN_BENEFICIARY
+
+                //dohvat svih slogova iz LOAN_BENEFICIARY
+                
+                 
+                try{
+                    #sql [ctx] iter2b = {
+                    SELECT loan_ben_id
+                    FROM loan_beneficiary
+                    WHERE col_hea_id=:(chno.COL_HEA_ID)
+                    };
+                }catch(SQLException sqle){
+                    tc.debug("Iter21 nije nista dohvatio-Nije dovacen plasman kad nema hipoteke!"); 
+                }
+               
+                    
+                    //za svaki slog iz loan_beneficiary insertiram novi slog
+                    while(iter2b.next()){                        
+                        BigDecimal pom_id_lb=null;
+                        pom_id_lb=iter2b.loan_ben_id();
+                        tc.debug("pom_id_lb:"+pom_id_lb);
+
+               try{                            
+                            #sql [ctx]{SELECT
+                            loan_ben_id,
+                            register_no,
+                            cus_id,
+                            acc_no,
+                            la_acc_id,
+                            coll_hf_prior_id,
+                            col_hea_id,
+                            ser_num,
+                            date_from,
+                            date_until,
+                            status,
+                            spec_status,
+                            use_open_id,
+                            use_id,
+                            opening_ts,
+                            user_lock,
+                            request_no,
+                            priority_no,
+                            acc_no_old,
+                            fra_agr_id,  
+                            aps_rqst_no,
+                            inspol_ind,
+                            ip_cus_id,
+                            krad_admin_ind,
+                            kred_admin_use_id,
+                            kred_admin_ts
+                            INTO
+                            :(chno.loan_ben_id),
+                            :(chno.register_no),
+                            :(chno.cus_id),
+                            :(chno.acc_no),
+                            :(chno.la_acc_id),
+                            :(chno.coll_hf_prior_id),
+                            :(chno.COL_HEA_ID),
+                            :(chno.ser_num),
+                            :(chno.date_from),
+                            :(chno.date_until),
+                            :(chno.status),
+                            :(chno.spec_status),
+                            :(chno.use_open_id),
+                            :(chno.use_id),
+                            :(chno.opening_ts),
+                            :(chno.user_lock),
+                            :(chno.request_no),
+                            :(chno.priority_no),
+                            :(chno.acc_no_old),
+                            :(chno.fra_agr_id),
+                            :(chno.aps_rqst_no),
+                            :(chno.inspol_ind),
+                            :(chno.ip_cus_id),
+                            :(chno.krad_admin_ind),
+                            :(chno.kred_admin_use_id),
+                            :(chno.kred_admin_ts)
+
+                            FROM loan_beneficiary
+                            WHERE loan_ben_id= :(pom_id_lb) 
+                            };
+                        }catch(java.sql.SQLException se){  
+                            tc.debug ( "......CO406.sqlj select  loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+                            tc.debug ( "......CO406.sqlj  select  loan_beneficiarySQL SQLState " + se.getSQLState());
+                            tc.debug ( "......CO406.sqlj i select  loan_beneficiary SQL Message " + se.getMessage());
+                            throw new VestigoTMException(1, "Transaction CO40: Error  select  loan_beneficiary! ","err411c", null);
+
+                        } 
+//                      INSERT LOAN_BENEFICIARY
+                        //dohvaceni slog insertiram ponovno u coll_hf_prior ali s  drugim id!
+                       insertIntoLoanBeneficiary(ctx);                       
+                    }//end while (iter2b.next())  
+                    
+                    //korak 4:deaktivacija svih veza na plasman za kolaterale koji nemaju hipoteku
+                    //deactLoanBenef(ctx,chno.COL_HEA_ID);
+                
+              } //kraj else
+            
+            //provjera da li kolateral ima policu osiguranja  
+            
+            check_ins_pol=checkInsurancePolicy(ctx,chno.COL_HEA_ID);
+            if(check_ins_pol){
+                tc.debug("Iter3 !-provjera da li kolateral ima policu osiguranja");
+
+                try{                
+                    #sql [ctx] iter3= {
+                    SELECT ip_id
+                    FROM insurance_policy
+                    WHERE col_hea_id=:(chno.COL_HEA_ID)
+                    };
+                }catch(SQLException sqle){
+                    tc.debug("Iter3 nije nista dohvatio!");
+                    throw sqle;
+                }
+
+                while(iter3.next()){
+                    BigDecimal pom_id_ip=null;                    
+                    pom_id_ip=iter3.ip_id();
+                    tc.debug("pom_id_ip:"+pom_id_ip);                    
+
+                    try{ #sql [ctx]{ SELECT  
+                        IP_ID,
+                        IP_CODE,
+                        IP_TYPE_ID,
+                        IP_IC_ID,
+                        IP_CONTRACTOR,
+                        IP_POL_HOLDER,
+                        IP_PLACE,
+                        IP_SECU_VAL,
+                        IP_CUR_ID,
+                        IP_DATE_SEC_VAL,
+                        COL_HEA_ID,
+                        IP_REPLACE,
+                        IP_VALI_FROM,
+                        IP_VALI_UNTIL,
+                        IP_ACT_NOACT,
+                        IP_SPEC_STAT,
+                        USE_OPEN_ID,
+                        USE_ID,
+                        OPENING_TS,
+                        USER_LOCK,
+                        WRN_STATUS,
+                        KMT_STATUS,
+                        IP_RESTR_1_IND,
+                        IP_P_SECU_VAL,
+                        IP_P_CUR_ID,
+                        IP_RESTR_VAL,
+                        IP_RESTR_CUR_ID,
+                        IP_RESTR_TYPE,
+                        IP_ADD_DATA
+                        INTO 
+                        :(chno.IP_ID),
+                        :(chno.IP_CODE),
+                        :(chno.IP_TYPE_ID),
+                        :(chno.IP_IC_ID),
+                        :(chno.IP_CONTRACTOR),
+                        :(chno.IP_POL_HOLDER),
+                        :(chno.IP_PLACE),
+                        :(chno.IP_SECU_VAL),
+                        :(chno.IP_CUR_ID),
+                        :(chno.IP_DATE_SEC_VAL),
+                        :(chno.COL_HEA_ID),
+                        :(chno.IP_REPLACE),
+                        :(chno.IP_VALI_FROM),
+                        :(chno.IP_VALI_UNTIL),
+                        :(chno.IP_ACT_NOACT),
+                        :(chno.IP_SPEC_STAT),
+                        :(chno.USE_OPEN_ID),
+                        :(chno.USE_ID),
+                        :(chno.OPENING_TS),
+                        :(chno.USER_LOCK),
+                        :(chno.WRN_STATUS),
+                        :(chno.KMT_STATUS),
+                        :(chno.IP_RESTR_1_IND),
+                        :(chno.IP_P_SECU_VAL),
+                        :(chno.IP_P_CUR_ID),
+                        :(chno.IP_RESTR_VAL),
+                        :(chno.IP_RESTR_CUR_ID),
+                        :(chno.IP_RESTR_TYPE),
+                        :(chno.IP_ADD_DATA)
+                        FROM insurance_policy
+                        WHERE ip_id= :(pom_id_ip) 
+                        };
+                    }catch(java.sql.SQLException se){  
+                        tc.debug ( "......CO406.sqlj select  insurance_policy SQL ErrorCode " + se.getErrorCode());
+                        tc.debug ( "......CO406.sqlj  select  insurance_policy SQLState " + se.getSQLState());
+                        tc.debug ( "......CO406.sqlj i select  insurance_policy SQL Message " + se.getMessage());
+                        throw new VestigoTMException(1, "Transaction CO40: Error  select  insurance_policy! ","err411c", null);
+                    }
+
+                    
+                    insertIntoInsurancePolicy(ctx);
+
+                }//end while (iter3.next())   
+
+            } //kraj checkInsurancePolicy
+            
+            //korak 5: isknjizenje kolaterala
+            chno.COL_HEA_ID=decl.inspoldeactownermapping.col_hea_id;
+            tc.debug ( "chno.COL_HEA_ID prije checkColAccount" +chno.COL_HEA_ID);
+
+            account_indic=checkColAccount(ctx,chno.COL_HEA_ID);
+
+            if(account_indic.equalsIgnoreCase("1")){
+                
+                tc.debug ( "WWWWWWWWWWWWWWWWWWWWWWWW Prije isknjizenja!! chno.COL_HEA_ID" +chno.COL_HEA_ID);
+                //ako se kol knjizi poziva se common za isknjizenje
+                YOY90 yoy90=new YOY90(tc);
+                yoy90.CollPosting(chno.COL_HEA_ID, true);
+
+            }else {
+                
+                    //Nije potrebno deaktivirati kolateral vec samo promijeniti vlasnika!
+                    tc.debug("QQQQQQQQQQQQQ  Nije potrebno deaktivirati kolateral vec samo promijeniti vlasnika!");
+                    throw new VestigoTMException(1, "Transaction CO40: Error  select  insurance_policy! ","infKolDeact02", null);
+            }
+            
+            
+            //korak 6:deaktivacija kolaterala
+            //update statusa kolaterala
+            updateColHeadStatus(ctx,chno.COL_HEA_ID);
+            
+            //korak 7: slanje deakt kolaterala na listu neaktivnih
+            //insert sloga u tabelu workflow-a obrade COLL_LIST_Q
+            YOY60 yoy60=new YOY60(tc);
+            CollListQData plq =new CollListQData();
+
+            plq.col_hea_id=chno.COL_HEA_ID;
+            plq.status="1";
+            plq.income_time=chno.CREATE_DATE_TIME;
+            plq.use_id=decl.inspoldeactownermapping.use_id;
+            plq.release_time=chno.CREATE_DATE_TIME;
+            plq.cmnt="RADI PROMJENE VLASNIKA";
+            plq.action_type="PONISTI";
+            plq.org_uni_id=decl.inspoldeactownermapping.org_uni_id;
+            plq.source_list="700223";
+            plq.status_source_list="1";
+            plq.target_list="701223";
+            plq.status_target_list="0";
+            plq.target_list_use_id=null;
+            plq.target_list_org_uni_id=null;
+            yoy60.update_insert_CollListQ(plq);
+            
+            
+            //korak8: prenos coll_pondera (aktivnih i povijesti)
+            //dodatak specifikaciji CQ:FBPr200008655 - 09-02856-001-02 Deaktivacija kolaterala radi promjene vlasnika (nastavak)
+            iter5=selectCollPonder(ctx,chno.COL_HEA_ID);
+            
+            while(iter5.next()){
+
+                //postavljanje vrijednosti za insert- sve slogove prepisujem i novom kolateralu jer se prenosi i povijest
+
+                YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+                BigDecimal collaterall_id = id_generator.getNewId();
+
+                tc.debug("dohvat collateral_id : "+collaterall_id);
+                chno.col_pon_id=collaterall_id;
+                tc.debug("chno.col_pon_id" +chno.col_pon_id);
+                chno.col_hea_id_pon=chno.COL_HEA_ID_NEW;//insert s col_hea_id novog kolaterala
+                chno.ponder_type=iter5.ponder_type();
+                chno.ponder_value=iter5.ponder_value();
+                chno.status_pon=iter5.status();
+                chno.date_from_pon=iter5.date_from();
+                chno.date_until_pon=iter5.date_until();
+                chno.org_uni_id_pon=iter5.org_uni_id();                
+                chno.use_id_pon=iter5.use_id();
+                chno.create_ts=iter5.create_ts();
+                
+                insertIntoCollPonder(ctx);
+
+            }
+            
+            
+            
+        }else{
+//          poruka: 
+            //Nije potrebno deaktivirati kolateral vec samo promijeniti vlasnika!
+            tc.debug("QQQQQQQQQQQQQ  Nije potrebno deaktivirati kolateral vec samo promijeniti vlasnika!");
+            throw new VestigoTMException(1, "Transaction CO40: Error  select  insurance_policy! ","infKolDeact02", null);
+         
+        }
+        
+        tc.debug("THE END!!!");
+        
+    }
+    
+
+    private void selectCollHead (ConnCtx ctx,BigDecimal col_hea_id) throws SQLException {
+        BigDecimal pomid=col_hea_id;
+        tc.debug("XXXXXXX Usla u selectCollHead!   pomid(col_hea_id):"+pomid);  
+        
+        //SELECT FROM coll_head     
+        try{    
+            #sql [ctx]{
+                SELECT
+                    col_hea_id,
+                    col_type_id,
+                    col_num,
+                    col_desc, 
+                    real_est_euse_id, 
+                    real_est_estn_valu, 
+                    real_est_estn_date,
+                    real_est_datn_from,
+                    real_est_datn_unti, 
+                    real_est_nomi_desc,
+                    real_est_nomi_valu,
+                    real_est_nomi_date,
+                    real_est_liqu_valu,
+                    real_est_liqu_date,
+                    real_est_bptc_valu,
+                    real_est_bptc_date,
+                    real_est_nm_cur_id,
+                    cus_id, 
+                    coll_cus_id,
+                    date_to_lop,
+                    date_rec_lop,
+                    rec_lop,
+                    com_doc,
+                    missing_doc,
+                    date_to_doc,
+                    date_rec_doc,
+                    reva_coef,     
+                    reva_date,
+                    reva_date_am,
+                    reva_bvalue,
+                    reva_bdate,
+                    reva_bdate_am,
+                    amort_age,
+                    amort_per_cal_id,
+                    amort_val_cal,
+                    nepo_value,
+                    nepo_date,     
+                    nepo_per_cal,
+                    third_right,
+                    third_right_cur_id,
+                    third_right_nom,
+                    third_right_date,  
+                    hfs_value,
+                    hfs_value_date,
+                    hfs_value_last_one,
+                    hfs_date_last_one,
+                    weigh_value,
+                    weigh_date,
+                    weigh_bvalue,
+                    weigh_bdate,
+                    sum_limit_val,
+                    sum_limit_dat,
+                    sum_part_val,
+                    sum_part_dat,
+                    avail_value,
+                    avail_per_cal,
+                    avail_date,
+                    inspol_ind,
+                    col_place,
+                    col_county,
+                    col_district,
+                    col_resi_quar,
+                    coll_mvp_ponder,
+                    coll_hnb_ponder,   
+                    coll_rzb_ponder,       
+                    real_est_date_from,
+                    real_est_date_unti,
+                    real_est_add_data,
+                    real_est_status,
+                    real_est_spec_stat,
+                    use_open_id,   
+                    use_id,        
+                    opening_ts,    
+                    user_lock,
+                    eve_id,   
+                    eligibility,
+                    acum_buy_value,
+                    origin_org_uni_id,
+                    org_uni_id,
+                    use_id_ver,
+                    use_id_aut,
+                    verification_ts,
+                    autorization_ts,
+                    mortgage_status,
+                    collateral_status,
+                    workflow_indic,
+                    cover_indic,
+                    ver_send_ts,
+                    basic_data_status,
+                    coll_data_status,
+                    col_cat_id,
+                    use_id_ver_snd,
+                    financial_flag,
+                    rba_eligibility,
+                    law_eligibility,
+                    rba_elig_dsc,
+                    number,
+                    b1_eligibility,
+                    b2_irb_elig,
+                    crm_hnb,
+                    used_in_recovery,
+                    kind_of_recovery,
+                    full_amount,
+                    full_amount_cur_id,
+                    recovery_amount,
+                    recovery_cur_id,
+                    recovery_comment,
+                    recovery_date,
+                    recovery_rate,
+                    b2_irb_insag_elig,
+                    b2_hnb_insag_elig,
+                    use_id_co,
+                    chg_nom_val_proc_ts,
+                    real_est_nom_type,
+                    prec_exec_est,
+                    correct_value,
+                    respect_deadline,
+                    prof_to_rba,
+                    prof_to_client,
+                    col_eco_life,
+                    real_est_estn_int,
+                    est_type,
+                    met_est_1,
+                    met_est_2,
+                    coll_risk,
+                    non_ins_reason,
+                    ins_cov_coll,
+                    recovery_proc_stat,
+                    gctc_id,
+                    endorsement_type_id,
+                    object_type_id,
+                    property_type_id,
+                    contract_type,
+                    realization_amount,
+                    realization_cur_id,
+                    realization_date,
+                    realization_kind,
+                    realization_cost,
+                    part_of_complex,
+                    realization_cost_cur_id,
+                    for_sale,
+                    for_sale_date,
+                    takeover_from_bank
+                INTO
+                    :(chno.COL_HEA_ID),                                                                                                     
+                    :(chno.COL_TYPE_ID),  
+                    :(chno.Coll_txtCode), 
+                    :(chno.Coll_txtDesc),  
+                    :(chno.REAL_EST_EUSE_ID),                           
+                    :(chno.Coll_txtEstnValu),                   
+                    :(chno.Coll_txtEstnDate),                   
+                    :(chno.Coll_txtDatnFrom),                   
+                    :(chno.Coll_txtDatnUnti),                   
+                    :(chno.Coll_txtNomiDesc), 
+                    :(chno.Coll_txtNomiValu),                           
+                    :(chno.Coll_txtNomiDate), 
+                    :(chno.Coll_txtLiquValu),                           
+                    :(chno.Coll_txtLiquDate),                           
+                    :(chno.Coll_txtBptcValu),                           
+                    :(chno.Coll_txtBptcDate), 
+                    :(chno.REAL_EST_NM_CUR_ID), 
+                    :(chno.CUS_ID),   
+                    :(chno.COLL_CUS_ID),   
+                    :(chno.Coll_txtDateToLop),   
+                    :(chno.Coll_txtDateRecLop), 
+                    :(chno.Coll_txtRecLop), 
+                    :(chno.Coll_txtComDoc),                                                                           
+                    :(chno.Coll_txtMissingDoc),                                                                       
+                    :(chno.Coll_txtDateToDoc),                                                                        
+                    :(chno.Coll_txtDateRecDoc), 
+                    :(chno.Coll_txtRevaCoefMan),                                                                   
+                    :(chno.Coll_txtRevaDate),                                                                              
+                    :(chno.Coll_txtRevaDateAM),                                                                          
+                    :(chno.Coll_txtRevaBValue),                                                                           
+                    :(chno.Coll_txtRevaBDate),                                  
+                    :(chno.Coll_txtRevaBDateAM),                                 
+                    :(chno.Coll_txtAmortAge),                                   
+                    :(chno.AMORT_PER_CAL_ID),                                                       
+                    :(chno.Coll_txtAmortValCal),  
+                    :(chno.Coll_txtNepoValue),                                                          
+                    :(chno.Coll_txtNepoDate),                                                           
+                    :(chno.Coll_txtNepoPerCal), 
+                    :(chno.Coll_txtThirdRight),                                                         
+                    :(chno.THIRD_RIGHT_CUR_ID),                                                 
+                    :(chno.Coll_txtThirdRightInNom),                                                                     
+                    :(chno.Coll_txtThirdRightDate),                                                                                                                              
+                    :(chno.Coll_txtHfsValue),                                                                                                                                        
+                    :(chno.Coll_txtHfsValueDate),                                                                        
+                    :(chno.Coll_txtHfsValueLastOne),                                                                     
+                    :(chno.Coll_txtHfsDateLastOne),     
+                    :(chno.Coll_txtAcouValue),                                                                           
+                    :(chno.Coll_txtAcouDate),                          
+                    :(chno.Coll_txtAcouBValue),                        
+                    :(chno.Coll_txtAcouBDate),  
+                    :(chno.Coll_txtSumLimitVal),                                                     
+                    :(chno.Coll_txtSumLimitDat),                                                       
+                    :(chno.Coll_txtSumPartVal),                                                          
+                    :(chno.Coll_txtSumPartDat), 
+                    :(chno.Coll_txtAvailValue),                                                       
+                    :(chno.Coll_txtAvailPerCal),                                                       
+                    :(chno.Coll_txtAvailDate),  
+                    :(chno.INSPOL_IND),  
+                    :(chno.COL_PLACE), 
+                    :(chno.COL_COUNTY), 
+                    :(chno.COL_DISTRICT), 
+                    :(chno.COL_RESI_QUAR), 
+                    :(chno.Coll_txtCollMvpPonder), 
+                    :(chno.Coll_txtCollHnbPonder), 
+                    :(chno.Coll_txtCollRzbPonder), 
+                    :(chno.Coll_txtDateFrom),                                                
+                    :(chno.Coll_txtDateUnti),                        
+                    :(chno.Coll_txtAddData),  
+                    :(chno.STATUS),                                                       
+                    :(chno.SPEC_STATUS),  
+                    :(chno.USE_OPEN_ID),
+                    :(chno.USE_ID),
+                    :(chno.Coll_txtOpeningTs),
+                    :(chno.USER_LOCK),
+                    :(chno.EVE_ID),
+                    :(chno.Coll_txtEligibility),
+                    :(chno.Coll_txtAcumBuyValue),
+                    :(chno.ORIGIN_ORG_UNI_ID),
+                    :(chno.ORG_UNI_ID),
+                    :(chno.USE_ID_VER),
+                    :(chno.USE_ID_AUT),
+                    :(chno.VERIFICATION_TS),
+                    :(chno.AUTORIZATION_TS),
+                    :(chno.MORTGAGE_STATUS),
+                    :(chno.COLLATERAL_STATUS),
+                    :(chno.WORKFLOW_INDIC),
+                    :(chno.COVER_INDIC),
+                    :(chno.VER_SEND_TS),
+                    :(chno.BASIC_DATA_STATUS), 
+                    :(chno.COLL_DATA_STATUS),
+                    :(chno.COL_CAT_ID),
+                    :(chno.USE_ID_VER_SND),
+                    :(chno.FINANCIAL_FLAG),
+                    :(chno.ColRba_txtEligibility),
+                    :(chno.KolLow_txtEligibility),
+                    :(chno.Kol_txtRbaEligDsc),
+                    :(chno.Coll_txtNumOf),
+                    :(chno.Coll_txtB1Eligibility),
+                    :(chno.Coll_txtB2IRBEligibility),
+                    :(chno.crm_hnb),
+                    :(chno.used_in_recovery),
+                    :(chno.kind_of_recovery),
+                    :(chno.full_amount),
+                    :(chno.full_amount_cur_id),
+                    :(chno.recovery_amount),
+                    :(chno.recovery_cur_id),
+                    :(chno.recovery_comment),
+                    :(chno.recovery_date),
+                    :(chno.recovery_rate),
+                    :(chno.b2_irb_insag_elig),
+                    :(chno.b2_hnb_insag_elig),
+                    :(chno.use_id_co),
+                    :(chno.chg_nom_val_proc_ts),
+                    :(chno.real_est_nom_type),
+                    :(chno.prec_exec_est),
+                    :(chno.correct_value),
+                    :(chno.respect_deadline),
+                    :(chno.prof_to_rba),
+                    :(chno.prof_to_client),
+                    :(chno.col_eco_life),
+                    :(chno.real_est_estn_int),
+                    :(chno.est_type),
+                    :(chno.met_est_1),
+                    :(chno.met_est_2),
+                    :(chno.coll_risk),
+                    :(chno.non_ins_reason),
+                    :(chno.ins_cov_coll),
+                    :(chno.recovery_proc_stat),
+                    :(chno.gctc_id),
+                    :(chno.endorsement_type_id),
+                    :(chno.object_type_id),
+                    :(chno.property_type_id),
+                    :(chno.contract_type),
+                    :(chno.realization_amount),
+                    :(chno.realization_cur_id),
+                    :(chno.realization_date),
+                    :(chno.realization_kind),
+                    :(chno.realization_cost),
+                    :(chno.part_of_complex),
+                    :(chno.realization_cost_cur_id),
+                    :(chno.for_sale),
+                    :(chno.for_sale_date),
+                    :(chno.takeover_from_bank)
+                FROM COLL_HEAD
+                WHERE col_hea_id = :(pomid)
+            };
+        }
+        catch (java.sql.SQLException se) {
+            tc.debug("puklo u selectCollHead");
+            tc.debug( "se.getSQLState()" + se.getSQLState());
+            tc.debug( "chno.COL_CAT_ID:"+chno.COL_CAT_ID);
+            tc.debug( "......CO406.sqlj select from coll_head SQL ErrorCode " + se.getErrorCode());
+            tc.debug( "......CO406.sqlj select from coll_head SQL SQLState " + se.getSQLState());
+            tc.debug( "......CO406.sqlj select from coll_head SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO406: Error select coll_head! ","err411a", null);
+        }      
+    }
+
+
+    private boolean checkPosting(ConnCtx ctx,BigDecimal col_cat_id, BigDecimal col_type_id){
+        boolean flag=false; //ne knjizi se
+        tc.debug("col_cat_id"+col_cat_id);
+        tc.debug("col_type_id"+col_type_id);
+        tc.debug("usla u checkposting");
+        if((col_cat_id.compareTo(new BigDecimal("616223"))==0)&&(col_type_id.compareTo(new BigDecimal("54777"))==0)){
+
+            flag=true; //knjizi se
+        }
+        tc.debug("flag prije returna;"+flag);        
+        return flag;        
+    }
+
+    private void fillChno (ConnCtx ctx) throws Exception {
+        try {
+        
+        
+            getDateTime(ctx);
+
+             chno.Coll_txtUserLock = chno.CREATE_DATE_TIME;
+             chno.USER_LOCK = chno.CREATE_DATE_TIME;
+
+             chno.STATUS = "A";
+             //chno.SPEC_STATUS = "00";
+             chno.Coll_txtOpeningTs = chno.CREATE_DATE_TIME;
+
+             chno.COLLATERAL_STATUS = "0";
+             chno.WORKFLOW_INDIC = "3";
+             chno.COVER_INDIC = "0";
+             chno.BASIC_DATA_STATUS = "0";
+             chno.COLL_DATA_STATUS="0";
+             //chno.eve_typ_id =  new java.math.BigDecimal("1602040003.0");
+             //chno.eve_typ_id = getEventId();
+             chno.ORG_UNI_ID=decl.org_uni_id;
+             tc.debug("chno.ORG_UNI_ID:"+chno.ORG_UNI_ID);
+        } catch(java.sql.SQLException se){  
+            tc.debug ( "......CO401.sqlj  fill_chno ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO401.sqlj fill_chno SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO401.sqlj fill_chnod SQL Message " + se.getMessage());
+        }
+    }
+
+    
+    private void insertIntoCollHead(ConnCtx ctx) throws Exception{
+
+        tc.debug("INSERT INTO COLL_HEAD");
+
+        YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id = id_generator.getNewId();
+
+        tc.debug("dohvat collateral_id : "+collaterall_id);
+        chno.COL_HEA_ID_NEW=collaterall_id;
+        tc.debug("Col_hea_id stari"+chno.COL_HEA_ID);
+        tc.debug("Col_hea_id novi:"+chno.COL_HEA_ID_NEW);
+        
+        //sifra (iz tekice preko recepta)      
+        chno.Coll_txtCode=getOrdNo(ctx);
+        decl.inspoldeactownermapping.Kolateral_txtColNumQBE= chno.Coll_txtCode;
+        tc.debug("chno.COL_HEA_ID_NEW : "+chno.COL_HEA_ID_NEW);
+        tc.debug("chno.Coll_txtCode : "+chno.Coll_txtCode);
+
+//      insert u event       
+        chno.EVE_ID  = getEventId();   
+
+        tc.debug ( ".........COL_TYPE_ID   " + chno.COL_TYPE_ID);  
+
+
+        tc.debug ( ".........REAL_EST_EUSE_ID" + chno.REAL_EST_EUSE_ID);                         
+        tc.debug ( ".........Coll_txtEstnValu" + chno.Coll_txtEstnValu);                   
+        tc.debug ( ".........Coll_txtEstnDate2" + chno.Coll_txtEstnDate);                
+        tc.debug ( ".........Coll_txtDatnFrom" + chno.Coll_txtDatnFrom);                   
+        tc.debug ( ".........Coll_txtDatnUnti" + chno.Coll_txtDatnUnti);                   
+
+        tc.debug ( ".........Coll_txtNomiValu" + chno.Coll_txtNomiValu);                         
+        tc.debug ( ".........Coll_txtNomiDate" + chno.Coll_txtNomiDate);
+
+        tc.debug ( ".........REAL_EST_NM_CUR_ID" + chno.REAL_EST_NM_CUR_ID); 
+
+        tc.debug ( ".........Coll_txtComDoc" + chno.Coll_txtComDoc);                                                                           
+
+        tc.debug ( ".........Coll_txtDateToDoc" +  chno.Coll_txtDateToDoc);                                                                    
+
+
+        tc.debug ( ".........Coll_txtDateFrom" + chno.Coll_txtDateFrom);                                              
+        tc.debug ( ".........Coll_txtDateUnti" +  chno.Coll_txtDateUnti);     
+
+        tc.debug ( ".........Coll_txtDateToLop" + chno.Coll_txtDateToLop);                                                
+        tc.debug ( ".........Coll_txtDateRecLop" +  chno.Coll_txtDateRecLop);     
+        tc.debug ( ".........Coll_txtRecLop" +  chno.Coll_txtRecLop);     
+
+
+        tc.debug ( ".........STATUS" + chno.STATUS);                                                       
+        tc.debug ( ".........SPEC_STATUS" +chno.SPEC_STATUS);   
+        tc.debug ( ".........USE_OPEN_ID" + chno.USE_OPEN_ID);
+        tc.debug ( ".........USE_ID" + chno.USE_ID);
+        tc.debug ( ".........Coll_txtOpeningTs" + chno.Coll_txtOpeningTs);
+        tc.debug ( ".........Coll_txtUserLock" + chno.Coll_txtUserLock);
+        tc.debug ( ".........eve_id" + chno.EVE_ID);
+        tc.debug ( ".........(rc.getBankSign())" + this.bank_sign);         
+
+        tc.debug ( ".........Coll_txtAcumBuyValue" + chno.Coll_txtAcumBuyValue);
+        tc.debug ( ".........Coll_txtEligibility)" + chno.Coll_txtEligibility);
+
+        tc.debug ( ".........BASIC_DATA_STATUS)" + chno.BASIC_DATA_STATUS);  
+
+        tc.debug ( ".........USER_LOCK)" + chno.USER_LOCK);          
+
+        //INSERT INTO coll_head     
+       try{    
+
+            #sql [ctx]{
+            INSERT INTO coll_head
+            (   
+            col_hea_id,
+            col_type_id,
+            col_num,
+            col_desc, 
+            real_est_euse_id, 
+            real_est_estn_valu, 
+            real_est_estn_date,
+            real_est_datn_from,
+            real_est_datn_unti, 
+            real_est_nomi_desc,
+            real_est_nomi_valu,
+            real_est_nomi_date,
+            real_est_liqu_valu,
+            real_est_liqu_date,
+            real_est_bptc_valu,
+            real_est_bptc_date,
+            real_est_nm_cur_id,
+            cus_id, 
+            coll_cus_id,
+            date_to_lop,
+            date_rec_lop,
+            rec_lop,
+            com_doc,
+            missing_doc,
+            date_to_doc,
+            date_rec_doc,
+            reva_coef,     
+            reva_date,
+            reva_date_am,
+            reva_bvalue,  
+            reva_bdate,
+            reva_bdate_am,
+            amort_age,
+            amort_per_cal_id,
+            amort_val_cal,
+            nepo_value,
+            nepo_date,     
+            nepo_per_cal,
+            third_right,
+            third_right_cur_id,
+            third_right_nom,
+            third_right_date,  
+            hfs_value,
+            hfs_value_date,
+            hfs_value_last_one,
+            hfs_date_last_one,
+            weigh_value,
+            weigh_date,
+            weigh_bvalue,
+            weigh_bdate,
+            sum_limit_val,
+            sum_limit_dat,
+            sum_part_val,
+            sum_part_dat,
+            avail_value,
+            avail_per_cal,
+            avail_date,
+            inspol_ind,
+            col_place,
+            col_county,
+            col_district,
+            col_resi_quar,
+            coll_mvp_ponder,
+            coll_hnb_ponder,   
+            coll_rzb_ponder,       
+            real_est_date_from,
+            real_est_date_unti,
+            real_est_add_data,
+            real_est_status,
+            real_est_spec_stat,
+            use_open_id,   
+            use_id,        
+            opening_ts,    
+            user_lock,     
+            eve_id,        
+            bank_sign,
+            eligibility,
+            acum_buy_value,
+            origin_org_uni_id,
+            org_uni_id,
+            mortgage_status,
+            collateral_status,
+            workflow_indic,
+            cover_indic,
+            basic_data_status,
+            coll_data_status,
+            col_cat_id,
+            financial_flag,
+            rba_eligibility,
+            law_eligibility,
+            rba_elig_dsc,
+            number,
+            b1_eligibility,
+            b2_irb_elig,
+            crm_hnb,
+           used_in_recovery,
+           kind_of_recovery,
+           full_amount,
+           full_amount_cur_id,
+           recovery_amount,
+           recovery_cur_id,
+           recovery_comment,
+           recovery_date,
+           recovery_rate,
+           b2_irb_insag_elig,
+           b2_hnb_insag_elig,
+           use_id_co,
+           chg_nom_val_proc_ts,
+           real_est_nom_type,
+           prec_exec_est,
+           correct_value,
+           respect_deadline,
+           prof_to_rba,
+           prof_to_client,
+           col_eco_life,
+           real_est_estn_int,
+           est_type,
+           met_est_1,
+           met_est_2,
+           coll_risk,
+           non_ins_reason,
+           ins_cov_coll,
+           recovery_proc_stat,
+           gctc_id,
+           endorsement_type_id,
+           object_type_id,
+           property_type_id,
+           contract_type,
+           realization_amount,
+           realization_cur_id,
+           realization_date,
+           realization_kind,
+           realization_cost,
+           part_of_complex,
+           realization_cost_cur_id,
+           for_sale,
+           for_sale_date,
+           takeover_from_bank
+           )   
+            VALUES( :(chno.COL_HEA_ID_NEW),                                                                                                      
+            :(chno.COL_TYPE_ID),  
+            :(chno.Coll_txtCode), 
+            :(chno.Coll_txtDesc),  
+            :(chno.REAL_EST_EUSE_ID),                            
+            :(chno.Coll_txtEstnValu),                   
+            :(chno.Coll_txtEstnDate),                   
+            :(chno.Coll_txtDatnFrom),                    
+            :(chno.Coll_txtDatnUnti),                   
+            :(chno.Coll_txtNomiDesc), 
+            :(chno.Coll_txtNomiValu),                        
+            :(chno.Coll_txtNomiDate), 
+            :(chno.Coll_txtLiquValu),                        
+            :(chno.Coll_txtLiquDate),                        
+            :(chno.Coll_txtBptcValu),                        
+            :(chno.Coll_txtBptcDate), 
+            :(chno.REAL_EST_NM_CUR_ID), 
+            :(chno.CUS_ID),   
+            :(chno.COLL_CUS_ID),   
+            :(chno.Coll_txtDateToLop),   
+            :(chno.Coll_txtDateRecLop), 
+            :(chno.Coll_txtRecLop), 
+            :(chno.Coll_txtComDoc),                                                                            
+            :(chno.Coll_txtMissingDoc),                                                                        
+            :(chno.Coll_txtDateToDoc),                                                                     
+            :(chno.Coll_txtDateRecDoc), 
+            :(chno.Coll_txtRevaCoefMan),                                                                
+            :(chno.Coll_txtRevaDate),                                                                               
+            :(chno.Coll_txtRevaDateAM),                                                                       
+            :(chno.Coll_txtRevaBValue),                                                                            
+            :(chno.Coll_txtRevaBDate),                                   
+            :(chno.Coll_txtRevaBDateAM),                              
+            :(chno.Coll_txtAmortAge),                                    
+            :(chno.AMORT_PER_CAL_ID),                                                        
+            :(chno.Coll_txtAmortValCal),  
+            :(chno.Coll_txtNepoValue),                                                           
+            :(chno.Coll_txtNepoDate),                                                            
+            :(chno.Coll_txtNepoPerCal), 
+            :(chno.Coll_txtThirdRight),                                                          
+            :(chno.THIRD_RIGHT_CUR_ID),                                                  
+            :(chno.Coll_txtThirdRightInNom),                                                                      
+            :(chno.Coll_txtThirdRightDate),                                                                                                                               
+            :(chno.Coll_txtHfsValue),                                                                                                                                     
+            :(chno.Coll_txtHfsValueDate),                                                                         
+            :(chno.Coll_txtHfsValueLastOne),                                                                      
+            :(chno.Coll_txtHfsDateLastOne),     
+            :(chno.Coll_txtAcouValue),                                                                            
+            :(chno.Coll_txtAcouDate),                          
+            :(chno.Coll_txtAcouBValue),                        
+            :(chno.Coll_txtAcouBDate),  
+            :(chno.Coll_txtSumLimitVal),                                                     
+            :(chno.Coll_txtSumLimitDat),                                                       
+            :(chno.Coll_txtSumPartVal),                                                         
+            :(chno.Coll_txtSumPartDat), 
+            :(chno.Coll_txtAvailValue),                                                       
+            :(chno.Coll_txtAvailPerCal),                                                       
+            :(chno.Coll_txtAvailDate),  
+            :(chno.INSPOL_IND),  
+            :(chno.COL_PLACE), 
+            :(chno.COL_COUNTY), 
+            :(chno.COL_DISTRICT), 
+            :(chno.COL_RESI_QUAR), 
+            :(chno.Coll_txtCollMvpPonder), 
+            :(chno.Coll_txtCollHnbPonder), 
+            :(chno.Coll_txtCollRzbPonder), 
+            :(chno.Coll_txtDateFrom),                                             
+            :(chno.Coll_txtDateUnti),                     
+            :(chno.Coll_txtAddData),  
+            :(chno.STATUS),                                                        
+            :(chno.SPEC_STATUS),  
+            :(chno.USE_OPEN_ID),
+            :(decl.inspoldeactownermapping.use_id),
+            CURRENT TIMESTAMP,
+            CURRENT TIMESTAMP,
+            :(chno.EVE_ID),
+            :(bank_sign), 
+            :(chno.Coll_txtEligibility),
+            :(chno.Coll_txtAcumBuyValue),
+            :(chno.ORIGIN_ORG_UNI_ID),
+            :(decl.inspoldeactownermapping.org_uni_id),
+            :(mortage_status),
+            :(chno.COLLATERAL_STATUS), 
+            :(chno.WORKFLOW_INDIC),
+            :(chno.COVER_INDIC),
+            :(chno.BASIC_DATA_STATUS),
+            :(chno.COLL_DATA_STATUS),
+            :(chno.COL_CAT_ID),
+            :(financial_flag),
+            :(rba_eligibility),
+            :(chno.KolLow_txtEligibility),
+            :(chno.Kol_txtRbaEligDsc),
+            :(chno.Coll_txtNumOf),
+            :(chno.Coll_txtB1Eligibility),
+            :(chno.Coll_txtB2IRBEligibility),
+            :(chno.crm_hnb),
+           :(chno.used_in_recovery),
+           :(chno.kind_of_recovery),
+           :(chno.full_amount),
+           :(chno.full_amount_cur_id),
+           :(chno.recovery_amount),
+           :(chno.recovery_cur_id),
+           :(chno.recovery_comment),
+           :(chno.recovery_date),
+           :(chno.recovery_rate),
+           :(chno.b2_irb_insag_elig),
+           :(chno.b2_hnb_insag_elig),
+           :(chno.use_id_co),
+           :(chno.chg_nom_val_proc_ts),
+           :(chno.real_est_nom_type),
+           :(chno.prec_exec_est),
+           :(chno.correct_value),
+           :(chno.respect_deadline),
+           :(chno.prof_to_rba),
+           :(chno.prof_to_client),
+           :(chno.col_eco_life),
+           :(chno.real_est_estn_int),
+           :(chno.est_type),
+           :(chno.met_est_1),
+           :(chno.met_est_2),
+           :(chno.coll_risk),
+           :(chno.non_ins_reason),
+           :(chno.ins_cov_coll),
+           :(chno.recovery_proc_stat),
+           :(chno.gctc_id),
+           :(chno.endorsement_type_id),
+           :(chno.object_type_id),
+           :(chno.property_type_id),
+           :(chno.contract_type),
+           :(chno.realization_amount),
+           :(chno.realization_cur_id),
+           :(chno.realization_date),
+           :(chno.realization_kind),
+           :(chno.realization_cost),
+           :(chno.part_of_complex),
+           :(chno.realization_cost_cur_id),
+           :(chno.for_sale),
+           :(chno.for_sale_date),
+           :(chno.takeover_from_bank)
+           )
+            }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO406.sqlj insert into coll_head SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO406.sqlj insert into coll_head SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO406.sqlj insert into coll_head SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO40: Error inserting coll_head! ","err411a", null);
+
+        }
+        
+        tc.debug ( "!!!!POSLIJE INSET INTO COLL_HEAD");  
+
+    }
+    
+    
+    //insert COLL_LIST_Q
+    private void insertIntoCollListQ(ConnCtx ctx)throws SQLException{
+
+//      INSERT COLL_LIST_Q
+        //dohvaceni slog insertiram ponovno u COLL_LIST_Q ali s  drugim id!
+       
+        tc.debug("Novi chno.col_lis_q_id:"+chno.col_lis_q_id);
+        
+        try{  
+            #sql [ctx]{
+            INSERT INTO coll_list_q
+                (col_lis_q_id,
+                 col_lis_typ_id,
+                 col_hea_id,
+                 status,
+                 income_time,
+                 use_id,
+                 release_time,
+                 bank_sign,
+                 cmnt,
+                 action_type,
+                 org_uni_id)   
+             VALUES(:(chno.col_lis_q_id),
+                    :(chno.col_lis_typ_id),
+                    :(chno.col_hea_id_clq),
+                    :(chno.status),
+                    :(chno.income_time),
+                    :(chno.use_id_clq),
+                    :(chno.release_time),
+                    :(chno.bank_sign),
+                    :(chno.cmnt),
+                    :(chno.action_type),
+                    :(chno.org_uni_id))
+            }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO406.sqlj insert into coll_list_q SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO406.sqlj insert into coll_list_q SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO406.sqlj insert into coll_list_q SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO40: Error inserting coll_list_q! ","err411b", null);
+        } 
+    }
+    
+    private Iter64 selectCollListQ(ConnCtx ctx, BigDecimal col_hea_id) throws SQLException{       
+        Iter64 iterhist = null;
+            try{                
+                #sql [ctx] iterhist={select col_lis_q_id,
+                                             col_lis_typ_id,
+                                             col_hea_id,
+                                            status,
+                                            income_time,
+                                            use_id,
+                                            release_time,
+                                            bank_sign,
+                                            cmnt,
+                                            action_type,
+                                            org_uni_id
+                                    from 
+                                    coll_list_q
+                                    where 
+                                    col_hea_id = :(col_hea_id)  
+                                    order by 1 
+                                    WITH UR
+                                    };
+
+            }catch (SQLException sqle) {   
+                tc.debug("Puklo kod selectCollListQ!");
+                throw sqle;
+            }             
+            return iterhist;        
+    }
+    
+    
+    private void insertIntoCollPonder(ConnCtx ctx) throws SQLException{
+
+//      insertIntoCollPonder
+        //dohvaceni slog insertiram ponovno u COLL_PONDER ali s  drugim id!
+
+        tc.debug("Novi chno.col_pon_id:"+chno.col_pon_id);
+
+        try{  
+            #sql [ctx]{
+            INSERT INTO coll_ponder
+            (col_pon_id,
+            col_hea_id,
+            ponder_type,
+            ponder_value,
+            status,
+            date_from,
+            date_until,
+            org_uni_id,
+            use_id,
+            create_ts)   
+            VALUES(:(chno.col_pon_id),
+            :(chno.col_hea_id_pon),
+            :(chno.ponder_type),
+            :(chno.ponder_value),
+            :(chno.status_pon),
+            :(chno.date_from_pon),
+            :(chno.date_until_pon),
+            :(chno.org_uni_id_pon),
+            :(chno.use_id_pon),
+            :(chno.create_ts))
+            }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO402.sqlj insert into coll_list_q SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO402.sqlj insert into coll_list_q SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO402.sqlj insert into coll_list_q SQL Message " + se.getMessage());
+            //throw new VestigoTMException(1, "Transaction CO40: Error inserting coll_list_q! ","err411b", null);
+            throw se;
+        } 
+
+
+    }
+    
+    
+    private Iter65 selectCollPonder(ConnCtx ctx, BigDecimal col_hea_id) throws SQLException{
+        Iter65 iterponder = null;
+        try{
+            #sql [ctx] iterponder={select col_pon_id, 
+                                        col_hea_id,
+                                        ponder_type,
+                                        ponder_value,
+                                        status,
+                                        date_from,
+                                        date_until,
+                                        org_uni_id,
+                                        use_id,
+                                        create_ts
+                                from 
+                                    coll_ponder
+                                where 
+                                    col_hea_id = :(col_hea_id)                
+                                WITH UR
+                                };
+
+        }catch(SQLException sqle){
+            tc.debug("Puklo kod selectCollPonder!");
+            throw sqle;
+        }
+        return iterponder;
+
+    }
+
+    
+    
+
+    private BigDecimal getEventId() throws Exception{
+
+//      insert into event
+        java.sql.Date todaySQLDate = null;
+
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);
+
+        BigDecimal eve_id = null;
+        tc.debug("chno.eve_typ_id"+chno.eve_typ_id);
+        chno.eve_typ_id=chno.eve_typ_id =  new java.math.BigDecimal("1602040003.0");
+        BigDecimal eve_typ_id =  chno.eve_typ_id;
+        try{tc.debug("eve_typ_id"+eve_typ_id);
+            tc.debug("todaySQLDate"+todaySQLDate);
+            tc.debug("chno.USE_ID"+chno.USE_ID);
+            tc.debug("bank_sign"+bank_sign);
+            
+            java.util.HashMap event = new java.util.HashMap();
+            event.put("eve_typ_id", eve_typ_id);
+            event.put("event_date", todaySQLDate);
+            event.put("cmnt", "Insert into coll_head");
+            event.put("use_id", chno.USE_ID);
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", bank_sign);
+            eve_id = eventGen.insertEventWithGeneratedId(event);
+        }catch(java.sql.SQLException e){
+            tc.debug (".getEventId() ..... Insert into event unsuccessful.");
+            tc.debug ( "getEventId() insert into event  SQL ErrorCode " + e.getErrorCode());
+            tc.debug ( "getEventId() insert into event  SQL SQLState " + e.getSQLState());
+            tc.debug ( "getEventId() insert into event  SQL Message " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+
+        tc.debug("..........EVE_ID je    " + eve_id); 
+
+        return eve_id;
+
+    }
+    
+    private String getOrdNo(ConnCtx ctx) throws Exception{
+        chno.recept = "CLT_IP";
+        //za svaki kol drugi recept
+        tc.debug("chno.recept");
+        String recept = chno.recept;
+        java.sql.Date todaySQLDate1 = null;
+        java.util.GregorianCalendar calendar1 = new java.util.GregorianCalendar();
+        long timeT1 = calendar1.getTime().getTime();
+
+        todaySQLDate1 = new java.sql.Date(timeT1);
+//      Dobivanje jedinstvene oznake iz RECEPTA       
+        String sifraCollaterala = null;
+        
+        tc.debug("chno.COL_TYPE_ID;"+chno.COL_TYPE_ID);
+        chno.Coll_txtCollTypeCode=getCollTypeCode(ctx,chno.COL_TYPE_ID);
+        tc.debug(" chno.Coll_txtCollTypeCode"+ chno.Coll_txtCollTypeCode);
+        sifraCollaterala = chno.Coll_txtCollTypeCode.trim();
+        tc.debug("..........Coll_txtCollTypeCode je    " + chno.Coll_txtCollTypeCode);
+
+
+        sifraCollaterala = sifraCollaterala +  todaySQLDate1.toString().substring(2,4);
+        sifraCollaterala.trim();
+        tc.debug("..........PREFIX   " + sifraCollaterala);               
+
+        String sif = null;
+        sif = sifraGen.getSequence(recept,todaySQLDate1);
+//      sif = new YXYG0(tc).getSequence("CLT_SE",todaySQLDate);
+        tc.debug("..........Dobiveni ID je    " + sif);  
+
+
+        sifraCollaterala = sifraCollaterala + sif;
+
+        tc.debug("..........Sifra collaterala  je    " + sifraCollaterala);         
+
+        return sifraCollaterala;
+
+
+    }  
+
+    private String getCollTypeCode(ConnCtx ctx,BigDecimal col_type_id)throws SQLException{
+        String collTypeCodepom="";
+        tc.debug("Usla u getCollTypeCode, col_type_id:"+col_type_id);
+        try {
+            #sql [ctx] {select coll_type_code 
+            into :(collTypeCodepom)
+            from collateral_type
+            where coll_type_id=:(col_type_id)
+            }; 
+          } catch(SQLException sqle) {
+              tc.debug("dohvaceni collTypeCodepom u SQLEXCEPTION"+collTypeCodepom);
+              tc.debug("sqle.getSQLState()"+sqle.getSQLState());
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+                tc.debug("NEMA ZAPISA U COLLATERAL_TYPE!!!");                
+            }
+        }
+        tc.debug("dohvaceni collTypeCodepom"+collTypeCodepom);
+        return collTypeCodepom;
+        
+    }
+    
+    private void getDateTime(ConnCtx ctx) throws Exception {
+        #sql[ctx] { 
+        SELECT current date, current timestamp 
+        INTO :(chno.CURR_DATE), :(chno.CREATE_DATE_TIME)
+        FROM sysibm.sysdummy1
+        };      
+
+    }
+    
+    private void selectCollInsPolicy(ConnCtx ctx,BigDecimal col_hea_id)throws SQLException{
+        BigDecimal pom_col_hea_id=col_hea_id;
+        tc.debug ("XXXXXXpom_col_hea_id u selectCollInsPOlicy:"+pom_col_hea_id);
+        try{
+            
+            #sql [ctx] {SELECT 
+                                        col_ins_id , 
+                                        col_hea_id , 
+                                        ip_type_id , 
+                                        con_cus_id ,
+                                        con_reg_no ,
+                                        con_code ,
+                                        con_data ,
+                                        ins_cus_id ,
+                                        ins_reg_no ,
+                                        ins_code ,
+                                        ins_data ,
+                                        ip_code ,  
+                                        ip_cus_id ,
+                                        ip_issue_date ,
+                                        ip_valid_from ,
+                                        ip_valid_until ,
+                                        ip_nom_cur_id ,
+                                        ip_nom_value ,
+                                        ip_amount ,
+                                        ip_paid_from ,
+                                        ip_paid_until ,
+                                        ip_status ,
+                                        ip_amo_cur_id ,
+                                        ip_spec_stat,
+                                        wrn_status,
+                                        kmt_status
+                        INTO   :(chno.col_ins_id),
+                               :(chno.COL_HEA_ID), 
+                               :(chno.ip_type_id), 
+                               :(chno.con_cus_id),
+                               :(chno.con_reg_no),
+                               :(chno.con_code), 
+                               :(chno.con_data), 
+                               :(chno.ins_cus_id), 
+                               :(chno.ins_reg_no),
+                               :(chno.ins_code), 
+                               :(chno.ins_data), 
+                               :(chno.ip_code), 
+                               :(chno.ip_cus_id), 
+                               :(chno.ip_issue_date), 
+                               :(chno.ip_valid_from),
+                               :(chno.ip_valid_until),
+                               :(chno.ip_nom_cur_id), 
+                               :(chno.ip_nom_value),
+                               :(chno.ip_amount),
+                               :(chno.ip_paid_from), 
+                               :(chno.ip_paid_until),
+                               :(chno.ip_status),
+                               :(chno.ip_amo_cur_id),
+                               :(chno.ip_spec_stat),
+                               :(chno.wrn_status),
+                               :(chno.kmt_status) 
+                FROM coll_inspolicy
+                WHERE col_hea_id = :(pom_col_hea_id) };       
+ 
+              
+        }catch(SQLException se){ 
+            tc.debug ( "XXXXXXxPuklo u selectCollInsPolicy!");
+          tc.debug ( "......CO406.sqlj select from coll_inspolicy SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO406.sqlj select from coll_inspolicy SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO406.sqlj select from coll_inspolicy SQL Message " + se.getMessage());
+            se.printStackTrace();
+            throw new VestigoTMException(1, "Transaction CO06A: Error selecting coll_inspolicy ","err411a", null);
+        }   
+    }
+    
+    private void insertIntoCollInspolicy(ConnCtx ctx)throws Exception{
+        
+
+        YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id_cv = id_generator.getNewId();
+
+        tc.debug("dohvat collateral_id_cv : "+collaterall_id_cv);         
+
+        chno.col_ins_id = collaterall_id_cv;  
+        
+        tc.debug("chno.col_ins_idd"+chno.col_ins_id);  
+        tc.debug("chno.COL_HEA_ID_NEW"+chno.COL_HEA_ID_NEW);
+
+       try{    
+
+            #sql [ctx]{
+                INSERT INTO coll_inspolicy
+                        (           
+                         col_ins_id , 
+                                        col_hea_id , 
+                                        ip_type_id , 
+                                        con_cus_id ,
+                                        con_reg_no ,
+                                        con_code ,
+                                        con_data ,
+                                        ins_cus_id ,
+                                        ins_reg_no ,
+                                        ins_code ,
+                                        ins_data ,
+                                        ip_code ,  
+                                        ip_cus_id ,
+                                        ip_issue_date ,
+                                        ip_valid_from ,
+                                        ip_valid_until ,
+                                        ip_nom_cur_id ,
+                                        ip_nom_value ,
+                                        ip_amount ,
+                                        ip_paid_from ,
+                                        ip_paid_until ,
+                                        ip_status ,
+                                        ip_amo_cur_id ,
+                                        ip_spec_stat,
+                                        wrn_status,
+                                        kmt_status
+                                       )
+
+                VALUES( :(chno.col_ins_id),
+                               :(chno.COL_HEA_ID_NEW), 
+                               :(chno.ip_type_id), 
+                               :(chno.con_cus_id),
+                               :(chno.con_reg_no),
+                               :(chno.con_code), 
+                               :(chno.con_data), 
+                               :(chno.ins_cus_id), 
+                               :(chno.ins_reg_no),
+                               :(chno.ins_code), 
+                               :(chno.ins_data), 
+                               :(chno.ip_code), 
+                               :(chno.ip_cus_id), 
+                               :(chno.ip_issue_date), 
+                               :(chno.ip_valid_from),
+                               :(chno.ip_valid_until),
+                               :(chno.ip_nom_cur_id), 
+                               :(chno.ip_nom_value),
+                               :(chno.ip_amount),
+                               :(chno.ip_paid_from), 
+                               :(chno.ip_paid_until),
+                               :(chno.ip_status),
+                               :(chno.ip_amo_cur_id),
+                               :(chno.ip_spec_stat),
+                               :(chno.wrn_status),
+                               :(chno.kmt_status)
+                            )   
+        };
+    }catch(java.sql.SQLException se){ 
+    
+        tc.debug ( "......CO406.sqlj insert into coll_inspolicy SQL ErrorCode " + se.getErrorCode());
+        tc.debug ( "......CO406.sqlj insert into coll_inspolicy SQL SQLState " + se.getSQLState());
+        tc.debug ( "......CO406.sqlj insert into coll_inspolicy SQL Message " + se.getMessage());
+        throw new VestigoTMException(1, "Transaction CO406: Error inserting coll_inspolicy! ","err411a", null);
+    }
+    }
+
+    private boolean checkCollHfPrior(ConnCtx ctx,BigDecimal col_hea_id)throws SQLException{
+        BigDecimal col_check=null;
+
+        try {
+            #sql [ctx] {select hf_coll_head_id 
+            into :(col_check)
+            from coll_hf_prior
+            where hf_coll_head_id=:(col_hea_id)
+            };      
+
+
+        } catch(SQLException sqle) {
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+                tc.debug(" coll_hf_prior=false - HIPOTEKA NE POSTOJI");
+                return false;
+
+            }
+        }
+        return true;
+    }
+    
+    private void insertIntoCollHfPrior(ConnCtx ctx)throws Exception{
+
+//      INSERT COLL_HF_PRIOR
+        //dohvaceni slog insertiram ponovno u coll_hf_prior ali s  drugim id!
+        YOY00 id_generator_hf = new YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id_hf = id_generator_hf.getNewId();     
+
+        chno.COLL_HF_PRIOR_ID_NEW=collaterall_id_hf;
+        
+        tc.debug("Stari coll_hf_prio_id:"+chno.COLL_HF_PRIOR_ID);
+        tc.debug("Novi coll_hf_prio_id:"+chno.COLL_HF_PRIOR_ID_NEW);
+        
+        try{  
+            #sql [ctx]{
+            INSERT INTO coll_hf_prior
+            (coll_hf_prior_id, 
+            hf_table_id,      
+            hf_ref_id, 
+            hf_coll_head_id,
+            hf_own_cus_id,    
+            hf_register_no,        
+            hf_own_code,       
+            hf_own_fname,      
+            hf_own_lname,      
+            hf_hfc_id,        
+            hf_priority,      
+            hf_notary_agr,     
+            hf_notary_place_id,
+            hf_notary_date,   
+            hf_notary,         
+            hf_not_fname,      
+            hf_not_lname,      
+            hf_date_reciv,    
+            hf_court_decis,    
+            hf_date_extract,  
+            land_regn,
+            land_regn_new,
+            judge_id,
+            judge_fname,
+            judge_lname,
+            court_id,
+            hf_offi_lrd,      
+            hf_offilrd_fname,  
+            hf_offilrd_lname, 
+            hf_rec_lop_id,
+            hf_add_data,          
+            hf_amount,        
+            hf_cur_id, 
+            amount_ref,            
+            cur_id_ref,            
+            exc_rat_ref,     
+            exc_rat_ref_date,
+            hf_draw_amo,
+            hf_date_hfc_from,
+            hf_date_hfc_until,
+            hf_avail_amo, 
+            hf_draw_amo_ref,
+            avail_amo_ref,
+            hf_avail_dat,
+            draw_bamo,    
+            avail_bamo,    
+            draw_bamo_ref,  
+            avail_bamo_ref, 
+            avail_bdat, 
+            val_date_turn,    
+            val_date_proc,    
+            hf_status,       
+            hf_spec_stat,     
+            hf_date_from,    
+            hf_date_until,    
+            use_open_id,      
+            use_id,          
+            opening_ts,       
+            user_lock,       
+            eve_id,          
+            bank_sign,
+            how_cover,
+            is_part_agreem,
+            rem_re_nomi_valu,
+            rec_lop,
+            date_to_lop,
+            date_rec_lop,
+            veh_con_num,
+            agreement, 
+            fra_agr_id,
+            reg_ins,
+            reg_place,
+            con_num,
+            con_date,
+            reg_cou_id,
+            sindic_ind,
+            hbor_loan,
+            rba_arang_sindic,
+            rba_sindic_part,
+            other_sindic_part,
+            rba_sindic_amount,
+            other_sindic_amount,
+            sindic_desc,
+            other_syndicate_cus_id,
+            total_sindic_amount)   
+            VALUES(:(chno.COLL_HF_PRIOR_ID_NEW),
+            :(chno.HF_TABLE_ID),           
+            :(chno.HF_REF_ID),
+            :(chno.COL_HEA_ID_NEW),
+            :(chno.HF_OWN_CUS_ID),
+            :(chno.CollHfPriorDialog_txtHfRegisterNo),
+            :(chno.CollHfPriorDialog_txtHfOwnCode),  
+            :(chno.CollHfPriorDialog_txtHfOwnFname),        
+            :(chno.CollHfPriorDialog_txtHfOwnLname),
+            :(chno.HF_HFC_ID),
+            :(chno.maxPriority), 
+            :(chno.CollHfPriorDialog_txtHfNotaryAgr),  
+            :(chno.HF_NOTARY_PLACE_ID),
+            :(chno.CollHfPriorDialog_txtHfNotaryDate),    
+            :(chno.HF_NOTARY),   
+            :(chno.CollHfPriorDialog_txtHfNotFname),  
+            :(chno.CollHfPriorDialog_txtHfNotLname), 
+            :(chno.CollHfPriorDialog_txtHfDateReciv), 
+            :(chno.CollHfPriorDialog_txtHfCourtDecis), 
+            :(chno.CollHfPriorDialog_txtHfDateExtract),
+            :(chno.CollHfPriorDialog_txtLandRegn),
+            :(chno.CollHfPriorDialog_txtLandRegnNew),
+            :(chno.CollHfPriorDialog_JUDGE_ID),
+            :(chno.CollHfPriorDialog_txtJudgeFname),
+            :(chno.CollHfPriorDialog_txtJudgeLname),
+            :(chno.CollHfPriorDialog_COURT_ID),
+            :(chno.HF_OFFI_LRD), 
+            :(chno.CollHfPriorDialog_txtHfOffildFname),  
+            :(chno.CollHfPriorDialog_txtHfOffildLname),
+            :(chno.HF_REC_LOP_ID),
+            :(chno.CollHfPriorDialog_txtHfAddData),
+            :(chno.CollHfPriorDialog_txtHfAmount),   
+            :(chno.HF_CUR_ID),
+            :(chno.CollHfPriorDialog_txtAmountRef),
+            :(chno.CUR_ID_REF),
+            :(chno.CollHfPriorDialog_txtExcRatRef),
+            :(chno.CollHfPriorDialog_txtExcRatRefDate),
+            :(chno.HF_DRAW_AMO),
+            :(chno.CollHfPriorDialog_txtHfDateHfcFrom),   
+            :(chno.CollHfPriorDialog_txtHfDateHfcUntil),   
+            :(chno.Hf_Avail_Amount), 
+            :(chno.Hf_Draw_Amo_Ref),
+            :(chno.AvailAmoRef),
+            :(chno.AvailDat),
+            :(chno.Draw_Bamo),
+            :(chno.AvailBAmo),
+            :(chno.DrawBAmoRef),
+            :(chno.HfAvailBAmoRef),
+            :(chno.AvailBDat),
+            :(chno.Val_Date_Turn),
+            :(chno.Val_Date_Proc),
+            :(chno.Hf_status),
+            :(chno.Hf_spec_stat),
+            :(chno.DateFrom),         
+            :(chno.DateUntil), 
+            :(chno.USE_OPEN_ID_HF),
+            :(chno.USE_ID_HF),
+            :(chno.Opening_Ts),
+            :(chno.User_Lock),
+            :(chno.Eve_id),
+            :(chno.Bank_sign),
+            :(chno.CollHfPrior_HOW_COVER),         
+            :(chno.CollHfPrior_txtIsPartAgreem),
+            :(chno.residuecollWorthCO),
+            :(chno.CollHFP_txtRecLop),
+            :(chno.CollHFP_txtDateToLop),
+            :(chno.CollHFP_txtDateRecLop),
+            :(chno.CollHFP_txtVehConNum),
+            :(chno.Kol_txtFrameAgr),
+            :(chno.fra_agr_id),
+            :(chno.REG_INS),
+            :(chno.HfPror_txtRegPlace),
+            :(chno.HfPror_txtConcNum),
+            :(chno.HfPror_txtConcDate),
+            :(chno.REG_COU_ID),
+            :(chno.sindic_ind),
+            :(chno.hbor_loan),
+            :(chno.rba_arang_sindic),
+            :(chno.rba_sindic_part),
+            :(chno.other_sindic_part),
+            :(chno.rba_sindic_amount),
+            :(chno.other_sindic_amount),
+            :(chno.sindic_desc),
+            :(chno.other_syndicate_cus_id),
+            :(chno.total_sindic_amount))
+            }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO406.sqlj insert into coll_hf_prior SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO406.sqlj insert into coll_hf_prior SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO406.sqlj insert into coll_hf_prior SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO40: Error inserting coll_hf_prior! ","err411b", null);
+        } 
+    }
+
+    private void insertIntoLoanBeneficiary(ConnCtx ctx)throws Exception{
+
+
+        YOY00 id_generator_lb = new YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id_lb = id_generator_lb.getNewId();
+
+        
+
+        chno.loan_ben_id_new=collaterall_id_lb;
+        tc.debug("Stari loan_ben_id: "+chno.loan_ben_id);
+        tc.debug("Novi loan_ben_id: "+chno.loan_ben_id_new); 
+
+        try{    
+
+            #sql [ctx]{
+            INSERT INTO loan_beneficiary
+            (loan_ben_id,  
+            register_no,
+            cus_id,
+            acc_no,
+            la_acc_id,
+            coll_hf_prior_id,
+            col_hea_id,
+            ser_num,
+            date_from,
+            date_until,
+            status,
+            spec_status,
+            use_open_id,
+            use_id,
+            opening_ts,
+            user_lock,
+            request_no,
+            priority_no,
+            acc_no_old,
+            fra_agr_id,
+            aps_rqst_no,
+            inspol_ind,
+            ip_cus_id,
+            krad_admin_ind,
+            kred_admin_use_id,
+            kred_admin_ts)   
+            VALUES(:(chno.loan_ben_id_new),
+            :(chno.register_no),
+            :(chno.cus_id),
+            :(chno.acc_no),
+            :(chno.la_acc_id),
+            null,
+            :(chno.COL_HEA_ID_NEW),
+            :(chno.ser_num),
+            :(chno.date_from),
+            :(chno.date_until),
+            :(chno.status),
+            :(chno.spec_status),
+            :(chno.use_open_id),
+            :(chno.use_id),
+            :(chno.opening_ts),
+            :(chno.user_lock),
+            :(chno.request_no),
+            :(chno.priority_no),
+            :(chno.acc_no_old),
+            :(chno.fra_agr_id),
+            :(chno.aps_rqst_no),
+            :(chno.inspol_ind),
+            :(chno.ip_cus_id),
+            :(chno.krad_admin_ind),
+            :(chno.kred_admin_use_id),
+            :(chno.kred_admin_ts))
+            }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO406.sqlj insert into loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO406.sqlj insert into loan_beneficiary SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO406.sqlj insert into loan_beneficiary SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO40: Error inserting loan_beneficiary! ","err411d", null);
+
+        }
+
+    }
+    
+    private void insertIntoLoanBeneficiaryCHFP(ConnCtx ctx)throws Exception{
+
+
+        YOY00 id_generator_lb = new YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id_lb = id_generator_lb.getNewId();
+
+        
+
+        chno.loan_ben_id_new=collaterall_id_lb;
+        tc.debug("Stari loan_ben_id: "+chno.loan_ben_id);
+        tc.debug("Novi loan_ben_id: "+chno.loan_ben_id_new); 
+
+        try{    
+
+            #sql [ctx]{
+            INSERT INTO loan_beneficiary
+            (loan_ben_id,  
+            register_no,
+            cus_id,
+            acc_no,
+            la_acc_id,
+            coll_hf_prior_id,
+            col_hea_id,
+            ser_num,
+            date_from,
+            date_until,
+            status,
+            spec_status,
+            use_open_id,
+            use_id,
+            opening_ts,
+            user_lock,
+            request_no,
+            priority_no,
+            acc_no_old,
+            fra_agr_id,
+            aps_rqst_no,
+            inspol_ind,
+            ip_cus_id,
+            krad_admin_ind,
+            kred_admin_use_id,
+            kred_admin_ts)   
+            VALUES(:(chno.loan_ben_id_new),
+            :(chno.register_no),
+            :(chno.cus_id),
+            :(chno.acc_no),
+            :(chno.la_acc_id),
+            :(chno.COLL_HF_PRIOR_ID_NEW),
+            null,
+            :(chno.ser_num),
+            :(chno.date_from),
+            :(chno.date_until),
+            :(chno.status),
+            :(chno.spec_status),
+            :(chno.use_open_id),
+            :(chno.use_id),
+            :(chno.opening_ts),
+            :(chno.user_lock),
+            :(chno.request_no),
+            :(chno.priority_no),
+            :(chno.acc_no_old),
+            :(chno.fra_agr_id),
+            :(chno.aps_rqst_no),
+            :(chno.inspol_ind),
+            :(chno.ip_cus_id),
+            :(chno.krad_admin_ind),
+            :(chno.kred_admin_use_id),
+            :(chno.kred_admin_ts))
+            }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO406.sqlj insert into loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO406.sqlj insert into loan_beneficiary SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO406.sqlj insert into loan_beneficiary SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO40: Error inserting loan_beneficiary! ","err411d", null);
+
+        }
+
+    }
+    
+
+    private void updateColHfPrior(ConnCtx ctx,BigDecimal col_hea_id)throws SQLException{
+
+
+        try {
+            #sql[ctx]{UPDATE coll_hf_prior
+            SET
+            hf_status=:(status_new),
+            hf_date_hfc_until=:(current_date),
+            hf_priority=:(new_priority),
+            user_lock = current timestamp
+            WHERE hf_coll_head_id=:(col_hea_id)
+            AND hf_status=:(status_old)
+            };
+
+
+        } catch(SQLException sqle) {
+            tc.debug(" Puklo kod UPDATE COLL_HF_PRIOR");                                    
+        }
+
+    }
+
+    private boolean checkInsurancePolicy(ConnCtx ctx,BigDecimal col_hea_id){        
+        BigDecimal col_check=null;
+        try {
+            #sql [ctx] {select ip_id 
+            into :(col_check)
+            from insurance_policy
+            where col_hea_id=:(col_hea_id)
+            };      
+
+
+        } catch(SQLException sqle) {
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+                tc.debug(" insurance_policy=false - POLICA OSIGURANJA NE POSTOJI");
+                return false;
+            }
+        }
+        return true;
+
+    }
+    
+
+    private void insertIntoInsurancePolicy(ConnCtx ctx) throws Exception {
+
+        YOY00 id_generator_ip = new YOY00(ctx);            //COLLATERAL_IDN
+        BigDecimal collaterall_id_ip = id_generator_ip.getNewId();
+
+        tc.debug("dohvat collateral_id_ip : "+collaterall_id_ip);         
+
+        chno.IP_ID_NEW=collaterall_id_ip;
+        tc.debug("NOVI ip_id: : "+chno.IP_ID_NEW);
+
+        try{    
+
+            #sql [ctx]{
+            INSERT INTO insurance_policy
+            (IP_ID,
+            IP_CODE,
+            IP_TYPE_ID,
+            IP_IC_ID,
+            IP_CONTRACTOR,
+            IP_POL_HOLDER,
+            IP_PLACE,
+            IP_SECU_VAL,
+            IP_CUR_ID,
+            IP_DATE_SEC_VAL,
+            COL_HEA_ID,
+            IP_REPLACE,
+            IP_VALI_FROM,
+            IP_VALI_UNTIL,
+            IP_ACT_NOACT,
+            IP_SPEC_STAT,
+            USE_OPEN_ID,
+            USE_ID,
+            OPENING_TS,
+            USER_LOCK,
+            WRN_STATUS,
+            KMT_STATUS,
+            IP_RESTR_1_IND,
+            IP_P_SECU_VAL,
+            IP_P_CUR_ID,
+            IP_RESTR_VAL,
+            IP_RESTR_CUR_ID,
+            IP_RESTR_TYPE,
+            IP_ADD_DATA)   
+            VALUES(:(chno.IP_ID_NEW),
+            :(chno.IP_CODE),
+            :(chno.IP_TYPE_ID),
+            :(chno.IP_IC_ID),
+            :(chno.IP_CONTRACTOR),
+            :(chno.IP_POL_HOLDER),
+            :(chno.IP_PLACE),
+            :(chno.IP_SECU_VAL),
+            :(chno.IP_CUR_ID),
+            :(chno.IP_DATE_SEC_VAL),
+            :(chno.COL_HEA_ID_NEW),
+            :(chno.IP_REPLACE),
+            :(chno.IP_VALI_FROM),
+            :(chno.IP_VALI_UNTIL),
+            :(chno.IP_ACT_NOACT),
+            :(chno.IP_SPEC_STAT),
+            :(chno.USE_OPEN_ID),
+            :(chno.USE_ID),
+            :(chno.OPENING_TS),
+            :(chno.USER_LOCK),
+            :(chno.WRN_STATUS),
+            :(chno.KMT_STATUS),
+            :(chno.IP_RESTR_1_IND),
+            :(chno.IP_P_SECU_VAL),
+            :(chno.IP_P_CUR_ID),
+            :(chno.IP_RESTR_VAL),
+            :(chno.IP_RESTR_CUR_ID),
+            :(chno.IP_RESTR_TYPE),
+            :(chno.IP_ADD_DATA))
+            }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO406.sqlj insert into insurance_policy SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO406.sqlj insert into insurance_policy SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO406.sqlj insert into insurance_policy SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO40: Error inserting insurance_policy! ","err411d", null);
+        }
+    }    
+    
+    
+    private void deactLoanBenef(ConnCtx ctx,BigDecimal col_hea_id)throws SQLException{
+
+        try{
+            #sql[ctx]{ UPDATE loan_beneficiary
+            SET date_until=:(current_date),
+            status=:(status_new),
+            user_lock = current timestamp
+            WHERE col_hea_id=:(col_hea_id)
+            AND status=:(status_old)
+            };
+
+
+        } catch(SQLException sqle){
+            tc.debug(" Puklo kod UPDATE LOAN_BENEFICIARY");
+
+        }
+
+    }
+    
+    private String checkColAccount(ConnCtx ctx,BigDecimal col_hea_id){
+        String pom_indic="";
+        tc.debug("checkColAccount pozvan s col_hea_id:"+col_hea_id);
+        
+
+        try {
+            #sql [ctx] {select b.accounting_indic
+            into :(pom_indic)
+            from coll_head a, coll_category b
+            where a.col_hea_id=:(col_hea_id)
+            and a.col_cat_id=b.col_cat_id
+            };      
+
+
+        } catch(SQLException sqle) {
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+                tc.debug("Nema zapisa!");
+
+            }
+        }
+        
+        tc.debug("pom_indic"+pom_indic);
+        return pom_indic;
+    }
+    
+    private void updateColHeadStatus(ConnCtx ctx,BigDecimal col_hea_id)throws SQLException{
+
+
+        try {
+            #sql[ctx]{UPDATE coll_head
+            SET
+            collateral_status=:(status_new),
+            rec_lop=:(status_new),
+            user_lock = current timestamp
+            WHERE col_hea_id=:(col_hea_id)
+            };
+
+
+        } catch(SQLException sqle) {
+            tc.debug(" Puklo kod UPDATE COLL_HEAD STATUS");
+            tc.debug ( "......CO406.sqlj insert into coll_restate SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......CO406.sqlj insert into coll_restate SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......CO406.sqlj insert into coll_restate SQL Message " + sqle.getMessage());
+        }
+
+    }
+    
+    
+}
+

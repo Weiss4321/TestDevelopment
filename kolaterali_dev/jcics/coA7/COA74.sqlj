@@ -1,0 +1,66 @@
+package hr.vestigo.modules.collateral.jcics.coA7;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+
+public class COA74
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA7/COA74.sqlj,v 1.2 2011/04/27 12:47:55 hrakis Exp $";
+
+    public DeclCOA7 decl = null;
+    
+
+    public COA74(DeclCOA7 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+
+        try
+        {
+            int cnt;
+            #sql [ctx] {
+                SELECT COUNT(*)
+                INTO :(cnt)
+                FROM frame_acc_exception 
+                WHERE cus_acc_id = :(decl.frameaccexceptiondialoginsertm.CUS_ACC_ID)
+                AND exception_type = :(decl.frameaccexceptiondialoginsertm.EXCEPTION_TYPE)
+                WITH UR
+            };
+            if(cnt > 0) throw new VestigoTMException(1, "Transaction COA74: Entry with specified CUS_ACC_ID already exists in FRAME_ACC_EXCEPTION!", "errclt8"); 
+            
+            BigDecimal fra_acc_exc_id = new YOY00(tc).getNewId();
+            
+            #sql [ctx] {
+                INSERT INTO frame_acc_exception (
+                    fra_acc_exc_id,
+                    cus_acc_id,
+                    status,
+                    comment,
+                    use_id,
+                    user_lock,
+                    exception_type
+                ) VALUES (
+                    :(fra_acc_exc_id),
+                    :(decl.frameaccexceptiondialoginsertm.CUS_ACC_ID),
+                    :(decl.frameaccexceptiondialoginsertm.FrameAccExceptionDialog_txtStatus),
+                    :(decl.frameaccexceptiondialoginsertm.FrameAccExceptionDialog_txtComment),
+                    :(decl.frameaccexceptiondialoginsertm.use_id),
+                    CURRENT TIMESTAMP,
+                    :(decl.frameaccexceptiondialoginsertm.EXCEPTION_TYPE)
+                )
+            };
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA74: Error inserting into FRAME_ACC_EXCEPTION!", "err411a", null, ex);
+        }
+    }
+}

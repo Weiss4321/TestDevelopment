@@ -1,0 +1,255 @@
+package hr.vestigo.modules.collateral.batch.bo67;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+import sqlj.runtime.ref.*;
+
+public class BO671 {
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo67/BO671.sqlj,v 1.2 2014/06/11 08:22:10 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private BigDecimal eve_id = null;
+    private ConnCtx connCtx;
+    private ConnCtx connCtx1;
+    
+    
+    #sql iterator IteratorData with (holdability = true)(
+            String register_no,
+            String name,
+            String cus_acc_no,
+            String col_num,
+            BigDecimal exp_coll_amount
+        );
+   
+    public BO671(BatchContext batchContext) {
+        this.batchContext = batchContext;
+        
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa ID obrade izraèuna pokrivenosti za zadani datum i ponder/prhivatljivost.
+     * @param report_date Datum izraèuna pokrivenosti.
+     * @param ponder Indikator pondera. Moguæe vrijednosti su P za ponderirano ili N za neponderirano.
+     * @param eligibility Prihvatljivost za koju se radi izvješæe. Moguæe vrijednosti su B1,B2,RBA,B2IRB,ND.
+     * @return ID obrade izraèuna pokrivenosti. Ako obrada ne postoji ili se dogodila greška, vraæa null.
+     */
+    public BigDecimal selectColProId(Date report_date, String ponder, String eligibility){
+        batchContext.startStopWatch("selectColProId");
+        
+        // odredi indikator vrste obrade za zadanu vrstu pokrivenosti i ponderiranost
+        String proc_type = "";
+        boolean ponded = "P".equals(ponder);
+        if(eligibility.equals("B1")){
+           if(ponded) proc_type = "E"; else proc_type = "C";
+           
+        }else if(eligibility.equals("B2")){
+           if(ponded) proc_type = "I"; else proc_type = "H";
+           
+        }else if(eligibility.equals("RBA")){
+           if(ponded) proc_type = "P"; else proc_type = "N";
+           
+        }else if(eligibility.equals("B2IRB")){
+           if(ponded) proc_type = "K"; else proc_type = "J";
+           
+        }else if(eligibility.equals("ND")){
+           if(ponded) proc_type = "M"; else proc_type = "L";           
+        }
+        
+        // dohvati ID obrade izraèuna pokrivenosti za zadani datum i vrstu obrade
+        BigDecimal col_pro_id = null;
+        try{
+            #sql [connCtx] {
+                SELECT col_pro_id
+                INTO   :col_pro_id
+                FROM   col_proc 
+                WHERE  value_date = :(report_date)
+                AND    proc_type = :(proc_type)
+                AND    proc_status = '1'
+                WITH UR
+            };
+        }catch(SQLException ex){
+            batchContext.error("Greska kod dohvata ID obrade izracuna pokrivenosti!", ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectColProId");
+        return col_pro_id;
+    }
+    
+    /**
+     * Metoda koja dohvaæa sve potrebne podatke o plasmanima i pokrivenosti prema zadanim kriterijima
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @return IteratorData 
+     */
+    public IteratorData selectData(BigDecimal col_pro_id)
+    { 
+        batchContext.startStopWatch("selectData");
+
+        IteratorData iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                 SELECT  c.register_no, c.name, b.cus_acc_no, d.col_num, a.exp_coll_amount
+                 FROM    cusacc_exp_coll a
+                 JOIN    cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                 JOIN    customer c ON b.cus_id = c.cus_id
+                 JOIN    coll_head d ON a.col_hea_id = d.col_hea_id
+                 WHERE   a.col_pro_id = :(col_pro_id)
+                 AND     a.cov_priority IS NOT NULL
+                 ORDER BY 1, 3, 4
+                 WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata podataka!",ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectData");
+        return iter;
+    }
+    
+    /**
+     * Metoda koja dohvaæa sve potrebne podatke o plasmanima i pokrivenosti prema zadanim kriterijima
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param register_no Interni MB komitenta
+     * @return IteratorData 
+     */
+    public IteratorData selectDataByRegisterNo(BigDecimal col_pro_id, String register_no)
+    { 
+        batchContext.startStopWatch("selectDataByRegisterNo");
+
+        IteratorData iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                     SELECT  c.register_no, c.name, b.cus_acc_no, d.col_num, a.exp_coll_amount
+                     FROM    cusacc_exp_coll a
+                     JOIN    cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                     JOIN    customer c ON b.cus_id = c.cus_id
+                     JOIN    coll_head d ON a.col_hea_id = d.col_hea_id
+                     WHERE   a.col_pro_id = :(col_pro_id)
+                     AND     a.cov_priority IS NOT NULL
+                     AND     c.register_no = :(register_no)
+                     ORDER BY   1, 3, 4
+                     WITH UR
+                };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata podataka!",ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectDataByRegisterNo");
+        return iter;
+    }
+    
+    /**
+     * Metoda koja dohvaæa sve potrebne podatke o plasmanima i pokrivenosti prema zadanim kriterijima
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param register_no Komitent
+     * @param acc_no Partija plasmana
+     * @return IteratorData 
+     */
+    public IteratorData selectDataByAccNo(BigDecimal col_pro_id, String register_no, String acc_no)
+    { 
+        batchContext.startStopWatch("selectDataByAccNo");
+
+        IteratorData iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                     SELECT  c.register_no, c.name, b.cus_acc_no, d.col_num, a.exp_coll_amount
+                     FROM    cusacc_exp_coll a
+                     JOIN    cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                     JOIN    customer c ON b.cus_id = c.cus_id
+                     JOIN    coll_head d ON a.col_hea_id = d.col_hea_id
+                     WHERE   a.col_pro_id = :(col_pro_id)
+                     AND     a.cov_priority IS NOT NULL
+                     AND     c.register_no = :(register_no)
+                     AND     b.cus_acc_no = :(acc_no)
+                     ORDER BY   1, 3, 4
+                     WITH UR
+                };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata podataka!",ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectDataByAccNo");
+        return iter;
+    }
+        
+    /**
+     * Metoda koja za zadani datum dohvaæa srednji teèaj za EUR.
+     * @param date datum za koji se dohvaæa teèaj
+     * @return srednji teèaj za zadani datum
+     */
+    public BigDecimal selectExchangeRate(Date date){
+        batchContext.startStopWatch("selectExchangeRate");
+        
+        BigDecimal exchangeRate = new BigDecimal("0.00");
+        try{ 
+            #sql [connCtx] {
+                       SELECT midd_rate
+                       INTO   :(exchangeRate)
+                       FROM   exchange_rate
+                       WHERE  cur_id = 64999
+                       AND    :(date) BETWEEN date_from and date_until 
+                       WITH UR
+            };
+        }catch(SQLException ex){
+            batchContext.error("Greska kod dohvata teèaja za dan: "+date.toString()+"!", ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectExchangeRate");
+        return exchangeRate;
+    }
+    
+    public BigDecimal insertIntoEvent() throws Exception{
+        batchContext.debug("BO671.sqlj insertIntoEvent poèeo.");     
+
+        try{
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("4800990704.0"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Batch za kreiranje izvještaja - alocirane vrijednosti kolaterala.");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+
+        } catch(Exception ex){
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }      
+}

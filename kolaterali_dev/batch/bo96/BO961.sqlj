@@ -1,0 +1,198 @@
+package hr.vestigo.modules.collateral.batch.bo96;
+
+
+
+import java.sql.*;   
+import sqlj.runtime.ref.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+
+public class BO961 {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo96/BO961.sqlj,v 1.11 2018/01/23 12:14:20 hraskd Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    public BO961(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }  
+    
+    #sql iterator CollRecovery (
+            BigDecimal colHeaId
+    );
+    
+    #sql iterator AllocationIterator (
+            BigDecimal colHeaId, 
+            String registerno,
+            String customer_name,
+            String cocunat,
+            String collateralObjectId,
+            String collataeralCode,
+            String endorsementType,
+            String propertyType,
+            String objectType,   
+            BigDecimal real_est_nomi_valu,
+            Date real_est_nomi_date, 
+            BigDecimal new_build_val,
+            Date real_est_estn_date,
+            BigDecimal recoveryAmount,
+            String recoveryCurrency,
+            String kindOfRecovery,
+            Date recoveryDate,
+            BigDecimal costForCollateralRealization,
+            BigDecimal realizationAmount,
+            String realizationCurrency,            
+            Date realizationDate,
+            BigDecimal collCatId,
+            String recovery_comment,
+            BigDecimal wca,
+            BigDecimal wcov,
+            Date cover_date,
+            String takeoverFromBank
+        );
+    
+    /**
+     * Metoda koja dohvaæa colaterale koji su na neaktivnoj listi i popunjeni recovery podaci
+     * @return iterator s col_hea_id
+     */
+    public CollRecovery selectRecoveryCollaterals() throws Exception
+    {   
+        bc.startStopWatch("BO961.selectRecoveryCollaterals");
+
+        CollRecovery iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT ch.col_hea_id as colHeaId
+                FROM coll_head ch
+                WHERE ch.collateral_status = 'N' 
+                AND ch.used_in_recovery = 'D'
+                WITH UR                    
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata kolaterala!", ex);
+        }
+        
+        bc.stopStopWatch("BO961.selectRecoveryCollaterals");
+        return iter;
+    }
+    
+    /**
+     * Metoda koja dohvaæa colateralima NCV, NGV, WCV, WCOV
+     * @return iterator s podacima
+     */
+    public BigDecimal getLastColProcID(BigDecimal colHeaID) throws Exception
+    {   
+        bc.startStopWatch("BO961.getLastColProcID"); 
+        BigDecimal col_pro_id=null;
+        Date max_date=null;
+        try
+        {
+            #sql [connCtx] { 
+                        SELECT col_pro_id, max(VALUE_DATE) AS MaxDate
+                        INTO :(col_pro_id),:(max_date)
+                        FROM COL_PROC cp
+                        WHERE cp.COL_PRO_ID in (
+                            SELECT DISTINCT cp1.COL_PRO_ID FROM CUSACC_EXP_COLL ceca
+                            INNER JOIN COL_PROC cp1 on ceca.COL_PRO_ID = cp1.COL_PRO_ID
+                            WHERE ceca.COL_HEA_ID = :(colHeaID)
+                        ) and cp.PROC_TYPE = 'M' AND proc_status='1'
+                        GROUP BY col_pro_id
+                        ORDER by MaxDate DESC
+                        FETCH FIRST ROW ONLY
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata getLastColProcID!", ex);
+        } 
+        bc.debug("getLastColProcID -> colHeaID=" + colHeaID + " , col_pro_id=" + col_pro_id + ", max_date=" + max_date);
+        bc.stopStopWatch("BO961.getLastColProcID");
+        return col_pro_id;
+    }
+    
+    /**
+     * Metoda koja dohvaæa colaterale koji su na neaktivnoj listi i popunjeni recovery podaci
+     * @return iterator s podacima
+     */
+    public AllocationIterator selectData(BigDecimal col_hea_id, BigDecimal col_pro_id) throws Exception
+    {   
+        bc.startStopWatch("BO961.selectData");
+
+        AllocationIterator iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                    SELECT
+                    ch.col_hea_id           as colheaid,
+                    c.register_no           as registerno, 
+                    c.name                  as customer_name,
+                    ctd.cocunat             as cocunat, 
+                    ch.col_num              as collateralobjectid, 
+                    cgt_code.code           as collataeralcode, 
+                    cgt_end.code            as endorsementtype, 
+                    cgt_prop.code           as propertytype,
+                    cgt_obj.code            as objecttype,
+                    ch.real_est_nomi_valu,
+                    ch.real_est_nomi_date,
+                    cr.new_build_val,
+                    ch.real_est_estn_date,
+                    ch.recovery_amount      as recoveryamount,
+                    cur.code_char           as recoverycurrency,
+                    scv.sys_code_desc       as kindofrecovery,
+                    ch.recovery_date        as recoverydate,
+                    ch.realization_cost     as costforcollateralrealization,
+                    ch.realization_amount   as realizationamount,
+                    currc.code_char         as realizationcurrency,
+                    ch.realization_date     as realizationdate,
+                    ch.col_cat_id           as collcatid,
+                    ch.recovery_comment     as recovery_comment,
+                    sum(cec.exp_coll_amount) as wca,
+                    cec.wcov,
+                    cec.cover_date,
+                    takeover_from_bank     as takeoverFromBank
+                    FROM coll_head ch
+                    LEFT OUTER JOIN CUSACC_EXP_COLL cec ON (ch.col_hea_id = cec.col_hea_id AND col_pro_id=:col_pro_id)
+                    LEFT OUTER JOIN COLL_RESTATE cr ON ch.col_hea_id = cr.col_hea_id 
+                    LEFT OUTER JOIN CUST_TIGER_DATA ctd ON (cec.CUS_ID = ctd.CUS_ID AND ctd.date_until='9999-12-31') 
+                    LEFT OUTER JOIN CUSTOMER c on c.CUS_ID = cec.CUS_ID
+                    LEFT OUTER JOIN SYSTEM_CODE_VALUE scv on scv.SYS_CODE_VALUE = ch.KIND_OF_RECOVERY AND scv.SYS_COD_ID = 'kind_of_recovery'
+                    LEFT OUTER JOIN CURRENCY cur on cur.CUR_ID = ch.RECOVERY_CUR_ID
+                    LEFT OUTER JOIN COLL_GCM_TYPE cgt_code on cgt_code.COL_GCM_TYP_ID = ch.GCTC_ID
+                    LEFT OUTER JOIN COLL_GCM_TYPE cgt_end on cgt_end.COL_GCM_TYP_ID = ch.ENDORSEMENT_TYPE_ID
+                    LEFT OUTER JOIN COLL_GCM_TYPE cgt_prop on cgt_prop.COL_GCM_TYP_ID = ch.PROPERTY_TYPE_ID
+                    LEFT OUTER JOIN COLL_GCM_TYPE cgt_obj on cgt_obj.COL_GCM_TYP_ID = ch.OBJECT_TYPE_ID
+                    LEFT OUTER JOIN CURRENCY curRC on curRC.CUR_ID = ch.REALIZATION_CUR_ID
+                    WHERE ch.col_hea_id=:col_hea_id 
+                    GROUP BY ch.col_hea_id, c.register_no,c.name,ctd.cocunat,ch.col_num,cgt_code.code, cgt_end.code, cgt_prop.code,cgt_obj.code, ch.real_est_nomi_valu, ch.real_est_nomi_date,
+                    cr.new_build_val, ch.real_est_estn_date, ch.recovery_amount, cur.code_char, scv.sys_code_desc, ch.recovery_date, ch.realization_cost, ch.realization_amount, currc.code_char,
+                    ch.realization_date, ch.col_cat_id, ch.recovery_comment, cec.wcov, cec.cover_date, takeover_from_bank       
+                    WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata collaterala!", ex);
+        }
+        
+        bc.stopStopWatch("BO961.selectData");
+        return iter;
+    }
+     
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

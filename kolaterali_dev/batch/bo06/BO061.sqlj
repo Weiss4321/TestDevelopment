@@ -1,0 +1,374 @@
+package hr.vestigo.modules.collateral.batch.bo06;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Vector;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*;  
+import hr.vestigo.modules.collateral.common.yoy0.*;
+
+
+public class BO061 {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo06/BO061.sqlj,v 1.9 2007/06/06 08:30:44 hratar Exp $";
+	
+	#sql iterator CollIdIter (BigDecimal col_hea_id,
+							BigDecimal real_est_nomi_valu,
+							BigDecimal real_est_nm_cur_id,
+							Date real_est_nomi_date, 
+							String val_per_min,
+							String amort_flag,
+							String amort_age, 
+							BigDecimal amort_pst,
+							String amort_per,
+							String accounting_indic
+	);							
+
+	
+	private ConnCtx connCtx;
+    private BigDecimal eve_id = null;
+    private Vector result = null;
+
+    private BigDecimal col_pro_id = null;
+    private hr.vestigo.framework.remote.batch.BatchContext bc;
+    private int kont;
+    private CollIdIter coliditer = null;	
+    
+	public BO061(){
+		//BO06Data data = new BO05Data(); 
+		
+	}
+	
+	public BigDecimal insertIntoEvent(){
+		//System.out.println("sqlj insertIntoEvent");		
+	 	eve_id = null;
+	  	
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(connCtx);			
+		  	eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+   	
+			event.put("eve_id", eve_id);
+			event.put("eve_typ_id", new BigDecimal("1688861003"));
+			event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+			event.put("cmnt", "Izracun amortizacije");
+			event.put("use_id", bc.getUserID());
+			event.put("ext_event_code", null);
+			event.put("ext_event_num", null);
+			event.put("org_uni_id", new BigDecimal("53253"));
+			event.put("bank_sign", bc.getBankSign());
+		  	eve1.insertEvent(event);
+		  	bc.updateEveID(eve_id);		
+	  
+	  } catch(Exception e){
+		  e.printStackTrace();
+		  return null;
+	  }
+	  
+	  return eve_id;
+	}
+	
+	public BO061(hr.vestigo.framework.remote.batch.BatchContext bc){
+		this.bc = bc;
+		try{
+			this.connCtx = bc.getContext();
+		} catch(SQLException e){
+			//System.out.println("Nema connCtx u podtransakciji!");
+		} 
+	}	
+	
+    public BigDecimal getEveId(){
+    	return this.eve_id;
+    }
+    
+	 public int selectCol_Proc(java.sql.Date argDate) throws SQLException {
+	 	
+	 	kont = 0;
+	 	System.out.println("sqlj selectCol_Proc kont ="+kont);
+	 	try{
+	 	 	#sql [connCtx] {SELECT COUNT(proc_status) INTO :kont 
+							FROM col_proc WHERE proc_status = '1'
+	 						AND proc_date = :argDate 
+	 						AND proc_type = 'A' 
+	 			};
+	 		
+		} catch (SQLException e) {
+			System.out.println("sql pogreska u selectCol_Proc");
+			System.out.println("proces_date kao argument "+argDate);
+			e.printStackTrace();
+	 	}
+	 	System.out.println("sqlj selectCol_Proc kont prije returna ="+kont);
+	 	return kont;
+	 }
+	 
+	public Vector selectCol_id(BO06Data p_data) throws Exception{
+			System.out.println("SQLJ selectCol_id()");
+			try{
+				
+				#sql [connCtx] coliditer  = {
+
+							SELECT a.COL_HEA_ID, 
+								a.REAL_EST_NOMI_VALU,  
+								a.REAL_EST_NM_CUR_ID, 
+								a.REAL_EST_NOMI_DATE, 
+								b.VAL_PER_MIN, 
+								b.AMORT_FLAG, 
+								b.AMORT_AGE, 
+								b.AMORT_PST, 
+								b.AMORT_PER ,
+								d.accounting_indic
+							FROM COLL_HEAD a, COLL_ATR b, COLL_CATEGORY d 
+							WHERE a.COLLATERAL_STATUS = '3' 
+								and a.col_cat_id = b.col_cat_id 
+								and a.COL_TYPE_ID = b.COLL_TYPE_ID 
+								and b.status='A' 
+								and b.amort_flag = '0' 
+								and b.date_from <= :(p_data.proces_date)  
+								and b.date_until = '9999-12-31' 
+								and a.col_cat_id = d.col_cat_id
+
+
+				};
+				
+			}catch(SQLException e){
+				System.out.println("SQLException za select coliditer ");
+				
+				if(e.getErrorCode()!=100){
+					try {
+						throw e;
+					} catch (Exception ignored) {
+					}
+				}
+			}
+		
+			
+			//if (coliditer != null) {
+				result = new Vector();
+				
+				
+				try {
+					while (coliditer.next()) {
+						
+						Vector redak = new Vector();
+						
+						redak.add(coliditer.col_hea_id());
+						redak.add(coliditer.real_est_nomi_valu());
+						redak.add(coliditer.real_est_nm_cur_id());
+						redak.add(coliditer.real_est_nomi_date());
+						redak.add(coliditer.val_per_min());
+						redak.add(coliditer.amort_flag());
+						redak.add(coliditer.amort_age());
+						redak.add(coliditer.amort_pst());
+						redak.add(coliditer.amort_per());
+						redak.add(coliditer.accounting_indic());
+						result.add(redak);
+					}
+				} catch (Exception ignored) {
+				}
+
+			//}
+			//if (coliditer != null) {
+			//	try {
+			//		coliditer.close();
+			//	} catch (Exception ignored) {
+			//	}
+			//}
+
+			return result;
+		}
+		
+	public void get_file_data(BO06Data p_data) throws Exception {
+			System.out.println("SQL USAO U get_file_data(BO06Data Data) ");
+			try {	
+				#sql [connCtx] {
+					SELECT COL_TYPE_ID 
+					INTO  :(p_data.coll_type_id) 
+					FROM coll_head 
+					WHERE col_hea_id = :(p_data.col_hea_id) 
+				};
+	 		
+	 		
+	 	} catch(SQLException e) {
+	 			
+	 	
+	 		if (e.getErrorCode()!=100){
+				
+				throw e;
+	 		}
+	 	}	
+	}
+	 public BigDecimal insertCol_Proc(BO06Data p_data) throws SQLException {
+	 	
+	 	
+	 	System.out.println("sqlj insertCol_Proc =");
+	 	
+	 	try{
+	 		YOY00 idgen = new YOY00(connCtx);
+	 		BigDecimal col_pro_id = idgen.getNewId();
+	 	
+	 		p_data.col_pro_id = col_pro_id;
+	 		p_data.proc_status ="0";
+	 		p_data.proc_type = "A";
+	 		p_data.proc_way = "A";
+	 	
+	 	
+	 	 	#sql [connCtx] {
+	 					INSERT INTO col_proc
+	 					(col_pro_id, 
+	 					 proc_date, 
+	 					 value_date, 
+	 					 proc_type, 
+	 					 proc_way, 
+	 					 proc_status, 
+	 					 org_uni_id, 
+	 					 use_id, 
+	 					 user_lock) 
+	 					VALUES
+	 					 (:col_pro_id,
+	 					  :(p_data.proces_date), 
+	 					  :(p_data.value_date), 
+	 					  :(p_data.proc_type), 
+	 					  :(p_data.proc_way), 
+	 					  :(p_data.proc_status), 
+	 					  :(p_data.org_uni_id), 
+	 				      :(p_data.use_id), 
+	 					  CURRENT TIMESTAMP)
+	 						
+	 			};
+	 		
+		} catch (Exception e) {
+			System.out.println("sql pogreska u insertCol_Proc");
+		
+			e.printStackTrace();
+	 	}
+	 	System.out.println("sqlj insertCol_Proc kont prije returna ="+kont);
+	 	
+	 	return col_pro_id;
+	 }
+	 public BigDecimal insertCol_Turnover(BO06Data p_data) throws SQLException {
+	 	
+	 	
+	 	System.out.println("sqlj insertCol_Turnover =");
+	 	
+	 	try{
+	 		YOY00 idgen = new YOY00(connCtx);
+	 		BigDecimal col_tur_id = idgen.getNewId();
+	 	
+	 		p_data.col_tur_id = col_tur_id;
+	 		p_data.proc_status ="0";
+	 		p_data.proc_type = "A";
+	 		p_data.proc_way = "A";
+	 	
+	 	
+	 	 	#sql [connCtx] {
+	 					INSERT INTO col_turnover
+	 					(col_tur_id, 
+	 					 col_pro_id, 
+	 					 col_hea_id, 
+	 					 coll_type_id, 
+	 					 amount, 
+	 					 amount_proc, 
+	 					 amort_age, 
+	 					 proc_perc, 
+	 					 date_from, 
+	 					 date_until, 
+	 					 proc_period, 
+	 					 proc_status) 
+	 					VALUES
+	 					 (:col_tur_id,
+	 					  :(p_data.col_pro_id), 
+	 					  :(p_data.col_hea_id), 
+	 					  :(p_data.coll_type_id), 
+	 					  :(p_data.col_turnover_amount), 
+	 					  :(p_data.col_turnover_amount_proc), 
+	 					  :(p_data.amort_age), 
+	 					  :(p_data.proc_perc),
+	 					  :(p_data.real_est_nomi_dat),
+	 					  :(p_data.proces_date), 
+	 					  :(p_data.proc_period), 
+	 				      :(p_data.proc_status)) 
+	 						
+	 			};
+	 		
+		} catch (Exception e) {
+			System.out.println("sql pogreska u insertCol_Turnover");
+		
+			e.printStackTrace();
+	 	}
+	 	System.out.println("sqlj insertCol_Turnover kont prije returna ="+kont);
+	 	
+	 	return col_pro_id;
+	 }
+	 public void updateCol_Proc(BO06Data p_data) throws SQLException {
+	 	
+	 	
+	 	System.out.println("sqlj updateCol_Proc =");
+	 	try{
+	 	 	#sql [connCtx] {UPDATE col_proc 
+	 						SET proc_status = '1', 
+	 						col_number = :(p_data.col_number), 
+	 						proc_ts = CURRENT TIMESTAMP
+	 						WHERE 
+	 						col_pro_id = :(p_data.col_pro_id) 
+							
+	 			};
+	 		
+		} catch (SQLException e) {
+			System.out.println("sql pogreska u updateCol_Proc");
+			e.printStackTrace();
+	 	}
+	 	System.out.println("sqlj updateCol_Proca =");
+	 	
+	 }
+	 public void updateCol_Head(BO06Data p_data) throws SQLException {
+	 	
+	 	BigDecimal pom1 = p_data.real_est_nomi_valu.subtract(p_data.col_turnover_amount_proc);
+	 	
+	 	System.out.println("sqlj updateCol_Proc =");
+	 	try{
+	 	 	#sql [connCtx] {UPDATE coll_head  
+	 						SET real_est_nomi_valu = :pom1, 
+	 						real_est_nomi_date = :(p_data.proces_date),  
+	 						amort_val_cal = :(p_data.col_turnover_amount_proc)  
+	 						WHERE 
+	 						col_hea_id = :(p_data.col_hea_id) 
+							
+	 			};
+	 		
+		} catch (SQLException e) {
+			System.out.println("sql pogreska u updateCol_Proc");
+			e.printStackTrace();
+	 	}
+	 	System.out.println("sqlj updateCol_Proca =");
+	 	
+	 }
+	 public BigDecimal updateCol_Turnover(BO06Data p_data,String bookingState) throws SQLException {
+	 	
+	 	
+	 	System.out.println("sqlj UPDATE Col_Turnover =");
+	 	String status = "2";
+	 	
+	 	try{ 	
+	 	 	#sql [connCtx] {
+	 					UPDATE col_turnover   
+	 						SET proc_status = :(bookingState)   
+	 						WHERE 
+	 						col_tur_id = :(p_data.col_tur_id) 
+	 						
+	 			};
+	 		
+		} catch (Exception e) {
+			System.out.println("sql pogreska u insertCol_Turnover");
+		
+			e.printStackTrace();
+	 	}
+	 	System.out.println("sqlj insertCol_Turnover kont prije returna ="+kont);
+	 	
+	 	return col_pro_id;
+	 }
+}

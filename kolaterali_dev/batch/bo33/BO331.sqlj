@@ -1,0 +1,187 @@
+package hr.vestigo.modules.collateral.batch.bo33;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO331
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo33/BO331.sqlj,v 1.1 2008/10/31 11:51:48 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator CollIterator with (holdability = true)( 
+    	String org_code,
+    	String org_name,
+    	String register_no,
+    	String cus_name,
+    	String address,
+    	String postoffice,
+    	String city_name,
+    	String request_no,
+    	String acc_no,
+    	String col_num,
+    	BigDecimal real_est_nomi_valu,
+    	String cur_code,
+    	String coll_type_name
+    );
+
+    public BO331(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	/**
+	 * Metoda ubacuje zapis u EVENT tablicu.
+	 * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+	 */
+    public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	BigDecimal eve_id = null;
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("2640218003"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Izvješæe o kolateralima prema aktivnosti plasmana");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+    /**
+    * Metoda koja dohvaæa podatke o kolateralima za zadanu kategoriju,OJ,period,status plasmana i vrstu klijenta.
+	* @param col_cat_id ID kategorije kolaterala. Ako je null, uzimaju se sve kategorije.
+	* @param org_uni_id ID organizacijske jedinice. Ako je null, uzimaju se sve organizacijske jedinice.
+	* @param date_from Datum od
+	* @param date_until Datum do
+	* @param status Status plasmana. Moguæe vrijednosti: A-aktivni, C-neaktivni, S-svi
+	* @param client_type Vrsta klijenta. Moguæe vrijednosti: P-pravne osobe(corporate klijenti), F-fizièke osobe(retail klijenti) 
+	* @return Iterator. Ako je došlo do greške, vraæa null.
+	*/
+    public CollIterator selectCollaterals(BigDecimal col_cat_id, BigDecimal org_uni_id, Date date_from, Date date_until, String status, String client_type)
+	{
+		CollIterator iter = null;
+		try
+		{
+			int filterByCat = 1;
+			if(col_cat_id == null) filterByCat = 0;
+
+			int filterByOrg = 1;
+			if(org_uni_id == null) filterByOrg = 0;
+			
+			#sql [connCtx] iter = {
+				SELECT 
+					H.code AS org_code,
+					H.name AS org_name,
+					E.register_no AS register_no,
+					E.name AS cus_name,
+					I.address AS address,
+					I.postoffice AS postoffice,
+					I.city_name AS city_name,
+					C.request_no AS request_no,
+					C.acc_no AS acc_no,
+					A.col_num AS col_num,
+					A.real_est_nomi_valu AS real_est_nomi_valu,
+					G.code_char AS cur_code,
+					F.coll_type_name AS coll_type_name
+				FROM
+					coll_head A
+					INNER JOIN coll_hf_prior B ON A.col_hea_id = B.hf_coll_head_id
+					INNER JOIN loan_beneficiary C ON B.coll_hf_prior_id = C.coll_hf_prior_id
+					INNER JOIN cusacc_exposure D ON (C.la_acc_id = D.cus_acc_id OR C.acc_no = D.cus_acc_no OR C.request_no = D.request_no)
+					INNER JOIN customer E ON D.cus_id = E.cus_id
+					INNER JOIN collateral_type F ON A.col_type_id = F.coll_type_id
+					INNER JOIN currency G ON A.real_est_nm_cur_id = G.cur_id
+					INNER JOIN organization_unit H ON D.org_uni_id = H.org_uni_id
+					INNER JOIN cust_address I ON E.cus_id = I.cus_id
+				WHERE
+					(:filterByCat = 0 OR A.col_cat_id = :col_cat_id) AND
+					DATE(A.opening_ts) BETWEEN :date_from AND :date_until AND
+					B.hf_status = 'A' AND
+					C.status = 'A' AND
+					(:filterByOrg = 0 OR D.org_uni_id = :org_uni_id) AND
+					(:status = 'S' OR (:status = 'A' AND D.cus_acc_status = 'A') OR (:status = 'C' AND D.cus_acc_status <> 'A')) AND
+					((:client_type = 'P' AND D.b2asset_class NOT IN ('1','20')) OR (:client_type = 'F' AND D.b2asset_class IN ('1','20'))) AND
+					I.add_typ_id = 'MAINADDRESS' AND
+					I.date_until = '9999-12-31'
+
+				UNION
+
+				SELECT 
+					H.code AS org_code,
+					H.name AS org_name,
+					E.register_no AS register_no,
+					E.name AS cus_name,
+					I.address AS address,
+					I.postoffice AS postoffice,
+					I.city_name AS city_name,
+					C.request_no AS request_no,
+					C.acc_no AS acc_no,
+					A.col_num AS col_num,
+					A.real_est_nomi_valu AS real_est_nomi_valu,
+					G.code_char AS cur_code,
+					F.coll_type_name AS coll_type_name
+				FROM
+					coll_head A 
+					INNER JOIN loan_beneficiary C ON A.col_hea_id = C.col_hea_id
+					INNER JOIN cusacc_exposure D ON (C.la_acc_id = D.cus_acc_id OR C.acc_no = D.cus_acc_no OR C.request_no = D.request_no)
+					INNER JOIN customer E ON D.cus_id = E.cus_id
+					INNER JOIN collateral_type F ON A.col_type_id = F.coll_type_id
+					INNER JOIN currency G ON A.real_est_nm_cur_id = G.cur_id
+					INNER JOIN organization_unit H ON D.org_uni_id = H.org_uni_id
+					INNER JOIN cust_address I ON E.cus_id = I.cus_id
+				WHERE 
+					(:filterByCat = 0 OR A.col_cat_id = :col_cat_id) AND
+					DATE(A.opening_ts) BETWEEN :date_from AND :date_until AND
+					C.status = 'A' AND
+					(:filterByOrg = 0 OR D.org_uni_id = :org_uni_id) AND
+					(:status = 'S' OR (:status = 'A' AND D.cus_acc_status = 'A') OR (:status = 'C' AND D.cus_acc_status <> 'A')) AND
+					((:client_type = 'P' AND D.b2asset_class NOT IN ('1','20')) OR (:client_type = 'F' AND D.b2asset_class IN ('1','20'))) AND
+					I.add_typ_id = 'MAINADDRESS' AND
+					I.date_until = '9999-12-31'
+
+				ORDER BY 1,3
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja kolaterala!", ex);
+		}
+		return iter;
+	}
+}

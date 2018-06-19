@@ -1,0 +1,101 @@
+package hr.vestigo.modules.collateral.jcics.coA2;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.framework.util.CharUtil;
+
+import java.sql.SQLException;  
+import java.math.BigDecimal;
+import java.util.Vector;
+import java.sql.Date;
+ 
+#sql iterator IterEstiminators (
+	BigDecimal est_cus_id,
+	String est_register_no,
+	String est_name,
+    String est_type,
+    String est_tax_number,
+	BigDecimal est_comp_cus_id,
+	String est_comp_register_no,
+	String est_comp_name,
+	String est_comp_tax_number,
+	String est_type_code,
+    String est_internal
+);  
+
+public class COA22 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA2/COA22.sqlj,v 1.4 2017/11/29 09:46:21 hrazst Exp $";
+	private DeclCOA2 d = null;
+
+	public COA22(DeclCOA2 d) {
+		this.d = d;
+	}
+	
+	public void execute (TransactionContext tc) throws Exception {
+	    ConnCtx ctx = tc.getContext();
+	    
+        Date estDate = d.collestimatorlookupmapping.estDate;
+        String reg_no = d.collestimatorlookupmapping.est_register_no.replace("*", "%");
+        String name =  d.collestimatorlookupmapping.est_name.replace("*", "%");    
+        String comp_reg_no = d.collestimatorlookupmapping.est_comp_register_no.replace("*", "%");
+        String comp_name = d.collestimatorlookupmapping.est_comp_name.replace("*", "%"); 
+        
+        if(reg_no.equals("")) reg_no="%";
+        if(name.equals("")) name="%";
+        if(comp_reg_no.equals("")) comp_reg_no="%";
+        if(comp_name.equals("")) comp_name="%";
+        
+        IterEstiminators iter=null;
+        
+        #sql [ctx] iter = {
+                SELECT e.est_cus_id, c.register_no as est_register_no, c.name as est_name, scv.sys_code_desc as est_type, c.tax_number as est_tax_number, 
+                   e.est_comp_cus_id, c1.register_no as est_comp_register_no, c1.name as est_comp_name, c1.tax_number as est_comp_tax_number, e.est_type as est_type_code,
+                   est_internal 
+                   FROM ESTIMATOR e 
+                   INNER JOIN CUSTOMER c ON e.est_cus_id=c.cus_id 
+                   INNER JOIN CUSTOMER c1 ON e.est_comp_cus_id=c1.cus_id 
+                   INNER JOIN SYSTEM_CODE_VALUE scv ON (e.est_type=scv.sys_code_value AND scv.sys_cod_id='est_type') 
+                   WHERE :(estDate) BETWEEN e.date_from AND e.date_until 
+                   AND trim(c.register_no) LIKE :(reg_no) 
+                   AND trim(c.name) LIKE :(name)
+                   AND trim(c1.register_no) LIKE :(comp_reg_no) 
+                   AND trim(c1.name) LIKE :(comp_name)  
+                   WITH UR
+        };        
+		
+		int number_of_rows=TransactionContext.LOOKUP_FETCH_SIZE;
+		int level=d.collestimatorlookupmapping.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+
+		int count=0;
+		int count_returned=0;
+		while (iter.next()){
+			if(start<=count && start+number_of_rows>count){
+				Vector row=new Vector();
+				Vector unique = new Vector();				
+			 				 	 
+				unique.add(iter.est_cus_id());
+				row.add(iter.est_register_no());
+				row.add(iter.est_name());
+				row.add(iter.est_type());
+				unique.add(iter.est_tax_number());
+				unique.add(iter.est_comp_cus_id());
+				row.add(iter.est_comp_register_no());
+				row.add(iter.est_comp_name());
+				unique.add(iter.est_comp_tax_number());
+				unique.add(iter.est_type_code());
+				unique.add(iter.est_internal());  
+                
+				d.collestimatorlookupmapping.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			}
+			count++;
+		}
+		
+		if(iter != null) iter.close();
+	}
+}

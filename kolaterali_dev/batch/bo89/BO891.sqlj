@@ -1,0 +1,125 @@
+package hr.vestigo.modules.collateral.batch.bo89;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.batch.BatchContext;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za Inicijalno punjenje podataka za historizaciju kolaterala
+* @author hrakis
+*/
+public class BO891
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo89/BO891.sqlj,v 1.1 2014/12/16 12:36:14 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+
+    #sql iterator CollIterator (
+        BigDecimal col_hea_id,
+        String col_num
+    );
+
+
+    public BO891(BatchContext batchContext) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+
+    /**
+     * Metoda dohvaæa kolaterale koji ulaze u obradu.
+     * U obradu ulaze nekretnine, vozila, zalihe, pokretnine i plovila s ????????????? liste
+     * @return iterator s podacima
+     */
+    public CollIterator selectCollaterals() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO891.selectCollaterals");
+            
+            CollIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT col_hea_id, col_num
+                FROM coll_head
+                WHERE collateral_status = '3'
+                AND col_cat_id IN (618223, 624223, 626223, 621223, 620223)
+                WITH UR 
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata kolaterala!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO891.selectCollaterals");
+        }
+    }
+
+
+    /**
+     * Metoda ažurira šifru kolaterala u povijesti promjena za zapise gdje nije popunjena.
+     */
+    public void updateColNum() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO891.updateColNum");
+
+            #sql [connCtx] {
+                UPDATE co_chg_history a
+                SET col_num = (SELECT b.col_num FROM coll_head b WHERE b.col_hea_id = a.col_hea_id)
+                WHERE col_num IS NULL
+            };
+        }
+        catch(Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska pri azuriranju sifre kolaterala u povijesti promjena!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO891.updateColNum");
+        }
+    }
+    
+    
+    /**
+     * Metoda ažurira vrijeme promjene zapisa u povijesti promjena za zapise gdje nije napunjeno. 
+     */
+    public void updateRecordingTime() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO891.updateRecordingTime");
+
+            #sql [connCtx] {
+                UPDATE co_chg_history a SET recording_time = co_ts WHERE recording_time IS NULL
+            };
+        }
+        catch(Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska pri azuriranju vremena promjene u povijesti promjena!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO891.updateRecordingTime");
+        }
+    }
+
+
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

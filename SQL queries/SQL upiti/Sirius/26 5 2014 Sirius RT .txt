@@ -1,0 +1,126 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+ 			SELECT
+                cc.com_adress com_address
+                FROM
+                cust_communication cc
+                , cusacc_sserv_com csc
+                WHERE
+               
+                '12.05.2006' between csc.date_from and csc.date_until
+                AND
+                '14.06.2006' between cc.date_from and cc.date_until
+                AND
+                cc.cus_com_code=csc.cus_com_code
+
+----------------------------------------------------------  
+
+
+
+
+
+
+                SELECT
+                cc.com_adress com_address
+                FROM
+                cust_communication cc
+----------------------------------------------------------
+
+  			SELECT
+             *
+                FROM
+                cust_communication cc
+-----------------------------------------------------
+	SELECT
+             *
+                FROM
+                cust_communication cc where cus_id = 10192980605;
+
+    ------------------------------------------------------------
+   ---  cc.com_adress com_address
+
+ 			 SELECT
+               *
+                FROM
+                cust_communication cc
+                , cusacc_sserv_com csc
+                WHERE
+                csc.cus_ban_subserv_id = 11430284610
+                --AND
+               -- '26.05.2014' between csc.date_from and csc.date_until
+               -- AND
+               -- '26.05.2014' between cc.date_from and cc.date_until
+               AND
+                cc.cus_com_code=csc.cus_com_code
+
+
+                -----------------------------------
+
+                 SELECT
+            acc_num_id
+            , account
+            , amo_type
+            , pro_typ_id
+            , cur_id
+            , balance
+            , credit_total
+            , debit_total
+            , balance_date
+            FROM
+            cusacc_balance_last
+            WHERE
+            --cus_acc_id = :(cusIter.cus_acc_id())
+            --AND 
+            pro_typ_id IN (826790005, 826791005) 
+
+     ------------------------------------
+     select * from cusacc_balance_last where balance_date > '01.05.2014';
+
+    --- slog za testiranje--  cus_acc_id =  11431387610 and acc_num_id = 578427607  -- balance date = 31.8.2012
+     select * from cusacc_balance_last where cus_acc_id =  11431387610 and acc_num_id = 578427607 ; 
+
+     --update cusacc_balance_last set balance_date = '26.05.2014' where cus_bal_last_id = 1817938607;
+
+     --commit;
+
+     select * from sms_log;
+
+	select * from sms_log where cus_acc_id = 11431387610 and acc_num_id = 578427607;  -- 9187.06
+
+  -- azurirati slog iz sms_loga  sms_log_id 13,448,973,610
+
+  -- update sms_log set balance = '9186.06' where sms_log_id = 13448973610;
+  commit;
+	
+     
+
+     select * from account_number where acc_num_id = 578427607 ;
+
+--- azurirati jedan acc_num_id -- 
+
+     
+                    
+
+
+
+          --- 10192980605
+
+                select * from customer where cus_id = 10192980605;
+
+                select * from cust_communication where cus_id = 10192980605;
+
+--------------------------------------
+
+    			SELECT
+                cc.com_adress com_address
+                FROM
+                cust_communication cc
+                , cusacc_sserv_com csc
+                WHERE
+                csc.cus_ban_subserv_id = :cusBanSubservId
+                AND
+                :(today) between csc.date_from and csc.date_until
+                AND
+                :(today) between cc.date_from and cc.date_until
+                AND
+                cc.cus_com_code=csc.cus_com_code

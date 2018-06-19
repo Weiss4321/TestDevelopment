@@ -1,0 +1,463 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+ 
+public class CO217 extends RemoteTransaction {
+     // akcija vrati collateral u obradu
+     // insert u tbl. COLL_LIST_Q sloga za akciju VRATI U OBRADU
+     // update statusa collaterala, ostalih statusa na pocetne prema parametrizaciji, workflow indikatora
+         
+     // Milka, promjena - predmet se vraca odabranom referentu u odabranoj org. jedinici
+     // treba napraviti update org_uni_id i use_id u tbl. COLL_HEAD  
+         
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO217.sqlj,v 1.17 2015/02/13 13:22:39 hrazst Exp $";
+       
+    private DeclCO21 d = null;
+
+    private Date CURR_DATE = null;
+    private Timestamp CREATE_DATE_TIME = null;
+    private IterLB iter=null;
+    private TransactionContext tc=null;
+    
+    public CO217(DeclCO21 d) {
+        this.d = d;
+    }  
+    
+    public void execute(TransactionContext tc) throws Exception {
+        
+        ConnCtx ctx = tc.getContext();
+        
+        String mortgage_status = "";
+        String collateral_status = "";
+        String workflow_indic= "";
+        String cover_indic= "";
+        String basic_data_status= "";
+        String coll_data_status= "";
+
+        String mortgage_flag = "";
+        String cover_flag = "";
+        String coll_data_flag ="";
+            
+        String financial_flag = "";
+        
+        BigDecimal col_cat_id = null;
+        
+        boolean ka_flag=true;
+        boolean coll_hf_prior_check=true;
+
+
+        #sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+        
+        #sql[ctx]{
+                    SELECT
+                            a.col_cat_id,
+                            a.mortgage_status,
+                            a.collateral_status,
+                            a.workflow_indic,
+                            a.cover_indic, 
+                            a.basic_data_status,
+                            a.coll_data_status,
+                            a.financial_flag,
+                            b.mortgage_flag,
+                            b.cover_flag,
+                            b.coll_data_flag
+                    INTO
+                            :(col_cat_id),
+                            :(mortgage_status),
+                            :(collateral_status),
+                            :(workflow_indic),
+                            :(cover_indic),
+                            :(basic_data_status),
+                            :(coll_data_status),
+                            :(financial_flag),
+                            :(mortgage_flag),
+                            :(cover_flag),
+                            :(coll_data_flag)
+                    FROM
+                            coll_head a, collateral_type b
+                    WHERE
+                            a.col_hea_id=:(d.collsndback.col_hea_id)
+                    AND     
+                            a.collateral_status=:(d.collsndback.source_status)
+                    AND
+                            a.col_type_id = b.coll_type_id
+        };  
+        
+   
+
+        tc.info("COLL_HEA_ID:...." + d.collsndback.col_hea_id);
+        tc.info("BASIC_DATA_STATUS:...." + basic_data_status);
+        tc.info("WORKFLOW_INDIC:...." + workflow_indic);                
+        tc.info("SOURCE_COLLATERAL_STATUS:...." + d.collsndback.source_status);     
+        tc.info("MORTGAGE_STATUS...." + mortgage_status);
+        tc.info("COVER_INDIC:...." + cover_indic); 
+        tc.info("COLL_DATA_STATUS:...." + coll_data_status);
+        
+        tc.info("MORTGAGE_FLAG...." + mortgage_flag);
+        tc.info("COVER_FLAG:...." + cover_flag);
+        tc.info("COLL_DATA_FLAG:...." + coll_data_flag);
+        
+        tc.info("PORUKA .....:" + d.collsndback.poruka);                
+
+        
+//       ako je knjizen ne moze se VRATITI s arhivske liste dok se knjizenja ne storniraju
+    /*  if ((d.collsndback.source_list).equalsIgnoreCase("700223")) {
+        
+            if (financial_flag.equals("1")) {
+                throw new VestigoTMException(1, "Transaction CO212: Error-nisu stornirana knjizenja! ","colErr011", null);          
+            }
+        }  
+          */
+        #sql[ctx] { 
+            SELECT current date, current timestamp 
+            INTO :(CURR_DATE), :(CREATE_DATE_TIME)
+            FROM sysibm.sysdummy1 
+        };      
+
+         
+        YOY60 YOY60=new YOY60(tc);
+        
+        CollListQData plq=new CollListQData();   
+  
+        plq.col_hea_id=d.collsndback.col_hea_id;    
+        plq.status="1";
+        plq.income_time = CREATE_DATE_TIME;
+        plq.use_id=d.collsndback.use_id;    
+        plq.release_time = CREATE_DATE_TIME;
+        plq.cmnt=d.collsndback.CollListQ_txaCmnt;
+        plq.action_type=d.collsndback.action_type;       
+        plq.org_uni_id = d.collsndback.org_uni_id;
+        plq.source_list = d.collsndback.source_list;
+        plq.status_source_list = "1";
+        plq.target_list = d.collsndback.target_list;
+        plq.status_target_list = "0";
+        
+//      plq.target_list_use_id = null;
+//      plq.target_list_org_uni_id = null;  
+          
+        plq.target_list_use_id = d.collsndback.use_id_asg;
+        plq.target_list_org_uni_id = d.collsndback.org_uni_id_asg;
+    
+        tc.info("COL_HEA_ID .....:" + plq.col_hea_id);
+        tc.info("STATUS......:"+plq.status);
+        tc.info("INCOME_TIME ....."+plq.income_time);
+        tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+        tc.info("USE_ID....."+plq.use_id);
+        tc.info("RELEASE TIME .....:" + plq.release_time);
+        tc.info("CMNT......:"+plq.cmnt);
+        tc.info("ACTION_TYPE ....."+plq.action_type);
+        tc.info("SOURCE_LIST .....:" + plq.source_list);
+        tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+        
+        tc.info("TARGET_LIST ....."+plq.target_list);
+        tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);      
+        tc.info("ORG_UNI_ID_TARGET....."+plq.target_list_org_uni_id);
+        tc.info("USE_ID_TARGET....."+plq.target_list_use_id);       
+         
+        YOY60.update_insert_CollListQ(plq); 
+        
+        // YOY60.updateCollListQ(plq); 
+        // napraviti update statusa  
+        collateral_status = d.collsndback.proc_status;  // 0 - collateral je vracen u unos
+        basic_data_status = "0";
+        workflow_indic = d.collsndback.workflow_indic;
+        // ostale statuse staviti na "0" osim ako parametrizacijom nije definirano da se ne unose (X)        
+        if (mortgage_flag.equalsIgnoreCase("X"))
+            mortgage_status = "X";
+        else 
+            mortgage_status = "0";
+        
+        if (cover_flag.equalsIgnoreCase("X"))
+            cover_indic = "X";
+        else 
+            cover_indic = "0";
+        
+        if (coll_data_flag.equalsIgnoreCase("X"))
+            coll_data_status = "X";
+        else 
+            coll_data_status = "0";
+
+        tc.info("NEW_COLLATERAL_STATUS:...." + d.collsndback.proc_status);      
+        
+        tc.info("BASIC_DATA_STATUS_NEW:...." + basic_data_status);      
+        tc.info("COLL_DATA_STATUS_NEW:...." + coll_data_status);        
+        tc.info("MORTGAGE_STATUS_NEW...." + mortgage_status);               
+        tc.info("COVER_INDIC_NEW:...." + cover_indic);      
+        tc.info("WORKFLOW_INDIC:...." + workflow_indic);    
+        
+        // Milka, 02.10.2009 - dodano brisanje RBA prihvatljivosti kod vracanja kolaterala na referentsku listu        
+        // vracanje s verifikacije ili autorizacije     
+        if (plq.source_list.equalsIgnoreCase("698223") || plq.source_list.equalsIgnoreCase("699223")) {
+            #sql[ctx]{
+                    UPDATE  
+                        coll_head 
+                    SET
+                        collateral_status = :(collateral_status),
+                        workflow_indic = :(workflow_indic),
+                        mortgage_status = :(mortgage_status),
+                        cover_indic = :(cover_indic), 
+                        basic_data_status = :(basic_data_status),
+                        coll_data_status = :(coll_data_status),
+                        rba_eligibility = '',
+                        user_lock = current timestamp
+                    WHERE
+                        col_hea_id=:(d.collsndback.col_hea_id)
+                    AND
+                        collateral_status=:(d.collsndback.source_status)
+            };
+            //ako se vraca sa liste u vlasnistvu banke na neaktivnu listu
+        } else if(plq.source_list.equalsIgnoreCase("712223") && plq.target_list.equalsIgnoreCase("709223")){
+                #sql[ctx]{
+                    UPDATE
+                       coll_head 
+                    SET
+                        use_id = :(d.collsndback.use_id_asg),
+                        org_uni_id = :(d.collsndback.org_uni_id_asg),
+                        collateral_status = :(collateral_status),
+                        workflow_indic = :(workflow_indic),
+                        user_lock = current timestamp
+                    WHERE
+                        col_hea_id=:(d.collsndback.col_hea_id)
+                    AND
+                        collateral_status=:(d.collsndback.source_status)
+               };
+        } else {  
+            // vracanje s arhivske liste, liste ponistenih, liste odbijenih     
+           if (col_cat_id.compareTo(new BigDecimal("613223")) == 0 || col_cat_id.compareTo(new BigDecimal("619223")) == 0 ||
+                   col_cat_id.compareTo(new BigDecimal("622223")) == 0 || col_cat_id.compareTo(new BigDecimal("627223")) == 0) {
+                  #sql[ctx]{
+                        UPDATE
+                                coll_head 
+                        SET
+                                use_id = :(d.collsndback.use_id_asg),
+                                org_uni_id = :(d.collsndback.org_uni_id_asg),
+                                collateral_status = :(collateral_status),
+                                workflow_indic = :(workflow_indic),
+                                mortgage_status = :(mortgage_status),
+                                cover_indic = :(cover_indic), 
+                                basic_data_status = :(basic_data_status),
+                                coll_data_status = :(coll_data_status),
+                                rba_eligibility = '',
+                                eligibility = '',
+                                b2_irb_elig = '',
+                                user_lock = current timestamp
+                        WHERE
+                                col_hea_id=:(d.collsndback.col_hea_id)
+                        AND
+                                collateral_status=:(d.collsndback.source_status)
+                   };
+           } else {  
+                   #sql[ctx]{
+                        UPDATE
+                           coll_head 
+                        SET
+                            use_id = :(d.collsndback.use_id_asg),
+                            org_uni_id = :(d.collsndback.org_uni_id_asg),
+                            collateral_status = :(collateral_status),
+                            workflow_indic = :(workflow_indic),
+                            mortgage_status = :(mortgage_status),
+                            cover_indic = :(cover_indic), 
+                            basic_data_status = :(basic_data_status),
+                            coll_data_status = :(coll_data_status),
+                            rba_eligibility = '',
+                            user_lock = current timestamp
+                        WHERE
+                            col_hea_id=:(d.collsndback.col_hea_id)
+                        AND
+                            collateral_status=:(d.collsndback.source_status)
+                   };
+           }
+        }
+ 
+        //26.04. dodano prema FBPr200009525- Spremanje povijesti promjena za kvacic KA            
+        //vracanje s liste aktivnih ili liste slobodnih
+        if (((d.collsndback.source_list).equalsIgnoreCase("700223"))||((d.collsndback.source_list).equalsIgnoreCase("710223"))) {
+            //System.out.println("COLL_HEA_ID : "+d.collsndback.col_hea_id );             
+            //kontrola da li ima hipoteku 
+            coll_hf_prior_check=checkCollHfPrior(ctx,d.collsndback.col_hea_id);  
+            //System.out.println("coll_hf_prior : "+coll_hf_prior_check );
+            //hipoteka postoji
+            if(coll_hf_prior_check){
+                //dohvat svih slogova iz LOAN_BENEFICIARY za poznati col_hea_id
+                try{
+                    
+                    #sql [ctx] iter = {
+                            SELECT  a.loan_ben_id as loan_ben_id,
+                                    a.krad_admin_ind as krad_admin_ind,
+                                    a.kred_admin_use_id as kred_admin_use_id,
+                                    a.kred_admin_ts as kred_admin_ts
+                            FROM loan_beneficiary a,coll_head b, coll_hf_prior c
+                            WHERE b.col_hea_id=c.hf_coll_head_id
+                            AND c.coll_hf_prior_id=a.coll_hf_prior_id
+                            AND a.status='A'
+                            AND b.col_hea_id=:(d.collsndback.col_hea_id)
+                        };
+                }catch(SQLException sqle){
+                    tc.debug("IterLB nije nista dohvatio!");
+                    throw sqle;
+                }                 
+            }else{
+                //kolateral vezan direktno na plasman
+                //dohvat iz LOAN_BENEFICIARY za poznati col_hea_id
+                try{
+                    #sql [ctx] iter = {
+                            SELECT  a.loan_ben_id as loan_ben_id,
+                                    a.krad_admin_ind as krad_admin_ind,
+                                    a.kred_admin_use_id as kred_admin_use_id,
+                                    a.kred_admin_ts as kred_admin_ts
+                            FROM loan_beneficiary a
+                            WHERE a.col_hea_id=:(d.collsndback.col_hea_id)   
+                            AND a.status='A'                         
+                        };
+                }catch(SQLException sqle){
+                    tc.debug("IterLB nije nista dohvatio!");
+                    throw sqle;
+                }
+            }
+                
+            //iteracija po LOAN_BENEFICIARY
+            while(iter.next()){
+                
+                if(((iter.krad_admin_ind())!=null&&!iter.krad_admin_ind().equals(""))||(iter.kred_admin_use_id()!=null)||(iter.kred_admin_ts()!=null)){
+                    //spremanje postojecu potvrdu KA
+                    insertIntoKAChgHistory(ctx,iter.krad_admin_ind(),iter.loan_ben_id(),iter.kred_admin_use_id(),iter.kred_admin_ts());
+                    updateLoanBeneficiary(ctx,iter.loan_ben_id());
+                }
+            }
+                 
+        } //END Spremanje povijesti promjena za kvacice KA 
+        
+        //FBPr200013720 - kod vracanja s liste aktivnih ili slobodbih postojeæa potvrda se updatea(ponistava)
+        // FBPr200017059 - dodana provjera - kod nekretnina nije potrebno brisati kvaèicu
+        BigDecimal co_chg_check=checkCoChgHistory(ctx,d.collsndback.col_hea_id);
+        if(co_chg_check!=null && col_cat_id.compareTo(new BigDecimal("618223")) != 0){
+            updateCoChgHistory(ctx,co_chg_check);
+        }
+    
+    }//end execute
+    
+  
+        
+    private boolean checkCollHfPrior(ConnCtx ctx,BigDecimal col_hea_id)throws SQLException{
+        BigDecimal col_check=null;
+//        System.out.println(" checkCollHfPrior=" + col_hea_id);
+        try {
+            #sql [ctx] {select hf_coll_head_id 
+                into :(col_check)
+                from coll_hf_prior
+                where hf_coll_head_id=:(col_hea_id)
+                };      
+    
+    
+        } catch(SQLException sqle) {
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+//                System.out.println(" coll_hf_prior=false - HIPOTEKA NE POSTOJI");
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    
+    private BigDecimal checkCoChgHistory(ConnCtx ctx,BigDecimal col_hea_id)throws SQLException{
+        BigDecimal co_chg_check=null;
+//        System.out.println(" checkCoChgHistory=" + col_hea_id);
+        try {
+            #sql [ctx] {select co_chg_his_id
+                into :(co_chg_check)
+                from co_chg_history
+                where col_hea_id=:(col_hea_id)
+                and (co_use_id is not null and co_chg_use_id is null)
+                };      
+    
+    
+        } catch(SQLException sqle) {
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+//                System.out.println(" coll_hf_prior=false - HIPOTEKA NE POSTOJI");
+                return null;
+            }
+        }
+        return co_chg_check;
+    }
+    
+    private void updateCoChgHistory(ConnCtx ctx,BigDecimal co_chg_his_id)throws SQLException{
+        
+        try {
+            #sql[ctx]{UPDATE co_chg_history
+                SET
+                co_chg_ts = CURRENT TIMESTAMP,
+                co_chg_use_id =:(d.collsndback.use_id),
+                co_ind='N'
+                WHERE co_chg_his_id=:(co_chg_his_id)
+                };
+    
+        } catch(SQLException sqle) {
+            tc.debug(" Puklo kod UPDATE CO_CHG_HISTORY");                                    
+        }
+    
+    }
+    
+    private void insertIntoKAChgHistory(ConnCtx ctx,String kred_admin_ind, BigDecimal loan_ben_id, BigDecimal kred_admin_use_id, Timestamp kred_admin_ts)throws Exception{
+    
+        //INSERT KA_CHG_HISTORY
+        YOY00 id_generator = new YOY00(ctx);  //COLLATERAL_IDN
+        BigDecimal collaterall_id = id_generator.getNewId();
+        BigDecimal ka_chg_his_id=collaterall_id;
+    
+        
+        try{  
+            #sql [ctx]{
+                INSERT INTO KA_CHG_HISTORY
+                    (ka_chg_his_id,
+                     loan_ben_id,
+                     krad_admin_ind,
+                     kred_admin_use_id,
+                     kred_admin_ts,
+                     kred_chg_ts,
+                     kred_chg_use_id)   
+                 VALUES(:(ka_chg_his_id),
+                        :(loan_ben_id),
+                        :(kred_admin_ind),
+                        :(kred_admin_use_id),
+                        :(kred_admin_ts),
+                        CURRENT TIMESTAMP,                      
+                        :(d.collsndback.use_id))
+                }; 
+        }catch(java.sql.SQLException se){  
+            tc.debug ( "......CO217.sqlj insert into ka_chg_his_id SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO217.sqlj insert into ka_chg_his_id SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO217.sqlj insert into ka_chg_his_id SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO217: Error inserting ka_chg_history! ","err411b", null);
+        } 
+    }
+        
+    private void updateLoanBeneficiary(ConnCtx ctx,BigDecimal loan_ben_id)throws SQLException{
+    
+        try {
+            #sql[ctx]{UPDATE loan_beneficiary
+                SET
+                krad_admin_ind =null,
+                kred_admin_use_id =null,
+                kred_admin_ts =null,
+                user_lock = current timestamp
+                WHERE loan_ben_id=:(loan_ben_id)
+                };
+    
+        } catch(SQLException sqle) {
+            tc.debug(" Puklo kod UPDATE COLL_HEAD STATUS");                                    
+        }
+    }
+}
+
+

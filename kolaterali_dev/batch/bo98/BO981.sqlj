@@ -1,0 +1,103 @@
+package hr.vestigo.modules.collateral.batch.bo98;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import java.math.BigDecimal;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+
+public class BO981
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo98/BO981.sqlj,v 1.2 2017/06/08 07:09:10 hrajkl Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql iterator DataIterator (
+        BigDecimal COL_HEA_ID,
+        String SIFRA_KOLATERALA,
+        String TIP_NEKRETNINE,
+        String VRSTA_NEKRETNINE,
+        String PROCJENITELJ,
+        String ZA_TVRTKU_PROCIJENIO,
+        BigDecimal TV,
+        String TV_VALUTA,
+        BigDecimal NGV,
+        String NGV_VALUTA,
+        BigDecimal CIJENA_KUPOPRODAJNOG_UGOVORA,
+        String OPIS_PROCJENE,
+        Date DATUM_PROCJENE,
+        Date DATUM_KVACICE,
+        String CO_VERIFICIRAO,
+        String MJESTO
+    );
+    
+    public BO981(BatchContext batchContext) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+    public DataIterator selectData() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO981.selectData");
+            
+            DataIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT  
+                    CH.COL_HEA_ID,
+                    RTRIM(CH.COL_NUM) as SIFRA_KOLATERALA,
+                    RTRIM(CT.COLL_TYPE_CODE) as TIP_NEKRETNINE, 
+                    RTRIM(RET.REAL_ES_TYPE_CODE) as VRSTA_NEKRETNINE,
+                    RTRIM(CUS_PROC.NAME) as PROCJENITELJ,
+                    RTRIM(CUS_TVRT.NAME) as ZA_TVRTKU_PROCIJENIO,
+                    CCH.REAL_EST_ESTN_VALU as TV,
+                    CUR.CODE_CHAR as TV_VALUTA,
+                    CCH.NEW_BUILD_VAL as NGV,
+                    CUR.CODE_CHAR as NGV_VALUTA,
+                    CCH.BUY_SELL_VALUE as CIJENA_KUPOPRODAJNOG_UGOVORA,
+                    RTRIM(CCH.REAL_EST_NOMI_DESC) as OPIS_PROCJENE,
+                    CCH.REAL_EST_ESTN_DATE as DATUM_PROCJENE,
+                    DATE(CCH.CO_TS) as DATUM_KVACICE,
+                    RTRIM(APP.USER_NAME) as CO_VERIFICIRAO,
+                    RTRIM(PM.NAME) as MJESTO 
+                FROM COLL_HEAD CH
+                INNER JOIN COLL_RESTATE CR ON (CH.COL_HEA_ID = CR.COL_HEA_ID)
+                INNER JOIN REAL_ESTATE_TYPE RET ON (CR.REAL_EST_TYPE = RET.REAL_ES_TYPE_ID)
+                INNER JOIN CO_CHG_HISTORY CCH ON (CH.COL_HEA_ID = CCH.COL_HEA_ID)
+                LEFT OUTER JOIN CUSTOMER CUS_PROC ON (CCH.REAL_EST_EUSE_ID = CUS_PROC.CUS_ID)
+                LEFT OUTER JOIN CUSTOMER CUS_TVRT ON (CCH.ESTIMATE_CUS_ID = CUS_TVRT.CUS_ID)
+                LEFT OUTER JOIN CURRENCY CUR ON (CCH.REAL_EST_NM_CUR_ID = CUR.CUR_ID)
+                LEFT OUTER JOIN APP_USER APP ON ( CCH.CO_USE_ID = APP.USE_ID)
+                LEFT OUTER JOIN POLITICAL_MAP PM ON ( CR.POL_MAP_ID_AD = PM.POL_MAP_ID)
+                INNER JOIN COLLATERAL_TYPE CT ON ( CH.COL_TYPE_ID= CT.COLL_TYPE_ID)
+                WHERE 
+                    CH.COLLATERAL_STATUS IN ('0','1','3','N','F')
+                    AND CCH.REAL_EST_ESTN_DATE IS NOT NULL
+                    ORDER BY CH.COL_HEA_ID,CCH.RECORDING_TIME DESC
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka za izvjestaj!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO981.selectData");
+        }
+    }
+    
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+    
+}

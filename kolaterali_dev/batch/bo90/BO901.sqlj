@@ -1,0 +1,634 @@
+package hr.vestigo.modules.collateral.batch.bo90;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za CES izvješæe.
+* @author hrakis
+*/
+public class BO901
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo90/BO901.sqlj,v 1.4 2014/12/24 11:26:31 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    private YRXX0 yrxx0;
+    
+    private final BigDecimal hrk_cur_id = new BigDecimal("63999");
+    private final BigDecimal eur_cur_id = new BigDecimal("64999");
+    
+    private final BigDecimal rba_cus_id = new BigDecimal("8218251");
+    
+   
+    #sql iterator CollateralSubtypeIterator (
+        BigDecimal col_sub_id,
+        String code,
+        String name
+    );
+    
+    #sql iterator CollSubtypeIdsIterator (
+        BigDecimal col_hea_id,
+        BigDecimal col_sub_id
+    );
+    
+    #sql iterator CustomerIterator (
+        BigDecimal cus_id,
+        String register_no,
+        String name,
+        String basel_cus_type
+    );
+    
+    #sql iterator CollateralIterator (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_cat_id,
+        BigDecimal col_typ_id,
+        String col_typ_name,
+        BigDecimal real_est_nomi_valu,
+        BigDecimal real_est_nm_cur_id,
+        BigDecimal real_ponder
+    );
+    
+    #sql iterator CoverageIterator (
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        BigDecimal exp_balance,
+        BigDecimal exp_cur_id,
+        BigDecimal exp_balance_hrk,
+        BigDecimal cus_id,
+        BigDecimal amount_ref,
+        BigDecimal cur_id_ref,
+        BigDecimal hf_own_cus_id,
+        BigDecimal exp_coll_amount
+    );
+
+              
+    public BO901(BatchContext batchContext, YRXX0 yrxx0) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+        this.yrxx0 = yrxx0;
+    }
+    
+    
+    /**
+     * Metoda dohvaæa ID obrade izraèuna pokrivenosti za ND prihvatljivost za zadani datum.
+     * @param report_date Datum izvještaja
+     * @return ID obrade izraèuna pokrivenosti
+     */
+    public BigDecimal selectColProId(Date report_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectColProId");
+            
+            BigDecimal col_pro_id = null;
+            #sql [connCtx] { 
+                SELECT col_pro_id
+                INTO :(col_pro_id) 
+                FROM col_proc
+                WHERE value_date = :(report_date)
+                  AND proc_type = 'M'
+                  AND proc_status = '1'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return col_pro_id;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Za datum " + report_date + " nije izvrsen izracun pokrivenosti za ND prihvatljivost!", null);
+                return null;
+            }
+            else
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata ID-a obrade izracuna pokrivenosti! (datum valute = " + report_date + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectColProId");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa podatke o zadanom komitenu.
+     * @param register_no Interni MB komitenta
+     * @return objekt s podacima o komitentu
+     */
+    public CustomerData selectCustomerData(String register_no) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectCustomerData");
+            
+            CustomerData customer = new CustomerData();
+            #sql [connCtx] { 
+                SELECT cus_id, register_no, name, basel_cus_type
+                INTO :(customer.cus_id), :(customer.register_no), :(customer.name), :(customer.basel_cus_type) 
+                FROM customer
+                WHERE register_no = :(register_no)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            customer.register_no = customer.register_no.trim();
+            if (customer.basel_cus_type != null) customer.basel_cus_type = customer.basel_cus_type.trim();
+            info("Komitent: " + customer);
+            return customer;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Ne postoji komitent s internim MB " + register_no + "!", null);
+                throw ex;
+            }
+            else
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata podataka o komitentu! (interni MB komitenta = " + register_no + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectCustomerData");
+        }
+    }
+
+
+    /**
+     * Metoda dohvaæa podatke o grupaciji zadanog komitenta.
+     * @param customer objekt s podacima o komitentu
+     * @return vraæa objekt s podacima o grupaciji komitenta ako je komitent dio grupacije, inaèe objekt gdje je zadani komitent jedini komitent u grupaciji
+     */
+    public GroupData selectCustomerGroup(CustomerData customer) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectCustomerGroup");
+            
+            GroupData group = new GroupData();
+            #sql [connCtx] { 
+                SELECT g.cus_gro_id, g.cus_gro_code, g.cus_gro_name
+                INTO :(group.cus_gro_id), :(group.code), :(group.name)
+                FROM customer c
+                INNER JOIN cus_gro_customer cg ON c.cus_id = cg.cus_id
+                INNER JOIN customer_group g ON cg.cus_gro_id = g.cus_gro_id
+                WHERE c.cus_id = :(customer.cus_id)
+                  AND g.cus_gro_typ_id = 5999
+                FETCH FIRST ROW ONLY 
+                WITH UR
+            };
+            group.code = group.code.trim();
+            info("Komitent " + customer.name + " je dio grupacije " + group + ".");
+            return group;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))  // komitent nije dio grupacije
+            {
+                info("Komitent " + customer.name + " nije dio grupacije.");
+                GroupData group = new GroupData();
+                group.cus_gro_id = null;
+                group.code = customer.register_no.trim();
+                group.name = customer.name;
+                group.customers.add(customer);
+                return group;
+            }
+            else
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata podataka o grupaciji kojoj pripada komitent " + customer.name + " (interni MB komitenta = " + customer.register_no + ", CUS_ID = " + customer.cus_id + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectCustomerGroup");
+        }
+    }
+
+    
+    /**
+     * Metoda dohvaæa sve komitente iz zadane grupacije.
+     * @param group objekt s podacima o grupi
+     * @return ništa ne vraæa, rezultat metode je napunjena kolekcija komitenata u objektu s podacima o grupaciji 
+     */
+    public void selectGroupCustomers(GroupData group) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectGroupCustomers");
+            
+            if (group.cus_gro_id == null) return;
+            
+            CustomerIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT
+                    c.cus_id            AS cus_id,
+                    c.register_no       AS register_no,
+                    c.name              AS name,
+                    c.basel_cus_type    AS basel_cus_type
+                FROM customer c
+                INNER JOIN cus_gro_customer cg ON c.cus_id = cg.cus_id
+                INNER JOIN customer_group g ON cg.cus_gro_id = g.cus_gro_id
+                WHERE g.cus_gro_id = :(group.cus_gro_id)
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                CustomerData customer = new CustomerData();
+                customer.cus_id = iter.cus_id();
+                customer.register_no = iter.register_no().trim();
+                customer.name = iter.name();
+                if (iter.basel_cus_type() != null) customer.basel_cus_type = iter.basel_cus_type().trim();
+                group.customers.add(customer);
+            }
+            iter.close();
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata komitenata iz grupacije " + group.name + " (CUS_GRO_ID = " + group.cus_gro_id + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectGroupCustomers");
+        }
+    }
+    
+    
+    /**
+     * Metoda za zadanog komitenta dohvaæa sve kolaterale povezane na njegove plasmane.
+     * U izvješæe ne ulaze kolaterali-police koje imaju vrijednost nula, cesije koje imaju vrijednost nula, mjenice i zadužnice, depoziti za netiranje, Police RS.
+     * @param report_date Datum za koji se radi izvještaj
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param customer objekt s podacima o komitentu
+     * @param group objekt s podacima o grupaciji komitenta
+     * @return ništa ne vraæa, rezultat metode je napunjena kolekcija kolaterala u objektu s podacima o grupaciji
+     */
+    public void selectCustomerCollaterals(Date report_date, BigDecimal col_pro_id, CustomerData customer, GroupData group) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectCustomerCollaterals");
+            
+            CollateralIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT DISTINCT
+                    b.col_hea_id            AS col_hea_id,
+                    b.col_num               AS col_num,
+                    b.col_cat_id            AS col_cat_id,
+                    b.col_type_id           AS col_typ_id,
+                    d.coll_type_name        AS col_typ_name,
+                    b.real_est_nomi_valu    AS real_est_nomi_valu,
+                    b.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    a.real_ponder           AS real_ponder
+                FROM cusacc_exp_coll a
+                INNER JOIN coll_head_d b ON a.col_hea_id = b.col_hea_id
+                INNER JOIN collateral_type d ON b.col_type_id = d.coll_type_id
+                WHERE a.col_pro_id = :(col_pro_id)
+                  AND a.cus_id = :(customer.cus_id)
+                  AND :(report_date) BETWEEN b.load_date_from AND b.load_date_until
+                  AND b.collateral_status = '3'
+                  AND NOT (b.col_cat_id IN (616223,614223) AND (b.real_est_nomi_valu = 0 OR b.real_est_nomi_valu IS NULL))
+                  AND b.col_cat_id NOT IN (617223,625223)
+                  AND b.col_type_id NOT IN (76777,77777,79777)
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                if (group.getCollateral(iter.col_hea_id()) != null) continue;
+                CollateralData collateral = new CollateralData();
+                collateral.col_hea_id = iter.col_hea_id();
+                collateral.col_num = iter.col_num().trim();
+                collateral.col_cat_id = iter.col_cat_id();
+                collateral.col_typ_id = iter.col_typ_id();
+                collateral.col_typ_name = iter.col_typ_name();
+                collateral.real_est_nomi_valu = iter.real_est_nomi_valu();
+                if (collateral.real_est_nomi_valu == null) collateral.real_est_nomi_valu = new BigDecimal("0.00");
+                collateral.real_est_nm_cur_id = iter.real_est_nm_cur_id();
+                if (collateral.real_est_nm_cur_id == null) collateral.real_est_nm_cur_id = eur_cur_id;
+                collateral.value_eur = yrxx0.exchange(collateral.real_est_nomi_valu, collateral.real_est_nm_cur_id, eur_cur_id, report_date);
+                collateral.real_est_nm_cur_code = yrxx0.getExchangeRate(report_date).get(collateral.real_est_nm_cur_id).code_char;
+                collateral.real_ponder = iter.real_ponder();
+                group.collaterals.add(collateral);
+            }
+            iter.close();
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata kolaterala za komitenta " + customer.name + " (interni MB = " + customer.register_no + ", CUS_ID = " + customer.cus_id + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectCustomerCollaterals");
+        }
+    }
+    
+    
+    /**
+     * Metoda za zadanog komitenta dohvaæa referenta.
+     * @param customer objekt s podacima o komitentu
+     * @param group objekt s podacima o grupaciji komitenta
+     * @return ništa ne vraæa, rezultat metode je napunjena kolekcija referenata u objektu s podacima o grupaciji
+     */
+    public void selectCustomerRelationshipManager(CustomerData customer, GroupData group) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectCustomerRelationshipManager");
+            
+            String rsm_name = null;
+            #sql [connCtx] { 
+                SELECT b.user_name
+                INTO :(rsm_name)
+                FROM customer a
+                INNER JOIN app_user b ON a.rsm_use_id = b.use_id 
+                WHERE a.cus_id = :(customer.cus_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            if (rsm_name != null) rsm_name = rsm_name.trim();
+            
+            if (!group.relationshipManagers.contains(rsm_name)) group.relationshipManagers.add(rsm_name);
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata referenta za komitenta " + customer.name + " (interni MB = " + customer.register_no + ", CUS_ID = " + customer.cus_id + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectCustomerRelationshipManager");
+        }
+    }
+    
+    
+    /**
+     * Metoda za zadani kolateral dohvaæa sva pokrivanja u kojima sudjeluje.
+     * @param report_date Datum za koji se radi izvještaj
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param collateral objekt s podacima o kolateralu
+     * @param group objekt s podacima o grupaciji
+     * @returns ne vraæa ništa, metoda puni objekt s podacima o kolateralu s pokrivanjima u kojima kolateral sudjeluje.
+     */
+    public void selectCollateralCoverages(Date report_date, BigDecimal col_pro_id, CollateralData collateral, GroupData group) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectCollateralCoverages");
+            
+            CoverageIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    a.cus_acc_id,
+                    b.cus_acc_no,
+                    a.exp_balance,
+                    a.exp_cur_id,
+                    a.exp_balance_hrk,
+                    a.cus_id,
+                    d.amount_ref,
+                    d.cur_id_ref,
+                    d.hf_own_cus_id,
+                    a.exp_coll_amount
+                FROM cusacc_exp_coll a
+                LEFT OUTER JOIN cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                LEFT OUTER JOIN coll_hf_prior_d d ON (a.coll_hf_prior_id = d.coll_hf_prior_id AND :(report_date) BETWEEN d.load_date_from AND d.load_date_until)
+                WHERE a.col_pro_id = :(col_pro_id)
+                  AND a.col_hea_id = :(collateral.col_hea_id)
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                CoverageData coverage = collateral.getPlacementCoverage(iter.cus_acc_id());
+                if (coverage == null)
+                {
+                    coverage = new CoverageData();
+                    coverage.cus_acc_id = iter.cus_acc_id();
+                    coverage.cus_acc_no = iter.cus_acc_no();
+                    coverage.cus_id = iter.cus_id();
+                    coverage.placement_owner = group.getCustomer(coverage.cus_id);  // bit æe popunjeno ako je komitent dio zadane grupacije
+                    coverage.exposure_balance_hrk = iter.exp_balance_hrk();
+                    coverage.exposure_balance_cur_id = iter.exp_cur_id();
+                    if (coverage.exposure_balance_hrk != null) coverage.exposure_balance_eur = yrxx0.exchange(coverage.exposure_balance_hrk, hrk_cur_id, eur_cur_id, report_date);
+                    if (coverage.exposure_balance_cur_id != null) coverage.exposure_balance_cur_code = yrxx0.getExchangeRate(report_date).get(coverage.exposure_balance_cur_id).code_char;
+                    coverage.coverage_amount_hrk = new BigDecimal("0.00");
+                    coverage.coverage_amount_eur = new BigDecimal("0.00");
+                    coverage.mortgage_amount_eur = new BigDecimal("0.00");
+                    collateral.coverages.add(coverage);
+                }
+                
+                if (iter.cus_id() != null)  // komitent banke - pribroji iznos kojim kolateral pokriva plasman
+                {
+                    if (iter.exp_coll_amount() != null)
+                    {
+                        BigDecimal amount_hrk = iter.exp_coll_amount();
+                        BigDecimal amount_eur = yrxx0.exchange(amount_hrk, hrk_cur_id, eur_cur_id, report_date);
+                        coverage.coverage_amount_hrk = coverage.coverage_amount_hrk.add(amount_hrk);
+                        coverage.coverage_amount_eur = coverage.coverage_amount_eur.add(amount_eur);
+                    }
+                }
+                else  // nije komitent banke - pribroji iznos hipoteke
+                {
+                    if (iter.amount_ref() != null && !rba_cus_id.equals(iter.hf_own_cus_id()))
+                    {
+                        BigDecimal mortgage_amount = iter.amount_ref();
+                        BigDecimal mortgage_amount_eur = yrxx0.exchange(mortgage_amount, iter.cur_id_ref(), eur_cur_id, report_date);
+                        coverage.mortgage_amount_eur = coverage.mortgage_amount_eur.add(mortgage_amount_eur);
+                    }
+                }
+            }
+            iter.close();
+        }
+        catch (Exception ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata pokrivenosti za kolateral " + collateral.col_num + "(COL_HEA_ID = "  + collateral.col_hea_id + ", REPORT_DATE = " + report_date + ", COL_PRO_ID = " + col_pro_id + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectCollateralCoverages");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa podatke o zadanoj nekretnini.
+     * @param collateral objekt s podacima o nekretnini.
+     */
+    public void selectRealEstateData(CollateralData collateral) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectRealEstateData");
+
+            #sql [connCtx] { 
+                SELECT c.name, a.real_est_land_regn, a.real_est_land_sub, b.name
+                INTO :(collateral.cadastre_map_name), :(collateral.real_est_land_regn), :(collateral.real_est_land_sub), :(collateral.city) 
+                FROM coll_restate a
+                LEFT OUTER JOIN political_map b ON a.pol_map_id_ad = b.pol_map_id
+                LEFT OUTER JOIN cadastre_map c ON a.real_est_cada_munc = c.cad_map_id
+                WHERE a.col_hea_id = :(collateral.col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            if (collateral.city != null) collateral.city = collateral.city.trim();
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata podataka o kolateralu " + collateral.col_num + " (COL_HEA_ID = " + collateral.col_hea_id + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectRealEstateData");
+        }        
+    }
+
+    
+    /**
+     * Metoda koja dohvaæa potrebne podatke o podvrstama kolaterala. 
+     * @return iterator s podacima
+     */
+    public CollateralSubtypeIterator selectCollateralSubtypes() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectCollateralSubtypes");
+            
+            CollateralSubtypeIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    real_es_type_id     AS col_sub_id,
+                    real_es_type_code   AS code,
+                    real_es_type_desc   AS name
+                FROM real_estate_type
+
+                UNION
+
+                SELECT
+                    veh_gro_id      AS col_sub_id,
+                    veh_gro_code    AS code,
+                    veh_gro_desc    AS name
+                FROM vehicle_group
+
+                UNION
+
+                SELECT
+                    ves_typ_id  AS col_sub_id,
+                    ves_code    AS code,
+                    ves_dsc     AS name
+                FROM vessel_type
+
+                UNION
+
+                SELECT
+                    mov_typ_id      AS col_sub_id,
+                    mov_typ_code    AS code,
+                    mov_typ_dsc     AS name
+                FROM movable_type
+
+                ORDER BY 1
+
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka o podvrstama kolaterala!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectCollateralSubtypes");
+        }
+    }
+
+    
+    /**
+     * Metoda koja dohvaæa ID-eve svih kolaterala koji imaju podvrstu, te ID pripadajuæe podvrste kolaterala.
+     * @return iterator s podacima.
+     */
+    public CollSubtypeIdsIterator selectCollSubtypeIds() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO901.selectCollSubtypeIds");
+            
+            CollSubtypeIdsIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    real_est_type   AS col_sub_id
+                FROM coll_restate
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    veh_group_id    AS col_sub_id
+                FROM coll_vehicle
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    ves_typ_id      AS col_sub_id
+                FROM coll_vessel
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    mov_typ_id      AS col_sub_id
+                FROM coll_movable
+
+                WITH UR
+            };
+            
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata ID-eva podvrsta svih kolaterala koji imaju podvrstu!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO901.selectCollSubtypeIds");
+        }
+    }
+    
+    private void info(String message) throws Exception
+    {
+        bc.info(message);
+        bc.userLog(message);
+    }
+    
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

@@ -1,0 +1,838 @@
+package hr.vestigo.modules.collateral.batch.bo05;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.batch.bo05.BO05Data;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*;  
+
+
+public class BO051 {
+	
+	#sql public iterator Iter1 (	
+			BigDecimal col_ins_id,
+	 		BigDecimal ip_type_id,
+	 		BigDecimal osig,		
+	 		String ip_code,
+	 		Date polica_do, 
+	 		Date premija_do,
+	 		BigDecimal value,
+	 		String status,
+	 		BigDecimal col_hea_id,
+			BigDecimal col_cat_id,
+	 		String col_num,
+	 		String org_uni_code,
+	 		String org_uni_name,
+	 		String code_char,
+			BigDecimal cus_id,
+			String acc_no,
+			String request_no
+		);	
+	#sql public iterator Iter2 (
+			BigDecimal cus_id,
+			String register_no,
+	 		String name,
+	 		String address,
+	 		String postoffice,
+	 		String city
+		);	
+	
+	#sql public iterator Iter3 (
+			BigDecimal cus_id,
+			String register_no,
+	 		String name,
+	 		String address,
+	 		String postoffice,
+	 		String city
+		);	
+	
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo05/BO051.sqlj,v 1.21 2008/08/22 10:04:00 hramkr Exp $";
+	private ConnCtx connCtx;
+    private BigDecimal eve_id = null;
+    private hr.vestigo.framework.remote.batch.BatchContext bc;
+	public Iter1 iter1 = null;		
+	public Iter2 iter2 = null;
+	public Iter3 iter3 = null;
+	
+	public BO051(){
+		BO05Data p_data = new BO05Data();
+		 
+	}
+	
+	public BO051(hr.vestigo.framework.remote.batch.BatchContext bc){
+		this.bc = bc;
+		try{
+			this.connCtx = bc.getContext();
+		} catch(SQLException e){
+			//System.out.println("Nema connCtx u podtransakciji!");
+		} 
+	}	
+    public BigDecimal getEveId(){
+    	return this.eve_id;
+    }
+      
+    public Iter1 fetchInsPolCollateral(BO05Data p_data) throws SQLException{
+        bc.debug("SQL USAO U fetchInsPolCollateral(BO05Data Data) ");
+    	
+    	try {
+    		#sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    		//Ako nije zadan parametar state_code select nece pretrazivati po tom parametru
+    		if (p_data.getState_code()==null || p_data.getState_code().trim().equals(""))
+    			p_data.setState_code("%");
+    		else
+       			p_data.setState_code(p_data.getState_code()+"%");   			
+    		
+//    		Ako nije zadan parametar type_code select nece pretrazivati po tom parametru
+    		if (p_data.getType_code()==null || p_data.getType_code().trim().equals(""))	
+    			p_data.setType_code("%");
+    		else 
+    			p_data.setType_code(p_data.getType_code()+"%");
+    		
+    		bc.debug("p_data.getState_code()" + p_data.getState_code());
+    		bc.debug("p_data.getType_code()" + p_data.getType_code());
+    		
+       		bc.debug("p_data.getDate_from()" + p_data.getDate_from());
+    		bc.debug("p_data.getDate_until()" + p_data.getDate_until());
+    		//ovisno o tome da li su ic_id i org_uni_id zadani izvrsava se odredeni select
+    		if (p_data.getIc_id() != null){
+    			
+    			if(p_data.getOrg_uni_id() != null){
+    				
+    		           bc.debug("SQL USAO 1.sql ");
+    		           bc.debug("SQL Data.getIc_id():"+p_data.getIc_id());
+    		           bc.debug("SQL USAO Data.getOrg_uni_id():"+p_data.getOrg_uni_id());
+    				p_data.collateral_is_ins_policy = true;
+    				
+    				#sql [connCtx] iter1 = {
+							SELECT 
+    							a.col_ins_id as col_ins_id,  
+								a.ip_type_id, 
+								a.ip_cus_id as osig, 
+								a.ip_code, 
+								a.ip_valid_until as polica_do, 
+								a.ip_paid_until as premija_do, 
+								b.acum_buy_value as value, 
+								a.ip_status as status, 
+								b.col_hea_id, 
+    							b.col_cat_id,
+								b.col_num, 
+								z.code as org_uni_code, 
+								z.name as org_uni_name, 
+								d.code_char,
+    							v.cus_id,
+    							v.acc_no,
+    							v.request_no
+							FROM 
+								COLL_INSPOLICY a left outer join CURRENCY d on a.ip_nom_cur_id = d.cur_id, 
+    							INSU_POLICY_TYPE e, 
+    							COLL_HEAD b,
+ 								LOAN_BENEFICIARY v,   
+								CUSACC_EXPOSURE w,
+    							ORGANIZATION_UNIT z
+							WHERE
+    								a.ip_paid_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+    						and
+    								a.ip_cus_id =  :(p_data.getIc_id())
+    					 	and
+    								a.ip_status LIKE :(p_data.getState_code())
+    					 	and
+    								a.ip_type_id = e.int_pol_type_id
+    					 	and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    					 	and
+    								a.col_hea_id = b.col_hea_id
+    					 	and
+    								b.collateral_status = '3'
+     					 	and
+    								b.col_hea_id = v.col_hea_id 
+    					 	and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    					 	and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    						and
+    								z.org_uni_id = :(p_data.getOrg_uni_id())
+				
+							UNION
+
+							SELECT 
+    							a.ip_id as col_ins_id, 
+								a.ip_type_id, 
+								a.ip_ic_id as osig, 
+								a.ip_code, 
+								a.ip_date_sec_val as polica_do, 
+								a.ip_vali_until as premija_do, 
+								0 as value, 
+								a.ip_act_noact as status, 
+								b.col_hea_id, 
+								b.col_cat_id,
+    							b.col_num, 
+								z.code as org_uni_code, 
+								z.name as org_uni_name, 
+								d.code_char,
+    							v.cus_id,
+    							v.acc_no,
+    							v.request_no
+							FROM
+								INSURANCE_POLICY a left outer join CURRENCY d on a.ip_cur_id = d.cur_id,
+    							INSU_POLICY_TYPE e,  
+    							COLL_HEAD b, 
+    							COLL_HF_PRIOR u, 
+								LOAN_BENEFICIARY v,   
+								CUSACC_EXPOSURE w,
+    							ORGANIZATION_UNIT z
+    						WHERE
+    								a.ip_vali_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+   							and
+    								a.ip_ic_id =  :(p_data.getIc_id())
+    						and
+    								a.ip_act_noact LIKE :(p_data.getState_code())
+    						and
+    								a.ip_type_id = e.int_pol_type_id
+    						and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    						and
+    								a.col_hea_id = b.col_hea_id
+    						and
+    								b.collateral_status = '3'
+     						and
+    								b.col_hea_id = u.hf_coll_head_id
+    						and
+    								u.COLL_HF_PRIOR_ID = v.COLL_HF_PRIOR_ID
+    						and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    						and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    						and
+    								z.org_uni_id = :(p_data.getOrg_uni_id())
+							ORDER BY 11, 2, 3
+				};
+		
+    			}else{
+    		           bc.debug("SQL USAO 2.sql ");
+    		           bc.debug("SQL Data.getIc_id():"+p_data.getIc_id());
+    		           bc.debug("SQL USAO Data.getOrg_uni_id() treba biti null:"+p_data.getOrg_uni_id());
+    				#sql [connCtx] iter1 = {
+    							SELECT 
+    								a.col_ins_id as col_ins_id,  
+    								a.ip_type_id, 
+    								a.ip_cus_id as osig, 
+    								a.ip_code, 
+    								a.ip_valid_until as polica_do, 
+    								a.ip_paid_until as premija_do, 
+    								b.acum_buy_value as value, 
+    								a.ip_status as status, 
+    								b.col_hea_id, 
+    								b.col_cat_id,
+    								b.col_num, 
+    								z.code as org_uni_code, 
+    								z.name as org_uni_name, 
+    								d.code_char,
+    								v.cus_id,
+    								v.acc_no,
+    								v.request_no
+    							FROM 
+ 								COLL_INSPOLICY a left outer join CURRENCY d on a.ip_nom_cur_id = d.cur_id, 
+    							INSU_POLICY_TYPE e, 
+    							COLL_HEAD b,
+  								LOAN_BENEFICIARY v,   
+								CUSACC_EXPOSURE w,
+    							ORGANIZATION_UNIT z
+ 							WHERE
+    								a.ip_paid_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+    						and
+    								a.ip_cus_id =  :(p_data.getIc_id())
+    					 	and
+    								a.ip_status LIKE :(p_data.getState_code())
+    					 	and
+    								a.ip_type_id = e.int_pol_type_id
+    					 	and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    					 	and
+    								a.col_hea_id = b.col_hea_id
+    					 	and
+    								b.collateral_status = '3'
+     					 	and
+    								b.col_hea_id = v.col_hea_id
+    					 	and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    					 	and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    							UNION
+
+    							SELECT 
+    								a.ip_id as col_ins_id, 
+    								a.ip_type_id, 
+    								a.ip_ic_id as osig, 
+    								a.ip_code, 
+    								a.ip_date_sec_val as polica_do, 
+    								a.ip_vali_until as premija_do, 
+    								0 as value, 
+    								a.ip_act_noact as status, 
+    								b.col_hea_id, 
+    								b.col_cat_id,
+    								b.col_num, 
+    								z.code as org_uni_code, 
+    								z.name as org_uni_name, 
+    								d.code_char,
+    								v.cus_id,
+    								v.acc_no,
+    								v.request_no
+    							FROM
+									INSURANCE_POLICY a left outer join CURRENCY d on a.ip_cur_id = d.cur_id,
+    								INSU_POLICY_TYPE e,  
+    								COLL_HEAD b,  
+    								COLL_HF_PRIOR u, 
+									LOAN_BENEFICIARY v,   
+									CUSACC_EXPOSURE w,
+    								ORGANIZATION_UNIT z
+     						WHERE
+    								a.ip_vali_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+   							and
+    								a.ip_ic_id =  :(p_data.getIc_id())
+    						and
+    								a.ip_act_noact LIKE :(p_data.getState_code())
+    						and
+    								a.ip_type_id = e.int_pol_type_id
+    						and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    						and
+    								a.col_hea_id = b.col_hea_id
+    						and
+    								b.collateral_status = '3'
+     						and
+    								b.col_hea_id = u.hf_coll_head_id
+    						and
+    								u.COLL_HF_PRIOR_ID = v.COLL_HF_PRIOR_ID
+    						and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    						and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    							ORDER BY 11, 2, 3
+    				};
+		   			
+    			
+    		
+    			}
+    		
+    	
+    		}else{
+    		
+    			if(p_data.getOrg_uni_id() != null){
+    			
+    		           bc.debug("SQL USAO 3.sql ");
+    		
+    		           bc.debug("SQL Data.getIc_id() mora biti null:"+p_data.getIc_id());
+    		           bc.debug("SQL USAO Data.getOrg_uni_id():"+p_data.getOrg_uni_id());
+    				#sql [connCtx] iter1 = {
+    							SELECT 
+    								a.col_ins_id as col_ins_id,  
+    								a.ip_type_id, 
+    								a.ip_cus_id as osig, 
+    								a.ip_code, 
+    								a.ip_valid_until as polica_do, 
+    								a.ip_paid_until as premija_do, 
+    								b.acum_buy_value as value, 
+    								a.ip_status as status, 
+    								b.col_hea_id,
+    								b.col_cat_id,
+    								b.col_num, 
+    								z.code as org_uni_code, 
+    								z.name as org_uni_name, 
+    								d.code_char,
+    								v.cus_id,
+    								v.acc_no,
+    								v.request_no
+    							FROM 
+									COLL_INSPOLICY a left outer join CURRENCY d on a.ip_nom_cur_id = d.cur_id, 
+    								INSU_POLICY_TYPE e, 
+    								COLL_HEAD b, 
+ 									LOAN_BENEFICIARY v,   
+									CUSACC_EXPOSURE w,
+    								ORGANIZATION_UNIT z
+    							WHERE
+     								a.ip_paid_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+    					 		and
+    								a.ip_status LIKE :(p_data.getState_code())
+    					 		and
+    								a.ip_type_id = e.int_pol_type_id
+    					 		and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    					 		and
+    								a.col_hea_id = b.col_hea_id
+    					 		and
+    								b.collateral_status = '3'
+    							and
+    								b.col_hea_id = v.col_hea_id
+    					 		and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    					 		and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    							and
+    								z.org_uni_id = :(p_data.getOrg_uni_id())
+
+    							UNION
+
+    							SELECT 
+    								a.ip_id as col_ins_id, 
+    								a.ip_type_id, 
+    								a.ip_ic_id as osig, 
+    								a.ip_code, 
+    								a.ip_date_sec_val as polica_do, 
+    								a.ip_vali_until as premija_do, 
+    								0 as value, 
+    								a.ip_act_noact as status, 
+    								b.col_hea_id, 
+    								b.col_cat_id,
+    								b.col_num, 
+    								z.code as org_uni_code, 
+    								z.name as org_uni_name, 
+    								d.code_char,
+    								v.cus_id,
+    								v.acc_no,
+    								v.request_no
+    							FROM
+									INSURANCE_POLICY a left outer join CURRENCY d on a.ip_cur_id = d.cur_id,
+    								INSU_POLICY_TYPE e,  
+    								COLL_HEAD b, 
+     								COLL_HF_PRIOR u, 
+									LOAN_BENEFICIARY v,   
+									CUSACC_EXPOSURE w,
+    								ORGANIZATION_UNIT z
+    							WHERE
+    								a.ip_vali_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+    						  	and
+    								a.ip_act_noact LIKE :(p_data.getState_code())
+    							and
+    								a.ip_type_id = e.int_pol_type_id
+    							and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    						  	and
+    								a.col_hea_id = b.col_hea_id
+    						  	and
+    								b.collateral_status = '3'
+    						  	and
+    								b.col_hea_id = u.hf_coll_head_id
+    							and
+    								u.COLL_HF_PRIOR_ID = v.COLL_HF_PRIOR_ID
+    						  	and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    						  	and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    							and	
+									z.org_uni_id = :(p_data.getOrg_uni_id())
+    							ORDER BY 11, 2, 3
+    				};
+		   			
+    			
+    			
+    		
+    			}else{
+    			
+    			
+    		           bc.debug("SQL USAO 4.sql ");
+    				
+    		           bc.debug("SQL p_data.getIc_id() null :"+p_data.getIc_id());
+    		           bc.debug("SQL USAO p_data.getOrg_uni_id() null :"+p_data.getOrg_uni_id());
+    					#sql [connCtx] iter1 = {
+    							SELECT 
+    								a.col_ins_id as col_ins_id,  
+    								a.ip_type_id, 
+    								a.ip_cus_id as osig, 
+    								a.ip_code, 
+    								a.ip_valid_until as polica_do, 
+    								a.ip_paid_until as premija_do, 
+    								b.acum_buy_value as value, 
+    								a.ip_status as status, 
+    								b.col_hea_id, 
+    								b.col_cat_id,
+    								b.col_num, 
+    								z.code as org_uni_code, 
+    								z.name as org_uni_name, 
+    								d.code_char,
+    								v.cus_id,
+    								v.acc_no,
+    								v.request_no
+    							FROM 
+ 									COLL_INSPOLICY a left outer join CURRENCY d on a.ip_nom_cur_id = d.cur_id, 
+    							 	INSU_POLICY_TYPE e, 
+    							 	COLL_HEAD b, 
+ 									LOAN_BENEFICIARY v,   
+									CUSACC_EXPOSURE w,
+    							 	ORGANIZATION_UNIT z
+    							WHERE
+    								a.ip_paid_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+    							and
+    								a.ip_status LIKE :(p_data.getState_code())
+    							and
+    								a.ip_type_id = e.int_pol_type_id
+    							and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    							and
+    								a.col_hea_id = b.col_hea_id
+    							and
+    								b.collateral_status = '3'
+     							and
+    								b.col_hea_id = v.col_hea_id
+    							and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    							and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    							UNION
+
+    							SELECT 
+    								a.ip_id as col_ins_id, 
+    								a.ip_type_id, 
+    								a.ip_ic_id as osig, 
+    								a.ip_code, 
+    								a.ip_date_sec_val as polica_do, 
+    								a.ip_vali_until as premija_do, 
+    								0 as value, 
+    								a.ip_act_noact as status, 
+    								b.col_hea_id,
+    								b.col_cat_id,
+    								b.col_num, 
+    								z.code as org_uni_code, 
+    								z.name as org_uni_name, 
+    								d.code_char,
+    								v.cus_id,
+    								v.acc_no,
+    								v.request_no
+    							FROM
+ 									INSURANCE_POLICY a left outer join CURRENCY d on a.ip_cur_id = d.cur_id,
+    								INSU_POLICY_TYPE e,  
+    								COLL_HEAD b,  
+     								COLL_HF_PRIOR u, 
+									LOAN_BENEFICIARY v,   
+									CUSACC_EXPOSURE w,
+    								ORGANIZATION_UNIT z
+    							WHERE
+    								a.ip_vali_until  between :(p_data.getDate_from()) and :(p_data.getDate_until())
+    							and
+    								a.ip_act_noact LIKE :(p_data.getState_code())
+    							and
+    								a.ip_type_id = e.int_pol_type_id
+    							and
+    								e.int_group1 LIKE :(p_data.getType_code())
+    							and
+    								a.col_hea_id = b.col_hea_id
+    							and
+    								b.collateral_status = '3'
+     						 	and
+    								b.col_hea_id = u.hf_coll_head_id
+    							and
+    								u.COLL_HF_PRIOR_ID = v.COLL_HF_PRIOR_ID
+    							and
+    								(v.LA_ACC_ID = w.CUS_ACC_ID OR
+    								v.ACC_NO = w.CUS_ACC_NO OR
+    								v.REQUEST_NO = w.REQUEST_NO)
+    							and
+    								w.ORG_UNI_ID = z.ORG_UNI_ID
+    							ORDER BY 11, 2, 3
+    				};
+		 			
+    			
+    	  		
+    		
+    			}
+    		}
+            bc.debug(" select uspjesno izvrsen!");
+    	}	
+        catch (SQLException sqle) {
+            throw sqle;
+        }
+    	return iter1;
+    }
+    
+    /**
+	* Uzima osnovnu adresu ukoliko opca dopisna aresa ne postoji
+	*/
+    public void getBasicAddress(BigDecimal cus_id,BO05Data p_data) throws SQLException{
+    try {	
+    	
+    	#sql [connCtx]  {
+			select 
+    			a.address,a.postoffice,a.city_name 
+    		into
+    			:(p_data.customer_address),:(p_data.customer_postoffice),:(p_data.customer_city)
+    		from 
+    			cust_address a, 
+    			address_type b 
+    		where 
+    			a.add_typ_id = b.add_typ_id  and
+    			upper(rtrim(ltrim(b.add_typ_id)))='MAINADDRESS' and
+    			a.cus_id = :(cus_id)
+
+			};
+    	  
+    } catch(SQLException e) {
+		if (e.getErrorCode()!=100){
+	           bc.debug("SQL select getBasicAddress  izbacio Exception!!!" + e.getMessage());	
+			throw e;
+		}
+		else 
+			{
+	           bc.debug("SQL select getBasicAddress  nije selektirao nista!!!" + e.getMessage());
+				throw e;
+			}
+    }
+}
+    
+	public Iter2 user_p_data_fetch_col(BO05Data p_data) throws Exception{
+		//System.out.println("SQL user_p_data_fetch_col:"+p_data.col_hea_id);
+
+		try { 
+	           bc.debug("->" + p_data.getClientType());
+			if (p_data.getClientType().equals("F")) {
+				#sql [connCtx] iter2 = {
+					SELECT 
+								d.cus_id as cus_id,
+								d.register_no as register_no, 
+								d.name as name, 
+								d.address as address, 
+								d.xpostoffice as postoffice, 	
+								d.xcity as city
+						FROM
+								CUSTOMER d
+				
+						WHERE 
+								d.cus_id = :(p_data.cus_id) and
+								d.cus_typ_id in (1998,1999)
+
+				};
+			}
+			else {
+		           bc.debug("ovdje 1 " + p_data.getCol_hea_id());
+			#sql [connCtx] iter2 = {
+					SELECT 
+								d.cus_id as cus_id,
+								d.register_no as register_no, 
+								d.name as name, 
+								d.address as address, 
+								d.xpostoffice as postoffice, 	
+								d.xcity as city
+					FROM
+						CUSTOMER d
+						
+					WHERE 
+						d.cus_id = :(p_data.cus_id) and
+						d.cus_typ_id in (2999,2998,999)
+
+					};
+		
+			}
+		
+		} catch (java.sql.SQLException e) {
+
+			if(e.getErrorCode()==100){
+		           bc.debug("Usao  korisnika vezanog direktno na kolateral ");
+				iter2 = null;
+			}else{
+				e.printStackTrace();
+		           bc.debug("SQL user_p_data_fetch_col dohvat pukao!!!");
+				throw e;
+			}
+		}
+		return iter2;
+		
+	}
+	
+	public Iter3 user_p_data_fetch_mortage(BO05Data p_data) throws Exception {
+        bc.debug("SQL user_p_data_fetch_mortage:"+p_data.col_hea_id);
+		try {
+			
+	           bc.debug("->" + p_data.getClientType());
+			if (p_data.getClientType().equals("F")) {
+				#sql [connCtx] iter3 = {
+					SELECT 
+								d.cus_id as cus_id,
+								d.register_no as register_no, 
+								d.name as name, 
+								d.address as address, 
+								d.xpostoffice as postoffice, 	
+								d.xcity as city
+						FROM
+								CUSTOMER d
+				
+						WHERE 
+								d.cus_id = :(p_data.cus_id) and
+								d.cus_typ_id in (1998,1999)
+					};
+			}
+			else {
+		           bc.debug("ovdje 2 " + p_data.getCol_hea_id());
+				#sql [connCtx] iter3 = {
+					SELECT 
+								d.cus_id as cus_id,
+								d.register_no as register_no, 
+								d.name as name, 
+								d.address as address, 
+								d.xpostoffice as postoffice, 	
+								d.xcity as city
+					FROM
+						CUSTOMER d
+						
+					WHERE 
+						d.cus_id = :(p_data.cus_id) and
+						d.cus_typ_id in (2999,2998,999)
+
+					};
+			}
+				
+			
+				
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100){
+		           bc.debug("SQL select user_p_data_fetch_mortage  puk'o k'o kokica!!!");	
+				throw e;
+			}
+		
+		}	
+		return iter3;
+	}
+	public BigDecimal insertIntoEvent(){
+		//System.out.println("sqlj insertIntoEvent");		
+	 	eve_id = null;
+	  	
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(connCtx);			
+		  	eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+   	
+			event.put("eve_id", eve_id);
+			event.put("eve_typ_id", new BigDecimal("1686886003"));
+			event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+			event.put("cmnt", "Izrada obavijesti/opomena po policama osiguranja u klolateral modulu");
+			event.put("use_id", bc.getUserID());
+			event.put("ext_event_code", null);
+			event.put("ext_event_num", null);
+			event.put("org_uni_id", new BigDecimal("53253"));
+			event.put("bank_sign", bc.getBankSign());
+		  	eve1.insertEvent(event);
+		  	bc.updateEveID(eve_id);		
+	  
+	  } catch(Exception e){
+		  e.printStackTrace();
+		  return null;
+	  }
+	  
+	  return eve_id;
+	}
+	
+	public void insertIntoRecordTable(BO05Data p_data) throws Exception {
+
+		try {
+	           bc.debug("SQL usao u insertIntoRecordTable!");
+			
+			//biti æe insert....?????????????????????????????????????????????????
+			#sql [connCtx]  {
+				SELECT 
+					a.register_no, 
+					a.request_no, 
+					a.acc_no, 
+					c.name, 
+					c.address, 
+					c.xpostoffice, 
+					c.xcity
+				INTO 
+					:(p_data.register_no), 
+					:(p_data.request_no), 
+					:(p_data.acc_no),
+					:(p_data.customer_name),
+					:(p_data.customer_address),
+					:(p_data.customer_postoffice),
+					:(p_data.customer_city)  
+				FROM
+					COLL_HEAD b, 
+					COLL_HF_PRIOR d, 
+					LOAN_BENEFICIARY a,   
+					CUSTOMER c
+				WHERE 
+					b.col_hea_id = :(p_data.col_hea_id) and
+					b.col_hea_id = d.hf_coll_head_id and
+					d.coll_hf_prior_id = a.coll_hf_prior_id and
+					a.cus_id = c.cus_id
+
+				};
+			
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100){
+				System.out.println("SQL select insertIntoRecordTable  puk'o k'o kokica!!!");	
+				throw e;
+			}
+		
+		}	
+	}
+	public boolean updateSendStateCol(BO05Data p_data) throws Exception {
+
+		try {
+	           bc.debug("SQL usao u updateSendState!");
+			
+			//biti æe insert....
+			#sql [connCtx]  {
+				UPDATE 
+					COLL_INSPOLICY 
+				SET 
+					ip_spec_stat = :(p_data.sendStatus)
+				WHERE 
+					col_ins_id = :(p_data.col_ins_id)
+
+			};
+			
+		} catch (java.sql.SQLException e) {
+
+			if(e.getErrorCode()==100){
+				System.out.println("Usao u return true nema korisnika vezanog direktno na kolateral ");
+				return true;
+			}else{
+				e.printStackTrace();
+				System.out.println("SQL user_p_data_fetch_col dohvat pukao!!!");
+				throw e;
+			}
+		}
+		return false;
+	}
+	public void updateSendStateInsPol(BO05Data p_data) throws Exception {
+
+		try {
+	           bc.debug("SQL usao u updateSendStateInsPol!");
+
+
+			#sql [connCtx]  {
+				UPDATE 
+					INSURANCE_POLICY
+				SET 
+					ip_spec_stat = :(p_data.sendStatus)
+				WHERE 
+					ip_id = :(p_data.col_ins_id)
+				};
+			
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100){
+		           bc.debug("SQL updateSendStateInsPol puk'o k'o kokica!!!");	
+				throw e;
+			}
+		
+		}	
+	}
+}

@@ -1,0 +1,178 @@
+package hr.vestigo.modules.collateral.batch.bo31;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+/**
+ * SQLJ za zalihe.
+ * @author hrakis
+ */
+public class BO314 extends ReportData
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo31/BO314.sqlj,v 1.16 2015/09/24 14:19:20 hrakis Exp $";
+    
+    #sql iterator ZaliheIterator with (holdability = true) (
+        String duznik_se_obvezuje_na_min_vrijed,
+        BigDecimal minim_vrijednost,
+        String cuva_se_kod,
+        String mjesto,
+        String za_tvrtku_proc
+    );
+
+    
+    public boolean hasMortgage()
+    {
+        return true;
+    }
+    
+    public String getFileName()
+    {
+        return "Zalihe";
+    }
+    
+    public void setColumns()
+    {
+        // IZVJEŠTAJ 1
+        int idx = 0;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.trzisna_vrijednost);
+        columns.get(idx).add(OutputData.valuta_procijenjene_vrijednosti);
+        columns.get(idx).add(OutputData.red_hipoteke);
+        columns.get(idx).add(OutputData.upisati_pravo_banke_do);
+        columns.get(idx).add(OutputData.omega_id_procjenitelja);
+        columns.get(idx).add(OutputData.naziv_procjenitelja);
+        columns.get(idx).add(OutputData.procijenjena_vrijednost);
+        columns.get(idx).add(OutputData.datum_procjene);
+        columns.get(idx).add(OutputData.datum_trzisne_vrijednosti_datum_nom_vrijed_c_o);
+        columns.get(idx).add(OutputData.id_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.status_vlasnika_u_zbk);
+        columns.get(idx).add(OutputData.naziv_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.upisano_pravo_banke);
+        columns.get(idx).add(OutputData.vrsta_trzisne_vrijednosti);
+        columns.get(idx).add(OutputData.ces_ponder_prijedlog);
+        columns.get(idx).add(OutputData.coll_officer);
+        columns.get(idx).add(OutputData.recovery_process_status);
+        columns.get(idx).add(OutputData.za_tvrtku_proc);
+        columns.get(idx).add(OutputData.tip_procjenitelja);
+        columns.get(idx).add(OutputData.ekonomski_vijek_kolaterala);
+        columns.get(idx).add(OutputData.razlog_neosiguranja);
+        columns.get(idx).add(OutputData.metoda_procjene_1);
+        columns.get(idx).add(OutputData.metoda_procjene_2);
+        columns.get(idx).add(OutputData.omjer_ngv_i_iznosa_os_sa_police);
+        columns.get(idx).add(OutputData.osiguranje_pokriva_kolateral_u_potpunosti);
+        columns.get(idx).add(OutputData.tip);
+        columns.get(idx).add(OutputData.cuva_se_kod);
+        columns.get(idx).add(OutputData.mjesto);
+        columns.get(idx).add(OutputData.duznik_se_obvezuje_na_min_vrijed);
+        columns.get(idx).add(OutputData.minim_vrijednost);
+        columns.get(idx).add(OutputData.osigurano);
+        
+        // IZVJEŠTAJ 2
+        idx = 1;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.trzisna_vrijednost);
+        columns.get(idx).add(OutputData.valuta_procijenjene_vrijednosti);
+        columns.get(idx).add(OutputData.misljenje_pravne_sluzbe);
+        columns.get(idx).add(OutputData.ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.hnb_ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.prihv_za_rezervacije);
+        columns.get(idx).add(OutputData.b2_hnb_stand_prihvatljivost);
+        columns.get(idx).add(OutputData.b2_irb_prihvatljivost);
+        columns.get(idx).add(OutputData.rba_prihvatljivost);
+        columns.get(idx).add(OutputData.nd_prihvatljivost);
+        columns.get(idx).add(OutputData.omega_id_korisnika_plasmana);
+        columns.get(idx).add(OutputData.zbk_status_korisnika_plasmana);
+        columns.get(idx).add(OutputData.naziv_korisnika_plasmana);
+        columns.get(idx).add(OutputData.partija_plasmana);
+        columns.get(idx).add(OutputData.plasman_osiguran);
+        columns.get(idx).add(OutputData.osiguravatelj);
+        columns.get(idx).add(OutputData.broj_zahtjeva);
+        columns.get(idx).add(OutputData.broj_zahtjeva_aps);
+        columns.get(idx).add(OutputData.broj_ugovora);
+        columns.get(idx).add(OutputData.valuta_izlozenosti);
+        columns.get(idx).add(OutputData.izlozenost_po_plasmanu);
+        columns.get(idx).add(OutputData.datum_izlozenosti);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_plasmana);
+        columns.get(idx).add(OutputData.dwh_status_plasmana);
+        columns.get(idx).add(OutputData.originalni_status_plasmana);
+        columns.get(idx).add(OutputData.datum_dospijeca_plasmana);
+        columns.get(idx).add(OutputData.sifra_liste_na_kojoj_se_nalazi_kolateral);
+        columns.get(idx).add(OutputData.login_referenta);
+        columns.get(idx).add(OutputData.ime_referenta);
+        columns.get(idx).add(OutputData.sifra_oj_referenta);
+        columns.get(idx).add(OutputData.naziv_oj_referenta);
+        columns.get(idx).add(OutputData.datum_unosa);
+        columns.get(idx).add(OutputData.datum_zadnje_promjene);
+        columns.get(idx).add(OutputData.unos_plasmana);
+        columns.get(idx).add(OutputData.im_suduznika);
+        columns.get(idx).add(OutputData.naziv_suduznika);
+        columns.get(idx).add(OutputData.uloga_suduznika);
+        columns.get(idx).add(OutputData.wcov_orig_valuta);
+        columns.get(idx).add(OutputData.kol_ponder_dfl);
+        columns.get(idx).add(OutputData.kolateral_ponder_co);
+        columns.get(idx).add(OutputData.realan_ponder);
+        columns.get(idx).add(OutputData.wcov);
+        columns.get(idx).add(OutputData.iskoristenost_kolaterala_wca);
+        columns.get(idx).add(OutputData.vrsta_ugovora);
+        columns.get(idx).add(OutputData.collateral_code_gctc_kolaterala);
+        columns.get(idx).add(OutputData.endorsement_type_gctc);
+        columns.get(idx).add(OutputData.object_type_gctc);
+        columns.get(idx).add(OutputData.property_type_gctc);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_local_level);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_group_level);
+        columns.get(idx).add(OutputData.suma_hipoteka_viseg_reda_do_prve_rba);
+        columns.get(idx).add(OutputData.raspoloziva_neponderirana_vrijednost);
+        columns.get(idx).add(OutputData.datum_izracuna_raspolozive_vrijednosti);
+        columns.get(idx).add(OutputData.b2_irb_prihv_sporazuma_o_osiguranju);
+        columns.get(idx).add(OutputData.b2_hnb_prihv_sporazuma_o_osiguranju);
+    }
+
+
+    public void selectAdditionalData(HashMap data, Date value_date, YRXX0 yrxx0) throws Exception
+    {
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+
+        data.put(OutputData.omjer_ngv_i_iznosa_os_sa_police, null);
+
+        try
+        {
+            bc.startStopWatch("BO314.selectAdditionalData#basic");
+            
+            ZaliheIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    e.sup_min_ind           AS duznik_se_obvezuje_na_min_vrijed,
+                    e.sup_min_amount        AS minim_vrijednost,
+                    m.sys_code_desc         AS cuva_se_kod,
+                    p.name                  AS mjesto,
+                    c.name                  AS za_tvrtku_proc
+                FROM coll_supply e
+                LEFT OUTER JOIN political_map p         ON e.sup_place_id = p.pol_map_id
+                LEFT OUTER JOIN customer c              ON e.estimate_cus_id = c.cus_id
+                LEFT OUTER JOIN system_code_value m     ON (e.sup_keeper = m.sys_code_value AND m.sys_cod_id = 'clt_keeper')
+                WHERE e.col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                fillDataFromIterator(iter, data, OutputData.class);
+            }
+            
+            bc.stopStopWatch("BO314.selectAdditionalData#basic");
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o zalihi! " + data.toString(), ex);
+            throw ex;
+        }
+    }
+}

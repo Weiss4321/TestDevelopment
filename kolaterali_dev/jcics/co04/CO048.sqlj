@@ -1,0 +1,137 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+             
+
+  
+ 
+#sql iterator IterInsPol (
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String ins_type ,      
+							String ins_name ,
+							String ins_code ,
+							String ins_curr ,
+							BigDecimal ins_amount ,
+							String ins_comp ,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id          
+                   );	
+
+public class CO048 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO048.sqlj,v 1.4 2006/05/08 13:27:58 hramkr Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterInsPol iterInsPol = null;
+	
+	public CO048 (DeclCO04 decl) { 
+		this.decl = decl;
+	}
+	 
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.collinspollistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		if(decl.collinspollistmapping.CUS_ID == null ){
+			#sql [ctx] iterInsPol = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.int_pol_type_code as ins_type, mova.int_pol_type_name as ins_name, cols.ip_code as ins_code, 
+									cu.code_char as ins_curr, ch.real_est_nomi_valu as ins_amount,
+									cus.name as ins_comp, ch.real_est_status as status, cols.col_ins_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                    
+							FROM
+									coll_head ch, coll_inspolicy cols , insu_policy_type mova, customer cus, currency cu
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		cols.ip_type_id = mova.int_pol_type_id
+							AND		cols.ip_cus_id = cus.cus_id
+							AND		ch.real_est_nm_cur_id = cu.cur_id
+						ORDER BY	2
+							
+			};
+		 
+		} 
+		  
+ 		
+		if(decl.collinspollistmapping.CUS_ID != null ){
+			#sql [ctx] iterInsPol = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.int_pol_type_code as ins_type, mova.int_pol_type_name as ins_name, cols.ip_code as ins_code, 
+									cu.code_char as ins_curr, ch.real_est_nomi_valu as ins_amount,
+									cus.name as ins_comp, ch.real_est_status as status, cols.col_ins_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                      
+							FROM
+									coll_head ch, coll_inspolicy cols , insu_policy_type mova, customer cus, currency cu
+							WHERE	ch.cus_id = :(decl.collinspollistmapping.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id   
+							AND		cols.ip_type_id = mova.int_pol_type_id
+							AND		cols.ip_cus_id = cus.cus_id
+							AND		ch.real_est_nm_cur_id = cu.cur_id
+						ORDER BY	2
+							
+			};
+		 
+		}   
+	
+		 
+	}
+	
+	public boolean next() throws Exception {
+		return iterInsPol.next(); 
+	}
+    
+	public void close() {
+		if(iterInsPol!=null) {
+			try {
+				iterInsPol.close();
+			} catch (Exception ignored) {}
+		}
+	} 
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterInsPol.col_num());	
+		row.add(iterInsPol.ins_type());	
+		row.add(iterInsPol.ins_name());
+		row.add(iterInsPol.ins_code()); 
+		row.add(iterInsPol.ins_curr());
+		
+		row.add(iterInsPol.ins_amount()); 
+		row.add(iterInsPol.ins_comp());	
+
+		row.add(iterInsPol.status());  
+
+		row1.add(iterInsPol.col_hea_id());
+		row1.add(iterInsPol.col_res_id());
+		row1.add(iterInsPol.real_est_nm_cur_id());
+		
+		decl.collinspollistmapping.tblCollInsPol.addRow(row,row1);
+		
+//		decl.collinspollistmapping.tblCollInsPol.addRow(row,iterInsPol.col_hea_id());   	
+		
+	}
+	
+}
+

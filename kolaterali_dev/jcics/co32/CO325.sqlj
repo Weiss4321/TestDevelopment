@@ -1,0 +1,201 @@
+package hr.vestigo.modules.collateral.jcics.co32;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */    
+          
+    
+public class CO325 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co32/CO325.sqlj,v 1.4 2017/02/16 15:27:22 hrazst Exp $";
+
+	
+	public DeclCO32 decl = null;
+
+
+	
+	public CO325 (DeclCO32 decl) {
+		this.decl = decl;
+	} 
+	 
+ 
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+   
+		try{	
+
+					#sql [ctx]{
+							SELECT
+									cus_id,
+									register_no,
+									agreement_no,
+									amount,
+									cur_id,
+									amount_post,
+									amount_rest,
+									date_until,
+									num_of_bill,
+									add_data,
+									proc_status,
+									hipo_status,
+									loan_status,
+									workflow_indic,
+									financial_flag,
+									use_open_id,
+									org_uni_open_id,
+									opening_ts,
+									use_id,
+									org_uni_id,
+									use_id_ver_snd,
+									ver_send_ts,
+									use_id_ver,
+									verification_ts,
+									user_lock,
+									status,
+		                            boe_stock_indicator
+							INTO    													                                                
+									:(decl.agrselect.agr_cus_id),
+ 									:(decl.agrselect.Agr_txtRegNo), 	
+									:(decl.agrselect.Agr_txtAgrNo),
+									:(decl.agrselect.Agr_txtAmount),
+									:(decl.agrselect.agr_cur_id), 	
+									:(decl.agrselect.Agr_txtAmountPost),                   
+									:(decl.agrselect.Agr_txtAmountRest),
+									:(decl.agrselect.Agr_txtDateUntil),
+									:(decl.agrselect.Agr_txtNumOfBill),
+									:(decl.agrselect.Agr_txtAddData),
+									:(decl.agrselect.proc_status),
+									:(decl.agrselect.Coll_txtMortgageSt),
+									:(decl.agrselect.Coll_txtCoverIndic),
+									:(decl.agrselect.workflow_indic),
+									:(decl.agrselect.Coll_txtFinFlag),
+									:(decl.agrselect.use_open_id),
+									:(decl.agrselect.org_uni_open_id),
+									:(decl.agrselect.Coll_txtOpeningTs),
+									:(decl.agrselect.use_id),
+									:(decl.agrselect.org_uni_id),
+									:(decl.agrselect.use_id_ver_snd),  
+									:(decl.agrselect.VER_SEND_TS),
+									:(decl.agrselect.use_id_ver),
+									:(decl.agrselect.VERIFICATION_TS),
+									:(decl.agrselect.Coll_txtUserLock),
+									:(decl.agrselect.status),
+		                            :(decl.agrselect.txtSporazumMZ)
+							FROM	frame_agreement
+							WHERE   fra_agr_id = :(decl.agrselect.fra_agr_id)
+
+
+					};
+
+			
+		}catch(SQLException se){
+				
+				tc.debug ( "......CO325.sqlj select from frame_agreement SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO325.sqlj select fromo frame_agreement SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO325.sqlj select from frame_agreement SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new VestigoTMException(1, "Transaction CO325: Error select from frame_agreement! ","err411a", null);
+		}
+
+
+		decl.agrselect.user_lock = decl.agrselect.Coll_txtUserLock;  
+		
+// select from CUSTOMER		
+
+		try{     
+			if (decl.agrselect.agr_cus_id != null){
+		             
+				#sql [ctx] {SELECT code, name, tax_number
+	             			INTO :(decl.agrselect.Agr_txtCode), :(decl.agrselect.Agr_txtName), :(decl.agrselect.Agr_txtOIB)
+	             			FROM CUSTOMER 
+	     	       			WHERE cus_id = :(decl.agrselect.agr_cus_id)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 				
+		   
+//	select from CURRENCY
+		
+		try{ 
+			if (decl.agrselect.agr_cur_id != null){ 
+				#sql [ctx] {
+                    SELECT code_char
+                        INTO :(decl.agrselect.Agr_txtCur)
+                        FROM currency
+                        WHERE cur_id = :(decl.agrselect.agr_cur_id)}; 
+      		}
+        }catch(SQLException e){
+        	if (e.getErrorCode()!=100) throw e;
+        }	      			
+// select from APP_USER
+
+		try{
+			if (decl.agrselect.use_open_id != null){      
+		           #sql [ctx] {
+	                SELECT login, user_name
+	                INTO :(decl.agrselect.Coll_txtUseOpenIdLogin), :(decl.agrselect.Coll_txtUseOpenIdName)
+	                FROM app_user
+	                WHERE use_id = :(decl.agrselect.use_open_id) };
+			}  
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }			
+
+		try{
+			if (decl.agrselect.use_id != null){      
+		           #sql [ctx] {
+		               SELECT login, user_name
+		               INTO :(decl.agrselect.Coll_txtUseIdLogin), :(decl.agrselect.Coll_txtUseIdName)
+		               FROM app_user
+		               WHERE use_id = :(decl.agrselect.use_id) };
+			}  
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }					 
+
+			try{
+				if (decl.agrselect.use_id_ver_snd != null){      
+			           #sql [ctx] {
+		                SELECT login, user_name
+		                INTO :(decl.agrselect.C_txtUseIdSndVerLogin), :(decl.agrselect.C_txtUseIdSndVerName)
+		                FROM app_user
+		                WHERE use_id = :(decl.agrselect.use_id_ver_snd) };
+				}  
+	        }catch(SQLException e){
+	              if (e.getErrorCode()!=100) throw e;
+	        }					
+		 
+	 
+			try{
+				if (decl.agrselect.use_id_ver != null){      
+			           #sql [ctx] {
+		                SELECT login, user_name
+		                INTO :(decl.agrselect.C_txtUseIdVerLogin), :(decl.agrselect.C_txtUseIdVerName)
+		                FROM app_user
+		                WHERE use_id = :(decl.agrselect.use_id_ver) };
+				}  
+	        }catch(SQLException e){
+	              if (e.getErrorCode()!=100) throw e;
+	        }					
+			
+	}//execute
+  
+
+ 
+
+		
+	 
+}	 
+			

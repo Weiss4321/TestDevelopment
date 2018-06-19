@@ -1,0 +1,145 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+      
+
+ 
+  
+ 
+#sql iterator IterLoanStock(
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String sto_type ,      
+							String sto_name ,
+							String payee_reg_no ,
+							String payee_name ,
+							BigDecimal amount ,
+							String currency ,
+							java.sql.Date issue_date ,
+							String status  ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id        						
+                   );	
+
+public class CO04A extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO04A.sqlj,v 1.2 2006/05/23 07:24:45 hrasia Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterLoanStock iterLoanStock = null;
+	
+	public CO04A (DeclCO04 decl) { 
+		this.decl = decl;
+	} 
+	 
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.collloanstocklistmap.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		
+		
+		if(decl.collloanstocklistmap.CUS_ID == null ){
+			#sql [ctx] iterLoanStock = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									ct.use_code_value as sto_type, ct.use_code_desc as sto_name,  
+									cols.payee_reg_no as payee_reg_no, cols.payee_data as payee_name,
+									cols.amount as amount, cu.code_char as currency,
+									cols.issue_date as issue_date, ch.real_est_status as status,
+									cols.col_loa_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id 
+							FROM
+									coll_head ch, coll_loanstock cols , user_code_value ct, currency cu
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		cols.sto_typ_id = ct.use_cod_val_id
+							AND		cols.cur_id = cu.cur_id
+						ORDER BY	2
+							
+			};
+		 
+		} 
+		  
+ 		
+		if(decl.collloanstocklistmap.CUS_ID != null ){
+			#sql [ctx] iterLoanStock = {
+
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									ct.use_code_value as sto_type, ct.use_code_desc as sto_name,  
+									cols.payee_reg_no as payee_reg_no, cols.payee_data as payee_name,
+									cols.amount as amount, cu.code_char as currency,
+									cols.issue_date as issue_date, ch.real_est_status as status,
+									cols.col_loa_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id 
+							FROM
+									coll_head ch, coll_loanstock cols , user_code_value ct, currency cu
+							WHERE   ch.cus_id = :(decl.collloanstocklistmap.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id   
+							AND		cols.sto_typ_id = ct.use_cod_val_id
+							AND		cols.cur_id = cu.cur_id
+						ORDER BY	2
+							 
+			};
+		 
+		}    
+	
+		  
+	}
+	
+	public boolean next() throws Exception {
+		return iterLoanStock.next(); 
+	}
+    
+	public void close() {
+		if(iterLoanStock!=null) {
+			try {
+				iterLoanStock.close();
+			} catch (Exception ignored) {}
+		}
+	} 
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterLoanStock.col_num());	
+		row.add(iterLoanStock.sto_type());	
+		row.add(iterLoanStock.sto_name());
+		row.add(iterLoanStock.payee_reg_no()); 
+		row.add(iterLoanStock.payee_name());
+		row.add(iterLoanStock.amount()); 
+		row.add(iterLoanStock.currency());	
+		row.add(iterLoanStock.issue_date());
+		row.add(iterLoanStock.status());  
+
+		row1.add(iterLoanStock.col_hea_id());
+		row1.add(iterLoanStock.col_res_id());
+		row1.add(iterLoanStock.real_est_nm_cur_id());
+		
+		decl.collloanstocklistmap.tblCollLoanStock.addRow(row,row1);
+		
+
+		
+	}
+	
+}
+
+
+ 					

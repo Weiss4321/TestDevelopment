@@ -1,0 +1,334 @@
+package hr.vestigo.modules.collateral.batch.bo42;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO421
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo42/BO421.sqlj,v 1.5 2011/04/21 07:36:18 hramlo Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator CollIterator with (holdability = true)( 
+		BigDecimal col_hea_id,
+		BigDecimal col_type_id,
+		String col_num,
+		BigDecimal market_value,
+    	String rec_lop,
+		String com_doc,
+		String inspol_ind,
+		String b2_eligibility, 
+		String status,
+		BigDecimal col_cat_id,
+		String rba_eligibility,
+		String law_eligibility,
+		String b1_eligibility,
+		String b2irb_eligibility,
+		String cust_id,
+		String cust_name,
+		String b2_asset,
+		BigDecimal cur_id,
+    	String code_char,
+    	String org_uni_code,
+    	String org_uni_name
+    );
+    
+    #sql iterator EuroExchangeRateIterator with (holdability = true)(
+    	BigDecimal cur_id,
+    	BigDecimal euro_rate
+    );
+
+    public BO421(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	/**
+	 * Metoda ubacuje zapis u EVENT tablicu.
+	 * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+	 */
+    public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	BigDecimal eve_id = null;
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("25958792"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Izvješæe o prihvatljivim i neprihvatljivim kolateralima");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+    
+    /**
+    * Metoda koja dohvaæa podatke za obradu.
+    * Dohvaæaju se svi aktivni kolaterali iz arhivskih tabela za zadani datum.
+	* @param load_date Datum za koji se radi izvješæe
+	* @return Iterator. Ako je došlo do greške, vraæa null.
+	*/
+    public CollIterator selectCollaterals(Date load_date)
+	{
+		CollIterator iter = null;
+		try
+		{
+			#sql [connCtx] iter = {
+				SELECT
+					a.col_hea_id 			AS col_hea_id,
+					a.col_type_id 			AS col_type_id,
+					a.col_num 				AS col_num,
+					a.real_est_nomi_valu	AS market_value,
+					a.rec_lop 				AS rec_lop,
+					a.com_doc 				AS com_doc,
+					a.inspol_ind 			AS inspol_ind,
+					a.eligibility 			AS b2_eligibility,
+					a.collateral_status 	AS status,
+					a.col_cat_id 			AS col_cat_id,
+					a.rba_eligibility 		AS rba_eligibility,
+					a.law_eligibility 		AS law_eligibility,
+					a.b1_eligibility 		AS b1_eligibility,
+					a.b2_irb_elig 			AS b2irb_eligibility,
+					cc.register_no 			AS cust_id,
+					cc.name 				AS cust_name,
+					cc.basel_cus_type 		AS b2_asset,
+					c.cur_id				AS cur_id,
+					c.code_char 			AS code_char,
+					o.code 					AS org_uni_code,
+					o.name 					AS org_uni_name
+				FROM
+					coll_head_d a,
+					coll_hf_prior_d d,
+					loan_beneficiary_d e,
+					customer cc,
+					currency c,
+					organization_unit o
+				WHERE
+					:(load_date) between a.load_date_from and a.load_date_until and
+					a.collateral_status IN ('0','1','2','3') AND
+					a.col_hea_id = d.hf_coll_head_id AND
+					:(load_date) between d.load_date_from and d.load_date_until and
+					d.hf_status = 'A' AND
+					d.coll_hf_prior_id = e.coll_hf_prior_id AND
+					:(load_date) between e.load_date_from and e.load_date_until and
+					e.status = 'A' AND
+					e.cus_id = cc.cus_id AND
+					a.real_est_nm_cur_id = c.cur_id AND
+					cc.org_uni_domicil_id = o.org_uni_id
+
+				UNION
+
+				SELECT
+					a.col_hea_id 			AS col_hea_id,
+					a.col_type_id 			AS col_type_id,
+					a.col_num 				AS col_num,
+					a.real_est_nomi_valu 	AS market_value,
+					a.rec_lop 				AS rec_lop,
+					a.com_doc 				AS com_doc,
+					a.inspol_ind 			AS inspol_ind,
+					a.eligibility 			AS b2_eligibility,
+					a.collateral_status 	AS status,
+					a.col_cat_id 			AS col_cat_id,
+					a.rba_eligibility 		AS rba_eligibility,
+					a.law_eligibility 		AS law_eligibility,
+					a.b1_eligibility 		AS b1_eligibility,
+					a.b2_irb_elig 			AS b2irb_eligibility,
+					cc.register_no 			AS cust_id,
+					cc.name 				AS cust_name,
+					cc.basel_cus_type 		AS b2_asset,
+					c.cur_id				AS cur_id,
+					c.code_char 			AS code_char,
+					o.code 					AS org_uni_code,
+					o.name 					AS org_uni_name
+				FROM
+					coll_head_d a,
+					loan_beneficiary_d e,
+					customer cc,
+					currency c,
+					organization_unit o
+				WHERE
+					:(load_date) between a.load_date_from and a.load_date_until and
+					a.collateral_status IN ('0','1','2','3') AND
+					a.col_hea_id = e.col_hea_id AND
+					:(load_date) between e.load_date_from and e.load_date_until and
+					e.status = 'A' AND
+					e.cus_id = cc.cus_id AND
+					a.real_est_nm_cur_id = c.cur_id AND
+					cc.org_uni_domicil_id = o.org_uni_id
+
+				ORDER BY 1
+				WITH UR
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja kolaterala!", ex);
+		}
+		return iter;
+	}
+    
+
+    /**
+     * Metoda koja vraæa datum dospijeæa depozita.
+     * @param col_hea_id ID depozita
+     * @return datum dospijeæa depozita
+     */
+    public Date selectCdeDepUnti(BigDecimal col_hea_id)
+    {
+	    try
+	    {
+	        Date cde_dep_unti = null;
+	        #sql [connCtx] {
+	        	SELECT cde_dep_unti
+	        	INTO :cde_dep_unti
+	        	FROM coll_cashdep
+	        	WHERE col_hea_id = :(col_hea_id)
+	        };
+	        return cde_dep_unti;   
+	    }
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvata datuma dospijeca depozita!", ex);
+			return null;
+		}
+    }
+
+    /**
+     * Metoda koja vraæa da li je garancija prihvatljiva na prvi poziv.
+     * @param col_hea_id ID garancije
+     * @return D ako je prihvatljiva, N ako nije
+     */
+    public String selectFirstCall(BigDecimal col_hea_id)
+    {
+	    try
+	    {
+	        String first_call = null;
+	        #sql [connCtx] {
+	        	SELECT first_call
+	        	INTO :first_call
+	        	FROM coll_guarantee
+	        	WHERE col_hea_id = :(col_hea_id)
+	        };
+	        return first_call;   
+	    }
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod provjere je li garancija prihvatljiva na prvi poziv!", ex);
+			return null;
+		}
+    }    
+
+    /**
+     * Metoda koja vraæa da li za nekretninu postoji uporabna dozvola.
+     * @param col_hea_id ID nekretnine
+     * @return D ako postoji uporabna dozvola, N ako ne postoji
+     */
+    public String selectBuildPermInd(BigDecimal col_hea_id)
+    {
+	    try
+	    {
+	        String build_perm_ind = null;
+	        #sql [connCtx] {
+	        	SELECT build_perm_ind
+	        	INTO :build_perm_ind
+	        	FROM coll_restate
+	        	WHERE col_hea_id = :(col_hea_id)
+	        };
+	        return build_perm_ind;
+	    }
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod provjere da li za nekretninu postoji uporabna dozvola!", ex);
+			return null;
+		}
+    }
+    
+    /**
+     * Metoda koja vraæa da li je vozilo kasko osigurano.
+     * @param col_hea_id ID vozila
+     * @return D ako je vozilo kasko osigurano, inaèe N
+     */
+    public String selectVehKasko(BigDecimal col_hea_id)
+    {
+	    try
+	    {
+	        String veh_kasko = null;
+	        #sql [connCtx] {
+	        	SELECT veh_kasko
+	        	INTO :veh_kasko
+	        	FROM coll_vehicle
+	        	WHERE col_hea_id = :col_hea_id
+	        };
+	        return veh_kasko;   
+	    }
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod provjere je li vozilo kasko osigurano!", ex);
+			return null;
+		}
+    }
+
+
+    /**
+    * Metoda koja dohvaæa teèajnu listu u eurima na današnji datum.
+    * @return hash mapa koja za kljuè ima ID valute, a za vrijednost odnos valuta/euro 
+    */
+    public HashMap selectEuroExchangeRate()
+    {
+		try
+		{
+			EuroExchangeRateIterator iter2 = null;
+			#sql [connCtx] iter2 = {
+				SELECT b.cur_id AS cur_id, b.midd_rate / a.midd_rate AS euro_rate
+    			FROM exchange_rate a, exchange_rate b
+    			WHERE a.cur_id = 64999
+    			AND current date BETWEEN a.date_from AND a.date_until
+    			AND current date BETWEEN b.date_from AND b.date_until
+    			WITH UR
+			};
+	    	HashMap map = new HashMap();
+	    	while(iter2.next()) map.put(iter2.cur_id(), iter2.euro_rate());
+	    	return map;
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja tecajne liste!", ex);
+			return null;
+		}
+    }
+}

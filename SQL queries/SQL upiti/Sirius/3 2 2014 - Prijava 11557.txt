@@ -1,0 +1,136 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+select * from customer_account;
+
+select * from customer_account where cus_acc_id = 426509761322;
+
+-- 
+ 		 SELECT
+                    code_num             
+                FROM
+                    currency
+                WHERE 
+                    cur_id = 64999;
+---------------------------------     za cur_id 64999 je code_num 978
+
+
+   select cus_acc_id, acc_cur_id  from customer_account where cus_acc_id IN (426509761322,426510170322,436075785322, 436075805322);                 
+
+-----------------------------------------------------
+     SELECT
+                 cusacc_amo_id,
+                 cus_acc_id,
+                 amount,
+                 cur_id,
+                 amo_offset_low,
+                 amo_offset_high,
+                 date_from,
+                 date_until
+             FROM
+                 cusacc_amount
+             WHERE
+                     cus_acc_id IN (426509761322,426510170322,436075785322, 436075805322)
+               --  AND CURRENT_DATE BETWEEN '01.01.2014' AND '02.02.2014'
+             ORDER BY
+                 date_until DESC
+
+select * from cusacc_amount;
+
+
+select * from bank_product_type;
+
+
+select * from bank_product_type where ban_rel_type in( '250', '005', '019');
+
+
+
+   SELECT
+                 cusacc_amo_id,
+                 cus_acc_id,
+                 amount,
+                 cur_id,
+                 amo_offset_low,
+                 amo_offset_high,
+                 date_from,
+                 date_until
+             FROM
+                 cusacc_amount
+             WHERE
+                     cus_acc_id = 436075686322
+                
+             ORDER BY
+                 date_until DESC
+
+---------------------------------------------------------------
+select cus_acc_no  from customer_account where  cus_acc_id IN ( 269157785522,301116278522, 434219830322); --  -- nema podataka o dospijecu - Maturity Date is not defined
+
+select cus_acc_no  from customer_account where  cus_acc_id IN (426509761322,426510170322, 436075785322,436075805322 );  --greska kod obrade racuna
+----
+
+
+       
+
+ 		SELECT
+                *
+             FROM
+                 cusacc_amount
+             WHERE
+                     cus_acc_id IN (426509761322,426510170322,436075785322, 436075805322) --- --greska kod obrade racuna
+               --  AND CURRENT_DATE BETWEEN '01.01.2014' AND '02.02.2014'
+             ORDER BY
+                 date_until DESC
+
+                 --------------------------------
+
+select * from customer_account where cus_acc_id IN (426509761322,426510170322,436075785322, 436075805322);
+
+
+select * from customer_account where cus_acc_no = '8000108914';   -- 436075785322
+
+
+select * from bank_product_type where ban_pro_typ_id = '37722005' ;
+
+----------------------------- provjera računa  - 1 točka
+select distinct ban_pro_typ_id from customer_account where cus_acc_no IN( '8000108914');
+
+
+select ban_pro_typ_id from customer_account where cus_acc_no IN( '8300039922', '6000033035', '1103530260');
+                 
+select ban_rel_type, code, name from bank_product_type where ban_pro_typ_id in( 24999)  ;   --- 
+
+----------------------------- provjera računa  - 2 točka - slučaj gdje imamo pogrešku  - Nema podataka o dospijeću
+
+                 
+select * from bank_product_type where ban_pro_typ_id in( 37722005)  ;   --- nostro akreditiv s odloženim placanjem
+
+
+-------------------------------- 
+-- dohvat
+
+			SELECT
+                  *
+                 
+                 FROM
+                      cusacc_term
+                  WHERE 
+                      cus_acc_id = 435363741322
+                      AND '2014-02-02' BETWEEN date_from AND date_until
+                      AND p_contract_id = 'frame_maturity';
+
+----------------------   
+
+
+			SELECT
+                  *
+                 
+                 FROM
+                      cusacc_term
+                  WHERE 
+                      --cus_acc_id = 435363741322
+                       '2014-02-02' BETWEEN date_from AND date_until
+                      AND p_contract_id = 'term_period';
+
+
+
+              

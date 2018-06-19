@@ -1,0 +1,170 @@
+package hr.vestigo.modules.collateral.batch.bo50;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO501
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo50/BO501.sqlj,v 1.1 2010/02/10 09:27:42 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator Iter1 with (holdability = true)( 
+        String sifra_kolaterala,
+        Date datum_unosa_kolaterala,
+        Date datum_promjene_kolaterala,
+        String red_hipoteke,
+        String partija_plasmana,
+        String broj_zahtjeva,
+        Date datum_unosa_plasmana,
+        Date datum_promjene_plasmana,
+        String dwh_status,
+        String status_u_modulu,
+        Date datum_izlozenosti,
+        String im_korisnika,
+        String korisnik,
+        String b2asset
+    );
+    
+    public BO501(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("2675840314"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Izvješæe o nepovezanim plasmanima");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+    * Metoda koja dohvaæa nepovezane plasmane koji imaju hipoteku.
+    * @return Iterator. Ako je došlo do greške, vraæa null.
+    */
+    public Iter1 selectLoansWithMortgage()
+    {
+        Iter1 iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT 
+                    a.col_num           AS sifra_kolaterala,
+                    DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                    DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                    b.hf_priority       AS red_hipoteke,
+                    c.acc_no            AS partija_plasmana,
+                    c.request_no        AS broj_zahtjeva,
+                    DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                    DATE(c.user_lock)   AS datum_promjene_plasmana,
+                    d.cus_acc_status    AS dwh_status,
+                    d.cus_acc_orig_st   AS status_u_modulu,
+                    d.exposure_date     AS datum_izlozenosti,
+                    e.register_no       AS im_korisnika,
+                    e.name              AS korisnik,
+                    e.basel_cus_type    AS b2asset
+                FROM coll_head a
+                    INNER JOIN coll_hf_prior b ON a.col_hea_id = b.hf_coll_head_id
+                    INNER JOIN loan_beneficiary c ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                    LEFT OUTER JOIN cusacc_exposure d ON (c.la_acc_id = d.cus_acc_id OR c.acc_no = d.cus_acc_no OR c.request_no = d.request_no)
+                    INNER JOIN customer e ON c.cus_id = e.cus_id
+                WHERE a.collateral_status = '3'
+                  AND b.hf_priority <> 'NA'
+                  AND d.cus_acc_status IS NULL
+                ORDER BY 5
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja plasmana s hipotekom!", ex);
+        }
+        return iter;
+    }
+    
+    /**
+     * Metoda koja dohvaæa nepovezane plasmane koji nemaju hipoteku.
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+     public Iter1 selectLoansWithoutMortgage()
+     {
+         Iter1 iter = null;
+         try
+         {
+             #sql [connCtx] iter = {
+                 SELECT 
+                     a.col_num              AS sifra_kolaterala,
+                     DATE(a.opening_ts)     AS datum_unosa_kolaterala,
+                     DATE(a.user_lock)      AS datum_promjene_kolaterala,
+                     ''                     AS red_hipoteke,
+                     c.acc_no               AS partija_plasmana,
+                     c.request_no           AS broj_zahtjeva,
+                     DATE(c.opening_ts)     AS datum_unosa_plasmana,
+                     DATE(c.user_lock)      AS datum_promjene_plasmana,
+                     d.cus_acc_status       AS dwh_status,
+                     d.cus_acc_orig_st      AS status_u_modulu,
+                     d.exposure_date        AS datum_izlozenosti,
+                     e.register_no          AS im_korisnika,
+                     e.name                 AS korisnik,
+                     e.basel_cus_type       AS b2asset
+                 FROM coll_head a
+                     INNER JOIN loan_beneficiary c ON a.col_hea_id = c.col_hea_id
+                     LEFT OUTER JOIN cusacc_exposure d ON (c.la_acc_id = d.cus_acc_id OR c.acc_no = d.cus_acc_no OR c.request_no = d.request_no)
+                     INNER JOIN customer e ON c.cus_id = e.cus_id
+                 WHERE a.collateral_status = '3'
+                   AND d.cus_acc_status IS NULL 
+                 ORDER BY 5
+                 WITH UR
+             };
+         }
+         catch(SQLException ex)
+         {
+             batchContext.error("Greska kod dohvacanja plasmana bez hipoteke!", ex);
+         }
+         return iter;
+     }
+}

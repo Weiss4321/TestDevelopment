@@ -1,0 +1,910 @@
+package hr.vestigo.modules.collateral.common.yoy7;
+
+import java.math.BigDecimal;
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+
+#sql iterator Iter1 (BigDecimal cus_id);
+
+
+public class YOY70 {
+  
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy7/YOY70.sqlj,v 1.21 2012/12/24 10:34:22 hrazst Exp $";
+ 
+	private String bank_sign = null;
+	private ConnCtx ctx = null;
+	private RemoteContext rc = null;
+	private CollHeadCusAccNoData chd = null;
+	private BigDecimal con_id = null;
+	private BigDecimal eve_con_id = null;
+	private BigDecimal cusaccCurrId = null;
+	
+	private BigDecimal curr_vk = new BigDecimal("64999");  // valuta valutne klauzule
+	
+	private YXYB0 eventGen=null;
+
+	private Iter1 iter=null;	   
+
+	public YOY70(RemoteContext rc, CollHeadCusAccNoData chd) throws Exception {
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc = rc;
+		this.chd = chd;
+		this.eventGen = new YXYB0(rc);
+		
+		getSQLTimestamp();
+
+	}
+	  
+	private void getSQLTimestamp() throws Exception {
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(chd.todaySQLTimestamp)
+			FROM sysibm.sysdummy1
+		};		
+
+	} 
+	
+	private void getProCatId() throws Exception {
+//	PRO_CAT_ID	PRO_CAT_CODE	PRO_CAT_NAME	PRO_CAT_NAME_SC	PRO_CAT_ENGNAME	PRO_CAT_ENGNAME_SC	BLOCKABLE	BANK_SIGN	USER_LOCK
+//	1666763003	060	depozit - kolateral	FHSRdLXNROAXHUAO	<null>	<null>	0	RB	2006-10-05 14:03:32.301327
+//	1666764003	061	nekretnina - kolateral	QHNUHXQLQANROAXHUAO	<null>	<null>	0	RB	2006-10-05 14:03:46.085382
+//	1666765003	062	vozilo -kolateral	ZRdLORNROAXHUAO	<null>	<null>	0	RB	2006-10-05 14:03:17.434983
+//	1666768003	063	vrijdnosnica-kolateral	ZULMFQRVQLCANROAXHUAO	<null>	<null>	0	RB	2006-10-05 14:04:12.471579
+	    
+//	    3763262364  081 cesija kolateral
+//	    4502544704  083 kolateral garancija države
+//	    4502545704  084 kolateral garancija druge banke
+//	    4502546704  085 kolateral garancija poduzeæa
+
+	    
+	    
+
+		BigDecimal proCatIdCashDep = new BigDecimal("1666763003.0");
+		BigDecimal proCatIdRealEstate = new BigDecimal("1666764003.0");
+		BigDecimal proCatIdVehicle = new BigDecimal("1666765003.0");
+		BigDecimal proCatIdCesija = new BigDecimal("3763262364.0");
+		BigDecimal proCatIdGarancija   = new BigDecimal("4502544704.0");
+
+		
+//		java.math.BigDecimal proCatIdSecurity = new java.math.BigDecimal("1666768003.0");
+		
+//		col_cat_id 		612223  	cash
+//		col_cat_id 		618223   	real estate
+//		col_cat_id 		624223  	vehicle
+//		
+//		627223   zapisi
+//		619223	 obveznice
+//		613223   dionice
+//		622223   udjeli
+
+		BigDecimal colCatIdCashDep = new BigDecimal("612223.0");
+		BigDecimal colCatIdRealEstate = new BigDecimal("618223.0");
+		BigDecimal colCatIdVehicle = new BigDecimal("624223.0");
+
+		
+// Milka, 08.03.2007, dodala plovila, dragocjenosti, pokretnine
+		BigDecimal colCatIdVessel = new BigDecimal("620223.00");  // plovila
+		BigDecimal colCatIdMovable = new BigDecimal("621223.00");  // pokretnine
+		BigDecimal colCatIdArt = new BigDecimal("623223.00");  // umjetnine
+		BigDecimal colCatIdSupp = new BigDecimal("626223.00");  // zalihe
+		BigDecimal colCatIdPres = new BigDecimal("628223.00");  // zlato, dijamanti, plemenite kovine
+
+// Zvonimir, 13.11.2007 dodao  		
+		
+		BigDecimal colCatIdInsurance = new BigDecimal("616223.00");  // police osiguranja
+
+// Zvonimir, 02.05.2008 dodao     
+        
+		BigDecimal colCatIdZapisi = new BigDecimal("627223.0");
+		BigDecimal colCatIdObveznice = new BigDecimal("619223.0");
+		BigDecimal colCatIdDionice= new BigDecimal("613223.0");
+		BigDecimal colCatIdUdjeli = new BigDecimal("622223.0");
+        BigDecimal colCatIdUdjeliPoduzeca = new BigDecimal("629223.0");
+		
+// Milka, 30.07.2010 dodala
+        
+        BigDecimal colCatIdCesija = new BigDecimal("614223.0");
+        
+// Milka, 17.05.2011 dodane garancije        
+
+        BigDecimal colCatIdGarancija = new BigDecimal("615223.0");
+       
+		try {
+			#sql [ctx]{ 
+				SELECT	col_cat_id, col_type_id
+				INTO	:(chd.col_cat_id), :(chd.col_typ_id)
+				FROM	coll_head 
+				WHERE	col_hea_id = :(chd.col_hea_id)  }; 
+
+		}catch(java.sql.SQLException se){
+			rc.debug (".......YOY70.sqlj ..... SELECT col_cat_id FROM COLL_HEAD UNSUCCESSFUL.");
+			rc.debug ( "......YOY70.sqlj select from coll_head  SQL ErrorCode " + se.getErrorCode());
+			rc.debug ( "......YOY70.sqlj select from coll_head  SQL SQLState " + se.getSQLState());
+			rc.debug ( "......YOY70.sqlj select from coll_head  SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw se;
+		}	
+		
+		
+		if(chd.col_cat_id.compareTo(colCatIdCashDep) == 0){
+			chd.pro_cat_id = proCatIdCashDep;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdRealEstate) == 0){
+			chd.pro_cat_id = proCatIdRealEstate;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdVehicle) == 0){
+			chd.pro_cat_id = proCatIdVehicle;
+		}		
+		
+		if(chd.col_cat_id.compareTo(colCatIdVessel) == 0){
+			chd.pro_cat_id = proCatIdVehicle;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdMovable) == 0){
+			chd.pro_cat_id = proCatIdVehicle;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdArt) == 0){
+			chd.pro_cat_id = proCatIdVehicle;
+		}		
+		if(chd.col_cat_id.compareTo(colCatIdSupp) == 0){
+			chd.pro_cat_id = proCatIdVehicle;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdPres) == 0){
+			chd.pro_cat_id = proCatIdVehicle;
+		}	
+		if(chd.col_cat_id.compareTo(colCatIdPres) == 0){
+			chd.pro_cat_id = proCatIdVehicle;
+		}			
+		if(chd.col_cat_id.compareTo(colCatIdInsurance) == 0){
+			chd.pro_cat_id = proCatIdCashDep;
+		}			
+		
+		if(chd.col_cat_id.compareTo(colCatIdZapisi) == 0){
+			chd.pro_cat_id = proCatIdCashDep;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdObveznice) == 0){
+			chd.pro_cat_id = proCatIdCashDep;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdDionice) == 0){
+			chd.pro_cat_id = proCatIdCashDep;
+		}
+		if(chd.col_cat_id.compareTo(colCatIdUdjeli) == 0){
+			chd.pro_cat_id = proCatIdCashDep;
+		}
+        if(chd.col_cat_id.compareTo(colCatIdUdjeliPoduzeca) == 0){
+            chd.pro_cat_id = proCatIdCashDep;
+        }
+        if(chd.col_cat_id.compareTo(colCatIdCesija) == 0){
+            chd.pro_cat_id = proCatIdCesija;
+        }
+        
+        if (chd.col_cat_id.compareTo(colCatIdGarancija) == 0) {
+            chd.pro_cat_id = proCatIdGarancija;                
+        }
+	} 
+	
+    /**
+     * Metoda koja dohvaæa izdavatelja garancije.
+     * 
+     */
+	private void getCusIdIssuer() throws Exception {
+               
+        try {
+            #sql [ctx]{ 
+                    SELECT  a.guar_issuer_id
+                    INTO    :(chd.cus_id)
+                    FROM    coll_guarantee a, customer b
+                    WHERE   a.col_hea_id = :(chd.col_hea_id) 
+                    and     a.guar_issuer_id = b.cus_id
+                    and     b.status not in ('1')
+                };
+        }catch(java.sql.SQLException se){
+            rc.debug (".......YOY70.sqlj ..... SELECT guar_issuer_id FROM coll_guarantee.");
+            rc.debug ( "......YOY70.sqlj select from coll_guarantee  SQL ErrorCode " + se.getErrorCode());
+            rc.debug ( "......YOY70.sqlj select from coll_guarantee  SQL SQLState " + se.getSQLState());
+            rc.debug ( "......YOY70.sqlj select from coll_guarantee  SQL Message " + se.getMessage());
+            se.printStackTrace();
+            throw new Exception(".......YOY70.sqlj ..... SELECT CUS_ID FROM coll_guarantee UNSUCCESSFUL - nema aktivnog. \n Error code=" + se.getErrorCode());
+
+        }   
+        rc.debug("ISSUER CUS_ID="+chd.cus_id);
+	}
+	
+	//18.01.2007. Promjenjen slq da provjerava da li cus_id postoji u tablici customer
+	//i da dohvaca prvog onog koji je naden, i koji je po ser_num-u najprviji
+    /**
+     * Metoda koja dohvaæa vlasnika kolaterala.
+     * 
+     */	
+	private void getCusIdOwner() throws Exception{
+		boolean isEmpty=true;
+		
+		try {
+			
+			#sql [ctx] iter = {SELECT	a.cus_id
+								FROM	coll_owner a, customer b
+								WHERE	a.col_hea_id = :(chd.col_hea_id)
+								AND 	a.cus_id=b.cus_id
+								AND 	b.status not in('1')
+								ORDER BY a.ser_num ASC
+								FETCH first 1 rows only     
+							};			
+			 
+
+		}catch(java.sql.SQLException se){
+
+				rc.debug (".......YOY70.sqlj ..... SELECT CUS_ID FROM COLL_OWNER UNSUCCESSFUL - nema aktivnog.");
+				rc.debug ( "......YOY70.sqlj select cus_id from coll_owner  SQL ErrorCode " + se.getErrorCode());
+				rc.debug ( "......YOY70.sqlj select cus_id from coll_owner  SQL SQLState " + se.getSQLState());
+				rc.debug ( "......YOY70.sqlj select cus_id from coll_owner  SQL Message " + se.getMessage());
+				se.printStackTrace();
+				throw new Exception(".......YOY70.sqlj ..... SELECT CUS_ID FROM COLL_OWNER UNSUCCESSFUL - nema aktivnog. \n Error code=" + se.getErrorCode());
+		}  
+		int i = 0;
+		while ((iter.next()) && ( i < 1)){
+			chd.cus_id = iter.cus_id();
+			i++;
+			isEmpty=false;
+		}
+		//dodano provjera da li je iterator prazan, ako je isEmpty zastavica je true
+		//27.11.2007 - dodan, ako nema vlasnika knjizi se na banku
+
+		if(isEmpty){
+			try {
+				
+				#sql [ctx] {
+			    			SELECT	a.cus_id
+			    			INTO :(chd.cus_id)
+							FROM	customer a
+			    			WHERE register_no='910000'  
+			    			};	 
+
+			}catch(java.sql.SQLException se){
+
+					rc.debug (".......YOY70.sqlj ..... SELECT CUS_ID FOR BANK - nema aktivnog.");
+					rc.debug ( "......YOY70.sqlj select cus_id from coll_owner  SQL ErrorCode " + se.getErrorCode());
+					rc.debug ( "......YOY70.sqlj select cus_id from coll_owner  SQL SQLState " + se.getSQLState());
+					rc.debug ( "......YOY70.sqlj select cus_id from coll_owner  SQL Message " + se.getMessage());
+					se.printStackTrace();
+					throw new Exception(".......YOY70.sqlj ..... SELECT CUS_ID FOR BANK. \n Error code=" + se.getErrorCode());
+			} 
+			//throw new Exception(".......YOY70.sqlj ..... SELECT CUS_ID FROM COLL_OWNER UNSUCCESSFUL - nema aktivnog. \n col_hea_id=" + chd.col_hea_id);
+		}
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}		
+		rc.debug("OWNER CUS_ID="+chd.cus_id);
+	}
+	
+	private void getBankProductType() throws Exception{
+		BigDecimal ban_pro_typ_id   = new BigDecimal ("897842005.0");
+		//ban_pro_typ_name
+		try {
+			#sql [ctx]{ 
+				SELECT	name ,cus_sub_acc_indic
+				INTO	:(chd.ban_pro_typ_name),
+						:(chd.cus_sub_acc_indic)
+				FROM	bank_product_type
+				WHERE	ban_pro_typ_id = :ban_pro_typ_id  }; 
+
+		}catch(java.sql.SQLException se){
+			rc.debug (".......YOY70.sqlj ..... SELECT name  FROM BANK_PRODUCT_TYPE UNSUCCESSFUL.");
+			rc.debug ( "......YOY70.sqlj select name from bank_product_type  SQL ErrorCode " + se.getErrorCode());
+			rc.debug ( "......YOY70.sqlj select name from bank_product_type  SQL SQLState " + se.getSQLState());
+			rc.debug ( "......YOY70.sqlj select name from bank_product_type  SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw se;
+		}		
+		
+		
+		chd.ban_pro_typ_id = ban_pro_typ_id;
+		
+	}
+	
+	private void getBankRelationType(){
+		BigDecimal ban_rel_typ_id   = new BigDecimal ("897841005.0");
+		chd.ban_rel_typ_id = ban_rel_typ_id;
+	}
+	
+	private void getCurrencyType() throws java.sql.SQLException{
+//	currency_type
+//	0 - kunski
+//	1 - devizni
+//	2 - multivalutni
+//	3 - valutna klauzula
+		
+//		Kako je u Sirius definiran samo jedan proizvod za kolaterale ( ne zna se je li devizni, kunski ili VK)
+//		Zato ja ispitujem o kojoj se valuti radi i ako nije kuna onda je devizni
+//	    Kada se definiraju proizvodi mozda treba promijeniti 05.10.2006	
+//
+//		Tada treba provjeriti i postavljanje ova dva parametra
+//		currency_indicator
+//		blockable_cusacc
+		
+		BigDecimal realEstNmCurId = null;
+		BigDecimal collCatId = null;
+		BigDecimal hrkCurId = new BigDecimal ("63999.0");
+
+// 17.09.2007 - dodano zbog depozita
+		BigDecimal collTypId = null;
+		
+		try {
+			#sql [ctx]{ 
+				SELECT	real_est_nm_cur_id,col_type_id,col_cat_id
+				INTO	:realEstNmCurId,
+						:collTypId,
+						:collCatId
+				FROM	coll_head 
+				WHERE	col_hea_id = :(chd.col_hea_id) }; 
+
+		}catch(java.sql.SQLException se){
+			rc.debug (".......YOY70.sqlj ..... SELECT real_est_nm_cur_id FROM COLL_HEAD UNSUCCESSFUL.");
+			rc.debug ( "......YOY70.sqlj select from coll_head  SQL ErrorCode " + se.getErrorCode());
+			rc.debug ( "......YOY70.sqlj select from coll_head  SQL SQLState " + se.getSQLState());
+			rc.debug ( "......YOY70.sqlj select from coll_head  SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw se;
+		}	
+		
+		rc.debug("realEstNmCurId="+ realEstNmCurId + ", collCatId=" + collCatId);
+// odrediti currency type prema kategoriji kolaterala 
+		
+		
+		
+/*		if(realEstNmCurId != null){
+			
+			if(realEstNmCurId.compareTo(hrkCurId)== 0){
+				//Kolateral je u kunama
+				chd.currency_type = "0";
+				chd.currency_indicator = "1";			
+			}else if(realEstNmCurId.compareTo(hrkCurId)!= 0 && valutnaKlauzula(collCatId)){
+				chd.currency_type = "3";
+				chd.currency_indicator = "5";
+			}else{
+				chd.currency_type = "1";
+				chd.currency_indicator = "1";
+			}
+			chd.blockable_cusacc = "1";
+			chd.real_est_nm_cur_id = realEstNmCurId;
+		}*/
+  
+// Milka, 14.03.2007			
+		if(realEstNmCurId != null){		
+		    boolean vKlauzula=valutnaKlauzula(collCatId,collTypId);
+		    
+			if(realEstNmCurId.compareTo(hrkCurId)== 0 && vKlauzula){
+				chd.currency_type = "3";
+				chd.currency_indicator = "5";	
+				chd.real_est_nm_cur_id = curr_vk;
+			} else if(realEstNmCurId.compareTo(hrkCurId)== 0 && !vKlauzula) {
+			//Kolateral je u kunama
+				chd.currency_type = "0";
+				chd.currency_indicator = "1";			
+				chd.real_est_nm_cur_id = realEstNmCurId;
+			}else if(realEstNmCurId.compareTo(hrkCurId)!= 0 && vKlauzula){
+				chd.currency_type = "3";
+				chd.currency_indicator = "5";
+				chd.real_est_nm_cur_id = curr_vk;
+			}else if (realEstNmCurId.compareTo(hrkCurId)!= 0 && !vKlauzula) {
+				chd.currency_type = "1";
+				chd.currency_indicator = "1";			
+				chd.real_est_nm_cur_id = realEstNmCurId;
+			}else{
+				chd.currency_type = "1";
+				chd.currency_indicator = "1";	
+				chd.real_est_nm_cur_id = realEstNmCurId;
+			}
+			chd.blockable_cusacc = "1";
+//			chd.real_est_nm_cur_id = realEstNmCurId;
+		     rc.debug("vKlauzula-" + vKlauzula + "--chd.currency_type="+chd.currency_type+",  chd.currency_indicator="+chd.currency_indicator + "chd.real_est_nm_cur_id="+
+		             chd.real_est_nm_cur_id);
+		}		
+		 
+
+		
+	}
+	
+	/**Provjerava se da li je tip kolaterala koji spada u one kolaterale koji se knjize po valutnoj klauzuli
+	 *@param (BigDecimal) tip kolaterala (col_cat_id)
+	 *@return true ako je za valutnu klauzulu, false inace
+	 */
+	private boolean valutnaKlauzula(BigDecimal tip, BigDecimal collTypId) throws SQLException{
+// ovo je ok za sve osim za depozite
+// doraditi za depozite - ne moze samo po tipu, mora po vrsti	
+// 13.11.2007 dodano za police osiguranja (Zvonimir)
+	    
+		BigDecimal colTypIdCashDep = new BigDecimal("612223.0");
+		BigDecimal colTypInsurance = new BigDecimal("616223.0");
+        BigDecimal colTypGuarantee = new BigDecimal("615223.0");
+        
+        String curClause=null;
+       
+		if (tip.compareTo(colTypIdCashDep) == 0 || tip.compareTo(colTypInsurance)==0) {   // za depozite
+			Vector cashDepType = new Vector();
+			int j=0;
+			cashDepType.add(new BigDecimal("2777"));
+			cashDepType.add(new BigDecimal("59777"));
+			cashDepType.add(new BigDecimal("79777"));
+			cashDepType.add(new BigDecimal("54777")); // police osiguranja 			
+			for (j=0; j<cashDepType.size(); j++) {
+				if (cashDepType.get(j).equals(collTypId)) return true;
+			}
+		} else if (tip.compareTo(colTypGuarantee) == 0) {   // za garancije
+/*            Vector guaranteeType = new Vector();
+            int j=0;
+            guaranteeType.add(new bigDecimal("30777"));
+            guaranteeType.add(new bigDecimal("31777"));
+            guaranteeType.add(new bigDecimal("32777"));
+            guaranteeType.add(new bigDecimal("34777"));
+            guaranteeType.add(new bigDecimal("35777"));
+            guaranteeType.add(new bigDecimal("36777"));
+            guaranteeType.add(new bigDecimal("37777"));
+            guaranteeType.add(new bigDecimal("56777"));
+            guaranteeType.add(new bigDecimal("57777"));
+            guaranteeType.add(new bigDecimal("73777")); */
+             
+            try {
+                #sql [ctx]{ 
+                    SELECT  cur_ind
+                    INTO    :curClause
+                    FROM    coll_guarantee
+                    WHERE   col_hea_id = :(chd.col_hea_id)  
+                }; 
+  
+            }catch(java.sql.SQLException se){
+                rc.debug (".......YOY70.sqlj ..... SELECT cur_ind FROM coll_guarantee UNSUCCESSFUL.");
+                rc.debug ( "......YOY70.sqlj SQL ErrorCode " + se.getErrorCode());
+                rc.debug ( "......YOY70.sqlj SQL SQLState " + se.getSQLState());
+                rc.debug ( "......YOY70.sqlj SQL Message " + se.getMessage());
+                se.printStackTrace();
+                throw se;
+            }
+            rc.debug("curClause="+curClause);
+            if(curClause!=null && curClause.equals("D")){
+                return true;
+            }            
+		      
+		} else {      // za ostale
+		
+			Vector collType=new Vector();
+		
+			collType.add(new BigDecimal("618223")); //nekretnine
+			collType.add(new BigDecimal("624223")); //vozila
+			collType.add(new BigDecimal("620223")); //plovila
+			collType.add(new BigDecimal("621223")); //pokretnine		
+			collType.add(new BigDecimal("628223")); //Zlato, dijamanti i plemenite kovine
+			collType.add(new BigDecimal("623223")); //umjetnine
+			collType.add(new BigDecimal("626223")); //zalihe
+            
+            for (int i=0;i<collType.size();i++){
+                if (collType.get(i).equals(tip)) return true;
+            }            
+            
+            Vector collTypeCurClause=new Vector();
+            
+            collTypeCurClause.add(new BigDecimal("627223"));//Zapisi
+            collTypeCurClause.add(new BigDecimal("619223"));//Obveznice
+            collTypeCurClause.add(new BigDecimal("613223"));//Dionice
+            collTypeCurClause.add(new BigDecimal("622223"));//Udjeli
+            collTypeCurClause.add(new BigDecimal("629223"));//Udjeli poduzeca
+            
+            for (int i=0;i<collTypeCurClause.size();i++){
+                if (collTypeCurClause.get(i).equals(tip)) {
+//                    String curClause=null;
+                    try {
+                        #sql [ctx]{ 
+                            SELECT  currency_clause
+                            INTO    :curClause
+                            FROM    coll_vrp 
+                            WHERE   col_hea_id = :(chd.col_hea_id)  
+                        }; 
+
+                    }catch(java.sql.SQLException se){
+                        rc.debug (".......YOY70.sqlj ..... SELECT currency_clause FROM coll_vrp UNSUCCESSFUL.");
+                        rc.debug ( "......YOY70.sqlj SQL ErrorCode " + se.getErrorCode());
+                        rc.debug ( "......YOY70.sqlj SQL SQLState " + se.getSQLState());
+                        rc.debug ( "......YOY70.sqlj SQL Message " + se.getMessage());
+                        se.printStackTrace();
+                        throw se;
+                    }
+                    if(curClause!=null && curClause.equals("3")){
+                        return true;
+                    }
+                }
+            } 
+		}
+		return false;
+	}
+  
+
+	private BigDecimal getEventId() throws Exception{
+		BigDecimal eve_id       = null;
+		BigDecimal eve_typ_id   = new BigDecimal ("1665777003.0");
+		
+		Date todaySQLDate = null;
+		java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+		long timeT = calendar.getTime().getTime();
+		todaySQLDate = new Date(timeT);
+		
+		
+		chd.eve_typ_id = eve_typ_id;
+		chd.todaySQLDate = todaySQLDate;
+		
+		rc.debug("-----INSERT INTO EVENT BEGIN-----");
+		rc.debug("-----hr.vestigo.modules.coreapp.common.yxyB.YXYB0-----");
+		
+		//
+		//select * from sidev.event_type where code ='clt_ins_cus_acc'
+		//clt_ins_cus_acc 
+		//1665777003
+		
+		try{
+			HashMap event = new HashMap();
+			event.put("eve_typ_id", eve_typ_id);
+			event.put("event_date", todaySQLDate);
+			event.put("cmnt", "Insert one collateral col_num into customer_account");
+			event.put("use_id", chd.use_open_id);
+			event.put("org_uni_id", chd.origin_org_uni_id);
+			event.put("ext_event_code", null);
+			event.put("ext_event_num", null);
+			event.put("bank_sign", bank_sign);
+			eve_id = eventGen.insertEventWithGeneratedId(event);
+		}catch(java.sql.SQLException e){
+			rc.debug("-----EVE_ID je-----" + eve_id); 
+			rc.debug (".......YOY70.sqlj ..... INSERT INTO EVENT END UNSUCCESSFUL.");
+			rc.debug ( "......YOY70.sqlj insert into event  SQL ErrorCode " + e.getErrorCode());
+			rc.debug ( "......YOY70.sqlj insert into event  SQL SQLState " + e.getSQLState());
+			rc.debug ( "......YOY70.sqlj insert into event  SQL Message " + e.getMessage());
+			e.printStackTrace();
+			throw e;
+		}
+		rc.debug("-----INSERT INTO EVENT END SUCCESSFUL-----");
+		rc.debug("-----EVE_ID je-----" + eve_id); 
+		return eve_id;
+	}//getEventId
+
+	
+	
+	
+	
+	private void insertCustomerAccount() throws Exception{
+		
+		hr.vestigo.modules.contract.common.yny3.CustomerAccountData cad = new hr.vestigo.modules.contract.common.yny3.CustomerAccountData(rc);
+		
+		cad.cus_id = chd.cus_id;
+		cad.cus_org_uni_id = null;
+		cad.ban_pro_typ_id = chd.ban_pro_typ_id;
+		cad.pro_cat_id = chd.pro_cat_id;
+		cad.pur_sub_id = null;
+		cad.cus_acc_no = chd.cus_acc_no;
+		cad.old_cus_acc_no = chd.cus_acc_no;
+		cad.iban_acc_no = null;
+		cad.contract_no = chd.cus_acc_no;
+		cad.cus_acc_name = chd.ban_pro_typ_name;
+		cad.ban_rel_typ_id = chd.ban_rel_typ_id;
+		cad.counterparty_id = null;
+		cad.pur_code = "000000";
+		cad.org_uni_id = chd.origin_org_uni_id;
+		cad.p_sch_id = null;
+		cad.client_category = null;
+		cad.currency_type = chd.currency_type;
+		cad.currency_indicator = chd.currency_indicator; 
+		cad.blockable_cusacc = chd.blockable_cusacc;
+		cad.acc_cur_id = chd.real_est_nm_cur_id;
+		cad.opening_date = chd .todaySQLDate;
+		cad.closing_date = null;
+		cad.cus_acc_status = "A";
+		cad.chg_stat_reason = "00";
+		cad.chg_stat_date = chd .todaySQLDate;
+		cad.eve_id = chd.eve_id;
+		cad.bank_sign = rc.getBankSign();
+		cad.cus_org_uni_indic = chd.cus_sub_acc_indic;
+		cad.external_flag = "0";
+		cad.owner_indicator = "0"; 
+		
+		rc.debug("-----INSERT INTO CUSTOMER_ACCOUNT BEGIN-----");
+		rc.debug("-----RUCNO-----");
+		
+		try{
+			#sql [ctx]{
+				INSERT INTO customer_account
+						(	
+							cus_acc_id          ,
+							cus_id              ,
+							cus_org_uni_id      ,
+							ban_pro_typ_id      ,
+							pro_cat_id          ,
+							pur_sub_id          ,
+							cus_acc_no          ,
+							old_cus_acc_no      ,
+							iban_acc_no         ,
+							contract_no         ,
+							cus_acc_name        ,
+							ban_rel_typ_id      ,
+							counterparty_id     ,
+							pur_code            ,
+							org_uni_id          ,
+							p_sch_id            ,
+							client_category     ,
+							currency_type       ,
+							currency_indicator  ,
+							blockable_cusacc    ,
+							acc_cur_id          ,
+							opening_date        ,
+							closing_date        ,
+							cus_acc_status      ,
+							chg_stat_reason     ,
+							chg_stat_date       ,
+							eve_id              ,
+							bank_sign           ,
+							cus_org_uni_indic   ,
+							external_flag       ,
+							owner_indicator	) 	
+				VALUES( :(chd.col_hea_id)             ,      
+						:(chd.cus_id)                 ,      
+						null                       ,      
+						:(chd.ban_pro_typ_id)         ,      
+						:(chd.pro_cat_id)                      ,      
+						null                       ,      
+						:(chd.cus_acc_no)             ,      
+						:(chd.cus_acc_no)             ,      
+						null                     ,      
+						:(chd.cus_acc_no )            ,      
+						:(chd.ban_pro_typ_name)       ,      
+						:(chd.ban_rel_typ_id)         ,      
+						null                       ,      
+						'000000'                      ,      
+						:(chd.origin_org_uni_id)      ,      
+						null                       ,      
+						null                       ,      
+						:(chd.currency_type)          ,      
+						:(chd.currency_indicator)     ,      
+						:(chd.blockable_cusacc)       ,      
+						:(chd.real_est_nm_cur_id)     ,      
+						:(chd .todaySQLDate)         ,      
+						null                       ,      
+						'A'                        ,      
+						'00'                       ,      
+						:(chd.todaySQLDate)           ,      
+						:(chd.eve_id)                 ,      
+						'RB'           ,      
+						:(chd.cus_sub_acc_indic)      ,      
+						'0'                        ,      
+						'0'  )
+				};
+
+			
+			
+			
+		}catch(java.sql.SQLException e){
+			rc.debug("chd.col_hea_id        	" +	chd.col_hea_id         );
+			rc.debug("chd.cus_id            	" +	chd.cus_id             );
+			rc.debug("null                  	" +	null                   );  
+			rc.debug("chd.ban_pro_typ_id    	" +	chd.ban_pro_typ_id     );
+			rc.debug("chd.pro_cat_id        	" +	chd.pro_cat_id         );
+			rc.debug("null                  	" +	null                   );  
+			rc.debug("chd.cus_acc_no        	" +	chd.cus_acc_no         );
+			rc.debug("chd.cus_acc_no        	" +	chd.cus_acc_no         );
+			rc.debug("null                  	" +	null                   );  
+			rc.debug("chd.cus_acc_no        	" +	chd.cus_acc_no         );
+			rc.debug("chd.ban_pro_typ_name  	" +	chd.ban_pro_typ_name   );
+			rc.debug("chd.ban_rel_typ_id    	" +	chd.ban_rel_typ_id     );
+			rc.debug("null                  	" +	null                   );  
+			rc.debug("'000000'              	" +	"000000"               );  
+			rc.debug("chd.origin_org_uni_id 	" +	chd.origin_org_uni_id  );
+			rc.debug("null                  	" +	null                   );  
+			rc.debug("null                  	" +	null                   );  
+			rc.debug("chd.currency_type     	" +	chd.currency_type      );
+			rc.debug("chd.currency_indicator	" +	chd.currency_indicator );
+			rc.debug("chd.blockable_cusacc  	" +	chd.blockable_cusacc   );
+			rc.debug("chd.real_est_nm_cur_id	" +	chd.real_est_nm_cur_id );
+			rc.debug("chd.todaySQLDate      	" +	chd.todaySQLDate       );
+			rc.debug("null                  	" +	null                   );  
+			rc.debug("'A'                   	" +	"A"                    );  
+			rc.debug("'00'                  	" +	"00"                   );  
+			rc.debug("chd.todaySQLDate      	" +	chd.todaySQLDate       );
+			rc.debug("chd.eve_id            	" +	chd.eve_id             );
+			rc.debug("'RB'                  	" +	"RB"                   );
+			rc.debug("chd.cus_sub_acc_indic 	" +	chd.cus_sub_acc_indic  );
+			rc.debug("'0'                   	" +	"0"                    );  
+			rc.debug("'0'                   	" +	"0"                    );
+			rc.debug (".......YOY70.sqlj ..... INSERT INTO CUSTOMER_ACCOUNT END UNSUCCESSFUL.");
+			rc.debug ( "......YOY70.sqlj insert into event  SQL ErrorCode " + e.getErrorCode());
+			rc.debug ( "......YOY70.sqlj insert into event  SQL SQLState " + e.getSQLState());
+			rc.debug ( "......YOY70.sqlj insert into event  SQL Message " + e.getMessage());
+			e.printStackTrace();
+			throw e;
+		}
+		rc.debug("-----INSERT INTO CUSTOMER_ACCOUNT END SUCCESSFUL-----");
+		
+	}
+	private void insertContract() throws Exception{
+		hr.vestigo.modules.contract.common.ynyB.ContractData  contractData = new hr.vestigo.modules.contract.common.ynyB.ContractData();
+		
+		contractData.recording_time = chd.todaySQLDate;
+		contractData.cus_acc_id = chd.col_hea_id;
+		contractData.contract_no = chd.cus_acc_no;
+		contractData.contract_subno = "000"; 
+		contractData.con_typ_id = new BigDecimal("4999.0"); 
+		contractData.cus_id = chd.cus_id;
+		contractData.contract_status = "A";
+		contractData.chg_stat_reason = "00"; 
+		contractData.chg_stat_date = chd.todaySQLDate;
+		contractData.activation_date = chd.todaySQLDate;
+		contractData.closing_date = Date.valueOf("9999-12-31");
+		contractData.eve_id = chd.eve_id;
+		contractData.use_id = chd.use_open_id;	
+		contractData.bank_sign = bank_sign;
+		hr.vestigo.modules.contract.common.ynyB.YNYB0 ynyb = new hr.vestigo.modules.contract.common.ynyB.YNYB0(rc, contractData);
+		con_id = ynyb.insertRecord();
+
+		
+		
+		
+	}
+	private void insertEventContractForContract() throws Exception{
+		
+		
+		hr.vestigo.modules.contract.common.yny9.YNY9Data yny9_data= new hr.vestigo.modules.contract.common.yny9.YNY9Data();
+							yny9_data.tra_typ_id = new BigDecimal("1457110003"); 
+							yny9_data.eve_id = chd.eve_id;
+							yny9_data.sys_timestamp = new Timestamp(System.currentTimeMillis());
+							yny9_data.cus_id = chd.cus_id;
+							yny9_data.cus_org_uni_id = null;
+							yny9_data.cus_acc_id = chd.col_hea_id;
+							yny9_data.conproc_id = con_id;
+							yny9_data.rel_conproc_id = null;
+							yny9_data.conproc_tbname = "CONTRACT";
+							yny9_data.content = null;
+							yny9_data.use_id = chd.use_open_id;
+							yny9_data.date_until_updated = null;
+							hr.vestigo.modules.contract.common.yny9.YNY90 yny9 = new hr.vestigo.modules.contract.common.yny9.YNY90(rc,yny9_data);
+							eve_con_id = yny9.insertEventContract();
+		
+	}
+	
+	
+	private void insertCusaccCurrency() throws Exception{
+		Date  maxDatum = Date.valueOf("9999-12-31");
+		HashMap hmCurrency = new HashMap();
+		hmCurrency.put("cus_acc_id", chd.col_hea_id);
+		hmCurrency.put("cur_id", chd.real_est_nm_cur_id);
+		hmCurrency.put("date_from", chd.todaySQLDate);
+		hmCurrency.put("date_until", maxDatum);
+		hmCurrency.put("eve_id", chd.eve_id);
+		
+		
+		hr.vestigo.modules.contract.common.yny3.YNY30 yny3 = new hr.vestigo.modules.contract.common.yny3.YNY30(rc);
+		cusaccCurrId = yny3.insertCusaccCurrency(hmCurrency);
+		
+	}
+	
+	private void insertEventContractCusaccCurrency() throws Exception{
+		hr.vestigo.modules.contract.common.yny9.YNY9Data yny9_data= new hr.vestigo.modules.contract.common.yny9.YNY9Data();
+		yny9_data.tra_typ_id = new BigDecimal("1457110003"); 
+		yny9_data.eve_id = chd.eve_id;
+		yny9_data.sys_timestamp = new Timestamp(System.currentTimeMillis());
+		yny9_data.cus_id = chd.cus_id;
+		yny9_data.cus_org_uni_id = null;
+		yny9_data.cus_acc_id = chd.col_hea_id;
+		yny9_data.conproc_id = cusaccCurrId;
+		yny9_data.rel_conproc_id = null;
+		yny9_data.conproc_tbname = "CUSACC_CURRENCY";
+		yny9_data.content = null;
+		yny9_data.use_id = chd.use_open_id;
+		yny9_data.date_until_updated = null;
+		hr.vestigo.modules.contract.common.yny9.YNY90 yny9 = new hr.vestigo.modules.contract.common.yny9.YNY90(rc,yny9_data);
+		eve_con_id = yny9.insertEventContract();
+
+	}
+	
+	
+	  
+	public void insertIntoCustomerAccountFCH() throws Exception{
+        rc.debug("-----INSERT IntoCustomerAccountFCH() BEGIN-----");		
+		//insert u EVENT
+		//insert u CUSTOMER_ACCOUNT
+		//insert u CONTRACT
+		//insert u EVENT_CONTRACT za CONTRACT
+		//insert u CUSACC_CURRENCY
+		//insert u EVENT_CONTRACT za CUSACC_CURRENCY
+		
+		String cusAccNo = null;
+		String colNum = null;
+		
+		try {
+			#sql [ctx]{ 
+				SELECT	col_num
+				INTO	:colNum
+				FROM	coll_head 
+				WHERE	col_hea_id = :(chd.col_hea_id)  }; 
+
+		}catch(java.sql.SQLException se){
+			rc.debug (".......YOY70.sqlj ..... SELECT col_num FROM COLL_HEAD UNSUCCESSFUL.");
+			rc.debug ( "......YOY70.sqlj insert into event  SQL ErrorCode " + se.getErrorCode());
+			rc.debug ( "......YOY70.sqlj insert into event  SQL SQLState " + se.getSQLState());
+			rc.debug ( "......YOY70.sqlj insert into event  SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw se;
+		}	
+		
+		chd.cus_acc_no = colNum;
+		
+		if(colNum != null){
+			try {
+				#sql [ctx]{ 
+					SELECT	cus_acc_no
+					INTO	:cusAccNo
+					FROM	customer_account
+					WHERE	cus_acc_no = :colNum
+					AND	cus_acc_id = :(chd.col_hea_id) }; 
+
+			}catch(java.sql.SQLException se){
+				
+				
+				
+				rc.debug (".......YOY70.sqlj ..... SELECT FROM CUSTOMER_ACCOUNT UNSUCCESSFUL.");
+				rc.debug (".......YOY70.sqlj ..... colNum: |"+colNum+"|    cusAccNo=|"+ cusAccNo + "|");
+				rc.debug ( "......YOY70.sqlj insert into event  SQL ErrorCode " + se.getErrorCode());
+				rc.debug ( "......YOY70.sqlj insert into event  SQL SQLState " + se.getSQLState());
+				rc.debug ( "......YOY70.sqlj insert into event  SQL Message " + se.getMessage());
+				se.printStackTrace();
+				
+				if (se.getErrorCode()!=100) 
+				   	throw se;
+				
+				
+			}		
+		
+		}
+		
+	    getProCatId();
+        rc.debug("-----INSERT IntoCustomerAccountFCH() chd.col_cat_id -----"+chd.col_cat_id);   	
+// garancije se knjize na izdavatelja garancije
+		if (chd.col_cat_id.compareTo(new BigDecimal("615223.0")) == 0) {
+		    getCusIdIssuer();
+		} else 
+		    getCusIdOwner();
+		getBankProductType();
+		getBankRelationType();
+		getCurrencyType();
+//		getProCatId();
+		
+		if(cusAccNo == null){
+			//insert u EVENT
+			//insert u CUSTOMER_ACCOUNT
+			//insert u CONTRACT
+			//insert u EVENT_CONTRACT za CONTRACT
+			//insert u CUSACC_CURRENCY
+			//insert u EVENT_CONTRACT za CUSACC_CURRENCY
+			chd.eve_id = getEventId();
+			
+			insertCustomerAccount();
+			
+			insertContract();
+			
+			insertEventContractForContract();
+			
+			//------------------------------
+			insertCusaccCurrency();
+			
+			insertEventContractCusaccCurrency();
+			
+		
+		}
+		
+	}
+	
+}
+

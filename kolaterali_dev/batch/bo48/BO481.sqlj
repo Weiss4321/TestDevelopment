@@ -1,0 +1,391 @@
+package hr.vestigo.modules.collateral.batch.bo48;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+ 
+public class BO481
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo48/BO481.sqlj,v 1.11 2013/01/21 11:57:09 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql iterator DepositIterator with (holdability = true)(
+        BigDecimal cus_acc_id,
+        BigDecimal ban_pro_typ_id,
+        BigDecimal cur_id,
+        String cde_cur,
+        BigDecimal cde_amount,
+        String prolong_flag,
+        String cde_account,
+        Date cde_dep_from,
+        Date cde_dep_unti,
+        String cde_owner,
+        String acc_num,
+        String loan_owner,
+        String cus_acc_status
+    );
+    
+    public BO481(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    
+    /**
+     * Metoda evidentira dogaðaj izvoðenja obrade u tablicu EVENT.
+     * @return EVE_ID novostvorenog zapisa u tablici EVENT.
+     */
+    public BigDecimal insertIntoEvent() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("insertIntoEvent");
+            bc.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(bc).getNewId();
+            bc.debug("EVE_ID = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("1049635734"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Preuzimanje garantnih depozita iz Siriusa");
+            event.put("use_id", bc.getUserID());
+            event.put("bank_sign", bc.getBankSign());
+
+            new YXYB0(bc).insertEvent(event);
+            bc.updateEveID(eve_id);
+
+            bc.commitTransaction();
+            bc.debug("Evidentirano izvodjenje obrade u tablicu EVENT.");
+            bc.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska pri evidentiranju izvodjenja obrade u tablicu EVENT!", ex);
+            throw ex;
+        }
+    }
+
+    
+    /**
+    * Metoda koja dohvaæa podatke o garantnim depozitima.
+    * @return iterator s podacima o depozitima
+    */
+    public DepositIterator selectDeposits() throws SQLException
+    {
+        bc.startStopWatch("selectDeposits");
+        try
+        {
+            DepositIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    a.cus_acc_id        AS cus_acc_id,
+                    a.ban_pro_typ_id    AS ban_pro_typ_id,
+                    d.cur_id            AS cur_id,
+                    d.code_char         AS cde_cur,
+                    b.amount            AS cde_amount,
+                    c.prolong_flag      AS prolong_flag,
+                    a.cus_acc_no        AS cde_account,
+                    a.opening_date      AS cde_dep_from,
+                    c.term_date_until   AS cde_dep_unti,
+                    x.register_no       AS cde_owner,
+                    f.cus_acc_no        AS acc_num,
+                    y.register_no       AS loan_owner,
+                    a.cus_acc_status    AS cus_acc_status
+                FROM customer_account a
+                    INNER JOIN cusacc_amount b ON a.cus_acc_id = b.cus_acc_id
+                    INNER JOIN cusacc_term c ON a.cus_acc_id = c.cus_acc_id
+                    INNER JOIN currency d ON b.cur_id = d.cur_id
+                    INNER JOIN customer x ON a.cus_id = x.cus_id
+                    LEFT OUTER JOIN cusacc_related e ON (a.cus_acc_id = e.cus_acc_id AND e.p_contract_id = 'guaranteed_account' and e.date_until = '9999-12-31') 
+                    LEFT OUTER JOIN customer_account f ON e.rel_cus_acc_id = f.cus_acc_id
+                    LEFT OUTER JOIN customer y ON f.cus_id = y.cus_id
+                WHERE 
+                      (a.ban_pro_typ_id IN (790658005,790660005,790659005,927285005,927286005,927287005) OR 
+                      (a.ban_rel_typ_id = 787171005 AND a.cus_acc_status = 'B' AND a.chg_stat_reason = '36'))
+                  AND CURRENT DATE BETWEEN b.date_from AND b.date_until
+                  AND b.p_contract_id = 'term_amount'
+                  AND CURRENT DATE BETWEEN c.date_from AND c.date_until
+                  AND c.p_contract_id = 'term_period'
+
+            UNION
+ 
+                 SELECT         
+                    a.cus_acc_id        AS cus_acc_id,
+                    a.ban_pro_typ_id    AS ban_pro_typ_id,
+                    d.cur_id            AS cur_id,
+                    d.code_char         AS cde_cur,                                                                                                              
+                    b.amount            AS cde_amount,                                                                                                           
+                    c.prolong_flag      AS prolong_flag,                                                                                                         
+                    a.cus_acc_no        AS cde_account,                                                                                                          
+                    a.opening_date      AS cde_dep_from,                                                                                                         
+                    c.term_date_until   AS cde_dep_unti,                                                                                                         
+                    x.register_no       AS cde_owner,                                                                                                            
+                    e.par_value         AS acc_num,                                                                                                              
+                    y.register_no       AS loan_owner,                                                                                                           
+                    a.cus_acc_status    AS cus_acc_status                                                                                                        
+                FROM customer_account a                                                                                                                          
+                    INNER JOIN cusacc_amount b ON a.cus_acc_id = b.cus_acc_id                                                                                    
+                    INNER JOIN cusacc_term c ON a.cus_acc_id = c.cus_acc_id                                                                                      
+                    INNER JOIN currency d ON b.cur_id = d.cur_id                                                                                                 
+                    INNER JOIN customer x ON a.cus_id = x.cus_id                                                                                                 
+                    LEFT OUTER JOIN cusacc_param e ON (a.cus_acc_id = e.cus_acc_id AND e.p_contract_id = 'term_guarant_acc' and e.date_until = '9999-12-31') 
+                    LEFT OUTER JOIN cusacc_exposure f ON e.par_value = f.cus_acc_no                                                                        
+                    LEFT OUTER JOIN customer y ON f.cus_id = y.cus_id                                                                                            
+                WHERE 
+                      (a.ban_pro_typ_id IN (4662968704,4662969704,4663049704,4663050704,4663058704,4663060704,4663066704,4663068704) OR 
+                      (a.ban_rel_typ_id = 887722005 AND a.cus_acc_status = 'B' AND a.chg_stat_reason = '36'))             
+                  AND CURRENT DATE BETWEEN b.date_from AND b.date_until                                                                                          
+                  AND b.p_contract_id = 'term_amount'                                                                                                            
+                  AND CURRENT DATE BETWEEN c.date_from AND c.date_until                                                                                          
+                  AND c.p_contract_id = 'term_period'                                                                                                            
+                WITH UR  
+            };
+            return iter;
+        } 
+        catch(SQLException ex)
+        {
+            bc.error("Greska pri dohvatu podataka o depozitima!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectDeposits");
+        }
+    }  
+    
+    
+    /**
+    * Metoda koja ispituje da li zadani depozit veæ postoji u tablici CASHDEP_DWH.
+    * @param cde_account Broj partije depozita
+    * @returns broj zapisa u tablici CASHDEP_DWH koji sadrže zadani depozit.
+    */
+    public int selectDepositCountInCashdepDwh(String cde_account) throws SQLException
+    {
+        bc.startStopWatch("selectDepositCountInCashdepDwh");
+        try
+        {
+            Integer count;
+            #sql [connCtx] {
+                SELECT COUNT(*)
+                INTO :count
+                FROM cashdep_dwh
+                WHERE cde_account = :cde_account
+                WITH UR
+            };
+            return count.intValue();
+        }
+        catch(SQLException ex)
+        {
+            bc.error("Greska pri provjeri da li vec postoji depozit (CDE_ACCOUNT=" + cde_account + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectDepositCountInCashdepDwh");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa stanje glavnice zadanog depozita.
+     * @param cus_acc_id ID partije depozita
+     * @param cur_id ID valute
+     * @return iznos stanja
+     */
+    public BigDecimal selectDepositBalance(BigDecimal cus_acc_id, BigDecimal cur_id) throws SQLException
+    {
+        bc.startStopWatch("selectDepositBalance");
+        try
+        {
+            BigDecimal balance;
+            #sql [connCtx] {
+                SELECT balance
+                INTO :(balance)
+                FROM cusacc_balance cb 
+                WHERE cus_acc_id = :(cus_acc_id) 
+                  AND cur_id = :(cur_id)  
+                  AND pro_typ_id IN (4048479797, 4048890797, 843980005, 843982005, 843984005, 843986005, 843988005, 940328005, 940329005) 
+                  AND balance_date = (
+                     SELECT MAX(balance_date) 
+                     FROM cusacc_balance cb1
+                     WHERE cb.acc_num_id = cb1.acc_num_id
+                       AND cb.cur_id = cb1.cur_id  
+                  )
+            };
+            return balance;
+        }
+        catch(SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.warning("Nema stanja depozita (CUS_ACC_ID = " + cus_acc_id + ").");
+                return new BigDecimal("0.00");
+            }
+            else
+            {
+                bc.error("Greska pri dohvatu stanja depozita (CUS_ACC_ID = " + cus_acc_id + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectDepositBalance");
+        }
+    }
+
+
+    /**
+    * Metoda koja ubacuje novi zapis u tablicu CASHDEP_DWH.
+    * @param iter Iterator s podacima o depozitu
+    * @param balance Stanje glavnice depozita
+    */
+    public void insertIntoCashdepDwh(DepositIterator iter, BigDecimal balance) throws SQLException
+    {  
+        bc.startStopWatch("insertIntoCashdepDwh");
+        try
+        {
+            // mapiranje ban_pro_typ_id u cde_typ
+            String cde_typ = "";
+            if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790658005")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790659005")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790660005")) == 0) cde_typ = "1KNCCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("927285005")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("927286005")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("927287005")) == 0) cde_typ = "1KNCCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4662969704")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4663050704")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4663060704")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4663068704")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4662968704")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4663049704")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4663058704")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("4663066704")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790652005")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790653005")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790654005")) == 0) cde_typ = "1KNCCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790655005")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790656005")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("790657005")) == 0) cde_typ = "1KNCCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("3767010394")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("3767013254")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("3767023264")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("3767024694")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("923345005")) == 0) cde_typ = "1KNKNRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("923374005")) == 0) cde_typ = "1FCRBA";
+            else if (iter.ban_pro_typ_id().compareTo(new BigDecimal("923403005")) == 0) cde_typ = "1KNCCRBA";
+            
+               
+            // mapiranje prolong_flag u cde_prolong
+            String cde_prolong = "";
+            if ("0".equals(iter.prolong_flag())) cde_prolong = "N";
+            else if ("1".equals(iter.prolong_flag())) cde_prolong = "D";
+            
+            String cde_dep_from = null;
+            if (iter.cde_dep_from() != null) cde_dep_from = iter.cde_dep_from().toString();
+            
+            String cde_dep_unti = null;
+            if (iter.cde_dep_unti() != null) cde_dep_unti = iter.cde_dep_unti().toString();
+
+            bc.beginTransaction();
+            #sql [connCtx] {
+                INSERT INTO cashdep_dwh (
+                    cde_typ,
+                    cde_cur,
+                    cde_amount,
+                    cde_prolong,
+                    cde_reg_no,
+                    cde_account,
+                    cde_dep_from,  
+                    cde_dep_unti,
+                    cde_owner,
+                    acc_num,
+                    loan_owner,
+                    create_ts,
+                    dep_stat)
+                VALUES (
+                    :(cde_typ),
+                    :(iter.cde_cur()),
+                    :(balance),
+                    :(cde_prolong),
+                    '910000',
+                    :(iter.cde_account()),
+                    :(cde_dep_from),
+                    :(cde_dep_unti),
+                    :(iter.cde_owner()),
+                    :(iter.acc_num()),
+                    :(iter.loan_owner()),
+                    CURRENT TIMESTAMP,
+                    :(iter.cus_acc_status())
+                )
+            };
+            bc.commitTransaction();
+        }
+        catch(SQLException ex)
+        {
+            bc.error("Greska pri ubacivanju zapisa u tablicu CASHDEP_DWH!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("insertIntoCashdepDwh");
+        }
+    }
+
+    
+    /**
+     * Metoda koja vrši ažuriranje postojeæeg zapisa u tablici CASHDEP_DWH.
+     * @param iter Iterator s podacima o depozitu
+     * @param balance Stanje glavnice depozita
+     */
+     public void updateCashdepDwh(DepositIterator iter, BigDecimal balance) throws SQLException
+     {
+         bc.startStopWatch("updateCashdepDwh");
+         try
+         {
+             // mapiranje prolong_flag u cde_prolong
+             String cde_prolong = "";
+             if ("0".equals(iter.prolong_flag())) cde_prolong = "N";
+             else if ("1".equals(iter.prolong_flag())) cde_prolong = "D";
+             
+             String cde_dep_unti = null;
+             if (iter.cde_dep_unti() != null) cde_dep_unti = iter.cde_dep_unti().toString();
+             
+             bc.beginTransaction();
+             #sql [connCtx] {
+                 UPDATE cashdep_dwh
+                 SET
+                     cde_cur = :(iter.cde_cur()),
+                     cde_amount = :(balance),
+                     cde_prolong = :(cde_prolong),
+                     cde_dep_unti = :(cde_dep_unti),
+                     create_ts = CURRENT TIMESTAMP,
+                     dep_stat = :(iter.cus_acc_status())
+                 WHERE
+                     cde_account = :(iter.cde_account())
+             };
+             bc.commitTransaction();
+         }
+         catch(SQLException ex)
+         {
+             bc.error("Greska pri azuriranju zapisa u tablici CASHDEP_DWH (CDE_ACCOUNT = " + iter.cde_account() + ")!", ex);
+             throw ex;
+         }
+         finally
+         {
+             bc.stopStopWatch("updateCashdepDwh");
+         }
+     }
+}

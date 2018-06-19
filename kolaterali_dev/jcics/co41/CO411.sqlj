@@ -1,0 +1,107 @@
+package hr.vestigo.modules.collateral.jcics.co41;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import java.math.*;
+import java.sql.*;
+import java.util.Vector;
+
+import sqlj.runtime.ref.*;
+
+
+#sql iterator Iter(
+        Date controlDate,
+        String COName,
+        String CORegisterNo,
+        BigDecimal marketValue,
+        String currency,
+        BigDecimal newBuildValue,
+        String estDesc,
+        Date estDate,
+        String estName,
+        String forEstName
+    );
+
+// Transakcija za dohvat podataka o povijesti kontrola kolateral officera
+public class CO411 extends SQLJScrollableRemoteTransaction{
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co41/CO411.sqlj,v 1.2 2014/12/16 12:24:36 hrakis Exp $";
+
+    private DeclCO41 decl;
+    private ConnCtx ctx;
+    private Iter iter;
+
+    public CO411(DeclCO41 decl){
+        this.decl = decl;
+    }
+
+    public void executeScrollable(TransactionContext tc) throws Exception{ 
+        
+        setLevel(decl.ActionListLevel);
+        ctx = tc.getContext();
+        
+        try{
+            #sql [ctx] iter = {
+                SELECT  DATE(cch.co_ts)         AS controlDate,
+                        au.user_name            AS COName,
+                        au.use_id               AS CORegisterNo, 
+                        cch.real_est_estn_valu  AS marketValue,
+                        cr.code_char            AS currency, 
+                        cch.new_build_val       AS newBuildValue,
+                        cch.real_est_nomi_desc  AS estDesc, 
+                        cch.real_est_estn_date  AS estDate,
+                        c1.name                 AS estName,
+                        c2.name                 AS forEstName
+                FROM co_chg_history cch
+                INNER JOIN app_user au ON au.use_id = cch.co_use_id
+                LEFT OUTER JOIN currency cr ON cr.cur_id = cch.real_est_nm_cur_id
+                LEFT OUTER JOIN customer c1 ON cch.real_est_euse_id = c1.cus_id
+                LEFT OUTER JOIN customer c2 ON cch.estimate_cus_id = c2.cus_id
+                WHERE cch.col_hea_id = :(decl.RealEstate_COL_HEA_ID)
+                ORDER BY DATE(cch.co_ts) DESC, co_chg_his_id DESC
+                WITH UR
+            };
+        }
+        catch (SQLException ex){
+            throw new VestigoTMException(1, "Transaction CO411: Error selecting from CO_CHG_HISTORY!", "fw_wrn_017", null, ex);
+        }
+    }
+
+    public boolean next() throws Exception{
+        
+        return iter.next();
+    }
+
+    public void close(){
+        
+        if (iter != null)
+        {
+            try {iter.close(); }
+            catch (Exception ignored) { }
+        }
+    }
+
+    public void populateRowData() throws Exception{
+        
+        Vector row = new Vector();
+        Vector rowHidden = new Vector();
+        
+        row.add(iter.controlDate());
+        row.add(iter.COName());
+        row.add(iter.CORegisterNo());
+        row.add(iter.marketValue());
+        row.add(iter.currency());
+        row.add(iter.newBuildValue());
+        row.add(iter.estDesc());
+        row.add(iter.estDate());
+        row.add(iter.estName());
+        if(iter.forEstName()!=null) row.add(iter.forEstName());
+        else row.add("");
+        
+        decl.tblCOHistoryViewList.addRow(row, rowHidden);
+    }
+
+}

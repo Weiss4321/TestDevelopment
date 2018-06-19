@@ -1,0 +1,44 @@
+package hr.vestigo.modules.collateral.jcics.co16;
+
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+import java.sql.*;
+
+public class CO168 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co16/CO168.sqlj,v 1.2 2011/04/27 12:45:01 hrakis Exp $";
+    public DeclCO16 decl = null;
+
+    public CO168(DeclCO16 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        String flag = "N";
+        try
+        {
+            BigDecimal fra_acc_exc_id;
+            #sql[ctx] { 
+                SELECT fra_acc_exc_id 
+                INTO :(fra_acc_exc_id)
+                FROM frame_acc_exception
+                WHERE cus_acc_id = :(decl.lbenframeaccexceptioncheckm.cus_acc_id)
+                AND exception_type = 'F'
+                AND status = 'A'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            flag = "D";
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() != 100) throw ex; 
+        }
+        
+        decl.lbenframeaccexceptioncheckm.LBenDialog_frame_acc_exception_flag = flag;
+    }
+} 

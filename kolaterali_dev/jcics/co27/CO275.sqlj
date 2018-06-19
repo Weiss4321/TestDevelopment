@@ -1,0 +1,186 @@
+package hr.vestigo.modules.collateral.jcics.co27;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+
+   
+ 
+
+#sql iterator IterCov ( 
+								  String register_no,
+								  String cus_acc_no, 
+								  Date cover_date, 
+							      BigDecimal exp_fc_amount, 
+								  BigDecimal exp_percent, 
+								  BigDecimal exp_coll_amount,
+								  BigDecimal exposure_balance,
+								  String code_char
+							);	
+
+
+
+public class CO275 extends SQLJScrollableRemoteTransaction{
+    
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co27/CO275.sqlj,v 1.16 2014/06/11 08:26:31 hrakis Exp $";
+	
+    public DeclCO27 decl = null;
+	
+
+	private IterCov iter2 = null; 
+
+	
+	private BigDecimal col_hea_id = null;
+	
+	private BigDecimal oneAmount = new BigDecimal("1.00");
+	 
+    public CO275(DeclCO27 decl){
+        this.decl = decl;
+    }
+
+
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        setLevel(decl.ActionListLevel);
+		setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+			col_hea_id = decl.colworklistcovmapping.COL_HEA_ID;
+			
+			
+			
+			tc.debug("col_hea_id" + col_hea_id);
+			
+			tc.debug("6 .tu sam ");
+  
+			#sql [ctx] {
+				SELECT	
+						a.col_num, 
+						b.coll_type_name,
+						e.coll_amount,
+						c.code_char,
+						e.mvp_dfl
+				INTO
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollParty),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollType),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollValue),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollCurrency),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblPonder)
+
+	        	FROM 	
+						coll_head a, 
+						collateral_type b,
+						currency c,
+						col_proc d,
+						cusacc_exp_coll e
+				WHERE	
+		   				a.col_hea_id = :(col_hea_id) and
+						a.col_type_id = b.coll_type_id and
+						a.real_est_nm_cur_id = c.cur_id and
+						a.col_hea_id = e.col_hea_id and
+						e.col_pro_id = d.col_pro_id and
+						d.value_date = (select MAX(f.value_date) from col_proc f where f.proc_type = 'P' and f.proc_status ='1' ) and
+						d.proc_type = 'P' and
+                        e.cov_priority is not null
+				FETCH FIRST ROW ONLY
+			}; 		 	
+			
+	  		
+/*			#sql [ctx] {
+				SELECT	
+						a.col_num, 
+						b.coll_type_name,
+						a.real_est_nomi_valu,
+						c.code_char,
+						b.coll_mvp_ponder
+				INTO
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollParty),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollType),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollValue),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblCollCurrency),
+						:(decl.colworklistcovmapping.ColWorkListCov_dynLblPonder)
+
+		        FROM 	
+						coll_head a, 
+						collateral_type b,
+						currency c
+		       WHERE	
+			   			a.col_hea_id = :(col_hea_id) and
+						a.col_type_id = b.coll_type_id and
+						a.REAL_EST_NM_CUR_ID = c.cur_id
+ 
+			
+				}; */
+			 
+			#sql [ctx] iter2 = {
+						SELECT	c.register_no as register_no,
+								a.cus_acc_no as cus_acc_no,
+								b.cover_date as cover_date,
+								b.exp_coll_amount as exp_fc_amount,
+								b.exp_percent as exp_percent,
+								b.exp_coll_amount as exp_coll_amount,
+								b.exp_balance_hrk as exposure_balance,
+								e.code_char
+						FROM	
+								cusacc_exp_coll b,
+								col_proc d,
+								cusacc_exposure a,
+								customer c,
+								currency e								
+						WHERE  	
+								b.col_hea_id = :(col_hea_id) and	
+								b.col_pro_id = d.col_pro_id and
+								d.value_date = (select MAX(f.value_date) from col_proc f where f.proc_type = 'P' and f.proc_status ='1') and
+								d.proc_type = 'P' and
+								b.cus_acc_id=a.cus_acc_id and
+								b.cus_id = c.cus_id and 
+								b.exp_cur_id = e.cur_id and
+                                b.cov_priority is not null
+				};
+    }
+
+    public boolean next() throws Exception {
+        return iter2.next();
+    }
+ 
+    public void close() {
+        if(iter2!=null) {
+			try {
+				iter2.close();
+			} catch (Exception ignored) {}
+		}
+    } 
+     
+    public void populateRowData() throws Exception {
+        Vector row = new Vector();
+		Vector hiddenRow = new Vector();
+		BigDecimal balance = new BigDecimal("0.00");		
+		//atributi koji se prikazuju u listi
+		
+		row.add(iter2.register_no());
+		row.add(iter2.cus_acc_no());
+		row.add(iter2.cover_date());
+		row.add(iter2.exp_fc_amount());		
+		row.add(iter2.exp_percent());
+		row.add(iter2.exp_coll_amount());
+		
+/*		balance = iter2.exposure_balance().divide(oneAmount, 2, BigDecimal.ROUND_HALF_UP);
+		row.add(balance);*/
+		
+		row.add(iter2.exposure_balance());
+	 	
+		
+		row.add(iter2.code_char());
+		//hiddenRow.add(iter2.cus_acc_id());
+		decl.colworklistcovmapping.tblColWorkListCov.addRow(row,hiddenRow);
+		
+    }
+       
+}

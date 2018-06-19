@@ -1,0 +1,80 @@
+package hr.vestigo.modules.collateral.jcics.coB0;
+
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+import hr.vestigo.framework.remote.transaction.*;   
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+
+public class COB02 extends RemoteTransaction { 
+
+    
+public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB0/COB02.sqlj,v 1.2 2017/11/29 09:46:18 hrazst Exp $";
+    
+    public DeclCOB0 decl = null;
+    
+    public COB02 (DeclCOB0 decl) {
+        this.decl = decl;
+    }
+    public void  execute(TransactionContext tc) throws Exception {
+        ConnCtx ctx = tc.getContext(); 
+        #sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        try{            
+            #sql [ctx] {SELECT  e.EST_CUS_ID, 
+                                e.EST_COMP_CUS_ID, 
+                                e.EST_TYPE, 
+                                e.DATE_FROM, 
+                                e.DATE_UNTIL, 
+                                ce.REGISTER_NO as ESTIMATOR_REG_NO,
+                                ce.NAME as ESTIMATOR_NAME,
+                                cce.REGISTER_NO as ESTIMATOR_COMP_REG_NO,
+                                cce.NAME as ESTIMATOR_COMP_NAME,
+                                scv.SYS_CODE_DESC,
+                                au.LOGIN as USE_LOGIN,
+                                au.USER_NAME as USE_NAME,
+                                cau.LOGIN as CUSE_LOGIN,
+                                cau.USER_NAME as CUSE_NAME,
+                                e.OPENING_TS,
+                                e.USER_LOCK,    
+                                e.est_internal
+                        INTO    :(decl.collestimatordialogdetailsmapping.EST_CUS_ID),
+                                :(decl.collestimatordialogdetailsmapping.EST_COMP_CUS_ID),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtEstimatorTypeCode),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtDateFrom),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtDateUntil),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtEstimatorRegNo),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtEstimatorName),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtEstCompRegNo),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtEstCompName),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtEstimatorTypeName),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtUseRegNo),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtUseName),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtChgUseRegNo),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtChgUseName),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtOpeningTS),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtUserLock),
+                                :(decl.collestimatordialogdetailsmapping.CollEstimatorDialog_txtEstiminatorInternal)
+                        FROM estimator e
+                        LEFT OUTER JOIN CUSTOMER ce on e.EST_CUS_ID = ce.CUS_ID
+                        LEFT OUTER JOIN CUSTOMER cce on e.EST_COMP_CUS_ID = cce.CUS_ID
+                        LEFT OUTER JOIN SYSTEM_CODE_VALUE scv on scv.SYS_CODE_VALUE = e.EST_TYPE and SYS_COD_ID = 'est_type'
+                        LEFT OUTER JOIN APP_USER au on e.USE_OPEN_ID = au.USE_ID
+                        LEFT OUTER JOIN APP_USER cau on e.USE_ID = cau.USE_ID
+                        WHERE e.EST_ID = :(decl.collestimatordialogdetailsmapping.EST_ID)
+                };                                                         
+                                                                                                                                  
+        }catch(java.sql.SQLException se){
+            tc.debug ( "......COBO2.sqlj  SQLException   decl.collestimatordialogdetailsmapping.EST_ID     " + decl.collestimatordialogdetailsmapping.EST_ID );
+            throw new VestigoTMException(1, "Transaction COBO2: Error selecting from ESTIMATOR ! ","errclt1", null);
+        }
+    }
+    
+}

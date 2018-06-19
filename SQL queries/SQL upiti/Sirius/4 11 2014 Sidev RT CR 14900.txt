@@ -1,0 +1,243 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+select * from customer_account;
+
+select * from customer_account where cus_acc_no = '3234616780'; --cus_id = 270776058551  cus_acc_id = 189371331522
+
+select * from cusacc_risk where cus_acc_id = 189371331522 and ris_ind_typ_id ='limit_reduction';
+
+               SELECT
+                    cr.cus_ris_id,
+                    cr.cus_acc_id,
+                    cr.ris_ind_typ_id,
+                    cr.risk_indic_value,
+                    cr.risk_reason,
+                    cr.risk_date,  
+                    cr.loan_acc_no,
+                    cr.loan_cus_id,
+                    cr.date_from,
+                    cr.date_until,
+                    cr.eve_id,
+                    cr.use_id,
+                    cr.bank_sign,
+                    cr.user_lock,
+                    cr.limit_date_from,
+                    cr.limit_date_until
+                FROM 
+                    cusacc_risk cr
+                WHERE
+                    cr.cus_acc_id = 189371331522
+                AND 
+                    cr.ris_ind_typ_id = 'limit_reduction' 
+                AND '2014-11-03' BETWEEN cr.date_from AND cr.date_until
+                ORDER BY cr.limit_date_from
+
+
+
+
+
+
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from payment_order;
+
+select * from CUST_BILL_EXCH;
+
+-- MJ-07/10/2014
+
+update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-07/10/2014-0' where cus_bil_exc_id in (3093938823);
+
+--commit;
+------------------------------------------------
+
+
+ 					SELECT 
+                            name,
+                            tax_number,
+                            address,
+                            cus_id
+                       
+                        FROM
+                            customer
+                        WHERE tax_number LIKE '45645646044'
+
+select * from customer;
+
+select * FROM customer_account;
+
+select iban_acc_no from customer_account  where cus_id = 39309275;
+
+
+select * FROM customer_account where cus_acc_no = '3205003215'; -- cus_id 39309275
+
+select * from customer where cus_id = 39309275; -- i od tuda Interni MB popuniti -- popuniti OIB iz customera - taxnumber
+
+select tax_number from customer where cus_id = 39309275;
+
+
+
+
+--  3093977823
+
+ 				SELECT 
+                        cus_bill_exch_no,
+                        issue_date,
+                        maturity_date,
+                        cus_bill_exch_no,
+                        amount,
+                        payer_reg_no,
+                        payer_tax_number,
+                        payer_address,
+                        ben_iban,
+                        ben_name,
+                        ben_tax_number,
+                        ben_address,
+                        status,
+                        paid_amount,
+                        payer_acc_no,
+                        payment_method
+                   FROM
+                        cust_bill_exch
+                    WHERE cus_bil_exc_id = 3093977823;       
+
+------------------------------------------------------------
+select *  from CUST_BILL_EXCH where cus_bil_exc_id in (3093811823);
+
+
+select status  from CUST_BILL_EXCH where cus_bil_exc_id in (3093937823, 3093938823);
+
+update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id in (3093937823, 3093938823);
+
+commit;
+
+select * from system_code_value where sys_cod_id = 'bill_change_stat'; -- upisati ove vrijednosti OK
+
+
+select * from customer_account where cus_id = 2193526251;
+
+         select * from cusacc_risk where cus_acc_id =4781921 and ris_ind_typ_id ='limit_reduction';
+
+
+   select * from customer_account where cus_id =21730284 and cus_acc_no = '3205002232';
+
+     select * from cusacc_risk where cus_acc_id = 15731432 and ris_ind_typ_id ='limit_reduction';
+
+  				SELECT
+                      sys_code_value                                       
+                      FROM
+                      system_code_value
+                      WHERE 
+                       sys_cod_id = 'bill_change_stat' 
+
+
+
+                          SELECT
+                      sys_code_value                                       
+                      FROM
+                      system_code_value
+                      WHERE 
+                       sys_cod_id = 'bill_change_stat' 
+					 
+					 
+					 
+select * from CUST_BILL_EXCH where cus_bill_exch_no = 'MJ-13/10/20141';
+
+
+----------------------------------------------------------------------- 27.10 2014
+
+
+			SELECT
+                    cr.cus_ris_id,
+                    cr.cus_acc_id,
+                    cr.ris_ind_typ_id,
+                    cr.risk_indic_value,
+                    cr.risk_reason,
+                    cr.risk_date,  
+                    cr.loan_acc_no,
+                    cr.loan_cus_id,
+                    cr.date_from,
+                    cr.date_until,
+                    cr.eve_id,
+                    cr.use_id,
+                    cr.bank_sign,
+                    cr.user_lock,
+                    cr.limit_date_from,
+                    cr.limit_date_until
+                FROM 
+                    cusacc_risk cr                   
+                WHERE
+                    cr.cus_acc_id = 15731432                  
+               AND   cr.ris_ind_typ_id = 'limit_reduction'       
+                AND '04.11.2014' BETWEEN cr.date_from AND cr.date_until
+                
+                ORDER BY cr.limit_date_from;
+
+--------------------------  azurirati cus_ris_id = 3137871823  i   3137872823
+             
+  update cusacc_risk set risk_date = '14.10.2014' where cus_ris_id = 3137871823;
+
+  commit;
+
+  update cusacc_risk set risk_date = '21.08.2014' where cus_ris_id = 3137872823;
+
+  commit;
+
+-- update CUST_BILL_EXCH set cus_bill_exch_no = 'MJ-07/10/2014-0' where cus_bil_exc_id in (3093938823);
+--------------------------------------------   
+
+
+select * from system_code_value; -- bill_change_stat
+
+select * from system_code_value where sys_cod_id = 'bill_change_stat';
+
+                   select * from system_code_value where sys_cod_id = 'pay_method'; -- sys_code_value 1 ili 2 
+                   
+                     select * from system_code_value where sys_cod_id = 'pay_method' and sys_code_value = '1'; -- sys_code_value 1 ili 2 
+
+
+                      SELECT
+                      sys_code_desc                
+                  FROM
+                    system_code_value                
+                  WHERE
+                    sys_cod_id = 'pay_method'
+                  AND sys_code_value = '1';
+
+    ---------------------------------------------------------------------------------------
+
+                  select * from CUST_BILL_EXCH where payment_method = '1'; 
+
+
+
+---------------------------------------------------------------
+
+
+
+   					 SELECT
+                          cbe.cus_bil_exc_id,
+                          cbe.cus_bill_exch_no,
+                          cbe.cus_bill_ext_no,
+                          cbe.payer_reg_no,
+                          cbe.payer_name,
+                          cbe.payer_tax_number,
+                          cbe.ben_iban,
+                          cbe.ben_name,
+                          cbe.ben_address,
+                          cbe.amount,                   
+                          cbe.maturity_date, 
+                          cbe.status, 
+                          cbe.paid_amount,
+                          cbe.order_trn, 
+                          cbe.payment_date,
+                          cbe.order_trn_last,
+                          cbe.payment_date_last,
+                          cbe.cur_id,
+                          cur.code_num
+                      FROM
+                          CUST_BILL_EXCH cbe
+                          LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id                              
+                     AND   (cbe.STATUS = 'N')     
+
+
+
+                     

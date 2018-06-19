@@ -1,0 +1,58 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+ 			SELECT
+                    term_date_until
+                FROM
+                    cusacc_term
+                WHERE 
+                    cus_acc_id = 882525933
+                    AND '2014-03-12' BETWEEN date_from AND date_until
+                    AND p_contract_id = 'utiliz_period'
+
+
+                    SELECT
+                    term_date_until
+                FROM
+                    cusacc_term
+                WHERE 
+                    --cus_acc_id = 882525933
+                     '2014-03-12' BETWEEN date_from AND date_until
+                    AND p_contract_id = 'utiliz_period'
+
+    ------------------------
+
+
+    select * from customer_account where BAN_PRO_TYP_ID = 2245837003;
+
+    select * from bank_product_type where ban_pro_typ_id = 2245837003;  -- kunski okvir 
+
+  select * from bank_product_type  where ban_pro_typ_id = 2245840003; -- devizni okvir
+
+--1 dohvat okvira
+select * from customer_account where BAN_PRO_TYP_ID IN( 2245837003, 2245840003) ;
+
+---- problematicni raèun
+select * from customer_account where     cus_acc_id = 882525933;
+
+select * from cusacc_term where  cus_acc_id = 882525933 and  p_contract_id = 'utiliz_period';
+
+select * from currency where code_num = '978'; -- euro
+
+------------ testni raèun 
+select * from customer_account where  cus_acc_no = '6000001255' ;  
+
+select cus_acc_id from customer_account where  cus_acc_no = '6000001255' ;  
+
+ 			SELECT
+                    AMOUNT              
+                FROM
+                    CUSACC_AMOUNT
+                WHERE
+                    CUS_ACC_ID = 286249022
+                    AND CUR_ID = 64999
+                    AND P_CONTRACT_ID = 'frame_amount'
+                    AND DATE_FROM <= '2014-03-12'
+                    AND DATE_UNTIL >= '2014-03-12'
+------------------------ dohvatim 600000 - za testiranje na SIDEV-u
+
+    

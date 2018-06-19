@@ -1,0 +1,37 @@
+package hr.vestigo.modules.collateral.jcics.co39;
+
+import java.math.BigDecimal;
+
+
+/**
+ * mapping getCollateralVehicleByNaturalKey
+ *
+*/
+public class CO397 extends AbstractLoxonRunnerData{
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co39/CO397.sqlj,v 1.5 2008/05/21 11:39:09 hraamh Exp $";
+	
+
+	public CO397(DeclCO39 decl){
+		this.decl=decl;
+	}
+	
+	public void run() throws Exception{
+		String veh_vin_num=decl.getcollateralvehiclebynaturalkey.chasisNumber.trim();	
+		BigDecimal col_hea_id=null;
+		
+		#sql[connCtx]{
+			select  col_hea_id
+			into :(col_hea_id)
+			from coll_vehicle
+			where veh_vin_num=:(veh_vin_num)
+		};
+		
+		getRunner().gatherByColHeaId(col_hea_id);
+	}
+	
+	protected  DeclLoxonMappingInterface getMappingDecl(){
+		return (decl.getcollateralvehiclebynaturalkey);
+	}
+	
+}

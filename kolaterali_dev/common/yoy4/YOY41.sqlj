@@ -1,0 +1,233 @@
+package hr.vestigo.modules.collateral.common.yoy4;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+import java.math.BigDecimal;
+import java.sql.*;
+ 
+
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+  
+   
+public class YOY41 {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy4/YOY41.sqlj,v 1.4 2006/07/11 09:39:56 hramkr Exp $";
+
+	private String bank_sign=null;
+	private ConnCtx ctx=null;
+	private RemoteContext rc=null;
+	private CollHfPriorInsertData hfd=null;
+	private YOY00 idGen=null;
+
+	 
+	Date date=null;
+
+	public YOY41(RemoteContext rc, CollHfPriorInsertData hfd) throws Exception {
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc=rc;
+		this.hfd=hfd;
+		this.idGen=new YOY00(rc);
+	}
+	 
+	public BigDecimal insertIntoCollHfPrior() throws Exception{
+		rc.debug("INSERT INTO COLL_HF_PRIOR");
+
+// generirani id		
+		hfd.COLL_HF_PRIOR_ID=getId();
+
+		rc.debug("hfd.COLL_HF_PRIOR_ID : "+hfd.COLL_HF_PRIOR_ID);
+			
+		getDateTime();
+		
+		hfd.HF_AVAIL_DAT = hfd.CURR_DATE;	// current_date		
+		hfd.HF_PRIORITY =  "1";
+
+		getOtherData();
+		
+		rc.debug ( ".........COL_HF_PRIOR_ID    " + hfd.COLL_HF_PRIOR_ID);												                                                
+		rc.debug ( ".........HF_TABLE_ID   " + hfd.HF_TABLE_ID);  
+		rc.debug ( ".........HF_REF_ID  " + hfd.HF_REF_ID); 
+
+		rc.debug ( ".........HF_COLL_HEAD_ID" + hfd.HF_COLL_HEAD_ID);                    		
+		rc.debug ( ".........HF_OWN_CUS_ID" + hfd.HF_OWN_CUS_ID);                   
+		rc.debug ( ".........HF_REGISTER_NO" +  hfd.HF_REGISTER_NO);                
+		rc.debug ( ".........HF_OWN_CODE" + hfd.HF_OWN_CODE);                   
+		rc.debug ( ".........HF_OWN_LNAME" + hfd.HF_OWN_LNAME);                   
+						 
+		rc.debug ( ".........HF_HFC_ID" + hfd.HF_HFC_ID);                   		
+		rc.debug ( ".........HF_PRIORITY" + hfd.HF_PRIORITY);
+
+		rc.debug ( ".........HF_REC_LOP_ID" + hfd.HF_REC_LOP_ID); 
+
+		rc.debug ( ".........HF_AMOUNT" + hfd.HF_AMOUNT);                             		                                      
+	                      		                                      
+		rc.debug ( ".........HF_CUR_ID" +  hfd.HF_CUR_ID);                         		                                      
+	               	                            
+
+		rc.debug ( ".........HF_DRAW_AMO" + hfd.HF_DRAW_AMO);                   	                         
+		rc.debug ( ".........HF_AVAIL_AMO" +  hfd.HF_AVAIL_AMO);     
+		rc.debug ( ".........HF_AVAIL_DAT" +  hfd.HF_AVAIL_DAT);		
+		
+		rc.debug ( ".........DRAW_BAMO" + hfd.DRAW_BAMO);                   	                         
+		rc.debug ( ".........AVAIL_BAMO" +  hfd.AVAIL_BAMO); 
+		rc.debug ( ".........DRAW_BAMO_REF" + hfd.DRAW_BAMO_REF);                   	                         
+		rc.debug ( ".........AVAIL_BAMO_REF" +  hfd.AVAIL_BAMO_REF); 		
+		rc.debug ( ".........AVAIL_BDAT" +  hfd.HF_AVAIL_DAT);	 
+
+		rc.debug ( ".........HF_DATE_HFC_FROM" +  hfd.HF_DATE_HFC_FROM); 		
+		rc.debug ( ".........HF_DATE_HFC_UNTIL" +  hfd.HF_DATE_HFC_UNTIL);	 		
+		rc.debug ( ".........HF_STATUS" + hfd.HF_STATUS);                      		                          
+		rc.debug ( ".........HF_SPEC_STAT" + hfd.HF_SPEC_STAT);
+		rc.debug ( ".........HF_DATE_FROM" +  hfd.HF_DATE_FROM); 		
+		rc.debug ( ".........HF_DATE_UNTIL" +  hfd.HF_DATE_UNTIL);	 			
+		rc.debug ( ".........USE_OPEN_ID" + hfd.USE_OPEN_ID);
+		rc.debug ( ".........USE_ID" + hfd.USE_ID);
+		rc.debug ( ".........OPENING_TS" + hfd.OPENING_TS);
+		rc.debug ( ".........USER_LOCK" + hfd.USER_LOCK);
+		rc.debug ( ".........EVE_ID" + hfd.EVE_ID);
+		rc.debug ( ".........(rc.getBankSign())" + bank_sign);	
+		
+	
+		
+	        //INSERT INTO coll_hf_prior	
+			try{	
+				
+				#sql [ctx]{
+					INSERT INTO coll_hf_prior
+							(	
+							 	coll_hf_prior_id , 
+								hf_table_id ,      
+								hf_ref_id ,    
+								hf_coll_head_id, 
+								hf_own_cus_id ,    
+								hf_register_no,    
+								hf_own_code,       
+								hf_own_lname,      
+								hf_hfc_id ,        
+								hf_priority ,      
+								hf_rec_lop_id,
+								hf_amount,        
+								hf_cur_id ,
+								hf_draw_amo,
+								hf_avail_amo,
+								hf_avail_dat,
+								draw_bamo,
+								avail_bamo,
+								draw_bamo_ref,
+								avail_bamo_ref,
+								avail_bdat,
+								hf_date_hfc_from ,
+								hf_date_hfc_until,
+								hf_status ,       
+								hf_spec_stat,     
+								hf_date_from ,    
+								hf_date_until,    
+								use_open_id,      
+								use_id ,          
+								opening_ts,       
+								user_lock ,        
+								eve_id ,          
+								bank_sign )        
+
+					VALUES( 		:(hfd.COLL_HF_PRIOR_ID),   
+									:(hfd.HF_TABLE_ID),           
+									:(hfd.HF_REF_ID),
+									:(hfd.HF_COLL_HEAD_ID),
+									:(hfd.HF_OWN_CUS_ID),
+									:(hfd.HF_REGISTER_NO),            
+             						:(hfd.HF_OWN_CODE),  
+                  					:(hfd.HF_OWN_LNAME),         
+									:(hfd.HF_HFC_ID),
+									:(hfd.HF_PRIORITY),  
+               						:(hfd.HF_REC_LOP_ID), 
+               						:(hfd.HF_AMOUNT),  
+                  					:(hfd.HF_CUR_ID),  
+               						:(hfd.HF_DRAW_AMO),  
+                  					:(hfd.HF_AVAIL_AMO),  
+                 					:(hfd.HF_AVAIL_DAT),  
+        							:(hfd.DRAW_BAMO),
+               						:(hfd.AVAIL_BAMO),
+               						:(hfd.DRAW_BAMO_REF),
+               						:(hfd.AVAIL_BAMO_REF),         
+									:(hfd.AVAIL_BDAT), 
+									:(hfd.HF_DATE_HFC_FROM), 
+									:(hfd.HF_DATE_HFC_UNTIL),
+									:(hfd.HF_STATUS),
+									:(hfd.HF_SPEC_STAT),
+									:(hfd.HF_DATE_FROM),
+									:(hfd.HF_DATE_UNTIL),
+									:(hfd.USE_OPEN_ID),
+									:(hfd.USE_ID),  
+									:(hfd.OPENING_TS),
+									:(hfd.USER_LOCK),
+									:(hfd.EVE_ID),
+									:(bank_sign) )                        	
+					};
+
+				}catch(java.sql.SQLException se){
+						rc.debug ( "......YOY41.sqlj insert into coll_hf_prior SQL ErrorCode " + se.getErrorCode());
+						rc.debug ( "......YOY41.sqlj insert into coll_hf_prior SQL SQLState " + se.getSQLState());
+						rc.debug ( "......YOY41.sqlj insert into coll_hf_prior SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction YOY41: Error inserting coll_hf_prior! ","err411a", null);
+
+				}
+			 
+			return hfd.HF_COLL_HEAD_ID;
+	
+	}
+	
+	private BigDecimal getId() throws Exception{
+		return idGen.getNewId();
+		
+	}
+
+
+	private void getDateTime() throws Exception {
+		#sql[ctx] {
+			SELECT current date, current timestamp 
+			INTO :(hfd.CURR_DATE), :(hfd.CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1
+		};		
+
+	}
+	
+
+	private void getOtherData () throws Exception {
+//		 punim HF_TABLE_ID		
+		
+	    #sql[ctx] {
+			SELECT sys_cod_val_id
+			INTO :(hfd.HF_TABLE_ID)
+			FROM SYSTEM_CODE_VALUE
+			WHERE SYS_COD_ID='clt_coll_table' and SYS_CODE_VALUE = :(hfd.table_id)
+		};	
+
+//	punim komitenta u ciju je korist upisana hipoteka		
+	    #sql[ctx] {
+			SELECT ban_id, code, register_no, name
+			INTO :(hfd.HF_OWN_CUS_ID), :(hfd.HF_OWN_CODE), :(hfd.HF_REGISTER_NO), :(hfd.HF_OWN_LNAME)
+			FROM BANK
+			WHERE register_no = '910000'
+		};	 
+		
+//	punim vrijednost za vrstu tereta  HF_HFC_ID	
+	   #sql[ctx] {
+			SELECT sys_cod_val_id
+			INTO :(hfd.HF_HFC_ID)
+			FROM SYSTEM_CODE_VALUE
+			WHERE SYS_COD_ID='clt_coll_hypo_fidu' and SYS_CODE_VALUE = 'P'
+		};			
+
+//		 punim vrijednost za HF_REC_LOP_ID, JE LI UPISANO PRAVO	
+	   #sql[ctx] {
+			SELECT sys_cod_val_id
+				INTO :(hfd.HF_REC_LOP_ID)
+				FROM SYSTEM_CODE_VALUE
+			WHERE SYS_COD_ID='clt_hfreclop' and SYS_CODE_VALUE = 'R'
+		};							
+		
+	}
+	
+}
+

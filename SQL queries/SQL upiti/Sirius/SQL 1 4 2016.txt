@@ -1,0 +1,292 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from account;
+
+   							SELECT  *
+                         		 FROM 
+                                cusacc_balance cb
+
+		-- polje 26
+           select * from   ban_pro_amo_type where amo_type =  '641' and ban_pro_typ_id = 6561936704;       -- pro_typ_id =    29369005   
+
+            select * from procedure_type where  pro_typ_id =    29369005  ; -- 017 Redovna kamata po dozvoljenom prekoračenju u kunama
+
+		select * from   ban_pro_amo_type where amo_type =  'K49' and ban_pro_typ_id = 6561936704;   -- pro_typ_id =  938220335;
+
+		 select * from procedure_type where  pro_typ_id =    938220335  ;
+		
+   -- polje 27
+			 select * from   ban_pro_amo_type where amo_type =  'K44' and ban_pro_typ_id = 6561936704; 
+
+			  select * from procedure_type where  pro_typ_id =    618082335  ; -- K44 Izravno isključenje zatezne kamate na kamatnu naknadu
+
+			   select * from   ban_pro_amo_type where amo_type =  'K07' and ban_pro_typ_id = 6561936704; 
+
+				  select * from procedure_type where  pro_typ_id =    243160335  ;	 -- K07 Zatezna kamata u kunama na kamatnu naknadu
+			   
+				 select * from   ban_pro_amo_type where amo_type =  '524' and ban_pro_typ_id = 6561936704;
+			  
+   					 select * from procedure_type where  pro_typ_id =  41999;
+
+			-- polje 28
+
+			select * from   ban_pro_amo_type where amo_type =  'K41' and ban_pro_typ_id = 6561936704; 
+   					 
+                   select * from procedure_type where  pro_typ_id =    243162335  ; 
+
+
+                   select * from   ban_pro_amo_type where amo_type =  'K52' and ban_pro_typ_id = 6561936704; 
+
+                    select * from procedure_type where  pro_typ_id =    938223335  ; 
+
+			-- polje 29
+
+			select * from   ban_pro_amo_type where amo_type =  'F22' and ban_pro_typ_id = 6561936704;  
+
+			 select * from procedure_type where  pro_typ_id =    31598005  ; -- 040
+
+			 select * from   ban_pro_amo_type where amo_type =  'F20' and ban_pro_typ_id = 6561936704;  
+
+			  select * from procedure_type where  pro_typ_id =    31598005  ; -- 040
+
+			   select * from   ban_pro_amo_type where amo_type =  'K03' and ban_pro_typ_id = 6561936704;  
+
+			     select * from procedure_type where  pro_typ_id =    243159335  ; -- k03
+
+
+			-- polje 31   PRO_TYP_ID_WO_PRINCIPAL_M01
+
+			select * from   ban_pro_amo_type where amo_type =  '022' and ban_pro_typ_id = 6561936704; 
+
+			  select * from procedure_type where  pro_typ_id =    3850368797  ; -- M02  Glavnica računa prenešenog na WorkOut
+
+
+			  -- polje 32 
+
+			  select * from   ban_pro_amo_type where amo_type =  '024' and ban_pro_typ_id = 6561936704; 
+
+			    select * from procedure_type where  pro_typ_id = 956406335; -- 046  Redovna kamata po dozvoljenom prekoračenju u kunama - WO
+
+			    select * from   ban_pro_amo_type where amo_type =  '030' and ban_pro_typ_id = 6561936704; 
+
+
+			    	SELECT 
+			    	cb.account,
+			    	at.amo_type ,
+			    	at.amo_type_name ,
+			    	ca.cus_acc_no
+       			
+       
+        FROM cusacc_balance_last cb, customer_account ca, currency cur, amount_type at, customer cu, bank_product_type bpt 
+        WHERE cb.cus_acc_id = ca.cus_acc_id 
+        AND cb.cur_id = cur.cur_id 
+        AND cb.amo_type = at.amo_type 
+        AND cb.cus_id = cu.cus_id 
+        AND ca.ban_pro_typ_id = bpt.ban_pro_typ_id 
+        AND cu.register_no = '8322'
+
+
+        SELECT cb.account, at.amo_type, at.amo_type_name, ca.cus_acc_no, 
+                    cur.code_char, SUM(cb.debit_total) as debitTotal,  
+                    SUM(cb.credit_total) as creditTotal, SUM(cb.balance) as balance 
+                    FROM cusacc_balance cb, customer_account ca, currency cur, amount_type at, customer cu 
+                    WHERE cb.cus_acc_id = ca.cus_acc_id 
+                    AND cb.cur_id = cur.cur_id 
+                    AND cb.amo_type = at.amo_type 
+                    AND cb.cus_id = cu.cus_id 
+                   -- AND (cb.account = ?) 
+                   -- AND (at.amo_type = ?) 
+                    AND (ca.cus_acc_no = '1135000123') 
+                    AND (cur.code_char = ?) 
+                    AND cb.bank_sign = ? group by cb.account, at.amo_type, at.amo_type_name, ca.cus_acc_no, cur.code_char, cb.balance_date order by cb.account 
+
+
+				SELECT cb.account, at.amo_type, at.amo_type_name, ca.cus_acc_no, cur.code_char, SUM(cb.debit_total)
+				
+                    FROM cusacc_balance cb, customer_account ca, currency cur, amount_type at, customer cu 
+				wHERE
+				cb.cus_acc_id = ca.cus_acc_id
+				AND cb.cur_id = cur.cur_id
+				AND cb.amo_type = at.amo_type
+				AND cb.cus_id = cu.cus_id
+				and ca.cus_acc_no = '1135000123' 
+        
+        AND (? = '0' OR bpt.code = ?) 
+        AND (? = '0' OR ca.cus_acc_no = '1135000123') 
+
+			    select * from procedure_type where  pro_typ_id = 956412335; -- 382 Izravno isključena dospjela aktivna kamata - WO
+
+
+			      -- polje 33
+
+			  select * from   ban_pro_amo_type where amo_type =  '025' and ban_pro_typ_id = 6561936704; 
+
+			    select * from procedure_type where  pro_typ_id = 956407335; -- 047 Zatezna kamata u kunama na kamatnu naknadu - WO
+
+
+			    ----
+
+			    
+		select * from customer_account where cus_acc_no = '1135001621'; -- cus_acc_id = 182108326
+
+		select * from procedure_type pt;
+
+		     SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock,
+                                pt.pro_typ_code,
+                                pt.name
+                          FROM 
+                                cusacc_balance cb, procedure_type pt
+                          WHERE  
+                                cb.cus_acc_id =  182108326
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '02.04.2016'
+                                                    )                                                   
+                          AND CB.PRO_TYP_ID = pt.PRO_TYP_ID with ur;
+
+
+			-- test za polje 33
+
+			select * from amount_type
+
+			cb.balance    ---  SELECT cb.account, ca.cus_acc_no, at.amo_type, at.amo_type_name, cb.debit_total, cb.credit_total , cb.balance
+
+
+			      SELECT cb.account, ca.cus_acc_no, at.amo_type, at.amo_type_name, cb.debit_total, cb.credit_total , cb.balance
+				
+                    FROM cusacc_balance cb, customer_account ca, currency cur, amount_type at, customer cu 
+				wHERE
+				cb.cus_acc_id = ca.cus_acc_id
+				AND cb.cur_id = cur.cur_id
+				AND cb.amo_type = at.amo_type
+				AND cb.cus_id = cu.cus_id
+				and ca.cus_acc_no = '1135000123' 
+				
+				
+				
+			------------------------------------------------
+
+
+
+SET CURRENT_SCHEMA = 'SIP'
+
+select * from PROCEDURE_TYPE where pro_typ_id = 29368005
+
+select * from PROCEDURE_TYPE where pro_typ_id = 29369005
+
+
+ select * from PROCEDURE_TYPE where PRO_TYP_ID IN (956405335,956407335,956408335,956409335,956410335,956411335)
+
+ select * FROM ban_pro_amo_type where amo_type = '025'
+
+ 
+  select * from PROCEDURE_TYPE where PRO_TYP_ID IN (956407335)
+
+
+  select * from  acu  1104750406
+
+
+  			 SELECT SUM(REST_DUE_DEB_AMO)
+                     
+                     FROM DUE_TERM_TABLE
+                     WHERE CUS_ACC_ID = 92993277522
+                 AND REST_DUE_DEB_AMO !=0
+                 AND VALUE_DATE < current date
+                 AND PRO_TYP_ID in  (956406335,956412335)
+
+  -- test za polje 33
+  					1105436983
+
+  					select * from customer_account where cus_acc_no = '1105436983'; -- 956407335
+
+		-----------   1 --- trenutno
+
+  			 SELECT SUM(REST_DUE_DEB_AMO)
+                 
+                     FROM DUE_TERM_TABLE
+                     WHERE CUS_ACC_ID = 92993277522
+                 AND REST_DUE_DEB_AMO !=0
+                 AND VALUE_DATE < current date
+                 AND PRO_TYP_ID IN (956407335) with ur;
+
+                    -- polje 33
+
+			  select * from   ban_pro_amo_type where amo_type =  '023' and ban_pro_typ_id = 6561936704; 
+
+			    select * from procedure_type where  pro_typ_id = 956405335; -- 045 Zatezna kamata u kunama - WO
+
+
+                 -- 58,111.77
+
+                 select * from procedure_type where PRO_TYP_ID IN (956405335,956407335,956408335,956409335,956410335,956411335) with ur;
+
+			 SELECT SUM(REST_DUE_DEB_AMO)
+                 
+                     FROM DUE_TERM_TABLE
+                     WHERE CUS_ACC_ID = 92993277522
+                 AND REST_DUE_DEB_AMO !=0
+                 AND VALUE_DATE < current date
+                 AND PRO_TYP_ID IN (956405335,956408335 ) with ur; -- 33,221.5
+
+                  SELECT *
+                 
+                     FROM DUE_TERM_TABLE
+                     WHERE CUS_ACC_ID = 92993277522
+                 AND REST_DUE_DEB_AMO !=0
+                 AND VALUE_DATE < current date
+                 AND PRO_TYP_ID IN (956405335,956408335 )  order by recording_time desc  with ur; -- 33,221.5
+
+                 
+
+			select * from DUE_TERM_TABLE where CUS_ACC_ID = 92993277522  AND PRO_TYP_ID IN (956405335) order by recording_time desc with ur;
+
+                 
+
+
+                  SELECT SUM(REST_DUE_DEB_AMO)
+                      
+                     FROM DUE_TERM_TABLE
+                     WHERE CUS_ACC_ID = 956407335
+                 AND REST_DUE_DEB_AMO !=0
+                 AND VALUE_DATE < current date
+                 AND PRO_TYP_ID in  (956406335,956412335) with ur;
+
+			
+                  SELECT SUM(REST_DUE_DEB_AMO)
+                      
+                     FROM DUE_TERM_TABLE
+                     WHERE CUS_ACC_ID = 956407335
+                 AND REST_DUE_DEB_AMO !=0
+  				AND PRO_TYP_ID in  (956406335,956412335) with ur;
+
+
+
+  				   SELECT cb.account, ca.cus_acc_no, at.amo_type, at.amo_type_name, cb.debit_total, cb.credit_total,  cb.balance
+				
+                    FROM cusacc_balance cb, customer_account ca, currency cur, amount_type at, customer cu 
+				wHERE
+				cb.cus_acc_id = ca.cus_acc_id
+				AND cb.cur_id = cur.cur_id
+				AND cb.amo_type = at.amo_type
+				AND cb.cus_id = cu.cus_id
+				and ca.cus_acc_no = '1105436983' 
+
+
+ 			
+				
+				
+				
+				
+				
+				
+				
+		

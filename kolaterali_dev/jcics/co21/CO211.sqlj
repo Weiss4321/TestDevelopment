@@ -1,0 +1,801 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+import java.math.*;
+import java.util.*;
+
+import hr.vestigo.framework.common.CheckBoxData;
+import hr.vestigo.framework.common.celltable.NamedRowData;
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import sqlj.runtime.Scrollable;
+
+#sql iterator Iter1 implements sqlj.runtime.Scrollable (
+					BigDecimal col_hea_id,
+					BigDecimal col_type_id,
+					String workflow_indic,
+					String collateral_status,  
+					String col_num,
+					BigDecimal real_est_nm_cur_id,
+					String code_char,
+					BigDecimal real_est_nomi_valu,
+					String basic_data_status, 
+					String mortgage_status,
+					String cover_indic,
+					String coll_data_status,
+					BigDecimal use_id,
+					String user_name,
+					BigDecimal col_cat_id,
+					String screen_name,
+					String code,
+					Timestamp user_lock,
+					String financial_flag,
+                    String coll_deact_indic
+					);
+  
+public class CO211 extends SQLJScrollableRemoteTransaction  {
+	
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO211.sqlj,v 1.24 2017/03/24 09:55:37 hrazst Exp $";
+	public DeclCO21 d=null;
+	private Iter1 iter=null;
+	
+	public CO211 (DeclCO21 d) {
+		this.d = d;  
+	}
+         
+	public void executeScrollable(TransactionContext tc) throws Exception {
+		String screen_entry_param=d.ScreenEntryParam;
+		String phase="";
+		String proc_status="";
+		Vector vec=new Vector();
+		
+		BigDecimal col_cat_id = null;
+ 		
+		int i=0;
+		int j=screen_entry_param.indexOf(".");
+		int k=0;
+		tc.info("screen_entry_param : "+screen_entry_param);
+		while(j>0){
+			vec.add(k++, screen_entry_param.substring(i,j));
+			screen_entry_param=screen_entry_param.substring(j+1);
+			tc.debug("screen_entry_param : "+screen_entry_param);
+			j=screen_entry_param.indexOf(".");
+		}
+	
+		if(vec==null) throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+		if(vec.elementAt(0)!=null && !((String)vec.elementAt(0)).trim().equals("")) phase=(String)vec.elementAt(0);
+		else throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+		if(vec.elementAt(1)!=null && !((String)vec.elementAt(1)).trim().equals("")) proc_status=(String)vec.elementAt(1);
+		else throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+
+		tc.info("phase : "+phase);
+		tc.info("proc_status : "+proc_status);
+		
+		setLevel(d.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx connCtx0 = tc.getContext();
+		
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+  		if(proc_status!=null) {
+  			if (proc_status.trim().equals("4")){
+  				tc.info("tu sam lista ponistenih-svi.... proc_status : "+proc_status);
+  				// lista ponistenih, jedna za banku  				
+  				#sql [connCtx0] iter = {
+										SELECT
+ 												ch.col_hea_id,
+												ch.col_type_id,
+												ch.workflow_indic,
+  												ch.collateral_status,
+												ch.col_num,
+												ch.real_est_nm_cur_id,
+												cu.code_char,
+												ch.real_est_nomi_valu,
+												ch.basic_data_status,
+												ch.mortgage_status,
+												ch.cover_indic,
+  												ch.coll_data_status,
+												ch.use_id,
+												au.user_name,
+  												ch.col_cat_id,
+  												clc.screen_name,
+  												clc.code,
+  												ch.user_lock,
+  												ch.financial_flag,
+  				                                clc.coll_deact_indic
+											FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch
+  											LEFT OUTER JOIN
+												currency cu 
+											ON
+												ch.real_est_nm_cur_id = cu.cur_id
+ 											WHERE
+  												ch.collateral_status = :(proc_status)
+ 											AND
+												ch.use_id = au.use_id
+ 											AND 
+  												ch.col_cat_id = clc.col_cat_id
+ 											ORDER BY
+												ch.workflow_indic desc, ch.col_hea_id desc
+  				};
+  				//lista ponistenih po org.jed. - treba doadati ?			
+  			}else if (proc_status.trim().equals("0")) {
+  			    // referentska lista za unos, po referentu  			  
+ 				tc.info("tu sam referentska lista.... proc_status : "+proc_status); 			
+				tc.info("tu sam .... proc_status : "+d.use_id); 			
+				tc.info("tu sam .... proc_status : "+d.org_uni_id); 			
+			
+				#sql [connCtx0] iter = {
+										SELECT
+ 												ch.col_hea_id,
+												ch.col_type_id,
+												ch.workflow_indic,
+												ch.collateral_status,
+												ch.col_num,
+												ch.real_est_nm_cur_id,
+												cu.code_char,
+												ch.real_est_nomi_valu,
+												ch.basic_data_status,
+												ch.mortgage_status,
+												ch.cover_indic,
+ 												ch.coll_data_status,
+												ch.use_id,
+												au.user_name,
+  												ch.col_cat_id,
+  												clc.screen_name,
+  												clc.code, 
+												ch.user_lock,
+ 												ch.financial_flag,
+                                                clc.coll_deact_indic
+											FROM app_user au ,
+												 coll_category clc,	
+												 coll_head ch
+  											LEFT OUTER JOIN
+												currency cu 
+											ON
+												ch.real_est_nm_cur_id = cu.cur_id
+ 											WHERE
+												ch.collateral_status = :(proc_status)
+  											AND
+  												ch.use_id = :(d.use_id)
+ 											AND
+												ch.org_uni_id = :(d.org_uni_id) 
+  											AND
+												ch.use_id = au.use_id
+   											AND 
+  												ch.col_cat_id = clc.col_cat_id
+ 											ORDER BY
+				                                3 desc
+  					};
+  			} else if (proc_status.trim().equals("1")) { 
+  			    //verifikacijska lista, po organizacijskoj jedinici  			  
+ 				tc.info("tu sam .verifikacijska lista, po org.jedinici... proc_status : "+proc_status);  			  			 
+  						
+  							#sql [connCtx0] iter = {
+  													SELECT
+  			 												ch.col_hea_id,
+  															ch.col_type_id,
+  															ch.workflow_indic,
+															ch.collateral_status,
+  															ch.col_num,
+  															ch.real_est_nm_cur_id,
+  															cu.code_char,
+  															ch.real_est_nomi_valu,
+  															ch.basic_data_status,
+  															ch.mortgage_status,
+  															ch.cover_indic,
+  			 												ch.coll_data_status,
+  															ch.use_id,
+  															au.user_name,
+  			  												ch.col_cat_id,
+  			  												clc.screen_name,
+  			  												clc.code,
+ 															ch.user_lock,
+ 															ch.financial_flag,
+                                                            clc.coll_deact_indic
+  														FROM app_user au ,
+  															 coll_category clc,	
+  															 coll_head ch
+  			  											LEFT OUTER JOIN
+  															currency cu 
+  														ON
+  															ch.real_est_nm_cur_id = cu.cur_id
+  			 											WHERE
+  															ch.collateral_status = :(proc_status)
+  			 											AND
+  															ch.org_uni_id = :(d.org_uni_id) 
+  			  											AND
+  															ch.use_id = au.use_id
+  			   											AND 
+  			  												ch.col_cat_id = clc.col_cat_id
+  			 											ORDER BY
+                                                            3 desc
+
+  			  					};  			  				  			
+  		} else if (proc_status.trim().equals("5")) {
+  		    // referentska lista odbijenih  				
+ 				tc.info("tu sam ref.lista odbijenih.... proc_status : "+proc_status);  				 
+				#sql [connCtx0] iter = {
+										SELECT
+												ch.col_hea_id,
+  												ch.col_type_id,
+												ch.workflow_indic,
+												ch.collateral_status,
+												ch.col_num,
+												ch.real_est_nm_cur_id,
+												cu.code_char,
+												ch.real_est_nomi_valu,
+												ch.basic_data_status,
+												ch.mortgage_status,
+												ch.cover_indic,
+												ch.coll_data_status,
+												ch.use_id,
+												au.user_name,
+												ch.col_cat_id,
+												clc.screen_name,
+												clc.code,
+ 												ch.user_lock,
+ 												ch.financial_flag,
+                                                clc.coll_deact_indic
+											FROM app_user au ,
+												 coll_category clc,		
+												 coll_head ch
+											LEFT OUTER JOIN
+												 currency cu 
+											ON
+												ch.real_est_nm_cur_id = cu.cur_id
+											WHERE
+												ch.collateral_status = :(proc_status)
+  											AND
+  												ch.use_id = :(d.use_id)
+ 											AND
+												ch.org_uni_id = :(d.org_uni_id) 
+  											AND
+												ch.use_id = au.use_id
+   											AND 
+  												ch.col_cat_id = clc.col_cat_id
+ 											ORDER BY
+												ch.workflow_indic desc, ch.col_hea_id asc
+  						}; 		
+ 			//lista odbijenih po org. jed 
+ 			//lista odbijenih jedna za banku 	
+ 		} else if (proc_status.trim().equals("D")) {
+ 			proc_status = "5";
+ 			//lista odbijenih jedna za banku 					
+ 		 				tc.info("tu sam lista odbijenih jedna za banku 	.... proc_status : "+proc_status);  				 
+ 						#sql [connCtx0] iter = {
+ 												SELECT
+ 														ch.col_hea_id,
+ 		  												ch.col_type_id,
+ 														ch.workflow_indic,
+														ch.collateral_status,
+ 														ch.col_num,
+ 														ch.real_est_nm_cur_id,
+ 														cu.code_char,
+ 														ch.real_est_nomi_valu,
+ 														ch.basic_data_status,
+ 														ch.mortgage_status,
+ 														ch.cover_indic,
+ 														ch.coll_data_status,
+ 														ch.use_id,
+ 														au.user_name,
+ 														ch.col_cat_id,
+ 														clc.screen_name,
+ 														clc.code,
+ 		 												ch.user_lock,
+ 														ch.financial_flag,
+                                                        clc.coll_deact_indic	
+ 													FROM app_user au ,
+ 														 coll_category clc,		
+ 														 coll_head ch
+ 													LEFT OUTER JOIN
+ 														 currency cu 
+ 													ON
+ 														ch.real_est_nm_cur_id = cu.cur_id
+ 													WHERE
+ 														ch.collateral_status = :(proc_status)
+ 		  											AND
+ 														ch.use_id = au.use_id
+ 		   											AND 
+ 		  												ch.col_cat_id = clc.col_cat_id
+ 		 											ORDER BY
+ 														ch.workflow_indic desc, ch.col_hea_id asc
+ 		  						}; 	 				
+  			} else if (proc_status.trim().equals("2")) {
+  			    // autorizacijska lista - jedna za banku  		
+ 				tc.info("tu sam ..autorizacijska lista - jedna za banku .. proc_status : "+proc_status);  	 
+						#sql [connCtx0] iter = {
+												SELECT
+		 												ch.col_hea_id,
+														ch.col_type_id,
+														ch.workflow_indic,
+														ch.collateral_status,
+														ch.col_num,
+														ch.real_est_nm_cur_id,
+														cu.code_char,
+														ch.real_est_nomi_valu,
+														ch.basic_data_status,
+														ch.mortgage_status,
+														ch.cover_indic,
+		 												ch.coll_data_status,
+														ch.use_id,
+														au.user_name,
+		  												ch.col_cat_id,
+		  												clc.screen_name,
+		  												clc.code,
+ 														ch.user_lock,
+ 														ch.financial_flag,
+                                                        clc.coll_deact_indic
+													FROM app_user au ,
+														 coll_category clc,	
+														 coll_head ch
+		  											LEFT OUTER JOIN
+														currency cu 
+													ON
+														ch.real_est_nm_cur_id = cu.cur_id
+		 											WHERE
+														ch.collateral_status = :(proc_status)
+		  											AND
+														ch.use_id = au.use_id
+		   											AND 
+		  												ch.col_cat_id = clc.col_cat_id
+		 											ORDER BY
+                                                        3 desc
+										};  						
+ 			} else if (proc_status.trim().equals("3") || proc_status.trim().equals("F") || proc_status.trim().equals("6") || proc_status.trim().equals("I")
+ 			        || proc_status.trim().equals("7")) {
+ 			    //lista slobodnih kolaterala - jedna za banku - 		
+ 			 	tc.info("tu sam .lista aktivnih ili .lista slobodnih ili .lista deaktivacije verifikacije ili .lista neaktivnih ili .lista vlasnistvo banke  - jedna za banku... proc_status : " + proc_status);  			  			 
+ 			 	if(proc_status.trim().equals("I")){
+ 			 	    tc.info("tu sam .lista neaktivnih - jedna za banku... proc_status : " + proc_status + " se mijenja u N");     
+ 			 	    proc_status = "N";    
+ 			 	}
+ 				#sql [connCtx0] iter = {
+ 											SELECT
+ 				 									ch.col_hea_id,
+ 													ch.col_type_id,
+ 													ch.workflow_indic,
+ 													ch.collateral_status,
+ 													ch.col_num,
+ 													ch.real_est_nm_cur_id,
+ 													cu.code_char,
+ 													ch.real_est_nomi_valu,
+ 													ch.basic_data_status,
+ 													ch.mortgage_status,
+ 													ch.cover_indic,
+ 				 									ch.coll_data_status,
+ 													ch.use_id,
+ 													au.user_name,
+ 				  									ch.col_cat_id,
+ 				  									clc.screen_name,
+ 				  									clc.code,
+ 			 										ch.user_lock,
+ 			 										ch.financial_flag,
+                                                    clc.coll_deact_indic
+ 												FROM app_user au ,
+ 													 coll_category clc,	
+ 													 coll_head ch
+ 				  								LEFT OUTER JOIN
+ 													currency cu 
+ 												ON
+ 													ch.real_est_nm_cur_id = cu.cur_id
+ 				 								WHERE
+ 													ch.collateral_status = :(proc_status)
+ 				  								AND
+ 													ch.use_id = au.use_id
+ 				   								AND 
+ 				  									ch.col_cat_id = clc.col_cat_id
+ 				 								ORDER BY
+ 													ch.col_hea_id desc  				
+ 										}; 
+  			} else if (proc_status.trim().equals("N")) {
+  			    //arhivska lista nekretnina - jedna za banku  
+  			 	col_cat_id = new BigDecimal("618223.0");
+  			 	tc.info("tu sam .arhivska lista nekretnina - jedna za banku... proc_status : "+proc_status);  			  			 
+ 				proc_status = "3";  							
+  				#sql [connCtx0] iter = {  
+  											SELECT
+  				 												ch.col_hea_id,
+  																ch.col_type_id,
+  																ch.workflow_indic,
+  																ch.collateral_status,
+  																ch.col_num,
+  																ch.real_est_nm_cur_id,
+  																cu.code_char,
+  																ch.real_est_nomi_valu,
+  																ch.basic_data_status,
+  																ch.mortgage_status,
+  																ch.cover_indic,
+  				 												ch.coll_data_status,
+  																ch.use_id,
+  																au.user_name,
+  				  												ch.col_cat_id,
+  				  												clc.screen_name,
+  				  												clc.code,
+  			 													ch.user_lock,
+  			 													ch.financial_flag,
+                                                                clc.coll_deact_indic
+  															FROM app_user au ,
+  																 coll_category clc,	
+  																 coll_head ch
+  				  											LEFT OUTER JOIN
+  																currency cu 
+  															ON
+  																ch.real_est_nm_cur_id = cu.cur_id
+  				 											WHERE
+  			 													ch.col_cat_id = :(col_cat_id)
+  			 												AND
+  																ch.collateral_status = :(proc_status)
+  				  											AND
+  																ch.use_id = au.use_id
+  				   											AND 
+  				  												ch.col_cat_id = clc.col_cat_id
+  				 											ORDER BY
+  																ch.col_hea_id desc  				
+  				}; 
+ 			} else if (proc_status.trim().equals("S")) {
+ 			    // arhivska lista nekretnina - jedna za banku  
+ 			 
+ 			  	col_cat_id = new BigDecimal("618223.0");
+ 			  	tc.info("tu sam .arhivska lista nekretnina - jedna za banku... proc_status : "+proc_status);  			  			 
+ 			 	proc_status = "F";  							
+ 			  	#sql [connCtx0] iter = {  
+ 			  							SELECT
+ 			 									ch.col_hea_id,
+ 			  									ch.col_type_id,
+ 			  									ch.workflow_indic,
+ 			  									ch.collateral_status,
+ 			  									ch.col_num,
+ 			  									ch.real_est_nm_cur_id,
+ 			  									cu.code_char,
+ 			  									ch.real_est_nomi_valu,
+ 			  									ch.basic_data_status,
+ 			  									ch.mortgage_status,
+ 			  									ch.cover_indic,
+ 			  				 					ch.coll_data_status,
+ 			  									ch.use_id,
+ 			  									au.user_name,
+ 			  				  					ch.col_cat_id,
+ 			  				  					clc.screen_name,
+ 			  				  					clc.code,
+ 			  			 						ch.user_lock,
+ 			  			 						ch.financial_flag,
+                                                clc.coll_deact_indic
+ 			  							FROM app_user au ,
+ 			  								 coll_category clc,	
+ 			  								 coll_head ch
+ 			  				  			LEFT OUTER JOIN
+ 			  								currency cu 
+ 			  							ON
+ 			  								ch.real_est_nm_cur_id = cu.cur_id
+ 			  				 			WHERE
+ 			  			 					ch.col_cat_id = :(col_cat_id)
+ 			  			 				AND
+ 			  								ch.collateral_status = :(proc_status)
+ 			  				  			AND
+ 			  								ch.use_id = au.use_id
+ 			  				   			AND 
+ 			  				  				ch.col_cat_id = clc.col_cat_id
+ 			  				 		ORDER BY
+ 			  								ch.col_hea_id desc  				
+ 			  				};
+  			} else if (proc_status.trim().equals("X")) {
+  			    //lista neaktivnih nekretnina - jedna za banku 
+  			  	col_cat_id = new BigDecimal("618223.0");
+  			  	tc.info("tu sam .lista neaktivnih nekretnina - jedna za banku... proc_status : "+proc_status);  			  			 
+  			 	proc_status = "N";  							
+  			 	#sql [connCtx0] iter = {  
+  			  							SELECT
+  			  				 						ch.col_hea_id,
+  			  										ch.col_type_id,
+  			  										ch.workflow_indic,
+  			  										ch.collateral_status,
+  			  										ch.col_num,
+  			  										ch.real_est_nm_cur_id,
+  			  										cu.code_char,
+  			  										ch.real_est_nomi_valu,
+  			  										ch.basic_data_status,
+  			  										ch.mortgage_status,
+  			  										ch.cover_indic,
+  			  				 						ch.coll_data_status,
+  			  										ch.use_id,
+  			  										au.user_name,
+  			  				  						ch.col_cat_id,
+  			  				  						clc.screen_name,
+  			 										clc.code,
+  			  			 							ch.user_lock,
+  			  			 							ch.financial_flag,
+                                                    clc.coll_deact_indic
+  			  								FROM app_user au ,
+  			  									 coll_category clc,	
+  			  									 coll_head ch
+  			  				  				LEFT OUTER JOIN
+  			  									currency cu 
+  			  								ON
+  			  									ch.real_est_nm_cur_id = cu.cur_id
+  			  				 				WHERE
+  			  			 						ch.col_cat_id = :(col_cat_id)
+  			  			 					AND
+  			  									ch.collateral_status = :(proc_status)
+  			  				  				AND
+  			  									ch.use_id = au.use_id
+  			  				   				AND 
+  			  				  					ch.col_cat_id = clc.col_cat_id
+  			  				 			ORDER BY
+  			  									ch.col_hea_id desc  				
+  			  				};  
+  			} else if (proc_status.trim().equals("M")) {
+  			    //monitoring lista - jedna za banku, svi collaterali koji su u radu, status not in (3,4,5)  		
+ 				tc.info("tu sam .monitoring lista - jedna za banku,... proc_status : "+proc_status);  			  			 
+				
+					#sql [connCtx0] iter = {
+											SELECT
+	 												ch.col_hea_id,
+													ch.col_type_id,
+													ch.workflow_indic,
+													ch.collateral_status,
+													ch.col_num,
+													ch.real_est_nm_cur_id,
+													cu.code_char,
+													ch.real_est_nomi_valu,
+													ch.basic_data_status,
+													ch.mortgage_status,
+													ch.cover_indic,
+	 												ch.coll_data_status,
+													ch.use_id,
+													au.user_name,
+	  												ch.col_cat_id,
+	  												clc.screen_name,
+	  												clc.code,
+ 													ch.user_lock,
+ 													ch.financial_flag,
+                                                    clc.coll_deact_indic
+												FROM app_user au ,
+													 coll_category clc,	
+													 coll_head ch
+	  											LEFT OUTER JOIN
+													currency cu 
+												ON
+													ch.real_est_nm_cur_id = cu.cur_id
+	 											WHERE
+													ch.collateral_status in ('0','1','2')
+	  											AND
+													ch.use_id = au.use_id
+	   											AND 
+	  												ch.col_cat_id = clc.col_cat_id
+	 											ORDER BY
+                                                    3 desc
+			
+									};  				
+  			} else if (proc_status.trim().equals("R")) {
+  			    //monitoring lista nekretnina - jedna za banku, svi kolaterali nekretnine koji su u radu, status not in (3,4,5)  		
+  			 	tc.info("tu sam .monitoring lista nekretnina - jedna za banku,... proc_status : "+proc_status);  			  			 
+  			 	col_cat_id = new BigDecimal("618223.0");
+  				#sql [connCtx0] iter = {
+  										SELECT
+  				 								ch.col_hea_id,
+  												ch.col_type_id,
+  												ch.workflow_indic,
+  												ch.collateral_status,
+  												ch.col_num,
+  												ch.real_est_nm_cur_id,
+  												cu.code_char,
+  												ch.real_est_nomi_valu,
+  												ch.basic_data_status,
+  												ch.mortgage_status,
+  												ch.cover_indic,
+  				 								ch.coll_data_status,
+  												ch.use_id,
+  												au.user_name,
+  				  								ch.col_cat_id,
+  				  								clc.screen_name,
+  				  								clc.code,
+  			 									ch.user_lock,
+  			 									ch.financial_flag,
+                                                clc.coll_deact_indic
+  											FROM app_user au ,
+  												 coll_category clc,	
+  												 coll_head ch
+  				  								LEFT OUTER JOIN
+  												currency cu 
+  												ON
+  												ch.real_est_nm_cur_id = cu.cur_id
+  				 							WHERE
+  			 									ch.col_cat_id = :(col_cat_id)
+  			 								AND
+  												ch.collateral_status in ('0','1','2')
+  				  							AND
+  												ch.use_id = au.use_id
+  				   							AND 
+  				  								ch.col_cat_id = clc.col_cat_id
+  				 							ORDER BY
+                                                3 desc
+		
+  					};  				
+  			} else if (proc_status.trim().equals("K")){
+  			     // arhivska lista - jedna za banku - lista aktivnih         
+                 tc.info("tu sam .lista za KA - jedna za banku... proc_status : "+proc_status);                        
+                 proc_status = "3";
+                     #sql [connCtx0] iter = { 
+                                SELECT distinct
+                                         ch.col_hea_id,
+                                         ch.col_type_id,
+                                         ch.workflow_indic,
+                                         ch.collateral_status,
+                                         ch.col_num,
+                                         ch.real_est_nm_cur_id,
+                                         cu.code_char,
+                                         ch.real_est_nomi_valu,
+                                         ch.basic_data_status,
+                                         ch.mortgage_status,
+                                         ch.cover_indic,
+                                         ch.coll_data_status,
+                                         ch.use_id,
+                                         au.user_name,
+                                         ch.col_cat_id,
+                                         clc.screen_name,
+                                         clc.code,
+                                         ch.user_lock,
+                                         ch.financial_flag,
+                                         clc.coll_deact_indic
+                                     FROM loan_beneficiary lb INNER JOIN customer cccc ON lb.cus_id = cccc.cus_id AND cccc.basel_cus_type not in ('1','20'),
+                                          coll_head ch LEFT OUTER JOIN currency cu ON ch.real_est_nm_cur_id = cu.cur_id,
+                                          app_user au ,
+                                          coll_category clc 
+                                     WHERE
+                                         lb.kred_admin_use_id is null 
+                                     AND
+                                         lb.status = 'A'
+                                     AND
+                                         lb.col_hea_id = ch.col_hea_id 
+                                     AND
+                                         ch.col_cat_id not in (617223,625223)
+                                     AND         
+                                         ch.collateral_status = :(proc_status)
+                                     AND
+                                         ch.use_id = au.use_id
+                                     AND 
+                                         ch.col_cat_id = clc.col_cat_id
+                                UNION 
+                                SELECT
+                                         ch.col_hea_id,
+                                         ch.col_type_id,
+                                         ch.workflow_indic,
+                                         ch.collateral_status,
+                                         ch.col_num,
+                                         ch.real_est_nm_cur_id,
+                                         cu.code_char,
+                                         ch.real_est_nomi_valu,
+                                         ch.basic_data_status,
+                                         ch.mortgage_status,
+                                         ch.cover_indic,
+                                         ch.coll_data_status,
+                                         ch.use_id,
+                                         au.user_name,
+                                         ch.col_cat_id,
+                                         clc.screen_name,
+                                         clc.code,
+                                         ch.user_lock,
+                                         ch.financial_flag,
+                                         clc.coll_deact_indic
+                                     FROM loan_beneficiary lb INNER JOIN customer cccc ON lb.cus_id = cccc.cus_id AND cccc.basel_cus_type not in ('1','20'),
+                                          coll_hf_prior chf,
+                                          coll_head ch LEFT OUTER JOIN currency cu ON ch.real_est_nm_cur_id = cu.cur_id,
+                                          app_user au ,
+                                          coll_category clc 
+                                     WHERE
+                                         lb.kred_admin_use_id is null 
+                                     and
+                                         lb.status = 'A'
+                                     AND
+                                         lb.coll_hf_prior_id = chf.coll_hf_prior_id
+                                     AND
+                                         chf.status = 'A'
+                                     AND    
+                                         chf.hf_coll_head_id = ch.col_hea_id 
+                                     AND
+                                         ch.col_cat_id not in (617223,625223)
+                                     AND         
+                                         ch.collateral_status = :(proc_status)
+                                     AND
+                                         ch.use_id = au.use_id
+                                     AND 
+                                         ch.col_cat_id = clc.col_cat_id         
+                         };   			     
+  			 }
+  		}
+  		
+  		int rowCount = this.size();
+        int pageSize = getFetchSize();
+        int pageCount = BigDecimal.valueOf((double)rowCount/pageSize).setScale(0, BigDecimal.ROUND_UP).intValue();
+
+        d.tblColWorkListCellTable.getPagingInfo().setCurrentPage(d.ActionListLevel);
+        d.tblColWorkListCellTable.getPagingInfo().setPageCount(pageCount);
+        d.tblColWorkListCellTable.getPagingInfo().setPageSize(pageSize);
+        d.tblColWorkListCellTable.getPagingInfo().setRowCount(rowCount); 
+	}
+ 	
+	public boolean next() throws Exception {
+	    if (iter==null) return false;
+		return iter.next(); 
+	}
+    
+	public void close() {
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}
+	}
+	
+   public int size() throws SQLException{
+        if (iter == null) return 0;
+        int currentRow = iter.getRow();
+        ((Scrollable)iter).last();
+        int rowCount = iter.getRow();
+        ((Scrollable)iter).absolute(currentRow);
+        return rowCount;
+    }
+ 
+	
+	public void populateRowData() throws Exception {
+					
+		Vector row=new Vector();
+		NamedRowData nrd = new NamedRowData();
+		
+		nrd.put("col_index", d.tblColWorkListCellTable.rowCount());	
+		nrd.put("col_col_hea_id", iter.col_hea_id());
+		CheckBoxData cd= new CheckBoxData(d.listSelected.containsKey(iter.col_hea_id()));
+		nrd.put("col_checkbox", cd);
+		
+		row.add(iter.workflow_indic());
+		nrd.put("col_wi", iter.workflow_indic());
+		
+		row.add(iter.collateral_status());
+		nrd.put("col_lst", iter.collateral_status());
+		row.add(iter.col_num());
+		nrd.put("col_broj", iter.col_num());
+		row.add(iter.code_char());
+		nrd.put("col_val", iter.code_char());
+		row.add(iter.real_est_nomi_valu());
+		nrd.put("col_iznos", iter.real_est_nomi_valu());
+		row.add(iter.basic_data_status()); 
+		nrd.put("col_podaci", iter.basic_data_status());
+		row.add(iter.mortgage_status());
+		nrd.put("col_hipoteka", iter.mortgage_status());
+		row.add(iter.cover_indic());
+		nrd.put("col_plasman", iter.cover_indic());
+		row.add(iter.coll_data_status());  
+		nrd.put("col_officer", iter.coll_data_status());
+		row.add(iter.financial_flag());
+		nrd.put("col_knjizen", iter.financial_flag());
+		row.add(iter.user_name());
+		nrd.put("col_referent", iter.user_name());
+		
+		Vector unique = new Vector();
+		
+		unique.add(iter.col_hea_id());
+		unique.add(iter.col_type_id());
+		unique.add(iter.real_est_nm_cur_id());
+		unique.add(iter.use_id());
+		unique.add(iter.col_cat_id());
+		unique.add(iter.screen_name());
+		unique.add(iter.code());
+		unique.add(iter.user_lock());
+		unique.add(iter.coll_deact_indic());
+   
+		String scr_ctx=d.ColWorkList_txtScreenContext;
+		
+		if((scr_ctx.equals("scr_k") || scr_ctx.equals("scr_ver_list") || scr_ctx.equals("scr_auth_list") 
+		        || scr_ctx.equals("scr_mon_list") || scr_ctx.equals("scr_mon_nek")) && iter.workflow_indic().equals("3")) {    
+		    d.tblColWorkList.addRow(row, unique,"tableRowHighlight2");
+		    nrd.setRowStyle("tableRowHighlight2");		    
+		} else {
+		    d.tblColWorkList.addRow(row, unique);		    
+		} 
+		d.tblColWorkListCellTable.addNamedRow(nrd);
+	}
+	
+	
+}    

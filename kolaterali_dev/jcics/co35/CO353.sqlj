@@ -1,0 +1,125 @@
+package hr.vestigo.modules.collateral.jcics.co35;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+#sql iterator CollWorkupsIter ( 
+						String vrsta,
+						Date datum,	
+						String status,
+						String valuta,
+						BigDecimal amount,
+						BigDecimal proc_perc,
+						BigDecimal amount_proc,
+						BigDecimal amount_new,
+						Date proc_ts
+			);	
+
+
+//dohvaca podatke o svim izvršenim revalorizacijama i amortizacijama za odabrani kolateral.
+//odabirom akcije Shift F3 - Reva/Amort (poziva se sa svih akcijskih lista 
+//(referentska, verifikacijska, lista aktivnih ....)
+
+
+public class CO353 extends SQLJScrollableRemoteTransaction{
+
+public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co35/CO353.sqlj,v 1.3 2010/05/25 13:45:57 hramkr Exp $";
+
+public DeclCO35 decl = null;
+
+private BigDecimal col_hea_id = null;
+private CollWorkupsIter iter = null; 
+
+public CO353(DeclCO35 decl){
+	this.decl = decl;
+}
+
+public void executeScrollable(TransactionContext tc) throws Exception {
+	setLevel(decl.ActionListLevel);
+	setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+	ConnCtx ctx = tc.getContext();
+
+	#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+	col_hea_id = decl.collworkupsmapping.col_hea_id;
+	tc.debug("col_hea_id " + col_hea_id);
+	tc.debug("1 .tu sam ");
+	
+	decl.collworkupsmapping.CollWorkups_dynLblCollateral = col_hea_id;
+	
+	tc.debug("2 .tu sam ");
+	#sql [ctx] iter = {
+		select	
+			c.proc_type as vrsta,
+			c.proc_date as datum, 
+			c.proc_status as status,
+			d.code_char as valuta,
+			b.amount as amount,
+			b.proc_perc as proc_perc,
+			b.amount_proc as amount_proc,
+			b.amount + b.amount_proc as amount_new,
+			c.proc_ts as proc_ts
+			
+	from
+			coll_head a,
+			col_turnover b,
+			col_proc c,
+			currency d
+	where	
+			a.col_hea_id = :(col_hea_id) and
+			a.col_hea_id = b.col_hea_id and
+			b.col_pro_id = c.col_pro_id and
+			c.proc_type in ( 'R','A','ARN','ARV') and
+			c.proc_status = '1' and
+			a.real_est_nm_cur_id = d.cur_id
+	order by
+			2 desc
+
+
+	};		
+
+
+
+} 
+
+public boolean next() throws Exception {
+return iter.next();
+}
+
+public void close() {
+	if(iter!=null) {
+		try {
+			iter.close();
+	} catch (Exception ignored) {}
+	}
+}
+
+public void populateRowData() throws Exception {
+	Vector row = new Vector();
+	Vector hiddenRow = new Vector();
+	//atributi koji se prikazuju u listi
+
+	row.add(iter.vrsta());
+	row.add(iter.datum());
+	row.add(iter.status());		
+	row.add(iter.valuta());
+	row.add(iter.amount());
+	row.add(iter.proc_perc());
+	row.add(iter.amount_proc());
+	row.add(iter.amount_new());
+	row.add(iter.proc_ts());		
+	//skriveni atributi
+
+
+	decl.collworkupsmapping.tblCollWorkups.addRow(row,hiddenRow);
+
+}
+
+
+
+}

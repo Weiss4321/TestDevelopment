@@ -1,0 +1,248 @@
+package hr.vestigo.modules.collateral.jcics.co13;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.util.scramble.Scramble;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+//import hr.vestigo.modules.collateral.common.yoyH.YOYH0;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+/**
+ * CO134 class update data about colaterall owner into table COLL_OWNERS 
+ *  	
+ */
+public class CO134 extends RemoteTransaction {
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co13/CO134.sqlj,v 1.20 2012/10/02 10:19:28 hrakis Exp $";
+    public DeclCO13 decl = null;
+
+    public CO134 (DeclCO13 decl) {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+
+        // provjera da li je kolateral knjizen na komitenta kojeg se zeli azurirati-promijeniti
+        // FBPr200010974 25.03.2011
+        // FBPr200017652 01.10.2012
+        try
+        {
+            // dohvat indikatora knjiženja kolaterala
+            String financial_flag = null;
+            #sql [ctx] { 
+                SELECT financial_flag
+                INTO :(financial_flag)
+                FROM coll_head
+                WHERE col_hea_id = :(decl.collownersupdatemapping.CollOwners_COL_HEA_ID)            
+            };
+            tc.debug("financial_flag:" + financial_flag);
+            
+            if("1".equals(financial_flag))  // ako je kolateral knjižen
+            {   
+                // dohvat komitenta na kojeg je kolateral knjižen
+                BigDecimal coll_post_cus_id = null;
+                #sql [ctx] { 
+                    SELECT cus_id
+                    INTO :(coll_post_cus_id)
+                    FROM customer_account
+                    WHERE cus_acc_id = :(decl.collownersupdatemapping.CollOwners_COL_HEA_ID)                
+                };
+
+                // dohvat komitenta - vlasnika kolaterala èiji se podaci mijenjaju
+                BigDecimal coll_owner_cus_id;
+                #sql [ctx] { 
+                    SELECT cus_id
+                    INTO :(coll_owner_cus_id)
+                    FROM coll_owner
+                    WHERE coll_own_id = :(decl.collownersupdatemapping.CollOwnersDialog_COLL_OWN_ID)                
+                };
+
+                if(coll_owner_cus_id.equals(coll_post_cus_id))  // ako se mijenjaju podaci o komitentu na koji je knjižen kolateral 
+                {
+                    if(!coll_owner_cus_id.equals(decl.collownersupdatemapping.CollOwnersDialog_CUS_ID))  // provjeri da se nije promijenio komitent
+                    {
+                        throw new VestigoTMException(1, "Transaction CO134: Kolateral knjizen na komitenta koji se zeli promijeniti", "wrnclt178", null);
+                    }
+                }
+                else  // ako se mijenjaju podaci o nekom drugom komitentu
+                {
+                    if(coll_post_cus_id.equals(decl.collownersupdatemapping.CollOwnersDialog_CUS_ID))  // provjeri da se komitent nije promijenio na komitenta na kojeg je knjižen kolateral
+                    {
+                        throw new VestigoTMException(1, "Transaction CO134: Kolateral knjizen na komitenta koji se zeli promijeniti", "wrnclt178", null);
+                    }
+                }
+            }
+        }
+        catch(SQLException se)
+        {
+            tc.debug("......CO134.sqlj insert into coll_owner_a SQL ErrorCode " + se.getErrorCode());
+            tc.debug("......CO134.sqlj insert into coll_owner_a SQL SQLState " + se.getSQLState());
+            tc.debug("......CO134.sqlj insert into coll_owner_a SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO134: Greska kod provjere komitenta na kojeg je knjizen kolateral!", "err411a", null);
+        }
+
+
+        int broj = 0;
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        try
+        {
+            #sql [ctx] {
+                SELECT COUNT(*) 
+                INTO :broj 
+                FROM coll_owner 
+                WHERE col_hea_id = :(decl.collownersupdatemapping.CollOwners_COL_HEA_ID)  
+                AND cus_id = :(decl.collownersupdatemapping.CollOwnersDialog_CUS_ID) 
+                AND coll_own_id <> :(decl.collownersupdatemapping.CollOwnersDialog_COLL_OWN_ID)
+            };
+        } 
+        catch (SQLException  sqle) 
+        {
+            tc.debug ( "......CO134.sqlj select coll_owner SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......CO134.sqlj select coll_owner SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......CO134.sqlj select coll_owner SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction CO134: Error select coll_owner!", "err411a", null);
+        }
+
+        if(broj != 0){
+            throw new VestigoTMException(1, "Transaction CO134: Error select coll_owner! ","errclt13", null);
+        }
+
+
+        tc.debug("Poslije provjere komitenta kolaterala..");
+
+        try{	
+
+            #sql [ctx]{ 
+            INSERT INTO coll_owner_a
+            SELECT * FROM coll_owner
+            WHERE coll_own_id = :(decl.collownersupdatemapping.CollOwnersDialog_COLL_OWN_ID)
+            AND user_lock = :(decl.collownersupdatemapping.CollOwnersDialog_USER_LOCK_NF)  
+            };
+
+        }catch(java.sql.SQLException se){
+
+            tc.debug ( "......CO134.sqlj insert into coll_owner_a SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO134.sqlj insert into coll_owner_a SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO134.sqlj insert into coll_owner_a SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO134: Error insert into coll_owner_a! ","err411a", null);
+        }     
+
+
+        tc.debug("ISPIS PRIJE UPDATE-AAAAA  decl.collownersupdatemapping.Kol_txtMainOwner"+decl.collownersupdatemapping.Kol_txtMainOwner);
+        //UPDATE coll_owner
+        
+        try{									
+            #sql [ctx]{ 
+            UPDATE coll_owner 
+            SET 
+            register_no =:( decl.collownersupdatemapping.CollOwnersDialog_txtRegisterNo), 
+            cus_id =:(decl.collownersupdatemapping.CollOwnersDialog_CUS_ID),
+            part_id = :(decl.collownersupdatemapping.CollOwnersDialog_txtUseCodeValue),
+            use_id = :(decl.collownersupdatemapping.CollOwnersDialog_USE_ID),
+            user_lock = current timestamp,
+            part_id2 = :(decl.collownersupdatemapping.CollOwnersDialog_txtUseCodeDesc),
+            own_num = :(decl.collownersupdatemapping.Kol_txtOwnNum),
+            num_of_estate = :(decl.collownersupdatemapping.Kol_txtOwnNumOfEstate),
+            main_owner = :(decl.collownersupdatemapping.Kol_txtMainOwner),
+            statement_owner_id = :(decl.collownersupdatemapping.Kol_txtStatementUseId)
+            WHERE 
+            coll_own_id=:(decl.collownersupdatemapping.CollOwnersDialog_COLL_OWN_ID)
+            AND user_lock =:(decl.collownersupdatemapping.CollOwnersDialog_USER_LOCK_NF)  
+            };
+
+        }catch(SQLException se){
+
+            tc.debug ( "......CO134.sqlj update coll_owner SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO134.sqlj update coll_owner SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO134.sqlj update coll_owner SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO134: Error updating coll_owner! ","err411a", null);
+
+        }
+
+        // provjera indikatora glavnog vlasnika, dozvoljen je samo jedan aktivan glavni vlasnik
+        String main_owner = decl.collownersupdatemapping.Kol_txtMainOwner;
+        broj = -1;  
+
+        try {
+            #sql [ctx] {SELECT COUNT(*) INTO :broj 
+            FROM coll_owner 
+            WHERE col_hea_id = :(decl.collownersupdatemapping.CollOwners_COL_HEA_ID)
+            AND 
+            date_until = '9999-12-31'
+            AND
+            main_owner = 'D'
+            AND 
+            coll_own_id <> :(decl.collownersupdatemapping.CollOwnersDialog_COLL_OWN_ID)
+            };
+
+            tc.debug ( "...broj: " + broj);
+
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO134.sqlj select main owner from coll_owners SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......CO134.sqlj select main owner from coll_owners SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......CO134.sqlj select main owner from coll_owners SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction CO134: Error selecting from coll_owners! ","err411a", null);
+        } 
+
+        if(broj > 0 && main_owner != null && main_owner.equalsIgnoreCase("D"))
+            throw new VestigoTMException(1, "Transaction CO134: Error update coll_owners! ","errclt11", null);       
+        else if (broj <= 0 && main_owner != null && main_owner.equalsIgnoreCase("N"))
+            throw new VestigoTMException(1, "Transaction CO134: Error update coll_owners! ","errclt12", null);       
+
+        BigDecimal col_hea_id = decl.collownersupdatemapping.CollOwners_COL_HEA_ID;
+        BigDecimal col_cat_id = null;
+        BigDecimal col_typ_id = null;
+        BigDecimal col_sub_typ_id = null;
+        
+        try
+        {
+            #sql [ctx] {
+                 SELECT
+                    a.col_cat_id,
+                    a.col_type_id,
+                    b.real_est_type
+                INTO
+                    :(col_cat_id),
+                    :(col_typ_id),
+                    :(col_sub_typ_id)
+                FROM coll_head a left outer join coll_restate b on a.col_hea_id = b.col_hea_id 
+                WHERE a.col_hea_id = :(col_hea_id)
+             };
+        }
+        catch(java.sql.SQLException se)
+        {
+            if(se.getErrorCode() != 100) throw se;
+        }
+        
+
+     // samo za stambene nekretnine   col_typ_id = 8777     
+/*        if ( col_cat_id != null && col_cat_id.compareTo(new BigDecimal("618223")) == 0 && 
+                col_typ_id != null && col_typ_id.compareTo(new BigDecimal("8777")) == 0 &&
+                col_sub_typ_id != null && col_sub_typ_id.compareTo(new BigDecimal("1156953223")) != 0) {
+            YOYH0 yoyh0 = new YOYH0(tc, col_hea_id);            
+            yoyh0.azurirajCRM_HNBPrihvatljivost();
+            tc.debug ( "......odredjena crm hnb prihvatljivost ");
+            decl.collownersupdatemapping.Kol_CRMHnb = yoyh0.getCRM_HNBPrihvatljivost();   
+        } */
+        // poziv common-a za update prihvatljivosti       
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collownersupdatemapping.Kol_ND =yoyg0.getNDPrihvatljivost();
+        decl.collownersupdatemapping.Kol_B2 = yoyg0.getB2StandPrihvatljivost();
+        decl.collownersupdatemapping.Kol_HNB = yoyg0.getHNBPrihvatljivost();
+        decl.collownersupdatemapping.Kol_B2IRB = yoyg0.getB2IRBPrihvatljivost();  
+
+        decl.collownersupdatemapping.Kol_ND_dsc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collownersupdatemapping.Kol_B2_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collownersupdatemapping.Kol_HNB_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collownersupdatemapping.Kol_B2IRB_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();
+
+        decl.collownersupdatemapping.Kol_CRMHnb = yoyg0.getCRMHNBMisljenje();
+    }
+}	
+

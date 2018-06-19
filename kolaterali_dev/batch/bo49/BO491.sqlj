@@ -1,0 +1,233 @@
+package hr.vestigo.modules.collateral.batch.bo49;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.sql.Date;
+
+
+public class BO491
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo49/BO491.sqlj,v 1.5 2017/03/14 12:17:09 hrazst Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql public iterator CustDataIterator with (holdability=true)(
+        String agreement_no,
+        String register_no,
+        String name,
+        String frame_currency,
+        BigDecimal frame_amount,
+        Date frame_until,
+        String frame_status,
+        String col_num,
+        String collateral_status,
+        String acc_no,
+        String request_no,
+        String dwh_status,
+        String orig_status,
+        BigDecimal exposure_balance,
+        String exposure_currency,
+        Date exposure_date,
+        String placement_owner_register_no,
+        String placement_owner_name,
+        String hf_status,
+        String hf_priority,
+        Integer number
+    );
+
+
+    public BO491(BatchContext bc) throws Exception
+    {
+        this.bc = bc;
+        connCtx = bc.getContext(); 
+    }
+
+
+    /**
+     * Metoda dohvaæa potrebne podatke o okvirnim sporazumima.
+     * @return iterator s podacima
+     */
+    public CustDataIterator selectFrameAgreements() throws SQLException 
+    {
+        try
+        {
+            bc.startStopWatch("BO491.selectFrameAgreements");
+            CustDataIterator iter = null;
+            
+            #sql [connCtx] iter = {
+                SELECT DISTINCT
+                    d.agreement_no      AS agreement_no,
+                    h.register_no       AS register_no,
+                    h.name              AS name,
+                    f.code_char         AS frame_currency,
+                    d.amount            AS frame_amount,
+                    d.date_until        AS frame_until,
+                    d.status            AS frame_status,
+                    a.col_num           AS col_num,
+                    a.collateral_status AS collateral_status,
+                    c.acc_no            AS acc_no,
+                    c.request_no        AS request_no,
+                    e.cus_acc_status    AS dwh_status,
+                    e.cus_acc_orig_st   AS orig_status,
+                    e.exposure_balance  AS exposure_balance,
+                    g.code_char         AS exposure_currency,
+                    e.exposure_date     AS exposure_date,
+                    i.register_no       AS placement_owner_register_no,
+                    i.name              AS placement_owner_name,
+                    b.hf_status         AS hf_status,
+                    b.hf_priority       AS hf_priority,
+                    0                   AS number
+                FROM coll_head a
+                INNER JOIN coll_hf_prior b      ON a.col_hea_id = b.hf_coll_head_id
+                INNER JOIN loan_beneficiary c   ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                INNER JOIN frame_agreement d    ON (c.fra_agr_id = d.fra_agr_id AND d.boe_stock_indicator='N')
+                INNER JOIN cusacc_exposure e    ON (c.la_acc_id = e.cus_acc_id or c.acc_no = e.cus_acc_no or c.request_no = e.request_no)
+                INNER JOIN currency f           ON d.cur_id = f.cur_id
+                INNER JOIN currency g           ON e.exposure_cur_id = g.cur_id
+                INNER JOIN customer h           ON d.cus_id = h.cus_id
+                INNER JOIN customer i           ON e.cus_id = i.cus_id
+                ORDER BY d.agreement_no, a.col_num
+                WITH UR
+            };
+            
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o okvirnim sporazumima!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO491.selectFrameAgreements");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa potrebne podatke o mjenicama za DS.
+     * @return iterator s podacima
+     */
+    public CustDataIterator selectBillsOfExchange() throws SQLException 
+    {
+        try
+        {
+            bc.startStopWatch("BO491.selectBillsOfExchange");
+            CustDataIterator iter = null;
+            
+            #sql [connCtx] iter = {                
+                SELECT DISTINCT
+                    fa.agreement_no      AS agreement_no,
+                    fa.register_no      AS register_no,
+                    h.name              AS name,
+                    f.code_char         AS frame_currency,
+                    fa.amount           AS frame_amount,
+                    fa.DATE_UNTIL       AS frame_until,
+                    fa.status           AS frame_status,
+                    a.col_num           AS col_num,
+                    a.collateral_status AS collateral_status,
+                    c.acc_no            AS acc_no,
+                    c.request_no        AS request_no,
+                    e.cus_acc_status    AS dwh_status,
+                    e.cus_acc_orig_st   AS orig_status,
+                    e.exposure_balance  AS exposure_balance,
+                    g.code_char         AS exposure_currency,
+                    e.exposure_date     AS exposure_date,
+                    i.register_no       AS placement_owner_register_no,
+                    i.name              AS placement_owner_name,
+                    ''                  AS hf_status,
+                    ''                  AS hf_priority,
+                    a.number            AS number
+                FROM coll_head a
+                INNER JOIN loan_beneficiary c   ON a.col_hea_id = c.col_hea_id
+                LEFT OUTER JOIN frame_agreement fa ON (fa.agreement_no = a.col_desc AND fa.boe_stock_indicator='D')
+                INNER JOIN cusacc_exposure e    ON (c.la_acc_id = e.cus_acc_id or c.acc_no = e.cus_acc_no or c.request_no = e.request_no)
+                INNER JOIN coll_bill_exch m     ON a.col_hea_id = m.col_hea_id
+                LEFT OUTER JOIN currency f      ON fa.cur_id = f.cur_id
+                INNER JOIN currency g           ON e.exposure_cur_id = g.cur_id
+                LEFT OUTER JOIN customer h      ON fa.cus_id = h.cus_id
+                INNER JOIN customer i           ON e.cus_id = i.cus_id
+                WHERE a.col_type_id = 81777
+                ORDER BY fa.agreement_no, a.col_num
+                WITH UR
+            };
+            
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o mjenicama za DS!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO491.selectBillsOfExchange");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa potrebne podatke o zadužnicama za DS.
+     * @return iterator s podacima
+     */
+    public CustDataIterator selectLoanStocks() throws SQLException 
+    {
+        try
+        {
+            bc.startStopWatch("BO491.selectLoanStocks");
+            CustDataIterator iter = null;
+            
+            #sql [connCtx] iter = {
+            SELECT
+                    fa.agreement_no     AS agreement_no,
+                    fa.register_no      AS register_no,
+                    h.name              AS name,
+                    f.code_char         AS frame_currency,
+                    fa.amount            AS frame_amount,
+                    fa.date_until       AS frame_until,
+                    fa.status           AS frame_status,
+                    a.col_num           AS col_num,
+                    a.collateral_status AS collateral_status,
+                    c.acc_no            AS acc_no,
+                    c.request_no        AS request_no,
+                    e.cus_acc_status    AS dwh_status,
+                    e.cus_acc_orig_st   AS orig_status,
+                    e.exposure_balance  AS exposure_balance,
+                    g.code_char         AS exposure_currency,
+                    e.exposure_date     AS exposure_date,
+                    i.register_no       AS placement_owner_register_no,
+                    i.name              AS placement_owner_name,
+                    ''                  AS hf_status,
+                    ''                  AS hf_priority,
+                    a.number            AS number
+                FROM coll_head a
+                INNER JOIN loan_beneficiary c   ON a.col_hea_id = c.col_hea_id
+                LEFT OUTER JOIN frame_agreement fa ON (fa.agreement_no = a.col_desc AND fa.boe_stock_indicator='D')
+                INNER JOIN cusacc_exposure e    ON (c.la_acc_id = e.cus_acc_id or c.acc_no = e.cus_acc_no or c.request_no = e.request_no)
+                INNER JOIN coll_loanstock z     ON a.col_hea_id = z.col_hea_id
+                LEFT OUTER JOIN currency f      ON fa.cur_id = f.cur_id
+                INNER JOIN currency g           ON e.exposure_cur_id = g.cur_id
+                LEFT OUTER JOIN customer h      ON fa.cus_id = h.cus_id
+                INNER JOIN customer i           ON e.cus_id = i.cus_id
+                WHERE a.col_type_id = 80777
+                ORDER BY fa.agreement_no, a.col_num
+                WITH UR 
+            };
+            
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o zaduznicama za DS!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO491.selectLoanStocks");
+        }
+    }
+}

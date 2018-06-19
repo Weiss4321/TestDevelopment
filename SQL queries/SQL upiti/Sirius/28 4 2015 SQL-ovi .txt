@@ -1,0 +1,622 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from nnb_list;
+
+select * from warning_notes order by user_lock desc;
+
+select * from WARNING_list;
+
+select * from param_wrn_notes;
+
+			
+
+select * from warning_notes  where candidate_status in ('K','A', 'N')order by user_lock desc;
+
+select * from batch_def where bat_def_id = 1702454003; -- bn71: Obrada za odreðivanje kandidata za obavijesti i opomene
+
+select * from batch_log where bat_def_id = 1702454003  order by recording_time desc;  -- bn71: Obrada za odreðivanje kandidata za obavijesti i opomene
+
+update batch_log set param_value = 'RB#PAY;931;X;X;X;X;X;14.01.2017' where bat_log_id in (319661327);
+
+commit;
+
+select war_not_id  ,cus_acc_id ,use_id ,exceeding_date , warn_note_date , cus_let_typ_id , war_not_sent_stat ,exceeding_amount ,overdraft_amount, resolved_date , eve_id  ,bank_sign ,user_lock , above_ovdt_num_day ,above_ovdt_amount , candidate_status ,  fee_eve_id  , fee_amount , fee_cur_id  ,ban_tar_code ,fee_flag
+from warning_notes where cus_let_typ_id = 159999;
+
+
+select  *
+from warning_notes;
+
+
+update warning_notes set candidate_status = 'R' where war_not_id in (2860594823, 1441966823 ); 
+
+update warning_notes set war_not_sent_stat = '3' where war_not_id = 3075159823;
+
+commit;
+
+insert into 
+ +bc.getDefaultSchema()+ 
+warning_notes 
+(war_not_id  ,cus_acc_id ,use_id ,exceeding_date ,
+ warn_note_date ,cus_let_typ_id , war_not_sent_stat ,exceeding_amount ,overdraft_amount,
+ resolved_date , eve_id  ,bank_sign ,user_lock , above_ovdt_num_day ,above_ovdt_amount ,
+candidate_status , fee_eve_id  ,fee_amount ,fee_cur_id  ,ban_tar_code, ban_pro_typ_id,
+ princip_debt_amount, act_int_debt_amount, pen_int_debt_amount, fee_debit_amount ) 
+
+ 
+select war_not_id  ,cus_acc_id ,use_id ,exceeding_date ,
+warn_note_date ,cus_let_typ_id , war_not_sent_stat ,exceeding_amount ,overdraft_amount,
+ resolved_date , eve_id  ,bank_sign ,user_lock , above_ovdt_num_day ,above_ovdt_amount ,
+candidate_status , fee_eve_id  ,fee_amount ,fee_cur_id  ,ban_tar_code, ban_pro_typ_id,  
+ princip_debt_amount, act_int_debt_amount, pen_int_debt_amount, fee_debit_amount  
+from warning_notes 
+
+
+select distinct(ban_pro_typ_id) from nnb_list where process_date =  '14.01.2014'
+
+select * from nnb_list where process_date =  '14.01.2014' and BAN_PRO_TYP_ID in (790661005);
+
+select * from nnb_list where process_date =  '14.01.2014' and BAN_PRO_TYP_ID in (790661005) and nnb_lis_id = 60897326;
+
+SELECT * FROM BANK_PRODUCT_TYPE where BAN_PRO_TYP_ID in (790661005,790662005,790663005,790664005,803276005)
+
+SELECT * FROM CUSTOMER_ACCOUNT where CUS_ACC_ID in (111007022,127514022,128466022,629314022,4414411,9392241,37633312,39000392,41284102,132924223,132971413,
+138205213,139366373,143527673,185652613,185718393,200929303,203108623,203243043,351478273,487986073,
+673531433,1104343243,1240585063,41793182,254638673)
+
+
+select * from banpro_param where p_contract_id='send_warning_note' ;
+
+select * from customer_account where cus_acc_no like '3205005135'
+
+
+					SELECT 1 flag_lbs, 
+	                        nl.cus_acc_id cus_acc_id, 
+	                        nl.nnb_account_balance balance,
+	                        nl.nnb_date nnb_date,
+	                        ca.collection_status,
+	                        nl.ban_pro_typ_id
+	                    FROM nnb_list nl, customer_account ca left outer join banpro_param bp on ca.ban_pro_typ_id = bp.ban_pro_typ_id	                                                        
+                                                                                and    bp.p_contract_id='send_warning_note'
+                                                                                and    '22.04.2015' between bp.date_from and bp.date_until
+	                    WHERE 
+	                   '14.01.2014'=nl.process_date
+	                        and    ca.cus_acc_status IN ('A','B','Z')
+	                        and    nl.cus_acc_id=ca.cus_acc_id
+	                        and    ca.law_block_status != '1'
+	                        and    ca.collection_status != '1'
+	                       -- and    nl.nnb_account_balance <=:(min_balance_amount)  
+	                        and    (bp.par_value is null OR bp.par_value = '1') 
+	                        and ca.cus_acc_id = 673531433
+	                       
+	                    UNION ALL
+	                    SELECT 2 flag_lbs, 
+	                        nl.cus_acc_id cus_acc_id, 
+                            nl.nnb_account_balance balance,
+                            nl.nnb_date nnb_date,
+                            ca.collection_status,
+                            nl.ban_pro_typ_id
+                        FROM nnb_list nl, customer_account ca left outer join banpro_param bp on ca.ban_pro_typ_id = bp.ban_pro_typ_id                                                          
+                                                                                and    bp.p_contract_id='send_warning_note'
+                                                                                and    '22.04.2015' between bp.date_from and bp.date_until
+                        WHERE
+                          '14.01.2014'=nl.process_date
+                          and     ca.cus_acc_status = 'B'
+                            and    nl.cus_acc_id=ca.cus_acc_id
+                            and    ca.law_block_status = '1'
+	                        and    ca.collection_status != '1'  
+                         and    (bp.par_value is null OR bp.par_value = '1') 
+
+
+
+-----------------------------------------------------
+
+                          SELECT 1 flag_lbs, 
+	                        nl.cus_acc_id cus_acc_id, 
+	                        nl.nnb_account_balance balance,
+	                        nl.nnb_date nnb_date,
+	                        ca.collection_status,
+	                        nl.ban_pro_typ_id
+	                    FROM nnb_list nl, customer_account ca left outer join banpro_param bp on ca.ban_pro_typ_id = bp.ban_pro_typ_id	                                                        
+                                                                                and    bp.p_contract_id='send_warning_note'
+                                                                                and    '22.04.2015' between bp.date_from and bp.date_until
+	                    WHERE 
+	                    
+	                   '14.01.2014'=nl.process_date
+	                   and nl.ban_pro_typ_id in (790661005, 795985005, 795986005 )
+	                        and    ca.cus_acc_status IN ('A','B','Z')
+	                        and    nl.cus_acc_id=ca.cus_acc_id
+	                        and    ca.law_block_status != '1'
+	                        and    ca.collection_status != '1'
+	                       -- and    nl.nnb_account_balance <=:(min_balance_amount)  
+	                        and    (bp.par_value is null OR bp.par_value = '1') 
+	                       
+	                    UNION ALL
+	                    SELECT 2 flag_lbs, 
+	                        nl.cus_acc_id cus_acc_id, 
+                            nl.nnb_account_balance balance,
+                            nl.nnb_date nnb_date,
+                            ca.collection_status,
+                            nl.ban_pro_typ_id
+                        FROM nnb_list nl, customer_account ca left outer join banpro_param bp on ca.ban_pro_typ_id = bp.ban_pro_typ_id                                                          
+                                                                                and    bp.p_contract_id ='send_warning_note'
+                                                                                and    '22.04.2015' between bp.date_from and bp.date_until
+                        WHERE
+                          '14.01.2014'=nl.process_date
+                           and nl.ban_pro_typ_id in (790661005, 795985005, 795986005 )
+                          and     ca.cus_acc_status = 'B'
+                            and    nl.cus_acc_id=ca.cus_acc_id
+                            and    ca.law_block_status = '1'
+	                        and    ca.collection_status != '1'  
+                         and    (bp.par_value is null OR bp.par_value = '1') 
+
+
+-------------------------------------------------------------------------------------------------------------
+
+
+							
+				SELECT 1 flag_lbs, 
+	                        nl.cus_acc_id cus_acc_id, 
+	                        nl.nnb_account_balance balance,
+	                        nl.nnb_date nnb_date,
+	                        ca.collection_status,
+	                        nl.ban_pro_typ_id
+	                    FROM nnb_list nl, customer_account ca left outer join banpro_param bp on ca.ban_pro_typ_id = bp.ban_pro_typ_id	                                                        
+                                                                               and    bp.p_contract_id like 'send_warning_note'   --   and    bp.p_contract_id='send_warning_note' 
+                                                                                and    '22.04.2015' between bp.date_from and bp.date_until
+	                    WHERE 
+	                   '14.01.2014'=nl.process_date
+	                        and    ca.cus_acc_status IN ('A','B','Z')
+	                        and    nl.cus_acc_id=ca.cus_acc_id
+	                        and    ca.law_block_status != '1'
+	                        and    ca.collection_status != '1'
+	                       -- and    nl.nnb_account_balance <=:(min_balance_amount)  
+	                        and    (bp.par_value is null OR bp.par_value = '1') 
+	                        and ca.cus_acc_id = 673531433
+
+
+	                        select * from nnb_list where cus_acc_id = 673531433 and process_date = '14.01.2014';
+
+---------------------------------------------------------------------------------------------------------------
+
+		
+			SELECT
+                   pa.PARAMETER_VALUE                 
+                  FROM
+                      PARAM_APPLICATION pa,
+                      PARAMS_DICTIONARY pd
+                  WHERE
+                      pa.PAR_DIC_ID = pd.PAR_DIC_ID
+                      AND pd.NAME = 'DPD_MIN_TR';
+
+---------------------------------------------------------------------------------------------------------------------
+
+				select 
+						pwn.above_ovdt_num_day,
+                        pwn.above_ovdt_amount,
+                        pwn.above_not_sent_day, 
+                        pwn.cus_let_typ_id, 
+                        pwn.pre_cus_let_typ_id,
+                        pwn.ban_pro_typ_id
+						FROM PARAM_WRN_NOTES pwn left outer join banpro_param bp on pwn.ban_pro_typ_id = bp.ban_pro_typ_id                                                         
+                                                                                and    bp.p_contract_id like 'send_warning_note'
+                                                                                and    '2014-01-14' between bp.date_from and bp.date_until
+	                    where pwn.ban_pro_typ_id = 790661005
+                        and (bp.par_value is null OR bp.par_value = '1')
+
+
+
+			
+                 SELECT parameter_value
+                  
+                    FROM PARAM_APPLICATION pa, PARAMS_DICTIONARY pd
+                    WHERE pa.par_dic_id = pd.par_dic_id
+                    AND pd.name = 'min_vel_datoteke_za_kompresiju'
+                    AND pa.bank_sign = 'RB'
+
+                    
+---------------------------------------------------------------------------------------------------
+
+			   overDueBalanceList.add( new BigDecimal("8271662797")); // P01 - Nedozvoljeno prekoracenje kunskog  depozita po videnju
+                overDueBalanceList.add( new BigDecimal("465655665"));  // R17 - Aktivna kamata fizicke osobe
+                overDueBalanceList.add( new BigDecimal("465640665"));  // R21 - Zatezna kamata fizickih osoba
+                overDueBalanceList.add(new BigDecimal("31598005"));   //  040 - Naknada po racunu u kunama
+                overDueBalanceList.add(new BigDecimal("3850367797"));  //M01 - Javnobiljeznicki troskovi
+                overDueBalanceList.add(new BigDecimal("3994565797"));  //M04 - Sudski troskovi    
+                overDueBalanceList.add(new BigDecimal("3994566797"));  //M05 - Odvjetnicki troskovi
+                overDueBalanceList.add(new BigDecimal("209338005"));  //174 - POTRAZIVANJA PO OSTALIM OSNOVAMA,
+                overDueBalanceList.add(new BigDecimal("3994569797"));  //M08 - Zatezna kamata
+                overDueBalanceList.add(new BigDecimal("8575214797"));  //M39 - Zatezna do. kune na glavnicu workout vanbilanca
+                overDueBalanceList.add(new BigDecimal("8274194797"));  //M52 - Aktivna do. kune na glavnicu workout bilanca
+                overDueBalanceList.add(new BigDecimal("8274196797"));  //M56 - Aktivna do. kune na glavnicu workout vanbilanca
+              
+
+			select * FROM procedure_type where pro_typ_code in ('P01','R17', 'R21');
+
+			select * FROM procedure_type where pro_typ_code in ('P01'); -- OK
+
+			select * FROM procedure_type where pro_typ_code in ('R17');
+
+			select * FROM procedure_type where pro_typ_code like 'R21';
+
+			
+			select * FROM procedure_type where pro_typ_id = 8271662797; -- P01 -  Nedozvoljeno prekoraèenje kunskog  depozita po viðenju
+			
+			select * FROM procedure_type where pro_typ_id = 465655665;  -- 641 - Aktivna kamata fizièke osobe
+
+			select * FROM procedure_type where pro_typ_id = 465640665; -- 524 - Zatezna kamata fizièkih osoba
+
+			select * FROM procedure_type where pro_typ_id = 31598005; -- 040 - Naknada po raèunu u kunama
+			
+			select * FROM procedure_type where pro_typ_id = 3850367797; -- M01 - Javnobilježnièki troškovi
+
+			select * FROM procedure_type where pro_typ_id = 3994565797; -- M04 - Sudski troškovi
+
+			select * FROM procedure_type where pro_typ_id = 3994566797; -- M05 - Odvjetnièki troškovi
+
+			select * FROM procedure_type where pro_typ_id = 209338005; -- 174 - POTRAZIVANJA PO OSTALIM OSNOVAMA
+
+			select * FROM procedure_type where pro_typ_id = 3994569797; -- M08 - Zatezna kamata
+
+			select * FROM procedure_type where pro_typ_id = 8575214797; -- M39 - Zatezna do. kune na glavnicu workout vanbilanca
+
+			select * FROM procedure_type where pro_typ_id = 8274194797; -- M52 - Zatezna do. kune na glavnicu workout vanbilanca
+
+			select * FROM procedure_type where pro_typ_id = 8274196797; -- M56 - Aktivna do. kune na glavnicu workout vanbilanca
+
+			
+
+                select * from PROCEDURE_TYPE;  
+
+
+			--- test 
+			SELECT balance, balance_date, pro_typ_id FROM cusacc_balance_last WHERE cus_acc_id  = 52755326 AND cur_id  = 63999 AND pro_typ_id IN  (8271662797, 465655665, 465640665, 31598005, 3850367797, 3994565797, 3994566797, 209338005, 3994569797, 8575214797, 8274194797, 8274196797) with ur;
+
+			SELECT balance, balance_date, pro_typ_id FROM cusacc_balance_last WHERE cus_acc_id  = 198036022 AND cur_id  = 63999 AND pro_typ_id IN  (8271662797, 465655665, 465640665, 31598005, 3850367797, 3994565797, 3994566797, 209338005, 3994569797, 8575214797, 8274194797, 8274196797 ) with ur;
+
+			
+			SELECT balance, balance_date, pro_typ_id FROM cusacc_balance_last WHERE cus_acc_id  = 198036022 AND cur_id  = 63999;
+
+
+			SELECT balance, balance_date, pro_typ_id FROM cusacc_balance WHERE cus_acc_id  = 198036022 AND cur_id  = 63999 and pro_typ_id IN  (8271662797, 465655665, 465640665, 31598005, 3850367797, 3994565797, 3994566797, 209338005, 3994569797, 8575214797, 8274194797, 8274196797 ) with ur;;
+
+
+
+
+
+			select * from customer_account where cus_acc_no like '3205001891' with ur; -- cus_acc_id = 4414411
+
+			select * from customer where cus_id = 2207054251;
+
+			------------------------------------------------
+			select * from nnb_list;
+
+
+--------------------------------------   nestor92  -------------------------------------
+
+SET CURRENT_SCHEMA = 'SITP'
+
+
+select * from batch_log where bat_def_id = 6266762704  order by recording_time desc; -- bfR4
+
+
+
+select * from batch_log where bat_def_id = 6259167704  order by recording_time desc; -- bfR3
+
+			SELECT
+                   pa.PARAMETER_VALUE                 
+                  FROM
+                      PARAM_APPLICATION pa,
+                      PARAMS_DICTIONARY pd
+                  WHERE
+                      pa.PAR_DIC_ID = pd.PAR_DIC_ID
+                      AND pd.NAME = 'DPD_MIN_TR'
+
+                      SELECT
+                  *             
+                  FROM
+                      PARAM_APPLICATION pa,
+                      PARAMS_DICTIONARY pd
+                  WHERE
+                      pa.PAR_DIC_ID = pd.PAR_DIC_ID
+                      AND pd.NAME = 'DPD_MIN_TR'
+
+
+select * from PARAM_APPLICATION where p_app_id = 5139575704;
+
+update PARAM_APPLICATION set parameter_value = '2' where p_app_id = 5139575704;
+
+commit;
+
+
+select * from PARAMS_DICTIONARY where name = 'DPD_MIN_TR';
+
+  --- azurirati 
+
+
+  ----------------------------------------
+
+  			SELECT 
+                 *                 
+                  FROM 
+                      event 
+                  WHERE
+                      eve_typ_id = 6259192704
+                     AND value_date IS NOT NULL
+                      AND ext_event_num IS NOT NULL
+				order by user_lock desc with ur;
+	
+		update event set value_date = '2014-11-13' where eve_id in (897256657);
+
+		commit;
+
+
+
+				SELECT 
+                 *                 
+                  FROM 
+                      event 
+                  WHERE
+                      eve_typ_id = 6266764704
+                     AND value_date IS NOT NULL
+                      AND ext_event_num IS NOT NULL
+				order by user_lock desc with ur;
+	
+update event set value_date = '2014-11-14' where eve_id in (897316657)
+
+
+commit;
+
+			SELECT 
+                      MAX(value_date) 
+                  
+                  FROM 
+                      event 
+                 WHERE
+                      eve_typ_id = 6266764704
+                      AND value_date IS NOT NULL
+                      AND ext_event_num IS NOT NULL
+
+                      -----
+
+--------------------------------------------  bfR3 - dohvat broj dana kašnjenja je zadan 
+
+                      SELECT
+                    ca.cus_acc_id,
+                    ca.cus_acc_no,
+                    ca.old_cus_acc_no,
+                    ca.iban_acc_no,
+                    ca.cus_acc_name,
+                    ca.org_uni_id,
+                    ca.currency_type,
+                    ca.acc_cur_id,
+                    ca.opening_date,
+                    ca.closing_date,
+                    ca.cus_acc_status,
+                    ca.chg_stat_reason,
+                    ca.chg_stat_date,
+                    ca.warn_note_status,
+                    ca.law_block_status,
+                    ca.collection_status,
+                    ca.court_proc_status,
+                    ca.distraint_flag,
+                    ca.ban_rel_typ_id,
+                    ca.ban_pro_typ_id,
+                    ca.pur_sub_id,
+                    ca.pro_cat_id,
+                    ci1.cus_id,
+                    ci1.code cus_code,
+                    ci1.register_no,
+                    ci1.name,
+                    ci1.surname,
+                    cl.nnb_no_days,
+                    cl.nnb_date,
+                    cl.absorbing_status,
+                    cl.abs_status_date,
+                    cl.process_date cl_process_date
+                FROM
+                    citizen ci1,
+                    customer_account ca
+                        LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '2015-04-22'
+                WHERE 
+                    ca.cus_id = ci1.cus_id
+                    
+                    AND ca.ban_pro_typ_id = 790661005
+                    AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                    AND ca.opening_date <= '2015-04-22'
+                    AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '2015-04-22')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '2014-10-23') ) )
+                    AND ca.org_uni_id = '2345'
+                    AND ca.bank_sign = 'RB'
+                ORDER BY
+                    ca.cus_acc_id,
+                    cl.nnb_no_days desc ; 
+
+
+
+                       SELECT
+                    ca.cus_acc_id,
+                    ca.cus_acc_no,
+                    ca.old_cus_acc_no,
+                    ca.iban_acc_no,
+                    ca.cus_acc_name,
+                    ca.org_uni_id,
+                    ca.currency_type,
+                    ca.acc_cur_id,
+                    ca.opening_date,
+                    ca.closing_date,
+                    ca.cus_acc_status,
+                    ca.chg_stat_reason,
+                    ca.chg_stat_date,
+                    ca.warn_note_status,
+                    ca.law_block_status,
+                    ca.collection_status,
+                    ca.court_proc_status,
+                    ca.distraint_flag,
+                    ca.ban_rel_typ_id,
+                    ca.ban_pro_typ_id,
+                    ca.pur_sub_id,
+                    ca.pro_cat_id,
+                    ci1.cus_id,
+                    ci1.code cus_code,
+                    ci1.register_no,
+                    ci1.name,
+                    ci1.surname,
+                    cl.nnb_no_days,
+                    cl.nnb_date,
+                    cl.absorbing_status,
+                    cl.abs_status_date,
+                    cl.process_date cl_process_date
+                FROM
+                    citizen ci1,
+                    customer_account ca
+                        LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '2015-04-22'
+                WHERE 
+                    ca.cus_id = ci1.cus_id
+                    AND (ci1.pay_list_flag = '1' OR cl.nnb_no_days >= '2')
+                    AND ca.ban_pro_typ_id = 790661005
+                    AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                    AND ca.opening_date <= '2015-04-22'
+                    AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '2015-04-22')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '2014-10-23') ) )
+                   -- AND ca.org_uni_id = '2345'
+                    AND ca.bank_sign = 'RB'
+                ORDER BY
+                    ca.cus_acc_id,
+                    cl.nnb_no_days desc;
+           
+  select * FROM customer_account  where cus_acc_no  like '3251010981';
+
+  select * from citizen where cus_id = 302329660;
+
+    select pay_list_flag from citizen where cus_id = 302329660;
+
+
+		----------------------------------------------------------  test za polje 11 - overdueBalance za 3251011371
+
+		 select * FROM customer_account  where cus_acc_no  like '3251011371';
+
+				 SELECT 
+               balance, 
+               balance_date, 
+               pro_typ_id 
+           FROM 
+               cusacc_balance_last 
+           WHERE 
+                   cus_acc_id  = 46390656  
+               AND cur_id  =  63999
+               AND pro_typ_id IN (8271662797);
+
+
+               
+	      SELECT 
+               balance, 
+               balance_date, 
+               pro_typ_id 
+           FROM 
+               cusacc_balance_last 
+           WHERE 
+                   cus_acc_id  = 46390656  
+               AND cur_id  =  63999
+               AND pro_typ_id IN (29344005,826790005,8271662797);
+
+
+		 select * from PROCEDURE_TYPE;
+
+               select * from PROCEDURE_TYPE  where pro_typ_id in (29344005,826790005,8271662797);
+
+			  select * from PROCEDURE_TYPE where pro_typ_code in ('P01',  '100');
+
+
+		select * FROM procedure_type where pro_typ_id = 8271662797;
+
+		  select * from PROCEDURE_TYPE where pro_typ_code in ('P01','R17%','R21');
+
+		    select * from PROCEDURE_TYPE where pro_typ_code like '%R2%';
+
+
+		    -----------------   test Comdebts-a
+
+		    select * from customer_account where cus_acc_no like '3251009098';
+
+		    select * from customer where cus_id = 10770855605;
+
+
+		     select * from customer_account where cus_acc_no like '3251011371';
+
+		     select * from customer where cus_id = 10801383605;
+
+
+
+		       select * from customer_account where cus_acc_no like '3251011380'; -- cus_acc_id = 46402656
+
+		     select * from customer where cus_id = 13216549605;
+
+-----------------------------------------------------------------  Sirius RBA Razvojni test ---------------------------------------------
+
+SET CURRENT_SCHEMA = 'SIP'
+
+
+	SELECT
+                   pa.PARAMETER_VALUE                 
+                  FROM
+                      PARAM_APPLICATION pa,
+                      PARAMS_DICTIONARY pd
+                  WHERE
+                      pa.PAR_DIC_ID = pd.PAR_DIC_ID
+                      AND pd.NAME = 'DPD_MIN_TR'
+
+
+              select * from PARAM_APPLICATION;        
+
+
+              select * from customer;
+
+
+--------------------------------------------------   Sirius Produkcijski test nestor 93 ----------------------------------
+
+SET CURRENT_SCHEMA = 'SIP'
+
+	
+  			SELECT
+                parameter_value
+                
+                FROM
+                param_application pa
+                , params_dictionary pd
+                WHERE
+                pa.par_dic_id = pd.par_dic_id
+                AND pd.name = 'smtp_server'
+                AND pa.bank_sign = 'RB'
+
+
+
+
+
+
+                 SELECT *
+                  
+                    FROM PARAM_APPLICATION pa, PARAMS_DICTIONARY pd
+                    WHERE pa.par_dic_id = pd.par_dic_id
+                    AND pd.name = 'min_vel_datoteke_za_kompresiju'
+                    AND pa.bank_sign = 'RB'
+
+                    
+		
+
+                 SELECT *
+                  
+                    FROM PARAM_APPLICATION pa, PARAMS_DICTIONARY pd
+                    WHERE pa.par_dic_id = pd.par_dic_id
+                    AND pd.name = 'min_vel_datoteke_za_kompresiju'
+                    AND pa.bank_sign = 'RB';
+
+                    
+  SELECT * from PARAMS_DICTIONARY pd where  pd.name = 'min_vel_datoteke_za_kompresiju'
+
+  select * from PARAM_APPLICATION where par_dic_id = 1790865999;
+
+
+
+
+			

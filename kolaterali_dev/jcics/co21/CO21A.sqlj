@@ -1,0 +1,79 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoyH.YOYH1;
+import hr.vestigo.modules.collateral.common.yoyH.YOYHData;
+
+import java.sql.SQLException;
+
+
+/**
+ * Transakcija za potvrdu kolateral officera (za sve kolaterale osim za nekretnine)
+ */
+public class CO21A extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO21A.sqlj,v 1.5 2014/12/16 12:24:02 hrakis Exp $";
+    
+    private DeclCO21 d = null;
+   
+    public CO21A(DeclCO21 d) {
+        this.d = d;
+    }
+     
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        YOYHData data;
+
+        // insert u co_chg_history
+        try
+        {     
+            YOYH1 yoyH1 = new YOYH1(tc);
+            data = yoyH1.getNewCollateralData(d.collcochghistmapping.col_hea_id);
+            data.co_ind = "D";
+            data.co_use_id = d.collcochghistmapping.use_id;
+            data.co_chg_ts = null;
+            data.co_chg_use_id = null;
+            #sql[ctx] { SELECT CURRENT TIMESTAMP INTO :(data.co_ts) FROM sysibm.sysdummy1 };
+            yoyH1.insertIntoCoChgHistory(data);
+        }
+        catch (SQLException se)
+        {
+            tc.debug( "......CO21A.sqlj INSERT INTO co_chg_history SQL ErrorCode " + se.getErrorCode());
+            tc.debug( "......CO21A.sqlj INSERT INTO co_chg_history SQL SQLState " + se.getSQLState());
+            tc.debug( "......CO21A.sqlj INSERT INTO co_chg_history SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO21A: Error inserting into co_chg_history! ", "err411a", null);
+        }
+        
+        // select podataka za potvrdu CO
+        try {
+            #sql [ctx] {
+                SELECT 
+                    a.co_ind,
+                    b.login,
+                    b.user_name,
+                    a.co_ts
+                INTO
+                    :(d.collcochghistmapping.Kol_txtCoConfirm),
+                    :(d.collcochghistmapping.Kol_txtCoConfirmUserId),
+                    :(d.collcochghistmapping.Kol_txtCoConfirmUserName),
+                    :(d.collcochghistmapping.Kol_txtCoConfirmTime)
+                FROM co_chg_history a
+                INNER JOIN app_user b ON a.co_use_id = b.use_id
+                WHERE a.co_chg_his_id = :(data.co_chg_his_id)
+            };
+        }
+        catch (SQLException se)
+        {
+            tc.debug("......CO21A.sqlj SELECT FROM co_chg_history SQL ErrorCode " + se.getErrorCode());
+            tc.debug("......CO21A.sqlj SELECT FROM co_chg_history SQL SQLState " + se.getSQLState());
+            tc.debug("......CO21A.sqlj SELECT FROM co_chg_history SQL Message " + se.getMessage());
+            throw new VestigoTMException(1, "Transaction CO21A: Error selecting from co_chg_history! ", "err411a", null);
+        }
+    }
+}  

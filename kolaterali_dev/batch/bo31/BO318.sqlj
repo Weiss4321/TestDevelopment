@@ -1,0 +1,388 @@
+package hr.vestigo.modules.collateral.batch.bo31;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+/**
+ * SQLJ za VRP.
+ * @author hrakis
+ */
+public class BO318 extends ReportData
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo31/BO318.sqlj,v 1.17 2015/09/24 14:19:20 hrakis Exp $";
+
+    
+    private final BigDecimal rat_typ_id_izdavatelja_s_p_long = new BigDecimal("660835251");
+    private final BigDecimal rat_typ_id_izdavatelja_s_p_short = new BigDecimal("660836251");
+
+    private final BigDecimal rat_typ_id_izdavatelja_moodys_long = new BigDecimal("660757251");
+    private final BigDecimal rat_typ_id_izdavatelja_moodys_short = new BigDecimal("660833251");
+    
+    private final BigDecimal rat_typ_id_vrp_s_p = new BigDecimal("91982780351");
+    private final BigDecimal rat_typ_id_vrp_moodys = new BigDecimal("91982745351");
+
+    
+    #sql iterator VRPIterator with (holdability = true)(
+        BigDecimal jedinicna_nominalna_vrijednost_osnova_za_izracun_glavnice,
+        BigDecimal jedinicna_trzisna_vrijednost_stanje_udjela_u_valuti,
+        BigDecimal jedinicna_trzisna_vrijednost_stanje_udjela_u_hrk,
+        BigDecimal jedinicna_trzisna_vrijednost_u_posto,
+        Date datum_zadnje_promjene_cijene_datum_trzisne_vrijednosti,
+        BigDecimal kolicina_ukupna_nominala_za_obv,
+        BigDecimal ukupna_nominala_u_valuti_ukupna_vrijednost_udjela_u_valuti,
+        BigDecimal ukupna_nominala_u_hrk,
+        BigDecimal ukupna_trzisna_vrijednost_u_valuti,
+        BigDecimal ukupna_trzisna_vrijednost_u_hrk,
+        BigDecimal margin_call,
+        BigDecimal omjer_margin_call_a,
+        String broj_skrbnickog_racuna,
+        BigDecimal UDJUPOD_ISS_CUS_ID,
+        BigDecimal COL_IN2_ID,
+        String isin_oznaka,
+        String da_li_je_vrp_uvrsten_u_glavni_index_burze,
+        BigDecimal kamatna_stopa,
+        Date datum_dospijeca,
+        String dnevno_objavljena_cijena,
+        String seniority_indicator,
+        BigDecimal ISS_CUS_ID,
+        String oznaka_referentnog_trzista,
+        String naziv_referentnog_trzista
+    );
+    
+
+    public boolean hasMortgage()
+    {
+        return true;
+    }
+    
+    public String getFileName()
+    {
+        return "VRP";
+    }
+    
+    public void setColumns()
+    {
+        // IZVJEŠTAJ 1
+        int idx = 0;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.ukupna_trzisna_vrijednost_u_valuti);
+        columns.get(idx).add(OutputData.valuta_nominalne_vrijednosti);
+        columns.get(idx).add(OutputData.red_hipoteke);
+        columns.get(idx).add(OutputData.upisati_pravo_banke_do);
+        columns.get(idx).add(OutputData.tip);
+        columns.get(idx).add(OutputData.isin_oznaka);
+        columns.get(idx).add(OutputData.id_izdavatelja);
+        columns.get(idx).add(OutputData.naziv_izdavatelja);
+        columns.get(idx).add(OutputData.oznaka_referentnog_trzista);
+        columns.get(idx).add(OutputData.naziv_referentnog_trzista);
+        columns.get(idx).add(OutputData.da_li_je_vrp_uvrsten_u_glavni_index_burze);
+        columns.get(idx).add(OutputData.vrsta_trzisne_vrijednosti);
+        columns.get(idx).add(OutputData.ces_ponder_prijedlog);
+        columns.get(idx).add(OutputData.coll_officer);
+        columns.get(idx).add(OutputData.jedinicna_nominalna_vrijednost_osnova_za_izracun_glavnice);
+        columns.get(idx).add(OutputData.jedinicna_trzisna_vrijednost_stanje_udjela_u_valuti);
+        columns.get(idx).add(OutputData.jedinicna_trzisna_vrijednost_stanje_udjela_u_hrk);
+        columns.get(idx).add(OutputData.jedinicna_trzisna_vrijednost_u_posto);
+        columns.get(idx).add(OutputData.datum_zadnje_promjene_cijene_datum_trzisne_vrijednosti);
+        columns.get(idx).add(OutputData.kamatna_stopa);
+        columns.get(idx).add(OutputData.datum_dospijeca);
+        columns.get(idx).add(OutputData.kolicina_ukupna_nominala_za_obv);
+        columns.get(idx).add(OutputData.ukupna_nominala_u_valuti_ukupna_vrijednost_udjela_u_valuti);
+        columns.get(idx).add(OutputData.ukupna_nominala_u_hrk);
+        columns.get(idx).add(OutputData.ukupna_trzisna_vrijednost_u_hrk);
+        columns.get(idx).add(OutputData.margin_call);
+        columns.get(idx).add(OutputData.omjer_margin_call_a);
+        columns.get(idx).add(OutputData.id_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.naziv_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.status_vlasnika_u_zbk);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_kolaterala);
+        columns.get(idx).add(OutputData.upisano_pravo_banke);
+        columns.get(idx).add(OutputData.dnevno_objavljena_cijena);
+        columns.get(idx).add(OutputData.seniority_indicator);
+        columns.get(idx).add(OutputData.vrsta_izdavatelja);
+        columns.get(idx).add(OutputData.obrada);
+        columns.get(idx).add(OutputData.rating_izdavatelja_zbk);
+        columns.get(idx).add(OutputData.rating_izdavatelja_s_p_long);
+        columns.get(idx).add(OutputData.rating_izdavatelja_s_p_short);
+        columns.get(idx).add(OutputData.rating_izdavatelja_moodys_long);
+        columns.get(idx).add(OutputData.rating_izdavatelja_moodys_short);
+        columns.get(idx).add(OutputData.rating_vrijednosnog_papira_s_p);
+        columns.get(idx).add(OutputData.rating_vrijednosnog_papira_moodys);
+        columns.get(idx).add(OutputData.rating_agencija_vrpa);
+        columns.get(idx).add(OutputData.rating_agencija_izdavatelja_vrpa);
+        columns.get(idx).add(OutputData.short_term_rating);
+        columns.get(idx).add(OutputData.broj_skrbnickog_racuna);
+        columns.get(idx).add(OutputData.indikator_ratinga);
+        
+        // IZVJEŠTAJ 2
+        idx = 1;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.ukupna_trzisna_vrijednost_u_valuti);
+        columns.get(idx).add(OutputData.valuta_nominalne_vrijednosti);
+        columns.get(idx).add(OutputData.ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.hnb_ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.prihv_za_rezervacije);
+        columns.get(idx).add(OutputData.b2_hnb_stand_prihvatljivost);
+        columns.get(idx).add(OutputData.b2_irb_prihvatljivost);
+        columns.get(idx).add(OutputData.rba_prihvatljivost);
+        columns.get(idx).add(OutputData.nd_prihvatljivost);
+        columns.get(idx).add(OutputData.omega_id_korisnika_plasmana);
+        columns.get(idx).add(OutputData.zbk_status_korisnika_plasmana);
+        columns.get(idx).add(OutputData.naziv_korisnika_plasmana);
+        columns.get(idx).add(OutputData.partija_plasmana);
+        columns.get(idx).add(OutputData.plasman_osiguran);
+        columns.get(idx).add(OutputData.osiguravatelj);
+        columns.get(idx).add(OutputData.broj_zahtjeva);
+        columns.get(idx).add(OutputData.broj_zahtjeva_aps);
+        columns.get(idx).add(OutputData.broj_ugovora);
+        columns.get(idx).add(OutputData.valuta_izlozenosti);
+        columns.get(idx).add(OutputData.izlozenost_po_plasmanu);
+        columns.get(idx).add(OutputData.datum_izlozenosti);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_plasmana);
+        columns.get(idx).add(OutputData.dwh_status_plasmana);
+        columns.get(idx).add(OutputData.originalni_status_plasmana);
+        columns.get(idx).add(OutputData.datum_dospijeca_plasmana);
+        columns.get(idx).add(OutputData.sifra_liste_na_kojoj_se_nalazi_kolateral);
+        columns.get(idx).add(OutputData.login_referenta);
+        columns.get(idx).add(OutputData.ime_referenta);
+        columns.get(idx).add(OutputData.sifra_oj_referenta);
+        columns.get(idx).add(OutputData.naziv_oj_referenta);
+        columns.get(idx).add(OutputData.datum_unosa);
+        columns.get(idx).add(OutputData.datum_zadnje_promjene);
+        columns.get(idx).add(OutputData.unos_plasmana);
+        columns.get(idx).add(OutputData.im_suduznika);
+        columns.get(idx).add(OutputData.naziv_suduznika);
+        columns.get(idx).add(OutputData.uloga_suduznika);
+        columns.get(idx).add(OutputData.wcov_orig_valuta);
+        columns.get(idx).add(OutputData.kol_ponder_dfl);
+        columns.get(idx).add(OutputData.kolateral_ponder_co);
+        columns.get(idx).add(OutputData.realan_ponder);
+        columns.get(idx).add(OutputData.wcov);
+        columns.get(idx).add(OutputData.iskoristenost_kolaterala_wca);
+        columns.get(idx).add(OutputData.vrsta_ugovora);
+        columns.get(idx).add(OutputData.collateral_code_gctc_kolaterala);
+        columns.get(idx).add(OutputData.endorsement_type_gctc);
+        columns.get(idx).add(OutputData.object_type_gctc);
+        columns.get(idx).add(OutputData.property_type_gctc);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_local_level);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_group_level);
+        columns.get(idx).add(OutputData.suma_hipoteka_viseg_reda_do_prve_rba);
+        columns.get(idx).add(OutputData.raspoloziva_neponderirana_vrijednost);
+        columns.get(idx).add(OutputData.datum_izracuna_raspolozive_vrijednosti);
+    }
+
+
+    public void selectAdditionalData(HashMap data, Date value_date, YRXX0 yrxx0) throws Exception
+    {
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        
+        try
+        {
+            bc.startStopWatch("BO318.selectAdditionalData#basic");
+            
+            data.put(OutputData.valuta_nominalne_vrijednosti, data.get(OutputData.valuta_procijenjene_vrijednosti));
+            
+            VRPIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    e.one_nom_amo       AS jedinicna_nominalna_vrijednost_osnova_za_izracun_glavnice,
+                    e.one_mar_amo       AS jedinicna_trzisna_vrijednost_stanje_udjela_u_valuti,
+                    e.one_mar_amo_kn    AS jedinicna_trzisna_vrijednost_stanje_udjela_u_hrk,
+                    e.one_mar_amo_per   AS jedinicna_trzisna_vrijednost_u_posto,
+                    e.price_date        AS datum_zadnje_promjene_cijene_datum_trzisne_vrijednosti,
+                    e.num_of_sec        AS kolicina_ukupna_nominala_za_obv,
+                    e.nominal_amount    AS ukupna_nominala_u_valuti_ukupna_vrijednost_udjela_u_valuti,
+                    e.nominal_amount_kn AS ukupna_nominala_u_hrk,
+                    e.market_amount     AS ukupna_trzisna_vrijednost_u_valuti,
+                    e.market_amount_kn  AS ukupna_trzisna_vrijednost_u_hrk,
+                    e.margin_granica    AS margin_call,
+                    e.margin_omjer      AS omjer_margin_call_a,
+                    e.custody_acc_no    AS broj_skrbnickog_racuna,
+                    e.iss_cus_id        AS UDJUPOD_ISS_CUS_ID,
+                    f.COL_IN2_ID        AS COL_IN2_ID,
+                    f.isin              AS isin_oznaka,
+                    f.stock_ind         AS da_li_je_vrp_uvrsten_u_glavni_index_burze,
+                    f.int_rate          AS kamatna_stopa,
+                    f.maturity_date     AS datum_dospijeca,
+                    f.daily_price       AS dnevno_objavljena_cijena,
+                    f.seniority_indic   AS seniority_indicator,
+                    f.iss_cus_id        AS ISS_CUS_ID,
+                    x.code              AS oznaka_referentnog_trzista,
+                    x.name              AS naziv_referentnog_trzista
+                FROM coll_vrp e
+                LEFT OUTER JOIN coll_in2 f              ON e.col_in2_id = f.col_in2_id 
+                LEFT OUTER JOIN stock_exchange x        ON f.sto_mar_id = x.sto_exc_id
+                WHERE e.col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                fillDataFromIterator(iter, data, OutputData.class);
+            }
+            
+            bc.stopStopWatch("BO318.selectAdditionalData#basic");
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o VRP-u! " + data.toString(), ex);
+            throw ex;
+        }
+        
+        
+        BigDecimal col_cat_id = (BigDecimal)data.get(OutputData.COL_CAT_ID);
+        BigDecimal iss_cus_id = new BigDecimal("629223").equals(col_cat_id) ? (BigDecimal)data.get(OutputData.UDJUPOD_ISS_CUS_ID) : (BigDecimal)data.get(OutputData.ISS_CUS_ID);
+        
+        String id_izdavatelja = null, naziv_izdavatelja = null, b2_asset_class_izdavatelja = null;
+        try
+        {
+            bc.startStopWatch("BO318.selectAdditionalData#issuer");
+            #sql[connCtx] {
+                SELECT a.register_no, a.name, a.basel_cus_type
+                INTO :(id_izdavatelja), :(naziv_izdavatelja), :(b2_asset_class_izdavatelja)
+                FROM customer a
+                WHERE a.cus_id = :(iss_cus_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            bc.stopStopWatch("BO318.selectAdditionalData#issuer");
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata izdavatelja VRP-a! " + data.toString(), ex);
+            }
+        }
+        
+        data.put(OutputData.id_izdavatelja, id_izdavatelja);
+        data.put(OutputData.naziv_izdavatelja, naziv_izdavatelja);
+        
+
+        String vrsta_izdavatelja = null;
+        try
+        {
+            bc.startStopWatch("BO318.selectAdditionalData#issuerType");
+            #sql [connCtx] {
+                SELECT map_out_desc
+                INTO :(vrsta_izdavatelja)
+                FROM mapping_sch
+                WHERE map_type = 'b2_issuer_type'
+                AND map_in_cod1 = :(b2_asset_class_izdavatelja)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            bc.stopStopWatch("BO318.selectAdditionalData#issuerType");
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata vrste izdavatelja (B2 ASSET CLASS=" + b2_asset_class_izdavatelja + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        data.put(OutputData.vrsta_izdavatelja, vrsta_izdavatelja);
+        
+        
+        String rating_izdavatelja_zbk = null;
+        try
+        {
+            bc.startStopWatch("BO318.selectAdditionalData#issuerZBKRating");
+            #sql [connCtx] {
+                SELECT b.score
+                INTO :(rating_izdavatelja_zbk)
+                FROM customer_rating b
+                WHERE b.rat_typ_id = 1354776003
+                AND :(value_date) BETWEEN b.date_from AND b.date_until
+                AND b.cus_id = :(iss_cus_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            bc.stopStopWatch("BO318.selectAdditionalData#issuerZBKRating");
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata ZBK ratinga izdavatelja (ISS_CUS_ID=" + iss_cus_id + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        data.put(OutputData.rating_izdavatelja_zbk, rating_izdavatelja_zbk);
+        
+        
+        BigDecimal col_in2_id = (BigDecimal)data.get(OutputData.COL_IN2_ID);
+        String rating_izdavatelja_s_p_long = getVrpRating(col_in2_id, rat_typ_id_izdavatelja_s_p_long, value_date);
+        String rating_izdavatelja_s_p_short = getVrpRating(col_in2_id, rat_typ_id_izdavatelja_s_p_short, value_date);
+        String rating_izdavatelja_moodys_long = getVrpRating(col_in2_id, rat_typ_id_izdavatelja_moodys_long, value_date);
+        String rating_izdavatelja_moodys_short = getVrpRating(col_in2_id, rat_typ_id_izdavatelja_moodys_short, value_date);
+        String rating_vrijednosnog_papira_s_p = getVrpRating(col_in2_id, rat_typ_id_vrp_s_p, value_date);
+        String rating_vrijednosnog_papira_moodys = getVrpRating(col_in2_id, rat_typ_id_vrp_moodys, value_date);
+        String indikator_ratinga = (rating_vrijednosnog_papira_s_p == null && rating_vrijednosnog_papira_moodys == null) ? "N" : "D";
+        
+        String rating_agencija_vrpa = "";
+        if (rating_vrijednosnog_papira_s_p != null) rating_agencija_vrpa = "S&P";
+        else if (rating_vrijednosnog_papira_moodys != null) rating_agencija_vrpa = "Moody's";
+        
+        String rating_agencija_izdavatelja_vrpa = "";
+        if (rating_izdavatelja_s_p_long != null || rating_izdavatelja_s_p_short != null) rating_agencija_izdavatelja_vrpa = "S&P";
+        else if (rating_izdavatelja_moodys_long != null || rating_izdavatelja_moodys_short != null) rating_agencija_izdavatelja_vrpa = "Moody's";
+        
+        data.put(OutputData.rating_izdavatelja_s_p_long, rating_izdavatelja_s_p_long);
+        data.put(OutputData.rating_izdavatelja_s_p_short, rating_izdavatelja_s_p_short);
+        data.put(OutputData.rating_izdavatelja_moodys_long, rating_izdavatelja_moodys_long);
+        data.put(OutputData.rating_izdavatelja_moodys_short, rating_izdavatelja_moodys_short);
+        data.put(OutputData.rating_vrijednosnog_papira_s_p, rating_vrijednosnog_papira_s_p);
+        data.put(OutputData.rating_vrijednosnog_papira_moodys, rating_vrijednosnog_papira_moodys);
+        data.put(OutputData.indikator_ratinga, indikator_ratinga);
+        data.put(OutputData.short_term_rating, "N");
+        data.put(OutputData.rating_agencija_vrpa, rating_agencija_vrpa);
+        data.put(OutputData.rating_agencija_izdavatelja_vrpa, rating_agencija_izdavatelja_vrpa);
+    }
+    
+    
+    private String getVrpRating(BigDecimal col_in2_id, BigDecimal rat_typ_id, Date value_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO318.selectAdditionalData#getVrpRating");            
+            String score = null;
+            #sql [connCtx]
+            {
+                SELECT score
+                INTO :(score)
+                FROM coll_in2_rating
+                WHERE col_in2_id = :(col_in2_id)
+                AND rat_typ_id = :(rat_typ_id)
+                AND :(value_date) BETWEEN date_from AND date_to
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return score;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata ratinga (COL_IN2_ID=" + col_in2_id + ",RAT_TYP_ID=" + rat_typ_id + ",VALUE_DATE=" + value_date + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO318.selectAdditionalData#getVrpRating");   
+        }
+    }
+}

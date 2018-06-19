@@ -1,0 +1,139 @@
+package hr.vestigo.modules.collateral.jcics.co17;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+/**
+ * CO173
+ *  	
+ */
+
+
+
+public class CO173 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co17/CO173.sqlj,v 1.3 2006/06/06 08:21:22 hrajkl Exp $";
+	public DeclCO17 decl = null;
+	
+	public CO173 (DeclCO17 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();	
+			
+			java.sql.Date DateFrom = null;		
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			DateFrom = new java.sql.Date(timeT);
+			
+			java.sql.Date DateUntil = java.sql.Date.valueOf("9999-12-31");
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			try{	//INSERT  real_estate_type_a slog prije brisanja
+				
+				#sql [ctx]{ INSERT INTO real_estate_type_a (
+							REAL_ES_TYPE_ID,
+							REAL_ES_TYPE_CODE,
+							REAL_ES_TYPE_DESC,
+							COLL_TYPE_ID,
+							real_es_date_from,
+							real_es_date_unti,
+							REAL_ES_ACT_NOACT,
+							USE_OPEN_ID,
+							USE_ID,
+							OPENING_TS,
+							USER_LOCK,
+							BANK_SIGN)
+						VALUES (
+							:(decl.realestatetypedeletem.REAL_ES_TYPE_ID),
+							:(decl.realestatetypedeletem.RealEstateDailog_txtCode_O),
+							:(decl.realestatetypedeletem.RealEstateDailog_txtDesc_O),
+							:(decl.realestatetypedeletem.COLL_TYPE_ID_O),
+							:(DateFrom),
+							:(DateUntil),
+							:(decl.realestatetypedeletem.RealEstateDailog_txtRealEsActNoact_O),
+							:(decl.realestatetypedeletem.USE_OPEN_ID),
+							:(decl.realestatetypedeletem.USE_ID),
+							:(decl.realestatetypedeletem.RealEstateDialog_txtOpeningTS),
+							:(decl.realestatetypedeletem.RealEstateDialog_txtUseLock),
+							:(tc.getBankSign())
+							)
+		        	};
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO173.sqlj insert into inserting real_state_type_a SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO173.sqlj insert into inserting real_state_type_a SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO173.sqlj insert into inserting real_state_type_a SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO173: Error inserting real_state_type_a! ","err411a", null);
+			}
+			
+			try{	//INSERT  real_estate_type_a slog oznaèen kao obrisan	
+		    	#sql [ctx]{ 
+						INSERT INTO real_estate_type_a 
+						(
+							REAL_ES_TYPE_ID,
+							REAL_ES_TYPE_CODE,
+							REAL_ES_TYPE_DESC,
+							COLL_TYPE_ID,
+							real_es_date_from,
+							real_es_date_unti,
+							REAL_ES_ACT_NOACT,
+							REAL_ES_SPEC_STAT,
+							USE_OPEN_ID,
+							USE_ID,
+							OPENING_TS,
+							USER_LOCK,
+							BANK_SIGN
+						)
+						VALUES 
+						(
+							:(decl.realestatetypedeletem.REAL_ES_TYPE_ID),
+							:(decl.realestatetypedeletem.RealEstateDailog_txtCode_O),
+							:(decl.realestatetypedeletem.RealEstateDailog_txtDesc_O),
+							:(decl.realestatetypedeletem.COLL_TYPE_ID_O),
+							:(DateFrom),
+							:(DateUntil),
+							:(decl.realestatetypedeletem.RealEstateDailog_txtRealEsActNoact_O),
+							'0D',
+							:(decl.realestatetypedeletem.USE_OPEN_ID),
+							:(decl.realestatetypedeletem.use_id),
+							:(decl.realestatetypedeletem.RealEstateDialog_txtOpeningTS),
+							current timestamp,
+							:(tc.getBankSign())
+						)
+		        	};
+				
+				//:(decl.realestatetypedeletem.USE_ID), trebao bi trenutni korisnik 
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO173.sqlj insert into inserting real_state_type_a SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO173.sqlj insert into inserting real_state_type_a SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO173.sqlj insert into inserting real_state_type_a SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO173: Error inserting real_state_type_a! ","err411a", null);
+			}
+			
+			try{	
+				
+				#sql [ctx, exCtx]{ 
+			    	DELETE FROM real_estate_type
+			    	WHERE real_es_type_id=:(decl.realestatetypedeletem.REAL_ES_TYPE_ID) 
+			    	AND user_lock=:(decl.realestatetypedeletem.USER_LOCK)
+			    	};
+			    	if (exCtx.getUpdateCount() == 0) {//ako ni jedan ne postoji, tj. ako je USER_LOCK promijenjen nece nista obrisati
+			    	    
+						throw new Exception("Nothing was deleted! REAL_ES_TYPE_ID : "+ decl.realestatetypedeletem.REAL_ES_TYPE_ID + " and user_lock is: " + decl.realestatetypedeletem.USER_LOCK);
+					}
+				}catch(java.sql.SQLException se){
+
+						tc.debug ( "......CO173.sqlj delete from political_map SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO173.sqlj delete from political_map SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO173.sqlj delete from political_map SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO173: Error deleting row in real_estate_type! ","err411a", null);
+				}
+		}//execute
+	
+
+}	
+			

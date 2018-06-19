@@ -1,0 +1,160 @@
+package hr.vestigo.modules.collateral.jcics.co01;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.framework.util.CharUtil;
+import hr.vestigo.framework.util.scramble.Scramble;
+
+import java.math.BigDecimal;
+import java.util.Vector;
+
+//RevRegCoefReLookUp
+
+
+#sql iterator Iter1 (
+	BigDecimal rev_re_id,
+	String rev_re_code,
+	String rev_re_name,
+	BigDecimal county_id,
+	String county_code,
+	String county_name,
+	BigDecimal place_id,
+	String place_code,
+	String place_name,
+	BigDecimal district_id,
+	String district_code,
+	String district_name,
+	BigDecimal resi_quar_id,
+	String resi_quar_code,
+	String resi_quar_name,
+	java.sql.Date rev_date_from,
+	java.sql.Date rev_date_unti,
+	java.math.BigDecimal rev_re_coef
+);
+
+public class CO011 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co01/CO011.sqlj,v 1.9 2006/01/29 08:38:48 hrasia Exp $";
+	private DeclCO01 d = null;
+
+	public CO011(DeclCO01 d) {
+		this.d = d;
+	}
+
+	public void execute (TransactionContext tc) throws Exception {
+
+		// dohvat definiranog contexta iz TransactionContext objekta, ctx nije
+		// potrebno eksplicitno zatvoriti, on ce se zatvoriti kasnije od strane
+		// CicsProgramRunner klase
+		ConnCtx connCtx0 = tc.getContext();
+
+		Iter1 iter1=null;
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+
+		
+		
+		
+		
+		if (d.rev_re_code!=null){
+			d.rev_re_code =d.rev_re_code.replace('*','%');
+		} else d.rev_re_code ="%";
+		if (d.rev_re_code .equals("")) d.rev_re_code ="%";
+
+		if (d.rev_re_name!=null){
+			d.rev_re_name =d.rev_re_name.replace('*','%');
+		} else d.rev_re_name ="%";
+		if (d.rev_re_name .equals("")) d.rev_re_name ="%";
+		
+		if (d.county_name!=null){
+			d.county_name =d.county_name.replace('*','%');
+		} else d.county_name ="%";
+		if (d.county_name .equals("")) d.county_name ="%";
+		
+		if (d.place_name!=null){
+			d.place_name =d.place_name.replace('*','%');
+		} else d.place_name ="%";
+		if (d.place_name .equals("")) d.place_name ="%";
+			
+		
+		tc.debug(" UKAZNI PARAMETRI LOOKUP-a RevRegCoefReLookUp ");
+		tc.debug("***rev_re_code = " + d.rev_re_code);
+		tc.debug("***rev_re_name = " + d.rev_re_name);
+		tc.debug("***county_name = " + d.county_name);
+		tc.debug("***place_name = " + d.place_name);
+		
+		
+		#sql [connCtx0] iter1 = {
+				SELECT
+					rrcr.rev_re_id as rev_re_id, rrcr.rev_re_code as rev_re_code, rtrim(rrcr.rev_re_name) as rev_re_name ,
+					pmc.pol_map_id as county_id,   rtrim(pmc.code) as county_code,rtrim(pmc.name) as county_name, 
+					pmp.pol_map_id as place_id,    rtrim(pmp.code) as place_code, rtrim(pmp.name) as place_name, 
+					pmd.pol_map_id as district_id, rtrim(pmd.code) as district_code, rtrim(pmd.name) as district_name,
+					pmr.pol_map_id as resi_quar_id, rtrim(pmr.code) as resi_quar_code, rtrim(pmr.name) as resi_quar_name ,
+					rrcr.rev_date_from as rev_date_from, rrcr.rev_date_unti as rev_date_unti,
+					rrcr.rev_re_coef as rev_re_coef
+				FROM rev_reg_coef_re rrcr
+				INNER JOIN  political_map pmc ON rrcr.rev_re_county = pmc.pol_map_id
+				INNER JOIN  political_map pmp ON rrcr.rev_re_place  = pmp.pol_map_id
+				LEFT OUTER JOIN  political_map pmd ON rrcr.rev_re_district  = pmd.pol_map_id
+				LEFT OUTER JOIN  political_map pmr ON rrcr.rev_re_resi_quar  = pmr.pol_map_id
+				WHERE rrcr.rev_re_code like :(d.rev_re_code)
+				AND rrcr.rev_re_name like :(d.rev_re_name)
+				AND pmc.name like :(d.county_name)
+				AND pmp.name like :(d.place_name)
+				AND rrcr.rev_act_noact = 'A'
+                AND rrcr.bank_sign=:(tc.getBankSign())
+				ORDER BY rrcr.rev_re_code , pmc.name 
+			};
+				
+		
+		
+		
+		
+		
+		
+		
+		int number_of_rows=TransactionContext.LOOKUP_FETCH_SIZE;
+		int level=d.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+
+		int count=0;
+		int count_returned=0;
+		while (iter1.next()){
+			if(start<=count && start+number_of_rows>count){
+				Vector row=new Vector();
+				Vector unique = new Vector();
+					// reodslijwed dpdavanja mora biti kao i na xml-u od lookupa
+				row.add(iter1.rev_re_code());
+				row.add(iter1.rev_re_name());
+				row.add(iter1.county_name());
+				row.add(iter1.place_name());
+				row.add(iter1.district_name());
+				row.add(iter1.resi_quar_name());
+				unique.add(iter1.rev_re_id());
+				unique.add(iter1.county_id());
+				unique.add(iter1.county_code());
+				unique.add(iter1.place_id());
+				unique.add(iter1.place_code());
+				unique.add(iter1.district_id());
+				unique.add(iter1.district_code());
+				unique.add(iter1.resi_quar_id());
+				unique.add(iter1.resi_quar_code());
+				unique.add(iter1.rev_date_from());
+				unique.add(iter1.rev_date_unti());
+				unique.add(iter1.rev_re_coef());
+				
+				
+				d.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			}
+			count++;
+		}
+		if(count_returned==0){
+			throw new VestigoTMException(1, "Transaction co011: No more data! ","wrn090", null);
+		}
+		if(iter1 != null) iter1.close();
+	}
+}

@@ -1,0 +1,1212 @@
+package hr.vestigo.modules.collateral.batch.bo31;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+
+
+/**
+ * @author hrakis
+ */
+public class BO311
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo31/BO311.sqlj,v 1.39 2017/05/03 12:01:34 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private final BigDecimal rba_cus_id = new BigDecimal("8218251");
+    private final BigDecimal zero = new BigDecimal("0.00");
+    private final BigDecimal hrk_cur_id = new BigDecimal("63999");
+    private final BigDecimal eur_cur_id = new BigDecimal("64999");
+
+    
+    #sql iterator CollateralIterator(
+        BigDecimal COL_HEA_ID,
+        BigDecimal COL_CAT_ID,
+        BigDecimal COL_TYP_ID,
+        String sifra_kolaterala,
+        BigDecimal ESTIMATOR_ID, 
+        Date datum_procjene,
+        String vrsta_procjene,
+        BigDecimal procijenjena_vrijednost,
+        BigDecimal trzisna_vrijednost,
+        Date datum_trzisne_vrijednosti_datum_nom_vrijed_c_o,
+        BigDecimal CUR_ID,
+        BigDecimal akumulirana_svota,
+        String predana_sva_dokumentacija,
+        String misljenje_pravne_sluzbe,
+        String prihv_za_rezervacije,
+        String b2_hnb_stand_prihvatljivost,
+        String b2_irb_prihvatljivost, 
+        String rba_prihvatljivost,
+        String nd_prihvatljivost,
+        String hnb_ekonomska_neovisnost,
+        String b2_irb_prihv_sporazuma_o_osiguranju, 
+        String b2_hnb_prihv_sporazuma_o_osiguranju,
+        String osigurano,
+        String sifra_liste_na_kojoj_se_nalazi_kolateral,
+        String ekonomska_neovisnost,
+        String upisano_pravo_banke,
+        Date predati_dokumentaciju_do,
+        Date upisati_pravo_banke_do,
+        Date datum_unosa,
+        Date datum_zadnje_promjene,
+        String tocnost_provedbe_procjene,
+        String korektnost_vrijednosti,
+        String postivanje_rokova,
+        String profesionalnost,
+        String ocjena_procjene,
+        Integer ekonomski_vijek_kolaterala,
+        String interni_procjenitelj,
+        String pristup_jpp,
+        String osiguranje_pokriva_kolateral_u_potpunosti,
+        String recovery_process_status,
+        String red_hipoteke,
+        BigDecimal CUS_ID,
+        String partija_plasmana,
+        String broj_zahtjeva,
+        String broj_zahtjeva_aps,
+        String broj_ugovora,
+        String plasman_osiguran,
+        String osiguravatelj,
+        Date unos_plasmana,
+        String coll_officer,
+        BigDecimal izlozenost_po_plasmanu,
+        Date datum_izlozenosti,
+        String CONTRACT_NO,
+        String tip,
+        String valuta_procijenjene_vrijednosti,
+        String valuta_izlozenosti,
+        String dwh_status_plasmana,
+        String originalni_status_plasmana,
+        Date datum_dospijeca_plasmana,
+        String collateral_code_gctc_kolaterala,
+        String endorsement_type_gctc,
+        String object_type_gctc,
+        String property_type_gctc,
+        String vrsta_trzisne_vrijednosti,
+        String tip_procjenitelja,
+        String metoda_procjene_1,
+        String metoda_procjene_2,
+        String razlog_neosiguranja,
+        String vrsta_ugovora
+    );
+    
+    #sql iterator CoborrowerIterator(
+        String register_no,
+        String name,
+        String role
+    );
+    
+    #sql iterator AllocationIterator(
+        BigDecimal cur_id,
+        String cur_char,
+        BigDecimal wcov_hrk,
+        BigDecimal real_ponder,
+        BigDecimal other_mrtg_hrk,
+        BigDecimal allocation_amount,
+        Integer cov_priority,
+        BigDecimal hf_own_cus_id
+    );
+
+    
+    public BO311 (BatchContext bc) throws SQLException
+    {
+        this.bc = bc;
+        this.connCtx = bc.getContext();
+    }
+
+    
+    public CollateralIterator selectCollaterals (BigDecimal col_cat_id, boolean hasMortgage, String customer_type, Date report_date, Date current_date, String col_list, String ind_archive) throws Exception
+    {
+        bc.startStopWatch("BO311.selectCollaterals");
+        
+        bc.info("selectCollaterals pozvan s:");
+        bc.info("   col_cat_id = " + col_cat_id);
+        bc.info("   hasMortgage = " + hasMortgage);
+        bc.info("   customer_type = " + customer_type);
+        bc.info("   report_date = " + report_date);
+        bc.info("   current_date = " + current_date);
+        bc.info("   col_list = " + col_list);
+        bc.info("   ind_archive = " + ind_archive);
+
+        int flag_customer = -1;
+        if ("P".equals(customer_type)) flag_customer = 0;
+        else if ("F".equals(customer_type)) flag_customer = 1;
+
+        int flag_list = -1;
+        if ("A".equals(col_list)) flag_list = 0;
+        else flag_list = 1;
+        
+        bc.info("   flag_customer = " + flag_customer);
+        bc.info("   flag_list = " + flag_list);
+
+        try
+        {
+            CollateralIterator iter = null;
+            
+            if (hasMortgage)  // kolaterali koji imaju hipoteku
+            {
+                if (report_date.before(current_date))  // kolaterali koji imaju hipoteku - arhiva
+                {
+                    #sql[connCtx] iter = {
+                        SELECT
+                            a.col_hea_id            AS COL_HEA_ID,
+                            a.col_cat_id            AS COL_CAT_ID,
+                            a.col_type_id           AS COL_TYP_ID,
+                            a.col_num               AS sifra_kolaterala,
+                            a.real_est_euse_id      AS ESTIMATOR_ID, 
+                            a.real_est_estn_date    AS datum_procjene,
+                            a.real_est_nomi_desc    AS vrsta_procjene,
+                            a.real_est_estn_valu    AS procijenjena_vrijednost,
+                            a.real_est_nomi_valu    AS trzisna_vrijednost,
+                            a.real_est_nomi_date    AS datum_trzisne_vrijednosti_datum_nom_vrijed_c_o,
+                            a.real_est_nm_cur_id    AS CUR_ID,
+                            a.acum_buy_value        AS akumulirana_svota,
+                            a.com_doc               AS predana_sva_dokumentacija,
+                            a.law_eligibility       AS misljenje_pravne_sluzbe,
+                            a.b1_eligibility        AS prihv_za_rezervacije,
+                            a.eligibility           AS b2_hnb_stand_prihvatljivost,
+                            a.b2_irb_elig           AS b2_irb_prihvatljivost, 
+                            a.rba_eligibility       AS rba_prihvatljivost,
+                            a.nd_eligibility        AS nd_prihvatljivost,
+                            a.crm_hnb               AS hnb_ekonomska_neovisnost,
+                            a.b2_irb_insag_elig     AS b2_irb_prihv_sporazuma_o_osiguranju, 
+                            a.b2_hnb_insag_elig     AS b2_hnb_prihv_sporazuma_o_osiguranju,
+                            a.inspol_ind            AS osigurano,
+                            a.collateral_status     AS sifra_liste_na_kojoj_se_nalazi_kolateral,
+                            a.real_est_spec_stat    AS ekonomska_neovisnost,
+                            a.rec_lop               AS upisano_pravo_banke,
+                            a.date_to_doc           AS predati_dokumentaciju_do,
+                            a.date_to_lop           AS upisati_pravo_banke_do,
+                            DATE(a.opening_ts)      AS datum_unosa,
+                            DATE(a.user_lock)       AS datum_zadnje_promjene,
+                            a.prec_exec_est         AS tocnost_provedbe_procjene,
+                            a.correct_value         AS korektnost_vrijednosti,
+                            a.respect_deadline      AS postivanje_rokova,
+                            a.prof_to_rba           AS profesionalnost,
+                            a.prof_to_client        AS ocjena_procjene,
+                            a.col_eco_life          AS ekonomski_vijek_kolaterala,
+                            a.real_est_estn_int     AS interni_procjenitelj,
+                            a.coll_risk             AS pristup_jpp,
+                            a.ins_cov_coll          AS osiguranje_pokriva_kolateral_u_potpunosti,
+                            a.recovery_proc_stat    AS recovery_process_status,
+                            b.hf_priority           AS red_hipoteke,
+                            c.CUS_ID                AS CUS_ID,
+                            c.acc_no                AS partija_plasmana,
+                            c.request_no            AS broj_zahtjeva,
+                            c.aps_rqst_no           AS broj_zahtjeva_aps,
+                            c.acc_no_old            AS broj_ugovora,
+                            c.inspol_ind            AS plasman_osiguran,
+                            i.ic_name               AS osiguravatelj,
+                            DATE(c.opening_ts)      AS unos_plasmana,
+                            n.user_name             AS coll_officer,
+                            d.exposure_balance      AS izlozenost_po_plasmanu,
+                            d.exposure_date         AS datum_izlozenosti,
+                            d.contract_no           AS CONTRACT_NO,
+                            f.coll_type_name        AS tip,
+                            j.code_char             AS valuta_procijenjene_vrijednosti, 
+                            k.code_char             AS valuta_izlozenosti,
+                            d.cus_acc_status        AS dwh_status_plasmana,
+                            d.cus_acc_orig_st       AS originalni_status_plasmana,
+                            d.due_date              AS datum_dospijeca_plasmana,
+                            g1.name                 AS collateral_code_gctc_kolaterala,
+                            g2.name                 AS endorsement_type_gctc,
+                            g3.name                 AS object_type_gctc,
+                            g4.name                 AS property_type_gctc,
+                            s1.sys_code_desc        AS vrsta_trzisne_vrijednosti,
+                            s2.sys_code_desc        AS tip_procjenitelja,
+                            s3.sys_code_desc        AS metoda_procjene_1,
+                            s4.sys_code_desc        AS metoda_procjene_2,
+                            s5.sys_code_desc        AS razlog_neosiguranja,
+                            s6.sys_code_desc        AS vrsta_ugovora
+                        FROM coll_head_d a
+                        LEFT OUTER JOIN coll_hf_prior_d b       ON a.col_hea_id = b.hf_coll_head_id
+                        LEFT OUTER JOIN loan_beneficiary_d c    ON b.coll_hf_prior_id = c.coll_hf_prior_id 
+                        LEFT OUTER JOIN cusacc_exposure d       ON (c.la_acc_id = d.cus_acc_id OR c.acc_no = d.cus_acc_no OR c.request_no = d.request_no)
+                        LEFT OUTER JOIN collateral_type f       ON a.col_type_id = f.coll_type_id 
+                        LEFT OUTER JOIN insu_company i          ON c.ip_cus_id = i.ic_id
+                        LEFT OUTER JOIN currency j              ON a.real_est_nm_cur_id = j.cur_id
+                        LEFT OUTER JOIN currency k              ON d.exposure_cur_id = k.cur_id
+                        LEFT OUTER JOIN customer l              ON c.cus_id = l.cus_id
+                        LEFT OUTER JOIN app_user n              ON a.use_id_co = n.use_id
+                        LEFT OUTER JOIN coll_gcm_type g1        ON a.gctc_id = g1.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g2        ON a.endorsement_type_id = g2.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g3        ON a.object_type_id = g3.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g4        ON a.property_type_id = g4.col_gcm_typ_id
+                        LEFT OUTER JOIN system_code_value s1    ON (s1.sys_cod_id = 'coll_RealEstNomTyp' AND a.real_est_nom_type = s1.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s2    ON (s2.sys_cod_id = 'est_type' AND a.est_type = s2.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s3    ON (s3.sys_cod_id = 'coll_Assessment' AND a.met_est_1 = s3.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s4    ON (s4.sys_cod_id = 'coll_Assessment' AND a.met_est_2 = s4.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s5    ON (s5.sys_cod_id = 'coll_NonInsReasone' AND a.non_ins_reason = s5.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s6    ON (s6.sys_cod_id = 'coll_cnt_typ' AND a.contract_type = s6.sys_code_value)
+                        WHERE a.col_cat_id = :(col_cat_id)
+                          AND :(report_date) BETWEEN a.load_date_from AND a.load_date_until
+                          AND ( (:(flag_list) = 0 AND a.collateral_status IN ('0','1','2','3')) OR (:(flag_list) = 1 AND a.collateral_status = :(col_list)) )
+                          AND :(report_date) BETWEEN b.load_date_from AND b.load_date_until
+                          AND b.hf_own_cus_id = 8218251
+                          AND ( (:(flag_list) = 0 AND b.hf_status = 'A') OR :(flag_list) = 1 )
+                          AND :(report_date) BETWEEN c.load_date_from AND c.load_date_until
+                          AND ( (:(flag_list) = 0 AND c.status = 'A') OR :(flag_list) = 1 )
+                          AND ( (:(flag_customer) = 0 AND l.basel_cus_type NOT IN ('1','36')) OR (:(flag_customer) = 1 AND l.basel_cus_type IN ('1','36')) )
+                        ORDER BY a.col_num
+                        WITH UR
+                    };
+                }
+                else  // kolaterali koji imaju hipoteku - trenutni podaci
+                {                    
+                    #sql[connCtx] iter = {
+                        SELECT
+                            a.col_hea_id            AS COL_HEA_ID,
+                            a.col_cat_id            AS COL_CAT_ID,
+                            a.col_type_id           AS COL_TYP_ID,
+                            a.col_num               AS sifra_kolaterala,
+                            a.real_est_euse_id      AS ESTIMATOR_ID, 
+                            a.real_est_estn_date    AS datum_procjene,
+                            a.real_est_nomi_desc    AS vrsta_procjene,
+                            a.real_est_estn_valu    AS procijenjena_vrijednost,
+                            a.real_est_nomi_valu    AS trzisna_vrijednost,
+                            a.real_est_nomi_date    AS datum_trzisne_vrijednosti_datum_nom_vrijed_c_o,
+                            a.real_est_nm_cur_id    AS CUR_ID,
+                            a.acum_buy_value        AS akumulirana_svota,
+                            a.com_doc               AS predana_sva_dokumentacija,
+                            a.law_eligibility       AS misljenje_pravne_sluzbe,
+                            a.b1_eligibility        AS prihv_za_rezervacije,
+                            a.eligibility           AS b2_hnb_stand_prihvatljivost,
+                            a.b2_irb_elig           AS b2_irb_prihvatljivost, 
+                            a.rba_eligibility       AS rba_prihvatljivost,
+                            a.nd_eligibility        AS nd_prihvatljivost,
+                            a.crm_hnb               AS hnb_ekonomska_neovisnost,
+                            a.b2_irb_insag_elig     AS b2_irb_prihv_sporazuma_o_osiguranju, 
+                            a.b2_hnb_insag_elig     AS b2_hnb_prihv_sporazuma_o_osiguranju,
+                            a.inspol_ind            AS osigurano,
+                            a.collateral_status     AS sifra_liste_na_kojoj_se_nalazi_kolateral,
+                            a.real_est_spec_stat    AS ekonomska_neovisnost,
+                            a.rec_lop               AS upisano_pravo_banke,
+                            a.date_to_doc           AS predati_dokumentaciju_do,
+                            a.date_to_lop           AS upisati_pravo_banke_do,
+                            DATE(a.opening_ts)      AS datum_unosa,
+                            DATE(a.user_lock)       AS datum_zadnje_promjene,
+                            a.prec_exec_est         AS tocnost_provedbe_procjene,
+                            a.correct_value         AS korektnost_vrijednosti,
+                            a.respect_deadline      AS postivanje_rokova,
+                            a.prof_to_rba           AS profesionalnost,
+                            a.prof_to_client        AS ocjena_procjene,
+                            a.col_eco_life          AS ekonomski_vijek_kolaterala,
+                            a.real_est_estn_int     AS interni_procjenitelj,
+                            a.coll_risk             AS pristup_jpp,
+                            a.ins_cov_coll          AS osiguranje_pokriva_kolateral_u_potpunosti,
+                            a.recovery_proc_stat    AS recovery_process_status,
+                            b.hf_priority           AS red_hipoteke,
+                            c.CUS_ID                AS CUS_ID,
+                            c.acc_no                AS partija_plasmana,
+                            c.request_no            AS broj_zahtjeva,
+                            c.aps_rqst_no           AS broj_zahtjeva_aps,
+                            c.acc_no_old            AS broj_ugovora,
+                            c.inspol_ind            AS plasman_osiguran,
+                            i.ic_name               AS osiguravatelj,
+                            DATE(c.opening_ts)      AS unos_plasmana,
+                            n.user_name             AS coll_officer,
+                            d.exposure_balance      AS izlozenost_po_plasmanu,
+                            d.exposure_date         AS datum_izlozenosti,
+                            d.contract_no           AS CONTRACT_NO,
+                            f.coll_type_name        AS tip,
+                            j.code_char             AS valuta_procijenjene_vrijednosti, 
+                            k.code_char             AS valuta_izlozenosti,
+                            d.cus_acc_status        AS dwh_status_plasmana,
+                            d.cus_acc_orig_st       AS originalni_status_plasmana,
+                            d.due_date              AS datum_dospijeca_plasmana,
+                            g1.name                 AS collateral_code_gctc_kolaterala,
+                            g2.name                 AS endorsement_type_gctc,
+                            g3.name                 AS object_type_gctc,
+                            g4.name                 AS property_type_gctc,
+                            s1.sys_code_desc        AS vrsta_trzisne_vrijednosti,
+                            s2.sys_code_desc        AS tip_procjenitelja,
+                            s3.sys_code_desc        AS metoda_procjene_1,
+                            s4.sys_code_desc        AS metoda_procjene_2,
+                            s5.sys_code_desc        AS razlog_neosiguranja,
+                            s6.sys_code_desc        AS vrsta_ugovora
+                        FROM coll_head a
+                        LEFT OUTER JOIN coll_hf_prior b         ON a.col_hea_id = b.hf_coll_head_id
+                        LEFT OUTER JOIN loan_beneficiary c      ON b.coll_hf_prior_id = c.coll_hf_prior_id 
+                        LEFT OUTER JOIN cusacc_exposure d       ON (c.la_acc_id = d.cus_acc_id OR c.acc_no = d.cus_acc_no OR c.request_no = d.request_no)
+                        LEFT OUTER JOIN collateral_type f       ON a.col_type_id = f.coll_type_id 
+                        LEFT OUTER JOIN insu_company i          ON c.ip_cus_id = i.ic_id
+                        LEFT OUTER JOIN currency j              ON a.real_est_nm_cur_id = j.cur_id
+                        LEFT OUTER JOIN currency k              ON d.exposure_cur_id = k.cur_id
+                        LEFT OUTER JOIN customer l              ON c.cus_id = l.cus_id
+                        LEFT OUTER JOIN app_user n              ON a.use_id_co = n.use_id
+                        LEFT OUTER JOIN coll_gcm_type g1        ON a.gctc_id = g1.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g2        ON a.endorsement_type_id = g2.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g3        ON a.object_type_id = g3.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g4        ON a.property_type_id = g4.col_gcm_typ_id
+                        LEFT OUTER JOIN system_code_value s1    ON (s1.sys_cod_id = 'coll_RealEstNomTyp' AND a.real_est_nom_type = s1.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s2    ON (s2.sys_cod_id = 'est_type' AND a.est_type = s2.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s3    ON (s3.sys_cod_id = 'coll_Assessment' AND a.met_est_1 = s3.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s4    ON (s4.sys_cod_id = 'coll_Assessment' AND a.met_est_2 = s4.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s5    ON (s5.sys_cod_id = 'coll_NonInsReasone' AND a.non_ins_reason = s5.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s6    ON (s6.sys_cod_id = 'coll_cnt_typ' AND a.contract_type = s6.sys_code_value)
+                        WHERE a.col_cat_id = :(col_cat_id)
+                          AND ( (:(flag_list) = 0 AND a.collateral_status IN ('0','1','2','3')) OR (:(flag_list) = 1 AND a.collateral_status = :(col_list)) )
+                          AND b.hf_own_cus_id = 8218251
+                          AND ( (:(flag_list) = 0 AND b.hf_status = 'A') OR :(flag_list) = 1 )
+                          AND ( (:(flag_list) = 0 AND c.status = 'A') OR :(flag_list) = 1 )
+                          AND ( (:(flag_customer) = 0 AND l.basel_cus_type NOT IN ('1','36')) OR (:(flag_customer) = 1 AND l.basel_cus_type IN ('1','36')) )
+                        ORDER BY a.col_num
+                        WITH UR
+                    };
+                }
+            }
+            else  // kolaterali koji nemaju hipoteku
+            {
+                if (report_date.before(current_date))  // kolaterali koji nemaju hipoteku - arhiva
+                {
+                    #sql[connCtx] iter = {
+                        SELECT
+                            a.col_hea_id            AS COL_HEA_ID,
+                            a.col_cat_id            AS COL_CAT_ID,
+                            a.col_type_id           AS COL_TYP_ID,
+                            a.col_num               AS sifra_kolaterala,
+                            a.real_est_euse_id      AS ESTIMATOR_ID, 
+                            a.real_est_estn_date    AS datum_procjene,
+                            a.real_est_nomi_desc    AS vrsta_procjene,
+                            a.real_est_estn_valu    AS procijenjena_vrijednost,
+                            a.real_est_nomi_valu    AS trzisna_vrijednost,
+                            a.real_est_nomi_date    AS datum_trzisne_vrijednosti_datum_nom_vrijed_c_o,
+                            a.real_est_nm_cur_id    AS CUR_ID,
+                            a.acum_buy_value        AS akumulirana_svota,
+                            a.com_doc               AS predana_sva_dokumentacija,
+                            a.law_eligibility       AS misljenje_pravne_sluzbe,
+                            a.b1_eligibility        AS prihv_za_rezervacije,
+                            a.eligibility           AS b2_hnb_stand_prihvatljivost,
+                            a.b2_irb_elig           AS b2_irb_prihvatljivost, 
+                            a.rba_eligibility       AS rba_prihvatljivost,
+                            a.nd_eligibility        AS nd_prihvatljivost,
+                            a.crm_hnb               AS hnb_ekonomska_neovisnost,
+                            a.b2_irb_insag_elig     AS b2_irb_prihv_sporazuma_o_osiguranju, 
+                            a.b2_hnb_insag_elig     AS b2_hnb_prihv_sporazuma_o_osiguranju,
+                            a.inspol_ind            AS osigurano,
+                            a.collateral_status     AS sifra_liste_na_kojoj_se_nalazi_kolateral,
+                            a.real_est_spec_stat    AS ekonomska_neovisnost,
+                            a.rec_lop               AS upisano_pravo_banke,
+                            a.date_to_doc           AS predati_dokumentaciju_do,
+                            a.date_to_lop           AS upisati_pravo_banke_do,
+                            DATE(a.opening_ts)      AS datum_unosa,
+                            DATE(a.user_lock)       AS datum_zadnje_promjene,
+                            a.prec_exec_est         AS tocnost_provedbe_procjene,
+                            a.correct_value         AS korektnost_vrijednosti,
+                            a.respect_deadline      AS postivanje_rokova,
+                            a.prof_to_rba           AS profesionalnost,
+                            a.prof_to_client        AS ocjena_procjene,
+                            a.col_eco_life          AS ekonomski_vijek_kolaterala,
+                            a.real_est_estn_int     AS interni_procjenitelj,
+                            a.coll_risk             AS pristup_jpp,
+                            a.ins_cov_coll          AS osiguranje_pokriva_kolateral_u_potpunosti,
+                            a.recovery_proc_stat    AS recovery_process_status,
+                            ''                      AS red_hipoteke,
+                            c.CUS_ID                AS CUS_ID,
+                            c.acc_no                AS partija_plasmana,
+                            c.request_no            AS broj_zahtjeva,
+                            c.aps_rqst_no           AS broj_zahtjeva_aps,
+                            c.acc_no_old            AS broj_ugovora,
+                            c.inspol_ind            AS plasman_osiguran,
+                            i.ic_name               AS osiguravatelj,
+                            DATE(c.opening_ts)      AS unos_plasmana,
+                            n.user_name             AS coll_officer,
+                            d.exposure_balance      AS izlozenost_po_plasmanu,
+                            d.exposure_date         AS datum_izlozenosti,
+                            d.contract_no           AS CONTRACT_NO,
+                            f.coll_type_name        AS tip,
+                            j.code_char             AS valuta_procijenjene_vrijednosti, 
+                            k.code_char             AS valuta_izlozenosti,
+                            d.cus_acc_status        AS dwh_status_plasmana,
+                            d.cus_acc_orig_st       AS originalni_status_plasmana,
+                            d.due_date              AS datum_dospijeca_plasmana,
+                            g1.name                 AS collateral_code_gctc_kolaterala,
+                            g2.name                 AS endorsement_type_gctc,
+                            g3.name                 AS object_type_gctc,
+                            g4.name                 AS property_type_gctc,
+                            s1.sys_code_desc        AS vrsta_trzisne_vrijednosti,
+                            s2.sys_code_desc        AS tip_procjenitelja,
+                            s3.sys_code_desc        AS metoda_procjene_1,
+                            s4.sys_code_desc        AS metoda_procjene_2,
+                            s5.sys_code_desc        AS razlog_neosiguranja,
+                            s6.sys_code_desc        AS vrsta_ugovora
+                        FROM coll_head_d a
+                        LEFT OUTER JOIN loan_beneficiary_d c    ON a.col_hea_id = c.col_hea_id 
+                        LEFT OUTER JOIN cusacc_exposure d       ON (c.la_acc_id = d.cus_acc_id OR c.acc_no = d.cus_acc_no OR c.request_no = d.request_no)
+                        LEFT OUTER JOIN collateral_type f       ON a.col_type_id = f.coll_type_id 
+                        LEFT OUTER JOIN insu_company i          ON c.ip_cus_id = i.ic_id
+                        LEFT OUTER JOIN currency j              ON a.real_est_nm_cur_id = j.cur_id
+                        LEFT OUTER JOIN currency k              ON d.exposure_cur_id = k.cur_id
+                        LEFT OUTER JOIN customer l              ON c.cus_id = l.cus_id
+                        LEFT OUTER JOIN app_user n              ON a.use_id_co = n.use_id
+                        LEFT OUTER JOIN coll_gcm_type g1        ON a.gctc_id = g1.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g2        ON a.endorsement_type_id = g2.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g3        ON a.object_type_id = g3.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g4        ON a.property_type_id = g4.col_gcm_typ_id
+                        LEFT OUTER JOIN system_code_value s1    ON (s1.sys_cod_id = 'coll_RealEstNomTyp' AND a.real_est_nom_type = s1.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s2    ON (s2.sys_cod_id = 'est_type' AND a.est_type = s2.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s3    ON (s3.sys_cod_id = 'coll_Assessment' AND a.met_est_1 = s3.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s4    ON (s4.sys_cod_id = 'coll_Assessment' AND a.met_est_2 = s4.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s5    ON (s5.sys_cod_id = 'coll_NonInsReasone' AND a.non_ins_reason = s5.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s6    ON (s6.sys_cod_id = 'coll_cnt_typ' AND a.contract_type = s6.sys_code_value)
+                        WHERE a.col_cat_id = :(col_cat_id)
+                          AND :(report_date) BETWEEN a.load_date_from AND a.load_date_until
+                          AND ( (:(flag_list) = 0 AND a.collateral_status IN ('0','1','2','3')) OR (:(flag_list) = 1 AND a.collateral_status = :(col_list)) )
+                          AND :(report_date) BETWEEN c.load_date_from AND c.load_date_until
+                          AND ( (:(flag_list) = 0 AND c.status = 'A') OR :(flag_list) = 1 )
+                          AND ( (:(flag_customer) = 0 AND l.basel_cus_type NOT IN ('1','36')) OR (:(flag_customer) = 1 AND l.basel_cus_type IN ('1','36')) )
+                        ORDER BY a.col_num
+                        WITH UR
+                    };
+                }
+                else  // kolaterali koji nemaju hipoteku - trenutni podaci
+                {                    
+                    #sql[connCtx] iter = {
+                        SELECT
+                            a.col_hea_id            AS COL_HEA_ID,
+                            a.col_cat_id            AS COL_CAT_ID,
+                            a.col_type_id           AS COL_TYP_ID,
+                            a.col_num               AS sifra_kolaterala,
+                            a.real_est_euse_id      AS ESTIMATOR_ID, 
+                            a.real_est_estn_date    AS datum_procjene,
+                            a.real_est_nomi_desc    AS vrsta_procjene,
+                            a.real_est_estn_valu    AS procijenjena_vrijednost,
+                            a.real_est_nomi_valu    AS trzisna_vrijednost,
+                            a.real_est_nomi_date    AS datum_trzisne_vrijednosti_datum_nom_vrijed_c_o,
+                            a.real_est_nm_cur_id    AS CUR_ID,
+                            a.acum_buy_value        AS akumulirana_svota,
+                            a.com_doc               AS predana_sva_dokumentacija,
+                            a.law_eligibility       AS misljenje_pravne_sluzbe,
+                            a.b1_eligibility        AS prihv_za_rezervacije,
+                            a.eligibility           AS b2_hnb_stand_prihvatljivost,
+                            a.b2_irb_elig           AS b2_irb_prihvatljivost, 
+                            a.rba_eligibility       AS rba_prihvatljivost,
+                            a.nd_eligibility        AS nd_prihvatljivost,
+                            a.crm_hnb               AS hnb_ekonomska_neovisnost,
+                            a.b2_irb_insag_elig     AS b2_irb_prihv_sporazuma_o_osiguranju, 
+                            a.b2_hnb_insag_elig     AS b2_hnb_prihv_sporazuma_o_osiguranju,
+                            a.inspol_ind            AS osigurano,
+                            a.collateral_status     AS sifra_liste_na_kojoj_se_nalazi_kolateral,
+                            a.real_est_spec_stat    AS ekonomska_neovisnost,
+                            a.rec_lop               AS upisano_pravo_banke,
+                            a.date_to_doc           AS predati_dokumentaciju_do,
+                            a.date_to_lop           AS upisati_pravo_banke_do,
+                            DATE(a.opening_ts)      AS datum_unosa,
+                            DATE(a.user_lock)       AS datum_zadnje_promjene,
+                            a.prec_exec_est         AS tocnost_provedbe_procjene,
+                            a.correct_value         AS korektnost_vrijednosti,
+                            a.respect_deadline      AS postivanje_rokova,
+                            a.prof_to_rba           AS profesionalnost,
+                            a.prof_to_client        AS ocjena_procjene,
+                            a.col_eco_life          AS ekonomski_vijek_kolaterala,
+                            a.real_est_estn_int     AS interni_procjenitelj,
+                            a.coll_risk             AS pristup_jpp,
+                            a.ins_cov_coll          AS osiguranje_pokriva_kolateral_u_potpunosti,
+                            a.recovery_proc_stat    AS recovery_process_status,
+                            ''                      AS red_hipoteke,
+                            c.CUS_ID                AS CUS_ID,
+                            c.acc_no                AS partija_plasmana,
+                            c.request_no            AS broj_zahtjeva,
+                            c.aps_rqst_no           AS broj_zahtjeva_aps,
+                            c.acc_no_old            AS broj_ugovora,
+                            c.inspol_ind            AS plasman_osiguran,
+                            i.ic_name               AS osiguravatelj,
+                            DATE(c.opening_ts)      AS unos_plasmana,
+                            n.user_name             AS coll_officer,
+                            d.exposure_balance      AS izlozenost_po_plasmanu,
+                            d.exposure_date         AS datum_izlozenosti,
+                            d.contract_no           AS CONTRACT_NO,
+                            f.coll_type_name        AS tip,
+                            j.code_char             AS valuta_procijenjene_vrijednosti, 
+                            k.code_char             AS valuta_izlozenosti,
+                            d.cus_acc_status        AS dwh_status_plasmana,
+                            d.cus_acc_orig_st       AS originalni_status_plasmana,
+                            d.due_date              AS datum_dospijeca_plasmana,
+                            g1.name                 AS collateral_code_gctc_kolaterala,
+                            g2.name                 AS endorsement_type_gctc,
+                            g3.name                 AS object_type_gctc,
+                            g4.name                 AS property_type_gctc,
+                            s1.sys_code_desc        AS vrsta_trzisne_vrijednosti,
+                            s2.sys_code_desc        AS tip_procjenitelja,
+                            s3.sys_code_desc        AS metoda_procjene_1,
+                            s4.sys_code_desc        AS metoda_procjene_2,
+                            s5.sys_code_desc        AS razlog_neosiguranja,
+                            s6.sys_code_desc        AS vrsta_ugovora
+                        FROM coll_head a
+                        LEFT OUTER JOIN loan_beneficiary c      ON a.col_hea_id = c.col_hea_id 
+                        LEFT OUTER JOIN cusacc_exposure d       ON (c.la_acc_id = d.cus_acc_id OR c.acc_no = d.cus_acc_no OR c.request_no = d.request_no)
+                        LEFT OUTER JOIN collateral_type f       ON a.col_type_id = f.coll_type_id 
+                        LEFT OUTER JOIN insu_company i          ON c.ip_cus_id = i.ic_id
+                        LEFT OUTER JOIN currency j              ON a.real_est_nm_cur_id = j.cur_id
+                        LEFT OUTER JOIN currency k              ON d.exposure_cur_id = k.cur_id
+                        LEFT OUTER JOIN customer l              ON c.cus_id = l.cus_id
+                        LEFT OUTER JOIN app_user n              ON a.use_id_co = n.use_id
+                        LEFT OUTER JOIN coll_gcm_type g1        ON a.gctc_id = g1.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g2        ON a.endorsement_type_id = g2.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g3        ON a.object_type_id = g3.col_gcm_typ_id
+                        LEFT OUTER JOIN coll_gcm_type g4        ON a.property_type_id = g4.col_gcm_typ_id
+                        LEFT OUTER JOIN system_code_value s1    ON (s1.sys_cod_id = 'coll_RealEstNomTyp' AND a.real_est_nom_type = s1.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s2    ON (s2.sys_cod_id = 'est_type' AND a.est_type = s2.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s3    ON (s3.sys_cod_id = 'coll_Assessment' AND a.met_est_1 = s3.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s4    ON (s4.sys_cod_id = 'coll_Assessment' AND a.met_est_2 = s4.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s5    ON (s5.sys_cod_id = 'coll_NonInsReasone' AND a.non_ins_reason = s5.sys_code_value)
+                        LEFT OUTER JOIN system_code_value s6    ON (s6.sys_cod_id = 'coll_cnt_typ' AND a.contract_type = s6.sys_code_value)
+                        WHERE a.col_cat_id = :(col_cat_id)
+                          AND ( (:(flag_list) = 0 AND a.collateral_status IN ('0','1','2','3')) OR (:(flag_list) = 1 AND a.collateral_status = :(col_list)) )
+                          AND ( (:(flag_list) = 0 AND c.status = 'A') OR :(flag_list) = 1 )
+                          AND ( (:(flag_customer) = 0 AND l.basel_cus_type NOT IN ('1','36')) OR (:(flag_customer) = 1 AND l.basel_cus_type IN ('1','36')) )
+                        ORDER BY a.col_num
+                        WITH UR
+                    };
+                }
+            }
+
+            bc.stopStopWatch("BO311.selectCollaterals");
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata kolaterala koji ulaze u izvjesce (COL_CAT_ID=" + col_cat_id + ")!", ex);
+            throw ex;
+        }
+    }
+
+    
+    
+    /**
+     * Metoda dohvaæa podatke o zadnjem ND izraèunu pokrivenosti prije zadanog datuma.
+     */
+    public HashMap selectColProId (Date value_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO311.selectColProId");
+            
+            BigDecimal col_pro_id = null;
+            Date allocation_date = null;
+            
+            #sql[connCtx] {
+                SELECT col_pro_id, value_date
+                INTO :(col_pro_id), :(allocation_date)
+                FROM col_proc
+                WHERE proc_type = 'M'
+                AND proc_status = '1'
+                AND value_date <= :(value_date)
+                ORDER BY value_date DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+
+            HashMap map = new HashMap();
+            map.put(OutputData.COL_PRO_ID, col_pro_id);
+            map.put(OutputData.ALLOCATION_DATE, allocation_date);
+            return map;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Ne postoji nijedan izvrseni ND izracun pokrivenosti prije datuma " + value_date + "!", new String[]{});
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata zadnjeg ND izracuna pokrivenosti prije datuma " + value_date + ")! ", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO311.selectColProId");    
+        }
+    }
+    
+    
+    
+    /**
+     * Metoda dohvaæa podatke o pokrivenosti zadanog kolaterala.
+     * @param data HashMap za punjenje podataka 
+     * @param col_pro_id ID izraèuna pokrivenosti
+     * @param allocation_date Datum izraèuna pokrivenosti
+     * @param yrxx0 Common za konverziju valuta 
+     */
+    public void selectAllocationData (HashMap data, BigDecimal col_pro_id, Date allocation_date, YRXX0 yrxx0) throws Exception
+    {
+        bc.startStopWatch("BO311.selectAllocationData");
+        
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        BigDecimal real_ponder = null, cur_id = null, wcov_hrk = null, wcov = null, other_mrtg_hrk = null, other_mrtg = null, allocation_amount = null;
+        String cur_char = null, cov_priority = null;
+        boolean eligible = false;
+        
+        if (col_pro_id != null && allocation_date != null)
+        {
+            try
+            {     
+                AllocationIterator iter = null;
+                #sql[connCtx] iter = {
+                    SELECT 
+                        a.exp_coll_cur_id   AS cur_id,
+                        c.code_char         AS cur_char,
+                        a.wcov              AS wcov_hrk,
+                        a.real_ponder       AS real_ponder,
+                        a.other_mrtg        AS other_mrtg_hrk,
+                        a.coll_fc_amount    AS allocation_amount,
+                        a.cov_priority      AS cov_priority,
+                        b.hf_own_cus_id     AS hf_own_cus_id
+                    FROM cusacc_exp_coll a
+                    LEFT OUTER JOIN coll_hf_prior b ON a.coll_hf_prior_id = b.coll_hf_prior_id 
+                    LEFT OUTER JOIN currency c ON a.exp_coll_cur_id = c.cur_id
+                    WHERE a.col_pro_id = :(col_pro_id)
+                    AND a.col_hea_id = :(col_hea_id)
+                    ORDER BY b.hf_priority
+                    WITH UR
+                };
+                
+                while (iter.next())
+                {
+                    if (allocation_amount == null) allocation_amount = zero;
+                    if (real_ponder == null && iter.real_ponder() != null) real_ponder = iter.real_ponder();
+                    if (cur_id == null && iter.cur_id() != null) cur_id = iter.cur_id();
+                    if (cur_char == null && iter.cur_char() != null) cur_char = iter.cur_char();
+                    if (wcov_hrk == null && iter.wcov_hrk() != null) wcov_hrk = iter.wcov_hrk();
+                    if (other_mrtg_hrk == null && iter.other_mrtg_hrk() != null && rba_cus_id.equals(iter.hf_own_cus_id())) other_mrtg_hrk = iter.other_mrtg_hrk();
+                    if (iter.allocation_amount() != null) allocation_amount = allocation_amount.add(iter.allocation_amount());
+                    if (iter.cov_priority() != null) eligible = true;
+                }
+                iter.close();
+                
+                if (!eligible && wcov_hrk != null) wcov_hrk = zero;
+                if (wcov_hrk != null && cur_id != null) wcov = yrxx0.exchange(wcov_hrk, hrk_cur_id, cur_id, allocation_date);
+                if (other_mrtg_hrk != null && cur_id != null) other_mrtg = yrxx0.exchange(other_mrtg_hrk, hrk_cur_id, cur_id, allocation_date);
+            }
+            catch (SQLException ex)
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o pokrivenosti (COL_HEA_ID=" + col_hea_id + ",COL_PRO_ID=" + col_pro_id + ",ALLOCATION_DATE=" + allocation_date + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        
+        data.put(OutputData.realan_ponder, real_ponder);
+        data.put(OutputData.wcov, wcov);
+        data.put(OutputData.weighted_guarantee_value_wgv, wcov);
+        data.put(OutputData.wcov_orig_valuta, cur_char);
+        data.put(OutputData.suma_hipoteka_viseg_reda_do_prve_rba, other_mrtg);
+        data.put(OutputData.iskoristenost_kolaterala_wca, allocation_amount);
+        data.put(OutputData.iskoristenost_garancije_wga, allocation_amount);
+        
+        bc.stopStopWatch("BO311.selectAllocationData");  
+    }
+    
+    
+    public void selectB2AllocatedCollateralValue (HashMap data) throws Exception
+    {
+        bc.startStopWatch("BO311.selectB2AllocatedCollateralValue");
+        data.put(OutputData.b2_allocated_collateral_value_group_level, null);
+        data.put(OutputData.b2_allocated_collateral_value_local_level, null);
+        data.put(OutputData.b2_guarantee_value_b2wgv_to_the_loan, null);
+        data.put(OutputData.b2_allocated_guarantee_value, null);
+        bc.stopStopWatch("BO311.selectB2AllocatedCollateralValue");
+    }
+    
+    
+    
+    /**
+     * Metoda koja puni predanu hashmapu s datumom izraèuna i neponderiranom raspoloživom vrijednosti zadanog kolaterala.
+     * @param data HashMap za punjenje podataka 
+     */
+    public void selectPonderRestAmount(HashMap data) throws Exception
+    {
+        bc.startStopWatch("BO311.selectPonderRestAmount");
+
+        YOYE0Data kolData = new YOYE0Data();
+        kolData.colHeaId = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        kolData.colCurId = (BigDecimal)data.get(OutputData.CUR_ID);
+        kolData.nominalAmount = (BigDecimal)data.get(OutputData.trzisna_vrijednost);
+        kolData.colCatId = (BigDecimal)data.get(OutputData.COL_CAT_ID);
+        kolData.colTypId = (BigDecimal)data.get(OutputData.COL_TYP_ID);
+        kolData.colSubTypId = (BigDecimal)data.get(OutputData.COL_SUB_ID);
+        kolData.addRequest = "N";
+
+        YOYE0 yoye0 = new YOYE0(bc);
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+        // yoye0.getPonderRestAmount(kolData);
+
+        data.put(OutputData.raspoloziva_neponderirana_vrijednost, kolData.restAmount);
+        data.put(OutputData.datum_izracuna_raspolozive_vrijednosti, kolData.coverDate);
+        // data.put(OutputData.raspoloziva_ponderirana_vrijednost, kolData.restPonAmount);
+        
+        BigDecimal trzisna = (BigDecimal)data.get(OutputData.trzisna_vrijednost);
+        BigDecimal wca = (BigDecimal)data.get(OutputData.iskoristenost_kolaterala_wca);
+        if (trzisna != null && wca != null) data.put(OutputData.raspoloziva_ponderirana_vrijednost, trzisna.subtract(wca));
+        else data.put(OutputData.raspoloziva_ponderirana_vrijednost, trzisna);
+
+        bc.stopStopWatch("BO311.selectPonderRestAmount");
+    }
+
+
+
+    /**
+     * Metoda koja puni predanu hashmapu defaultnim ponderom definiranim za zadanu kategoriju, vrstu i podvrstu kolaterala, te dodatni uvjet.
+     * @param data HashMap za punjenje podataka
+     * @param value_date važeæi datum
+     */
+    public void selectPonderDfl(HashMap data, Date value_date) throws SQLException
+    {
+        bc.startStopWatch("BO311.selectPonderDfl");
+        
+        BigDecimal ponder = null;
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        BigDecimal col_cat_id = (BigDecimal)data.get(OutputData.COL_CAT_ID);
+        BigDecimal col_typ_id = (BigDecimal)data.get(OutputData.COL_TYP_ID);
+        BigDecimal col_sub_id = (BigDecimal)data.get(OutputData.COL_SUB_ID);
+        String add_request = (String)data.get(OutputData.osigurano);
+        if (!"D".equals(add_request)) add_request = "N";
+
+        boolean try_again = true;
+
+        while (try_again)
+        {
+            try_again = false;
+            try
+            { 
+                #sql[connCtx] {
+                    SELECT dfl_value
+                    INTO :(ponder)
+                    FROM dfl_col_ponder
+                    WHERE col_cat_id = :(col_cat_id)
+                      AND col_typ_id = :(col_typ_id)
+                      AND (col_sub_id = :(col_sub_id) OR col_sub_id IS NULL)
+                      AND add_request = :(add_request)
+                      AND ponder_type = 'MVP'
+                      AND :(value_date) BETWEEN date_from AND date_until
+                    FETCH FIRST ROW ONLY
+                    WITH UR
+                };
+            }
+            catch (SQLException ex)
+            {
+                if (bc.getSQLExHandler().isEmptyRowset(ex)) 
+                {
+                    if (add_request.equals("D"))  // ako defaultni ponder za uvjet D nije pronaðen, promijeni uvjet u N i pokušaj opet
+                    {
+                        add_request = "N";
+                        try_again = true;
+                    }
+                }
+                else
+                {
+                    bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o defaultnom ponderu (COL_HEA_ID=" + col_hea_id + ",COL_CAT_ID=" + col_cat_id + ",COL_TYP_ID=" + col_typ_id + ",COL_SUB_ID=" + col_sub_id + ",ADD_REQUEST=" + add_request + ",VALUE_DATE=" + value_date + ")! " + data.toString(), ex);
+                    throw ex;
+                }
+            }
+        }
+        
+        data.put(OutputData.kol_ponder_dfl, ponder);
+        
+        bc.stopStopWatch("BO311.selectPonderDfl");
+    }
+
+
+    
+    /**
+     * Metoda koja puni predanu hashmapu s ponderom koji definira referent kolaterala.
+     * @param data HashMap za punjenje podataka
+     * @param value_date datum valute
+     */
+    public void selectPonderCo(HashMap data, Date value_date, String ponder_type) throws SQLException
+    {
+        bc.startStopWatch("BO311.selectPonderCo");
+
+        BigDecimal ponder = null;
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+
+        try
+        {    
+            #sql[connCtx] {
+                SELECT ponder_value
+                INTO :(ponder)
+                FROM coll_ponder
+                WHERE col_hea_id = :(col_hea_id)
+                  AND ponder_type = :(ponder_type)
+                  AND :(value_date) BETWEEN date_from AND date_until
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata pondera koji definira referent kolaterala (COL_HEA_ID=" + col_hea_id + ", VALUE_DATE=" + value_date + ", PONDER_TYPE=" + ponder_type + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+
+        if (ponder_type.equalsIgnoreCase("MVP")) data.put(OutputData.kolateral_ponder_co, ponder);
+        else if (ponder_type.equalsIgnoreCase("CES")) data.put(OutputData.ces_ponder_prijedlog, ponder);
+        else bc.warning("Nepoznati tip pondera: " + ponder_type);
+        
+        bc.stopStopWatch("BO311.selectPonderCo");
+    }
+
+
+
+    /**
+     * Metoda koja puni predanu hashmapu podatkom o placenosti premije osiguranja.
+     * @param data HashMap za punjenje podataka
+     */
+    public void selectIpValiUntil (HashMap data) throws SQLException
+    {
+        bc.startStopWatch("BO311.selectIpValiUntil");
+        
+        Date ip_vali_until = null;
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        
+        try
+        {
+            #sql[connCtx] {
+                SELECT ip_vali_until 
+                INTO :ip_vali_until
+                FROM insurance_policy
+                WHERE col_hea_id = :(col_hea_id)
+                ORDER BY ip_vali_until DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podatka do kada je placena premija (COL_HEA_ID=" + col_hea_id + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        
+        data.put(OutputData.premija_placena_do, ip_vali_until);
+        
+        bc.stopStopWatch("BO311.selectIpValiUntil");
+    }
+
+    
+    
+    /**
+     * Metoda koja puni predanu hashmapu podacima o procjenitelju.
+     * @param data HashMap za punjenje podataka
+     */
+    public void selectEstimator (HashMap data) throws SQLException
+    {
+        bc.startStopWatch("BO311.selectEstimator");
+        
+        String estimator_register_no = null, estimator_name = null;
+        BigDecimal estimator_id = (BigDecimal)data.get(OutputData.ESTIMATOR_ID);
+        
+        try
+        { 
+            #sql[connCtx] {
+                SELECT register_no, name
+                INTO :(estimator_register_no), :(estimator_name)
+                FROM customer 
+                WHERE cus_id = :(estimator_id)
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o procjenitelju (ESTIMATOR_ID=" + estimator_id + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        
+        data.put(OutputData.omega_id_procjenitelja, estimator_register_no);
+        data.put(OutputData.naziv_procjenitelja, estimator_name);
+        
+        bc.stopStopWatch("BO311.selectEstimator");
+    }
+
+    
+    
+    /**
+     * Metoda koja puni predanu hashmapu podacima o vlasniku zadanog kolaterala.
+     * @param data HashMap za punjenje podataka
+     */
+    public void selectCollateralOwner (HashMap data) throws SQLException
+    {
+        bc.startStopWatch("BO311.selectCollateralOwner");
+        
+        String register_no = null, name = null, status = null, num_of_estate = null, main_ind = null, b2asset = null, state_name = null;
+        
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        BigDecimal col_cat_id = (BigDecimal)data.get(OutputData.COL_CAT_ID);
+        int onlyMainOwner = new BigDecimal("618223").equals(col_cat_id) ? 1 : 0;
+        
+        boolean try_again = true;
+        
+        while (try_again)
+        {
+            try_again = false;
+            try
+            { 
+                #sql[connCtx] {
+                    SELECT 
+                        c.register_no,
+                        c.name,
+                        c.status,
+                        c.basel_cus_type,
+                        a.num_of_estate,
+                        a.main_owner,
+                        cc.name
+                    INTO 
+                        :(register_no),
+                        :(name),
+                        :(status),
+                        :(b2asset),
+                        :(num_of_estate),
+                        :(main_ind),
+                        :(state_name) 
+                    FROM coll_owner a
+                    LEFT OUTER JOIN customer c ON a.cus_id = c.cus_id
+                    LEFT OUTER JOIN customer cc ON a.statement_owner_id = cc.cus_id
+                    WHERE a.col_hea_id = :col_hea_id
+                    AND a.date_until = '9999-12-31'
+                    AND (:(onlyMainOwner) = 0 OR a.main_owner = 'D')
+                    ORDER BY c.status, a.ser_num
+                    FETCH FIRST ROW ONLY
+                    WITH UR 
+                };
+            }
+            catch (SQLException ex)
+            {
+                if (bc.getSQLExHandler().isEmptyRowset(ex)) 
+                {
+                    if (onlyMainOwner == 1)
+                    {
+                        onlyMainOwner = 0;
+                        try_again = true;
+                    }
+                }
+                else
+                {
+                    bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o vlasniku kolaterala (COL_HEA_ID=" + col_hea_id + ",COL_CAT_ID=" + col_cat_id + ")! " + data.toString(), ex);
+                    throw ex;
+                }
+            }
+        }
+        
+        data.put(OutputData.id_vlasnika_kolaterala, register_no);
+        data.put(OutputData.naziv_vlasnika_kolaterala, name);
+        data.put(OutputData.status_vlasnika_u_zbk, status);
+        data.put(OutputData.b2_asset_class_vlasnika_kolaterala, b2asset);
+        data.put(OutputData.broj_nekretnina_u_vlasnistvu, num_of_estate);
+        data.put(OutputData.glavni_vlasnik, main_ind);
+        data.put(OutputData.davatelj_izjave, state_name);
+        
+        bc.stopStopWatch("BO311.selectCollateralOwner");
+    }
+
+    
+    
+    /**
+     * Metoda koja puni predanu hashmapu s podacima o vlasniku plasmana i njegovom nadležnom referentu.
+     * @param data HashMap za punjenje podataka
+     */
+    public void selectPlacementOwner (HashMap data) throws SQLException
+    {
+        bc.startStopWatch("BO311.selectPlacementOwner");
+        
+        String owner_register_no = null, owner_status = null, owner_name = null, owner_basel_cus_type = null;
+        String referent_login = null, referent_name = null, referent_org_code = null, referent_org_name = null;
+        
+        BigDecimal cus_id = (BigDecimal)data.get(OutputData.CUS_ID);;
+        
+        try
+        {
+            #sql[connCtx] {
+                SELECT 
+                    a.register_no, 
+                    a.status, 
+                    a.name, 
+                    a.basel_cus_type, 
+                    b.login, 
+                    b.user_name, 
+                    d.code, 
+                    d.name
+                INTO 
+                    :(owner_register_no), 
+                    :(owner_status),
+                    :(owner_name),
+                    :(owner_basel_cus_type),
+                    :(referent_login),
+                    :(referent_name),
+                    :(referent_org_code),
+                    :(referent_org_name)
+                FROM customer a
+                LEFT OUTER JOIN app_user b ON a.rsm_use_id = b.use_id 
+                LEFT OUTER JOIN user_signing c ON b.use_id = c.use_id
+                LEFT OUTER JOIN organization_unit d ON c.org_uni_id = d.org_uni_id
+                WHERE a.cus_id = :(cus_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o vlasniku plasmana i njegovom nadleznom referentu (CUS_ID=" + cus_id + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        
+        data.put(OutputData.omega_id_korisnika_plasmana, owner_register_no);
+        data.put(OutputData.naziv_korisnika_plasmana, owner_name);
+        data.put(OutputData.zbk_status_korisnika_plasmana, owner_status);
+        data.put(OutputData.b2_asset_class_vlasnika_plasmana, owner_basel_cus_type);
+        data.put(OutputData.login_referenta, referent_login);
+        data.put(OutputData.ime_referenta, referent_name);
+        data.put(OutputData.sifra_oj_referenta, referent_org_code);
+        data.put(OutputData.naziv_oj_referenta, referent_org_name);
+        
+        bc.stopStopWatch("BO311.selectPlacementOwner");
+    }
+
+    
+    
+    /**
+     * Metoda koja puni predanu hashmapu s podacima o CO kvaèici kolateral officera.
+     * @param data HashMap za punjenje podataka
+     */
+    public void selectCoKvacica (HashMap data) throws SQLException
+    {
+        bc.startStopWatch("BO311.selectCoKvacica");
+        
+        String co_ind = null, login = null, user_name = null;
+        Date co_date = null;
+        
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        
+        try
+        {     
+            #sql[connCtx] {
+                SELECT a.co_ind, DATE(a.co_ts), b.login, b.user_name
+                INTO :(co_ind), :(co_date), :(login), :(user_name)
+                FROM co_chg_history a
+                INNER JOIN app_user b ON a.co_use_id = b.use_id
+                WHERE a.col_hea_id = :(col_hea_id)
+                ORDER BY recording_time DESC
+                FETCH FIRST ROW ONLY 
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o CO kvacici kolateral officera (COL_HEA_ID=" + col_hea_id + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        
+        data.put(OutputData.potvrda_co, co_ind);
+        data.put(OutputData.datum_co, co_date);
+        data.put(OutputData.login_referenta_co, login);
+        data.put(OutputData.ime_referenta_co, user_name);
+        
+        bc.stopStopWatch("BO311.selectCoKvacica");
+    }
+
+    
+    
+    /**
+     * Metoda koja dohvaæa trenutni datum iz baze podataka.
+     */
+    public Date selectCurrentDate () throws SQLException
+    {
+        bc.startStopWatch("BO311.selectCurrentDate");
+        Date current_date = null;
+        try
+        {     
+            #sql[connCtx] {
+                SELECT CURRENT DATE
+                INTO :(current_date)
+                FROM sysibm.sysdummy1
+                WITH UR
+            };
+         }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata trenutnog datuma!", ex);
+                throw ex;
+            }
+        }
+        bc.stopStopWatch("BO311.selectCurrentDate");
+        return current_date;
+    }
+
+    
+    
+    /**
+     * Metoda koja puni predanu hashmapu s podacima o sudužniku zadanog plasmana.
+     * @param data HashMap za punjenje podataka
+     */
+    public void selectCoborrower (HashMap data) throws Exception
+    {
+        bc.startStopWatch("BO311.selectCoborrower");
+        
+        String cus_acc_no = (String)data.get(OutputData.partija_plasmana);
+        String contract_no = (String)data.get(OutputData.CONTRACT_NO);
+        
+        try
+        {     
+            CoborrowerIterator iter = null;
+            #sql[connCtx] iter = {
+                SELECT 
+                    b.register_no   AS register_no,
+                    b.name          AS name,
+                    c.sys_code_desc AS role
+                FROM loan_coborrower a
+                INNER JOIN customer b ON a.cus_id = b.cus_id
+                LEFT OUTER JOIN system_code_value c ON (c.sys_cod_id = 'loa_cob_role' AND a.loa_cob_role = c.sys_code_value) 
+                WHERE cus_acc_no = :(cus_acc_no) OR contract_no = :(contract_no)
+                WITH UR
+            };
+            
+            String coborrower_register_no = "", coborrower_name = "", coborrower_role = "";
+            while (iter.next())
+            {
+                coborrower_register_no += ", " + iter.register_no().trim();
+                coborrower_name += ", " + iter.name();
+                coborrower_role += ", " + iter.role();
+            }
+            iter.close();
+
+            coborrower_register_no = coborrower_register_no.replaceFirst(", ", "");
+            coborrower_name = coborrower_name.replaceFirst(", ", "");
+            coborrower_role = coborrower_role.replaceFirst(", ", "");
+
+            data.put(OutputData.im_suduznika, coborrower_register_no);
+            data.put(OutputData.naziv_suduznika, coborrower_name);
+            data.put(OutputData.uloga_suduznika, coborrower_role);
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata suduznika (CUS_ACC_NO=" + cus_acc_no + ",CONTRACT_NO=" + contract_no + ")! " + data.toString(), ex);
+            throw ex;
+        }
+        bc.stopStopWatch("BO311.selectCoborrower");        
+    }
+}

@@ -1,0 +1,85 @@
+package hr.vestigo.modules.collateral.jcics.coB2;
+
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+import java.sql.SQLException;
+
+import sqlj.runtime.ref.*;
+import hr.vestigo.framework.remote.transaction.*;   
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+
+public class COB24 extends RemoteTransaction { 
+
+    
+public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB2/COB24.sqlj,v 1.2 2015/12/04 07:45:01 hraziv Exp $";
+    
+    public DeclCOB2 decl = null;
+    
+    public COB24 (DeclCOB2 decl) {
+        this.decl = decl;
+    }
+    public void  execute(TransactionContext tc) throws Exception {
+        tc.debug("execute");
+        ConnCtx ctx = tc.getContext(); 
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+                
+        // prvo provjeriti da li postoji u bazi aktivna veza za mjesto
+        int broj = 0;           
+        try {
+            #sql [ctx] {SELECT count(*) 
+                        INTO: broj
+                        FROM POL_REGION_MAP                        
+                        WHERE POL_MAP_ID = :(decl.collpolregionmapdialoginsertmapping.POL_MAP_ID)
+                        AND CURRENT DATE BETWEEN date_from AND date_until
+                };          
+                tc.debug ( "...broj: " + broj);
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction COB23: Error inserting into POL_REGION_MAP! ","err411a", null);
+        }
+        if(broj > 0){
+            throw new VestigoTMException(1, "Transaction COB23: Error inserting into POL_REGION_MAP! ","CollMsgErr03", null);
+        } 
+      
+        
+       //generator id-a za modul Collateral
+        YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+        java.math.BigDecimal collaterall_id = id_generator.getNewId();
+        //insert u tablicu POL_REGION_MAP        
+        try{    
+            
+            #sql [ctx]{  INSERT INTO POL_REGION_MAP(
+                                     POL_REGION_MAP_ID,
+                                     POL_MAP_ID,
+                                     REGION_ID,
+                                     DATE_FROM,
+                                     DATE_UNTIL,
+                                     USER_ID,
+                                     RECORDING_TIMESTAMP)
+                            values (:collaterall_id, 
+                            :(decl.collpolregionmapdialoginsertmapping.POL_MAP_ID), 
+                            :(decl.collpolregionmapdialoginsertmapping.REGION_ID),
+                            :(decl.collpolregionmapdialoginsertmapping.CollPolMapRegionDialog_txtDateFrom),
+                            :(decl.collpolregionmapdialoginsertmapping.CollPolMapRegionDialog_txtDateUntil), 
+                            :(decl.collpolregionmapdialoginsertmapping.use_id),                             
+                            current_timestamp
+                    )
+                    };
+                    
+        }catch(java.sql.SQLException se){
+                tc.debug ( "......COB01.sqlj insert into inserting POL_REGION_MAP SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......COB01.sqlj insert into inserting POL_REGION_MAP SQL SQLState " + se.getSQLState());
+                tc.debug ( "......COB01.sqlj insert into inserting POL_REGION_MAP SQL Message " + se.getMessage());
+                throw new VestigoTMException(1, "Transaction COB01: Error inserting POL_REGION_MAP! ","err411a", null);
+        }  
+    }    
+}

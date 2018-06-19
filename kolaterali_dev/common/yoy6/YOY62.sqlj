@@ -1,0 +1,603 @@
+package hr.vestigo.modules.collateral.common.yoy6;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy9.YOY90;
+import hr.vestigo.modules.collateral.common.yoyE.YOYE1;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+public class YOY62 {
+	
+    #sql iterator IterMortage (
+            BigDecimal coll_hf_prior_id,
+            String hf_priority
+    );    
+    
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy6/YOY62.sqlj,v 1.6 2018/02/21 12:47:21 hraskd Exp $";
+	RemoteContext rc = null;
+
+	public YOY62(RemoteContext rc) throws Exception {
+	    this.rc=rc;
+	}	
+	
+    /**Metoda dohvaca broj hipoteka vezanih na verificirani ugovor
+     * MILKA 03.10.2007 - iz uvjeta izbacen datum do kada vazi hipoteka, jer hipoteka moze isteci prije nego ju se deaktivira 
+     * @param ctx
+     * @param fra_agr_id
+     * @throws SQLException
+     */
+    public int getNumberOfMortageByAgreement(ConnCtx ctx, BigDecimal fra_agr_id) throws SQLException
+    {   
+        int countMortgage=0;
+        try {
+            debug("getNumberOfMortageByAgreement: fra_agr_id=[" +fra_agr_id+ "].");
+            
+            #sql [ctx] {SELECT count(a.coll_hf_prior_id) INTO :(countMortgage)
+                FROM
+                    coll_hf_prior a, frame_agreement b
+                WHERE
+                    a.fra_agr_id = :(fra_agr_id)
+                AND
+                    a.agreement = 'D'
+                AND 
+                    a.hf_status = 'A' 
+                AND
+                    a.hf_own_cus_id = 8218251
+                AND
+                    a.fra_agr_id = b.fra_agr_id 
+                AND 
+                    b.status = 'A'
+                AND 
+                    b.date_until >= current date
+                AND
+                    b.proc_status = '2'
+            }; 
+            debug("getNumberOfMortageByAgreement zavrsio.");            
+        } catch(SQLException ex) {
+            if(ex.getErrorCode()!=100){
+                debug("getNumberOfMortageByAgreement -> Greska :" + ex.getMessage());
+                throw ex;
+            }
+        } 
+        debug("getNumberOfMortageByAgreement countMortgage="+countMortgage); 
+        return countMortgage;
+    }
+    
+    /**Metoda dohvaca broj aktivnih hipoteka vezanih na kolateral i u taj broj ne uzima samo hipoteku sa poslanim id-em col_hf_prior_id  
+     * Milka, 03.10.2007 - iz uvjeta izbacen datum do kada vazi hipoteka, jer hipoteka moze isteci prije nego ju se deaktivira      
+     * Milka, 03.09.2009 - promjena uvjeta
+     * @param ctx
+     * @param col_hea_id, col_hf_prior_id
+     * @throws SQLException
+     */
+    public int getNumberOfActiveMortageExceptThis(ConnCtx ctx, BigDecimal col_hea_id, BigDecimal col_hf_prior_id) throws SQLException
+    {   
+        int countMortgage=0;
+        try {
+            debug("getNumberOfActiveMortageExceptThis: col_hea_id=[" +col_hea_id+ "], col_hf_prior_id=[" +col_hf_prior_id+ "].");
+            
+            #sql [ctx] {                           
+                        SELECT count(coll_hf_prior_id)
+                        INTO :(countMortgage)
+                        FROM 
+                            coll_hf_prior a
+                        WHERE   
+                            a.hf_coll_head_id = :(col_hea_id)  
+                        AND 
+                            a.hf_status = 'A' 
+                        AND
+                            a.hf_own_cus_id = 8218251
+                        AND
+                            a.coll_hf_prior_id <> :(col_hf_prior_id)
+            }; 
+            debug("getNumberOfActiveMortageExceptThis zavrsio.");            
+        } catch(SQLException ex) {
+            info("getNumberOfActiveMortageExceptThis greska--->>>"+ex.toString());
+        } 
+        debug("getNumberOfActiveMortageExceptThis countMortgage="+countMortgage); 
+        return countMortgage;
+    }
+    
+    /** spremanje podataka o deaktivaciji hipoteke u tablicu povijesti
+     * @param ctx
+     * @param coll_hf_prior_id
+     * @param col_hea_id
+     * @param use_id
+     * @param cmnt
+     * @throws Exception
+     */
+    public void insertIntoHfHistory(ConnCtx ctx,BigDecimal coll_hf_prior_id, BigDecimal col_hea_id, BigDecimal use_id, String cmnt) throws Exception{      
+        YOY00 id_generator_hf = new YOY00(ctx); //COLLATERAL_IDN
+        BigDecimal hf_chg_his_id = id_generator_hf.getNewId();        
+        debug("insertIntoHfHistory hf_chg_his_id:" + hf_chg_his_id);    
+        debug("use_id:" + use_id); 
+        try{  
+            #sql [ctx]{
+            INSERT INTO hf_chg_history
+                    (hf_chg_his_id,
+                    coll_hf_prior_id,
+                    col_hea_id,
+                    use_id,
+                    user_lock,
+                    cmnt)   
+             VALUES(:(hf_chg_his_id),
+                    :(coll_hf_prior_id),
+                    :(col_hea_id),
+                    :(use_id),
+                    current timestamp,
+                    :(cmnt))
+            };  
+        }catch(SQLException se){  
+            debug("insertIntoHfHistory SQL ErrorCode " + se.getErrorCode());
+            debug("insertIntoHfHistory SQL SQLState " + se.getSQLState());
+            debug("insertIntoHfHistory SQL Message " + se.getMessage());
+            throw se;
+        } 
+    }
+    
+    /** spremanje podataka o deaktivaciji hipoteke u tablicu povijesti
+     * @param ctx
+     * @param coll_hf_prior_id
+     * @param col_hea_id
+     * @param use_id
+     * @param cmnt
+     * @throws Exception
+     */
+    public BigDecimal getLastActiveMortageId(ConnCtx ctx, BigDecimal col_hea_id) throws Exception{
+        BigDecimal id = null;        
+        debug("getLastActiveMortageId col_hea_id:" + col_hea_id);        
+        try{  
+            #sql [ctx]{
+                SELECT coll_hf_prior_id
+                INTO :(id)
+                FROM 
+                    coll_hf_prior a
+                WHERE   
+                    a.hf_coll_head_id = :(col_hea_id)  
+                AND 
+                    a.hf_status = 'A' 
+                AND
+                    a.hf_own_cus_id = 8218251
+            };  
+        }catch(SQLException se){ 
+            if(se.getErrorCode()!=100){
+                debug("insertIntoHfHistory SQL ErrorCode " + se.getErrorCode());
+                debug("insertIntoHfHistory SQL SQLState " + se.getSQLState());
+                debug("insertIntoHfHistory SQL Message " + se.getMessage());
+                throw se;
+            }
+        }
+        return id;
+    }
+        
+    public void deactivateCollateral(ConnCtx ctx, BigDecimal col_hea_id, BigDecimal use_id, BigDecimal org_uni_id, Timestamp user_lock) throws Exception{
+     // dohvatiti parametrizaciju knjizenja i status  
+        String accounting_indic = "";
+        String lista = "";      
+        try{  
+            #sql [ctx] {SELECT a.collateral_status, d.accounting_indic
+                        INTO :(lista), 
+                             :(accounting_indic)
+                        FROM
+                            coll_head a, coll_category d
+                        WHERE a.col_hea_id = :(col_hea_id)
+                        AND 
+                            a.col_cat_id = d.col_cat_id
+                        };   
+        } catch(SQLException e){
+        }
+        
+        
+        //UPDATE kolaterala na neaktivan            
+        try{  
+                #sql [ctx] {UPDATE COLL_HEAD
+                            SET collateral_status = 'N', 
+                                user_lock = :(user_lock),
+                                use_id = :(use_id),
+                                org_uni_id = :(org_uni_id)
+                            WHERE col_hea_id = :(col_hea_id)
+                            };          
+         } catch(SQLException e){
+            throw e;
+         }
+            
+        debug("NAPRAVLJEN UPDATE kolaterala na NEAKTIVAN.....");                 
+        // insert dogadjaja u COLL_LIST_Q
+        //sa liste deaktivacije kolaterala ili aktivne na listu neaktivnih
+        String action="";
+        String sourceList="";
+        
+        try {
+            YOY60 YOY60=new YOY60(rc);            
+            CollListQData plq=new CollListQData();
+            //ako je trenutni status(lista) 3 to znaci da je u deaktivaciju kolateral dosao sa aktivne liste 
+            // pa se u direktno deaktivira inace je dosao sa verifikacije deaktivacije
+            if(lista.equals("3")){
+                action="DEAKTIVIRAJ";
+                sourceList="700223";
+            }else{
+                action="VERIFIKACIJA DEAK.";
+                sourceList="711223";                
+            }            
+            plq.col_hea_id=col_hea_id; 
+            plq.status="1";
+            plq.income_time = user_lock;
+            plq.use_id=use_id; 
+            plq.release_time = user_lock;
+            plq.cmnt="";
+            plq.action_type=action;        
+            plq.org_uni_id = org_uni_id;
+            plq.source_list = sourceList;            
+            plq.status_source_list = "1";           
+            plq.target_list = "709223";  // lista neaktivnih
+            plq.status_target_list = "0";           
+            plq.target_list_use_id = null;
+            plq.target_list_org_uni_id = null;
+        
+            debug("plq data .....:" + plq.toString());   
+             
+            YOY60.update_insert_CollListQ(plq); 
+        } catch (Exception e){
+            throw e;
+        }  
+        debug("NAPRAVLJEN insert workflow-a.....");      
+        
+        // ako se knjizi, treba isknjiziti
+        
+        if (accounting_indic.equalsIgnoreCase("1")) {
+            //knjizi se      
+           YOY90 YOY90=new YOY90(rc);                         
+           try {
+               YOY90.CollPosting(col_hea_id, true); 
+           } catch (Exception e) {
+                //TODO: handle exception
+               //throw new VestigoTMException(1, "Transaction CO214: Greska kod knjizenja! ","colErr015", null);
+               throw e;
+           }       
+                
+       }           
+       debug("KOLATERAL isknjizen....."); 
+    }
+    
+    /**Metoda radi deaktivaciju hipoteke, azuriranje okvirnog sporazuma
+     * @param ctx
+     * @param col_hf_prior_id
+     * @param user_lock
+     * @throws Exception
+     */
+    public void deactivateMortageFirstPart(ConnCtx ctx, BigDecimal col_hf_prior_id, Timestamp user_lock) throws Exception{
+        debug("DeactivateMortageFirstPart");
+        BigDecimal rba_hf = new BigDecimal("1602772003.00");
+        String AGREEMENT = null;
+        BigDecimal HF_REC_LOP_ID = null;
+        BigDecimal COL_HEA_ID = null;
+        BigDecimal FRA_AGR_ID = null;           
+        
+        //dohvat podataka koji su potrebni da se vidi da li se hipoteka moze deaktivirati
+        try {
+            #sql [ctx] {
+                        SELECT  AGREEMENT, HF_REC_LOP_ID, HF_COLL_HEAD_ID, FRA_AGR_ID
+                        INTO    :(AGREEMENT), :(HF_REC_LOP_ID), :(COL_HEA_ID), :(FRA_AGR_ID)
+                        FROM    COLL_HF_PRIOR
+                        WHERE   coll_hf_prior_id = :(col_hf_prior_id)    
+                    };                                                                      
+        } catch(SQLException e){
+            if (e.getErrorCode()!=100) throw e;
+            else
+                throw new VestigoTMException(1, "Transaction YOY62 - DeactivateMortageFirstPart: Hipoteka obrisana ili mijenjana ","errclt7", null);                 
+        }           
+        debug("DOHVACENA HIPOTEKA=[" + HF_REC_LOP_ID + "] AGREEMENT=[" +  AGREEMENT + "] SPRAZUM=[" + FRA_AGR_ID+"]");
+        if(HF_REC_LOP_ID.compareTo(rba_hf) == 0){
+            // hipoteka je u korist RBA     
+            // provjera da li je dio okvirnog sporazuma
+            if (AGREEMENT != null && AGREEMENT.equalsIgnoreCase("D")) {
+                // da li je hipoteka zadnja hipoteka vezana na verificirani ugovor-ako je ne moze ju se deaktivirati              
+                // treba najprije deaktivirati ugovor 
+                int countMortgage=getNumberOfMortageByAgreement(ctx, FRA_AGR_ID);
+                debug("NUM_OF_RBA hipoteka vezanih za sporazum: "+countMortgage);     
+                if (countMortgage == 1) {
+                    throw new VestigoTMException(1, "Transaction YOY62 - DeactivateMortageFirstPart: Veza hipoteka - ugovor! ","colErr027", null);   
+                }
+            } else {
+                // nije dio sporazuma - moze se deaktivirati      
+            }    
+        }
+        // nema vezanih aktivnih plasmana ili je hipoteka u korist trece osobe:
+        // deaktivirati hipoteku 
+        // deaktivirani slog spremiti u arhivu
+        // ažurirati redoslijed preostalih hipoteka  
+        // ako na kolateral nije vezan vise nijedan aktivni plasman kolateral ide na listu neaktivnih       
+            
+        // ako je deaktivirana hipoteka dio sporazuma   
+        // hipoteka je razvezana - treba maknuti flag s okvirnog sporazuma ako je bila zadnja
+        if (HF_REC_LOP_ID.compareTo(rba_hf) == 0){   
+            if (AGREEMENT != null && AGREEMENT.equalsIgnoreCase("D")) {            
+                debug("HIPOTEKA u sporazumu... update flaga");         
+                //hipoteka je razvezana - treba maknuti flag s okvirnog sporazuma ako je bila zadnja 
+                chkFrameHypo(ctx, FRA_AGR_ID, col_hf_prior_id, user_lock);               
+            }  
+        }        
+        debug ("DeactivateMortageFirstPart finish.");        
+    }
+        
+    /**Metoda radi deaktivaciju hipoteke, azuriranje okvirnog sporazuma, promjenu redosljeda hipoteka, 
+     * povecanje vrijednosti kolaterala ako hipoteka koja se deaktivira nije u korist RBA 
+     * @param ctx
+     * @param col_hf_prior_id
+     * @param user_lock
+     * @param use_id
+     * @throws Exception
+     */
+    public void deactivateMortageSecondPart(ConnCtx ctx, BigDecimal col_hf_prior_id, Timestamp user_lock, BigDecimal use_id) throws Exception{
+        debug("DeactivateMortageSecondPart  use_id " + use_id);
+        BigDecimal rba_hf = new BigDecimal("1602772003.00");
+        String HF_PRIORITY = null;
+        BigDecimal HF_REC_LOP_ID = null;
+        BigDecimal COL_HEA_ID = null;          
+        BigDecimal HF_CUR_ID = null;
+        
+        //dohvat podataka koji su potrebni da se vidi da li se hipoteka moze deaktivirati
+        try {
+            #sql [ctx] {
+                        SELECT  HF_REC_LOP_ID, HF_COLL_HEAD_ID, HF_PRIORITY, HF_CUR_ID
+                        INTO    :(HF_REC_LOP_ID), :(COL_HEA_ID), :(HF_PRIORITY), :(HF_CUR_ID)
+                        FROM    COLL_HF_PRIOR
+                        WHERE   coll_hf_prior_id = :(col_hf_prior_id)    
+                    };                                                                      
+        } catch(SQLException e){
+            if (e.getErrorCode()!=100) throw e;
+            else
+                throw new VestigoTMException(1, "Transaction YOY62 - DeactivateMortageSecondPart: Hipoteka obrisana ili mijenjana ","errclt7", null);                 
+        }           
+        
+        // update sloga hipoteke
+        // status = N
+        // datum vazenja tereta do = current date
+        // prioritet hipoteke na NA (deaktivirana)
+        try{
+            #sql [ctx]{ UPDATE COLL_HF_PRIOR
+                SET hf_status = 'N',
+                    hf_date_hfc_until = current date,
+                    hf_priority = 'NA',
+                    use_id = :(use_id), 
+                    user_lock = :(user_lock)
+                WHERE coll_hf_prior_id = :(col_hf_prior_id)    
+
+            };            
+        }catch(SQLException e){
+            if (e.getErrorCode()!=100) throw e;
+            else
+                throw new VestigoTMException(1, "Transaction YOY62 - DeactivateMortageSecondPart: Hipoteka obrisana ili mijenjana ","errclt7", null);     
+        } 
+        debug ("HIPOTEKA deaktivirana.");
+        // deaktivirana hipoteka nije u korist RBA - treba knjiziti povecanje vrijednosti kolaterala za iznos deaktivirane hipoteke
+        if (HF_REC_LOP_ID.compareTo(rba_hf) != 0 ) {    
+            postKolateral(ctx, COL_HEA_ID);      
+        }
+        
+        // promjena redosljeda preostalih aktivnih hipoteka
+        debug("PROMJENA redosljeda." );      
+        chgMortgagePriority(ctx, COL_HEA_ID, HF_PRIORITY,col_hf_prior_id, user_lock);
+        
+        // poziv common-a za update prihvatljivosti 
+        YOYG0 yoyg0 = new YOYG0(rc, COL_HEA_ID);   
+        yoyg0.azurirajPrihvatljivosti();        
+        //FBPr200010700-> Spremanje povijesti za deaktivaciju hipoteke        
+        //---------------yoy62.insertIntoHfHistory(ctx,COLL_HF_PRIOR_ID,HF_COLL_HEAD_ID,d.kolmortgagedeact.use_id, d.kolmortgagedeact.KolMortgageDeact_txtCmnt);
+          
+        // pozvati preraèun suma hipoteka
+        YOYE1 YOYE1_find = new YOYE1(rc);
+        BigDecimal Coll_txtThirdRightInNom = new BigDecimal("0.00");
+        Coll_txtThirdRightInNom = YOYE1_find.getMortgagesSum(COL_HEA_ID, HF_CUR_ID);//tudje hipoteke
+        debug("other_mortgages=" + Coll_txtThirdRightInNom);
+        
+        BigDecimal Coll_txtHfsValue = new BigDecimal("0.00");
+        Coll_txtHfsValue = YOYE1_find.getRBAMortgagesSum(COL_HEA_ID, HF_CUR_ID);  // RBA hipoteke
+        debug("rba_mortgages=" + Coll_txtHfsValue);
+        
+        // pronaci zadnju vazecu RBA hipoteku
+        Vector rba_last_hf_prior = YOYE1_find.getLastRBAMortgage(COL_HEA_ID);
+        
+        BigDecimal Kol_txtLastRBAMortgageAmount = (BigDecimal) rba_last_hf_prior.elementAt(0);
+        Date Kol_txtLastRBAMortgageDate = (Date) rba_last_hf_prior.elementAt(1);        
+        
+        updCollMortgage(ctx, COL_HEA_ID, Coll_txtThirdRightInNom,Coll_txtHfsValue,Kol_txtLastRBAMortgageAmount,Kol_txtLastRBAMortgageDate);  
+     
+    }
+    
+    private void updCollMortgage (ConnCtx hCtx, BigDecimal HF_COLL_HEAD_ID, BigDecimal Coll_txtThirdRightInNom, BigDecimal Coll_txtHfsValue, BigDecimal Kol_txtLastRBAMortgageAmount, Date Kol_txtLastRBAMortgageDate ) {
+        debug( "HF_COLL_HEAD_ID=" + HF_COLL_HEAD_ID);         
+        
+        try{  
+            #sql [hCtx] {UPDATE COLL_HEAD
+                            SET third_right_nom = :(Coll_txtThirdRightInNom),
+                                third_right_date = current date,
+                                hfs_value = :(Coll_txtHfsValue),
+                                hfs_value_date = current date,
+                                hfs_value_last_one = :(Kol_txtLastRBAMortgageAmount),
+                                hfs_date_last_one = :(Kol_txtLastRBAMortgageDate),
+                                user_lock = current timestamp
+                 WHERE col_hea_id = :(HF_COLL_HEAD_ID)
+       
+                };          
+        } catch(SQLException e){
+        
+        }                       
+    } 
+    
+    /** Metoda knjizi povecanje vrijednosti kolaterala
+     * @param hCtx
+     * @param col_hea_id
+     * @throws Exception
+     */
+    private void postKolateral(ConnCtx hCtx, BigDecimal col_hea_id) throws Exception {      
+        String accounting_indic = "";
+        //dohvatiti parametrizaciju knjizenja           
+        try{  
+            #sql [hCtx] {SELECT d.accounting_indic
+                        INTO :(accounting_indic)
+                        FROM
+                            coll_head a, coll_category d
+                        WHERE a.col_hea_id = :(col_hea_id)
+                        AND 
+                            a.col_cat_id = d.col_cat_id
+                        };                          
+        } catch(SQLException e){
+        }   
+            
+        try{
+            if (accounting_indic.equalsIgnoreCase("1")) {
+                // knjizi se        
+                YOY90 YOY90=new YOY90(rc); 
+                YOY90.CollPosting(col_hea_id, false); 
+            }
+        } catch (Exception e) {
+            throw e;    
+        }     
+        debug("Kolateralu knjizeno povecanje vrijednosti.");
+    } 
+    
+    /** Metoda provjerava da li je hipoteka koja se zeli deaktivirati zadnja na okvirnom sporazumu?
+     * ako je zadnja treba napraviti update pripadajuceg flag-a
+     * @param hCtx
+     * @param h_fra_agr_id
+     * @param coll_hf_prior_id
+     */
+    private void chkFrameHypo(ConnCtx hCtx, BigDecimal h_fra_agr_id, BigDecimal coll_hf_prior_id, Timestamp user_lock) {               
+        int num_mort=0;
+        debug("Provjera da li je hipoteka zadnja za sporazum broj: " + h_fra_agr_id);          
+        try{              
+            #sql [hCtx] {
+                SELECT count(coll_hf_prior_id)
+                INTO :(num_mort)
+                FROM 
+                    coll_hf_prior a, frame_agreement b
+                WHERE   
+                    a.fra_agr_id = :(h_fra_agr_id)
+                AND 
+                    a.hf_status = 'A' 
+                AND
+                    a.hf_own_cus_id = 8218251
+                AND
+                    a.coll_hf_prior_id <> :(coll_hf_prior_id)
+                AND 
+                    a.fra_agr_id = b.fra_agr_id 
+            };
+        } catch(SQLException e){
+
+        }                                           
+        debug("Dohvatio num_mort hipoteka vezanih za sporazum: " + num_mort);      
+        if (num_mort < 1) {            
+            debug("NAPRAVLJEN UPDATE flag-a na sporazumu");                  
+            //zadnja hipoteka          
+            try{  
+                #sql [hCtx] {
+                            UPDATE FRAME_AGREEMENT
+                            SET hipo_status = '0', 
+                            USER_LOCK = :(user_lock)
+                            WHERE fra_agr_id = :(h_fra_agr_id)
+                            };          
+            } catch(SQLException e){
+            }                   
+        }   
+    }
+    
+    /** promjena redosljeda preostalih aktivnih hipoteka
+     * @param hCtx
+     * @param col_hea_id
+     * @param priority
+     * @param hf_prior_id
+     * @param user_lock
+     */
+    private void chgMortgagePriority (ConnCtx hCtx, BigDecimal col_hea_id, String priority, BigDecimal hf_prior_id,Timestamp user_lock) {        
+        BigDecimal col_hf_id = null;
+        // HF_PRIORITY
+        // pokupiti u iterator sve hipoteke koje imaju prioritet veci od deaktivirane
+        String oldPriority = null;
+        String newPriority = null;
+        int newIntPriority = 0;
+        
+        debug("Promjena prioriteta za hipoteke veceg reda od " + priority + " kolateral id="+col_hea_id);       
+        
+        try {
+            IterMortage iter=null;
+            #sql [hCtx] iter = { SELECT 
+                                        coll_hf_prior_id as coll_hf_prior_id,
+                                        hf_priority as hf_priority
+                                FROM
+                                        coll_hf_prior 
+                                WHERE
+                                        hf_coll_head_id = :(col_hea_id)  
+                                AND     
+                                        coll_hf_prior_id <> :(hf_prior_id)
+                                AND
+                                        hf_priority > :(priority)  
+                                AND
+                                        hf_priority <> 'NA'
+                                AND
+                                        hf_status = 'A'
+                };
+            
+            debug("Pocinje iteracija.");
+            Vector coll_hf_prior_ids = new Vector();
+            Vector hf_priorities = new Vector();
+            while (iter.next()) {
+                coll_hf_prior_ids.add(iter.coll_hf_prior_id());
+                hf_priorities.add(iter.hf_priority());
+            }
+            iter.close();
+            
+            // update prioriteta
+            for (int idx = 0; idx < coll_hf_prior_ids.size(); idx++) {
+                col_hf_id = (BigDecimal)coll_hf_prior_ids.get(idx);
+                oldPriority = (String)hf_priorities.get(idx);
+                newPriority = oldPriority.trim();
+
+                newIntPriority = Integer.parseInt(newPriority);
+                newIntPriority--;
+           
+                if (newIntPriority < 10) 
+                    newPriority = "0" + newIntPriority + "";
+                else
+                    newPriority = newIntPriority + "";                
+                info( "ITERACIJA hipoteka.....update prioriteta  " + col_hf_id + "stari=" +oldPriority+ " novi=" + newPriority);
+            
+                try {
+                    #sql [hCtx] {
+                        UPDATE COLL_HF_PRIOR
+                        SET hf_priority = :(newPriority), 
+                            user_lock = :(user_lock)
+                        WHERE coll_hf_prior_id = :(col_hf_id)
+                    };
+                }
+                catch (SQLException sex) {
+                }
+            }
+            
+        } catch (SQLException sex) {
+            rc.error("Greska kod promjene prioriteta hipoteke!", sex);
+        } catch (Exception ex) {
+            rc.error("Greska kod promjene prioriteta hipoteke!", ex);
+        }
+    }
+    
+    private void debug(String s){
+        rc.debug("---YOY62 -> " + s);
+    } 
+    
+    private void info(String s){
+        rc.info("---YOY62 -> " + s);
+    } 
+}  
+ 
+

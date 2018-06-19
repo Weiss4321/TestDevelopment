@@ -1,0 +1,171 @@
+package hr.vestigo.modules.collateral.batch.bo77;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.ExcelUtils;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Iterator;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+
+
+/**
+ * Klasa za generiranje izvještaja RE, OPC Overview (1.3) 
+ * @author hrakis
+ */
+public class BO774
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo77/BO774.sqlj,v 1.2 2013/09/11 13:21:31 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    private Date value_date;
+    
+    private YOYM0 mapping_re_opc;
+    
+    private HashMap data;
+    
+    private Workbook workbook;
+
+
+    /**
+     * Konstruktor klase.
+     * @param batchContext Kontekst u kojem se izvršava obrada
+     * @param value_date Datum valute (datum za koji se radi izvještaj)
+     */
+    public BO774(BatchContext batchContext, Date value_date) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+        this.value_date = value_date;
+        
+        // mapiranja
+        this.mapping_re_opc = new YOYM0(bc, "re_opc", value_date);  // kolaterali koji ulaze u izvještaj 1.3
+        
+        // kreiraj strukturu u kojoj æe se èuvati podaci - HashMap kojem je kljuè tip kolaterala, a vrijednost sumarni podaci za tip
+        this.data = new HashMap();
+        Iterator iter = mapping_re_opc.getGcmTypes().iterator();
+        while (iter.hasNext())
+        {
+            GcmTypeData type = (GcmTypeData)iter.next();
+            data.put(type, new SummaryData(type));
+        }
+    }
+
+    
+    /**
+     * Metoda koja provjerava ulazi li zadani kolateral u izvještaj, mapira ga na pripadajuæi tip i pribraja vrijednosti u sumarne podatke tog tipa.
+     * @param collateral Objekt s podacima o kolateralu
+     * @param date Datum za koji vrijede dani podaci
+     */
+    public void processCollateral(CollateralData collateral, Date date)
+    {
+        // ako datum nije jednak datumu valute, preskoèi ovaj kolateral
+        if (date.compareTo(value_date) != 0) return;
+        
+        // provjeri da li kolateral ulazi u izvještaj i mapiraj kolateral na pripadajuæi tip
+        GcmTypeData type = mapping_re_opc.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        if (type == null)
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 1.3.");
+            return;
+        }
+        
+        // pribroji vrijednosti kolaterala u odgovarajuæi tip
+        SummaryData summary = (SummaryData)data.get(type);
+        summary.ncv_sum = summary.ncv_sum.add(collateral.ncv);
+        summary.wcov_sum = summary.wcov_sum.add(collateral.wcov);
+        summary.wcv_sum = summary.wcv_sum.add(collateral.wcv);
+        summary.count++;
+        bc.debug("...Kolateral pribrojen u izvjestaj 1.3 pod tip " + type.code + ".");
+    }
+    
+    
+    /**
+     * Metoda koja na temelju prikupljenih podataka kreira izvještaj u obliku Excel datoteke. 
+     */
+    public void createReport() throws Exception
+    {
+        // kreiraj workbook
+        this.workbook = new SXSSFWorkbook(100);
+        ExcelStyleData styles = ExcelStyleData.createStyles(workbook);
+        
+        // kreiraj sheet
+        Sheet sheet1 = workbook.createSheet("1 RE&OPC Overview");
+        ExcelUtils.setColumnWidths(sheet1, new int[] { 216, 147, 147, 147, 147 });
+        
+        // kreiraj naslov izvještaja
+        int rowIndex = 0;
+        Row row = sheet1.createRow(rowIndex);
+        ExcelUtils.createCell(row, 0, "1.3", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "RE, OPC OVERVIEW", styles.titleStyle);
+        rowIndex += 2;
+        
+        // kreiraj header izvještaja
+        row = sheet1.createRow(rowIndex);
+        ExcelUtils.createCell(row, 0, "RE, OPC Coll. Type", styles.normalWrapStyle);
+        ExcelUtils.createCell(row, 1, "Sum of market value (NCV)", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 2, "Sum of wcov/wgcv", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 3, "Sum of allocated wcv", styles.headingWrapStyle);
+        ExcelUtils.createCell(row, 4, "Sum of B2 allocated collateral value", styles.headingWrapStyle);
+        rowIndex++;
+        
+        // kreiraj red za svaku kategoriju
+        Iterator iter = mapping_re_opc.getGcmTypes().iterator();
+        while (iter.hasNext())
+        {
+            GcmTypeData type = (GcmTypeData)iter.next();
+            SummaryData summary = (SummaryData)data.get(type);
+            
+            row = sheet1.createRow(rowIndex);
+            ExcelUtils.createCell(row, 0, summary.type.name, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 1, summary.ncv_sum, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 2, summary.wcov_sum, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 3, summary.wcv_sum, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 4, "", styles.normalNumericAllBordersStyle);
+            rowIndex++;
+        }
+        
+        // kreiraj footer izvještaja
+        row = sheet1.createRow(rowIndex);
+        ExcelUtils.createCell(row, 0, "Total", styles.normalTopBordersStyle);
+        ExcelUtils.createCell(row, 1, (BigDecimal)null, styles.normalNumericTopBordersStyle).setCellFormula("SUM(B4:B" + rowIndex + ")");
+        ExcelUtils.createCell(row, 2, (BigDecimal)null, styles.normalNumericTopBordersStyle).setCellFormula("SUM(C4:C" + rowIndex + ")");
+        ExcelUtils.createCell(row, 3, (BigDecimal)null, styles.normalNumericTopBordersStyle).setCellFormula("SUM(D4:D" + rowIndex + ")");
+        ExcelUtils.createCell(row, 4, "", styles.normalNumericTopBordersStyle);
+        rowIndex++;
+
+        // spremi izvještaj
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
+        String fileName = bc.getOutDir() + "/" + "RE_OPC_Overview" + "_" + dateFormat.format(value_date) + ".xlsx";
+        FileOutputStream fileOut = new FileOutputStream(fileName);
+        workbook.write(fileOut);
+        fileOut.close();
+        dispose();
+        
+        // kreiraj marker datoteku
+        new File(fileName + ".marker").createNewFile();
+        
+        bc.info("Uspjesno kreiran izvjestaj 1.3.");
+    }
+    
+    
+    /**
+     * Metoda koja briše privremene datoteke koje se stvaraju za vrijeme kreiranja izvještaja.
+     */
+    public void dispose()
+    {
+        if (workbook instanceof SXSSFWorkbook) ((SXSSFWorkbook)workbook).dispose();
+    }
+}

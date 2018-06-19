@@ -1,0 +1,141 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+             
+
+
+ 
+#sql iterator IterArt (
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String art_type ,      
+							String art_name ,
+							String art_unit ,
+							BigDecimal art_num_of_unit ,
+							String art_period ,
+							String art_year ,
+							String art_author ,
+							String art_cond ,
+							java.sql.Date art_cond_date ,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id               
+                   );	
+
+public class CO044 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO044.sqlj,v 1.4 2006/05/08 13:27:58 hramkr Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterArt iterArt = null;
+	
+	public CO044 (DeclCO04 decl) { 
+		this.decl = decl;
+	}
+	 
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.collartlistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		if(decl.collartlistmapping.CUS_ID == null ){
+			#sql [ctx] iterArt = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.wot_type_code as art_type, mova.wot_type_desc as art_name, cols.woa_unit_mes as art_unit, 
+									cols.woa_num_of_unit as art_num_of_unit, cols.woa_art_period as art_period, cols.woa_art_year as art_year,
+									cols.woa_art_author as art_author, cols.woa_condition as art_cond, cols.woa_cond_date as art_cond_date,
+									ch.real_est_status as status, cols.col_wor_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                    
+							FROM
+									coll_head ch, coll_workofart cols , work_of_art_type mova 
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		cols.wot_typ_id = mova.wot_typ_id
+						ORDER BY	2
+							
+			};
+		
+		} 
+		  
+  
+		
+		if(decl.collartlistmapping.CUS_ID != null ){
+			#sql [ctx] iterArt = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.wot_type_code as art_type, mova.wot_type_desc as art_name, cols.woa_unit_mes as art_unit, 
+									cols.woa_num_of_unit as art_num_of_unit, cols.woa_art_period as art_period, cols.woa_art_year as art_year,
+									cols.woa_art_author as art_author, cols.woa_condition as art_cond, cols.woa_cond_date as art_cond_date,
+									ch.real_est_status as status, cols.col_wor_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                                  
+							FROM	
+									coll_head ch, coll_workofart cols , work_of_art_type mova 
+							WHERE	ch.cus_id = :(decl.collartlistmapping.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id
+							AND 	cols.wot_typ_id = mova.wot_typ_id
+						ORDER BY	2
+							
+			};
+		 
+		}   
+	
+		 
+	}
+	
+	public boolean next() throws Exception {
+		return iterArt.next(); 
+	}
+    
+	public void close() {
+		if(iterArt!=null) {
+			try {
+				iterArt.close();
+			} catch (Exception ignored) {}
+		}
+	}
+     
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterArt.col_num());	
+		row.add(iterArt.art_type());	
+		row.add(iterArt.art_name());
+		row.add(iterArt.art_unit()); 
+		row.add(iterArt.art_num_of_unit());
+		
+		row.add(iterArt.art_period());
+		row.add(iterArt.art_year()); 
+		row.add(iterArt.art_author());		
+
+		row.add(iterArt.art_cond());	
+		row.add(iterArt.art_cond_date());			
+		row.add(iterArt.status());
+		
+		row1.add(iterArt.col_hea_id());
+		row1.add(iterArt.col_res_id());
+		row1.add(iterArt.real_est_nm_cur_id());
+		
+		decl.collartlistmapping.tblCollArt.addRow(row,row1);
+ 
+//		decl.collartlistmapping.tblCollArt.addRow(row,iterArt.col_hea_id());   	
+		
+	}
+	
+}

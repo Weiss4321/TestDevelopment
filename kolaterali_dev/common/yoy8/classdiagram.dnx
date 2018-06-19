@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--xtools2_universal_type_manager-->
+<notation:Diagram xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:notation="http://www.ibm.com/xtools/1.5.0/Notation" xmlns:uml="http://www.eclipse.org/uml2/1.0.0/UML" xmlns:umlnotation="http://www.ibm.com/xtools/1.5.0/Umlnotation" xmi:id="_7yFOQI9OEdut55afMSyKMA" type="Class" name="classdiagram.dnx">
+  <children xmi:id="_OdMpkI9PEdut55afMSyKMA" sourceEdges="_RevvAo9PEdut55afMSyKMA _VG46YI9PEdut55afMSyKMA _i1FIsI9PEdut55afMSyKMA">
+    <children xmi:id="_OdMpk49PEdut55afMSyKMA" type="ImageCompartment">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+      <layoutConstraint xmi:type="notation:Size" xmi:id="_OdMplI9PEdut55afMSyKMA" width="1320" height="1320"/>
+    </children>
+    <children xmi:id="_OdMplY9PEdut55afMSyKMA" type="Stereotype">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_OdMplo9PEdut55afMSyKMA" type="Name">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_OdMpl49PEdut55afMSyKMA" type="AttributeCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_OdMpmI9PEdut55afMSyKMA" collapsed="true"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_OdMpmY9PEdut55afMSyKMA" type="OperationCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_OdMpmo9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_OdMpm49PEdut55afMSyKMA" visible="false" type="SignalCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_OdMpnI9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_OdMpnY9PEdut55afMSyKMA" visible="false" type="StructureCompartment">
+      <styles xmi:type="umlnotation:UMLShapeCompartmentStyle" xmi:id="_OdMpno9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLShapeStyle" xmi:id="_OdMpkY9PEdut55afMSyKMA" showStereotype="Label"/>
+    <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_OdMpko9PEdut55afMSyKMA" x="5088" y="4770" width="3596" height="4176"/>
+  </children>
+  <children xmi:id="_Rcz1UI9PEdut55afMSyKMA" sourceEdges="_i1O5sI9PEdut55afMSyKMA" targetEdges="_RevvAo9PEdut55afMSyKMA">
+    <children xmi:id="_Rcz1U49PEdut55afMSyKMA" type="ImageCompartment">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+      <layoutConstraint xmi:type="notation:Size" xmi:id="_Rcz1VI9PEdut55afMSyKMA" width="1320" height="1320"/>
+    </children>
+    <children xmi:id="_Rcz1VY9PEdut55afMSyKMA" type="Stereotype">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_Rcz1Vo9PEdut55afMSyKMA" type="Name">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_Rcz1V49PEdut55afMSyKMA" type="AttributeCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_Rcz1WI9PEdut55afMSyKMA" collapsed="true"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_Rcz1WY9PEdut55afMSyKMA" type="OperationCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_Rcz1Wo9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_Rcz1W49PEdut55afMSyKMA" visible="false" type="SignalCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_Rcz1XI9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_Rcz1XY9PEdut55afMSyKMA" visible="false" type="StructureCompartment">
+      <styles xmi:type="umlnotation:UMLShapeCompartmentStyle" xmi:id="_Rcz1Xo9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLShapeStyle" xmi:id="_Rcz1UY9PEdut55afMSyKMA" showStereotype="Label"/>
+    <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_Rcz1Uo9PEdut55afMSyKMA" x="318" y="4770" width="3598" height="4181"/>
+  </children>
+  <children xmi:id="_VEDo0I9PEdut55afMSyKMA" sourceEdges="_i1O5t49PEdut55afMSyKMA" targetEdges="_VG46YI9PEdut55afMSyKMA">
+    <children xmi:id="_VEDo049PEdut55afMSyKMA" type="ImageCompartment">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+      <layoutConstraint xmi:type="notation:Size" xmi:id="_VEDo1I9PEdut55afMSyKMA" width="1320" height="1320"/>
+    </children>
+    <children xmi:id="_VEDo1Y9PEdut55afMSyKMA" type="Stereotype">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_VEDo1o9PEdut55afMSyKMA" type="Name">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_VEDo149PEdut55afMSyKMA" type="AttributeCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_VEDo2I9PEdut55afMSyKMA" collapsed="true"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_VEDo2Y9PEdut55afMSyKMA" type="OperationCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_VEDo2o9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_VEDo249PEdut55afMSyKMA" visible="false" type="SignalCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_VEDo3I9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_VEDo3Y9PEdut55afMSyKMA" visible="false" type="StructureCompartment">
+      <styles xmi:type="umlnotation:UMLShapeCompartmentStyle" xmi:id="_VEDo3o9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLShapeStyle" xmi:id="_VEDo0Y9PEdut55afMSyKMA" showStereotype="Label"/>
+    <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_VEDo0o9PEdut55afMSyKMA" x="9858" y="4767" width="3598" height="4180"/>
+  </children>
+  <children xmi:id="_iotgoI9PEdut55afMSyKMA" targetEdges="_i1FIsI9PEdut55afMSyKMA _i1O5sI9PEdut55afMSyKMA _i1O5t49PEdut55afMSyKMA">
+    <children xmi:id="_iotgo49PEdut55afMSyKMA" type="ImageCompartment">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+      <layoutConstraint xmi:type="notation:Size" xmi:id="_iotgpI9PEdut55afMSyKMA" width="530" height="530"/>
+    </children>
+    <children xmi:id="_iotgpY9PEdut55afMSyKMA" type="Stereotype">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_iotgpo9PEdut55afMSyKMA" type="Kind">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_iotgp49PEdut55afMSyKMA" type="Name">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_iotgqI9PEdut55afMSyKMA" type="AttributeCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_iotgqY9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_iotgqo9PEdut55afMSyKMA" type="OperationCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_iotgq49PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_iotgrI9PEdut55afMSyKMA" visible="false" type="SignalCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_iotgrY9PEdut55afMSyKMA"/>
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLClassifierStyle" xmi:id="_iotgoY9PEdut55afMSyKMA" showStereotype="Label" useClassifierShape="true"/>
+    <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_iotgoo9PEdut55afMSyKMA" x="4452" y="636"/>
+  </children>
+  <children xmi:id="_h-KzEJD1EduXYbvOf2rwiw" targetEdges="_k5D24JD1EduXYbvOf2rwiw _nyTU4JD1EduXYbvOf2rwiw">
+    <children xmi:id="_h-KzE5D1EduXYbvOf2rwiw" type="ImageCompartment">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+      <layoutConstraint xmi:type="notation:Size" xmi:id="_h-KzFJD1EduXYbvOf2rwiw" width="530" height="530"/>
+    </children>
+    <children xmi:id="_h-KzFZD1EduXYbvOf2rwiw" type="Stereotype">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_h-KzFpD1EduXYbvOf2rwiw" type="Kind">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_h-KzF5D1EduXYbvOf2rwiw" type="Name">
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_h-KzGJD1EduXYbvOf2rwiw" type="AttributeCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_h-KzGZD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_h-KzGpD1EduXYbvOf2rwiw" type="OperationCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_h-KzG5D1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_h-KzHJD1EduXYbvOf2rwiw" visible="false" type="SignalCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_h-KzHZD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLClassifierStyle" xmi:id="_h-KzEZD1EduXYbvOf2rwiw" showStereotype="Label" useClassifierShape="true"/>
+    <element xmi:type="uml:Interface" href="vizref:///#jsrctype^vcore.target=uml2.Interface^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_h-KzEpD1EduXYbvOf2rwiw" x="4452" y="12084" height="6086"/>
+  </children>
+  <children xmi:id="_k4AuAJD1EduXYbvOf2rwiw" sourceEdges="_k5D24JD1EduXYbvOf2rwiw">
+    <children xmi:id="_k4AuA5D1EduXYbvOf2rwiw" type="ImageCompartment">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+      <layoutConstraint xmi:type="notation:Size" xmi:id="_k4AuBJD1EduXYbvOf2rwiw" width="1320" height="1320"/>
+    </children>
+    <children xmi:id="_k4AuBZD1EduXYbvOf2rwiw" type="Stereotype">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_k4AuBpD1EduXYbvOf2rwiw" type="Name">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_k4AuB5D1EduXYbvOf2rwiw" type="AttributeCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_k4AuCJD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_k4AuCZD1EduXYbvOf2rwiw" type="OperationCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_k4AuCpD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_k4KfAJD1EduXYbvOf2rwiw" visible="false" type="SignalCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_k4KfAZD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_k4KfApD1EduXYbvOf2rwiw" visible="false" type="StructureCompartment">
+      <styles xmi:type="umlnotation:UMLShapeCompartmentStyle" xmi:id="_k4KfA5D1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLShapeStyle" xmi:id="_k4AuAZD1EduXYbvOf2rwiw" showStereotype="Label"/>
+    <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_k4AuApD1EduXYbvOf2rwiw" x="2544" y="19398" height="3418"/>
+  </children>
+  <children xmi:id="_nxZ9AJD1EduXYbvOf2rwiw" sourceEdges="_nyTU4JD1EduXYbvOf2rwiw">
+    <children xmi:id="_nxZ9A5D1EduXYbvOf2rwiw" type="ImageCompartment">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+      <layoutConstraint xmi:type="notation:Size" xmi:id="_nxZ9BJD1EduXYbvOf2rwiw" width="1320" height="1320"/>
+    </children>
+    <children xmi:id="_nxZ9BZD1EduXYbvOf2rwiw" type="Stereotype">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_nxZ9BpD1EduXYbvOf2rwiw" type="Name">
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_nxZ9B5D1EduXYbvOf2rwiw" type="AttributeCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_nxZ9CJD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_nxZ9CZD1EduXYbvOf2rwiw" type="OperationCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_nxZ9CpD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_nxZ9C5D1EduXYbvOf2rwiw" visible="false" type="SignalCompartment">
+      <styles xmi:type="umlnotation:UMLListCompartmentStyle" xmi:id="_nxZ9DJD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <children xmi:id="_nxZ9DZD1EduXYbvOf2rwiw" visible="false" type="StructureCompartment">
+      <styles xmi:type="umlnotation:UMLShapeCompartmentStyle" xmi:id="_nxZ9DpD1EduXYbvOf2rwiw"/>
+      <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLShapeStyle" xmi:id="_nxZ9AZD1EduXYbvOf2rwiw" showStereotype="Label"/>
+    <element xmi:type="uml:Class" href="vizref:///#jsrctype^vcore.target=uml2.Class^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_nxZ9ApD1EduXYbvOf2rwiw" x="7632" y="19398" height="3548"/>
+  </children>
+  <styles xmi:type="umlnotation:UMLDiagramStyle" xmi:id="_7yFOQY9OEdut55afMSyKMA"/>
+  <edges xmi:id="_RevvAo9PEdut55afMSyKMA" source="_OdMpkI9PEdut55afMSyKMA" target="_Rcz1UI9PEdut55afMSyKMA">
+    <children xmi:id="_RfCp8I9PEdut55afMSyKMA" type="KindLabel">
+      <children xmi:id="_Rlmk8I9PEdut55afMSyKMA" type="Stereotype">
+        <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_Rlmk8o9PEdut55afMSyKMA" type="Kind">
+        <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_Rlmk8Y9PEdut55afMSyKMA" type="Name">
+        <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      <layoutConstraint xmi:type="notation:Location" xmi:id="_RfCp8Y9PEdut55afMSyKMA" y="-185"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLConnectorStyle" xmi:id="_RevvA49PEdut55afMSyKMA" showStereotype="Text"/>
+    <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+    <bendpoints xmi:type="notation:RelativeBendpoints" xmi:id="_RevvBI9PEdut55afMSyKMA" points="[-14, 3373, 4114, -5014]$[-4141, 4960, -13, -3427]"/>
+  </edges>
+  <edges xmi:id="_VG46YI9PEdut55afMSyKMA" source="_OdMpkI9PEdut55afMSyKMA" target="_VEDo0I9PEdut55afMSyKMA">
+    <children xmi:id="_VG46Y49PEdut55afMSyKMA" type="KindLabel">
+      <children xmi:id="_VG46ZY9PEdut55afMSyKMA" type="Stereotype">
+        <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_VG46Z49PEdut55afMSyKMA" type="Kind">
+        <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_VG46Zo9PEdut55afMSyKMA" type="Name">
+        <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      <layoutConstraint xmi:type="notation:Location" xmi:id="_VG46ZI9PEdut55afMSyKMA" y="-185"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLConnectorStyle" xmi:id="_VG46YY9PEdut55afMSyKMA" showStereotype="Text"/>
+    <element xmi:type="uml:Usage" href="vizref:///#jdep^vcore.target=uml2.Usage[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+    <bendpoints xmi:type="notation:RelativeBendpoints" xmi:id="_VG46Yo9PEdut55afMSyKMA" points="[-14, 3373, 106, -5014]$[-120, 4960, 0, -3427]"/>
+  </edges>
+  <edges xmi:id="_i1FIsI9PEdut55afMSyKMA" source="_OdMpkI9PEdut55afMSyKMA" target="_iotgoI9PEdut55afMSyKMA">
+    <children xmi:id="_i1FIs49PEdut55afMSyKMA" type="NameLabel">
+      <children xmi:id="_i1FItY9PEdut55afMSyKMA" type="Stereotype">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_i1FIto9PEdut55afMSyKMA" type="Name">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      <layoutConstraint xmi:type="notation:Location" xmi:id="_i1FItI9PEdut55afMSyKMA" y="-185"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLConnectorStyle" xmi:id="_i1FIsY9PEdut55afMSyKMA" showStereotype="Text"/>
+    <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralData[jcu^name=CollateralData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+    <bendpoints xmi:type="notation:RelativeBendpoints" xmi:id="_i1FIso9PEdut55afMSyKMA" points="[106, -3360, -53, 3307]$[106, -3968, -53, 2699]$[53, -4842, -106, 1825]$[53, -4895, -106, 1772]"/>
+  </edges>
+  <edges xmi:id="_i1O5sI9PEdut55afMSyKMA" source="_Rcz1UI9PEdut55afMSyKMA" target="_iotgoI9PEdut55afMSyKMA">
+    <children xmi:id="_i1O5s49PEdut55afMSyKMA" type="NameLabel">
+      <children xmi:id="_i1O5tY9PEdut55afMSyKMA" type="Stereotype">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_i1O5to9PEdut55afMSyKMA" type="Name">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      <layoutConstraint xmi:type="notation:Location" xmi:id="_i1O5tI9PEdut55afMSyKMA" y="-185"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLConnectorStyle" xmi:id="_i1O5sY9PEdut55afMSyKMA" showStereotype="Text"/>
+    <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=MortgageData[jcu^name=MortgageData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+    <bendpoints xmi:type="notation:RelativeBendpoints" xmi:id="_i1O5so9PEdut55afMSyKMA" points="[-13, 3426, -4114, -3373]$[4088, 5013, -13, -1786]"/>
+  </edges>
+  <edges xmi:id="_i1O5t49PEdut55afMSyKMA" source="_VEDo0I9PEdut55afMSyKMA" target="_iotgoI9PEdut55afMSyKMA">
+    <children xmi:id="_i1O5uo9PEdut55afMSyKMA" type="NameLabel">
+      <children xmi:id="_i1O5vI9PEdut55afMSyKMA" type="Stereotype">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_i1O5vY9PEdut55afMSyKMA" type="Name">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      <layoutConstraint xmi:type="notation:Location" xmi:id="_i1O5u49PEdut55afMSyKMA" y="-185"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLConnectorStyle" xmi:id="_i1O5uI9PEdut55afMSyKMA" showStereotype="Text"/>
+    <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=PlacementData[jcu^name=PlacementData.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=CollElement[jcu^name=CollElement.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+    <bendpoints xmi:type="notation:RelativeBendpoints" xmi:id="_i1O5uY9PEdut55afMSyKMA" points="[0, 3426, -93, -3373]$[80, 5013, -13, -1786]"/>
+  </edges>
+  <edges xmi:id="_k5D24JD1EduXYbvOf2rwiw" source="_k4AuAJD1EduXYbvOf2rwiw" target="_h-KzEJD1EduXYbvOf2rwiw">
+    <children xmi:id="_k5D245D1EduXYbvOf2rwiw" type="NameLabel">
+      <children xmi:id="_k5D25ZD1EduXYbvOf2rwiw" type="Stereotype">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_k5D25pD1EduXYbvOf2rwiw" type="Name">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      <layoutConstraint xmi:type="notation:Location" xmi:id="_k5D25JD1EduXYbvOf2rwiw" y="-185"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLConnectorStyle" xmi:id="_k5D24ZD1EduXYbvOf2rwiw" showStereotype="Text"/>
+    <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=VirtualLayer[jcu^name=VirtualLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+    <bendpoints xmi:type="notation:RelativeBendpoints" xmi:id="_k5D24pD1EduXYbvOf2rwiw" points="[0, 0, 0, 0]$[0, 0, 0, 0]"/>
+  </edges>
+  <edges xmi:id="_nyTU4JD1EduXYbvOf2rwiw" source="_nxZ9AJD1EduXYbvOf2rwiw" target="_h-KzEJD1EduXYbvOf2rwiw">
+    <children xmi:id="_nyTU45D1EduXYbvOf2rwiw" type="NameLabel">
+      <children xmi:id="_nyTU5ZD1EduXYbvOf2rwiw" type="Stereotype">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <children xmi:id="_nyTU5pD1EduXYbvOf2rwiw" type="Name">
+        <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      </children>
+      <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+      <layoutConstraint xmi:type="notation:Location" xmi:id="_nyTU5JD1EduXYbvOf2rwiw" y="-185"/>
+    </children>
+    <styles xmi:type="umlnotation:UMLConnectorStyle" xmi:id="_nyTU4ZD1EduXYbvOf2rwiw" showStereotype="Text"/>
+    <element xmi:type="uml:Implementation" href="vizref:///#jimpl^vcore.target=uml2.Implementation[jsrctype^name=CollateralLayer[jcu^name=CollateralLayer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]][jsrctype^name=Layer[jcu^name=Layer.java[jpack^name=hr.vestigo.modules.collateral.common.yoy8[jsrcroot^srcfolder=src[project^vcore.target=uml2.Model^id=java]]]]]"/>
+    <bendpoints xmi:type="notation:RelativeBendpoints" xmi:id="_nyTU4pD1EduXYbvOf2rwiw" points="[0, 0, 0, 0]$[0, 0, 0, 0]"/>
+  </edges>
+</notation:Diagram>

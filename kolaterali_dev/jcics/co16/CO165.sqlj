@@ -1,0 +1,182 @@
+package hr.vestigo.modules.collateral.jcics.co16;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+/**
+ * CO165 class delete data from loan beneficiary and insert into  loan_beneficiary_a
+ *  	
+ */
+public class CO165 extends RemoteTransaction {
+		
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co16/CO165.sqlj,v 1.8 2012/01/11 14:12:10 hramkr Exp $";
+    public DeclCO16 decl = null;
+	
+	public CO165 (DeclCO16 decl) {
+		this.decl = decl;
+	}
+	
+	
+	public void execute(TransactionContext tc) throws Exception {
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();			
+		ConnCtx ctx = tc.getContext();
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+		int broj=0;
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);        			
+			
+		try{	
+			#sql [ctx]{	INSERT INTO loan_beneficiary_a
+			          				(loan_ben_id,
+									register_no,
+									cus_id,
+									acc_no,
+									la_acc_id,
+									coll_hf_prior_id,
+									col_hea_id,
+									ser_num,
+									date_from,
+									date_until,
+									status,
+									spec_status,
+									use_open_id,
+									use_id,
+									opening_ts,
+									user_lock	,
+									request_no, 
+									priority_no,
+									fra_agr_id,
+									aps_rqst_no ) 
+							VALUES( :(decl.loanbeneficiarydelm.LBenDialog_LOAN_BEN_ID),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtRegNo_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_CUS_ID_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtAccNo_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_LA_ACC_ID_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_COLL_HF_PRIOR_ID_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_COLL_HEA_ID_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtSerNum_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtDateFrom_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtDateUntil_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtStatus_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtSpecStatus_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_USE_OPEN_ID_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_USE_ID_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtOpeningTS_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtUserLock_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtRequestNo_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtPriorityNo_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_fra_agr_id_O),
+									:(decl.loanbeneficiarydelm.LBenDialog_txtApsRqstNo)
+
+									)
+
+			};  
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO165.sqlj insert into loan_beneficiary_a before delete SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO165.sqlj insert into loan_beneficiary_a before delete SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO165.sqlj insert into loan_beneficiary_a before delete SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO164: Error inserting loan_beneficiary_a! ","err411a", null);
+		}			
+			 
+//			 za plasmane koji su dio okvirnog sporazuma		 	
+		if(decl.loanbeneficiarydelm.l_fra_agr_id != null){	
+			tc.debug ( "......CO165.sqlj brisem plasmane iz sporazuma odn. mijenjam im status" + decl.loanbeneficiarydelm.l_fra_agr_id);	
+			tc.debug ( "......CO165.sqlj plasman " + decl.loanbeneficiarydelm.LBenDialog_txtAccNo);	
+			try{	
+				#sql [ctx, exCtx]{ 
+			    	update loan_beneficiary
+			                set status = 'D',
+			                date_until = current date,
+			                user_lock = current timestamp
+			     		WHERE 	acc_no  = :(decl.loanbeneficiarydelm.LBenDialog_txtAccNo)
+			    		AND 	fra_agr_id = :(decl.loanbeneficiarydelm.l_fra_agr_id)  
+		    	};
+//                #sql [ctx, exCtx]{ 
+//                    delete from loan_beneficiary  
+//                        WHERE   acc_no  = :(decl.loanbeneficiarydelm.LBenDialog_txtAccNo)
+//                        AND     fra_agr_id = :(decl.loanbeneficiarydelm.l_fra_agr_id)  
+//                };			    	
+				if(exCtx.getUpdateCount()==0){
+					throw new VestigoTMException(1,"CO0165..... nista za brisanje","errclt7", null);
+				}
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			}catch(java.sql.SQLException se){
+				tc.debug ( "......CO165.sqlj deleting loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO165.sqlj deleting loan_beneficiary SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO165.sqlj deleting loan_beneficiary SQL Message " + se.getMessage());
+				throw new VestigoTMException(1, "Transaction CO1653: Error deleting  loan_beneficiary! ","err411a", null);
+			}		 		
+		} else { 
+			tc.debug ( "......CO165.sqlj brisem plasman koji nije iz sporazuma " + decl.loanbeneficiarydelm.l_fra_agr_id);				
+// plasmani koji nisu dio sporazuma	
+ 				//loan_beneficiary  
+			try{	
+					#sql [ctx, exCtx]{ 
+                    update loan_beneficiary
+                            set status = 'D',
+                            date_until = current date,
+                            user_lock = current timestamp
+			    		WHERE loan_ben_id  =:(decl.loanbeneficiarydelm.LBenDialog_LOAN_BEN_ID)
+			    	};
+//                    #sql [ctx, exCtx]{ 
+//                        delete from loan_beneficiary  
+//                            WHERE   loan_ben_id  =:(decl.loanbeneficiarydelm.LBenDialog_LOAN_BEN_ID)
+//                            AND       user_lock =:(decl.loanbeneficiarydelm.LBenDialog_txtUserLock_O)  
+//                        };			    	
+				if(exCtx.getUpdateCount()==0){
+					throw new VestigoTMException(1,"Transaction CO1654: Error deleting loan_beneficiary because of user_lock","errclt7", null);
+				}
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			}catch(java.sql.SQLException se){
+				tc.debug ( "......CO165.sqlj deleting loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO165.sqlj deleting loan_beneficiary SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO165.sqlj deleting loan_beneficiary SQL Message " + se.getMessage());
+				throw new VestigoTMException(1, "Transaction CO1653: Error deleting  loan_beneficiary! ","err411a", null);
+			}
+	 	}
+        
+        kolData.colHeaId = decl.loanbeneficiarydelm.RealEstate_COL_HEA_ID;
+        kolData.colCurId = decl.loanbeneficiarydelm.RealEstate_REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.loanbeneficiarydelm.RealEstate_txtNomiValu;
+        kolData.ponder = decl.loanbeneficiarydelm.RealEstate_txtCollMvpPonder;
+
+        yoye0.getRestAmount(kolData);
+         
+        decl.loanbeneficiarydelm.RealEstate_txtWeighValue = kolData.ponderAmount;
+        decl.loanbeneficiarydelm.RealEstate_txtWeighDate = todaySQLDate;
+        decl.loanbeneficiarydelm.RealEstate_txtAvailValue = kolData.restAmount;
+        decl.loanbeneficiarydelm.RealEstate_txtAvailDate = todaySQLDate;
+        decl.loanbeneficiarydelm.RealEstate_txtSumPartVal = kolData.exposureAmount;
+        decl.loanbeneficiarydelm.RealEstate_txtSumPartDat = kolData.exposureDate;        
+
+        // poziv common-a za update prihvatljivosti-samo za direktno vezane kolaterale
+        BigDecimal col_hea_id = decl.loanbeneficiarydelm.LBenDialog_COLL_HEA_ID;
+        
+        if (col_hea_id !=null) {
+            YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+    
+            yoyg0.azurirajPrihvatljivosti();
+            decl.loanbeneficiarydelm.Kol_ND_lb =yoyg0.getNDPrihvatljivost();
+            decl.loanbeneficiarydelm.Kol_B2_lb = yoyg0.getB2StandPrihvatljivost();
+            decl.loanbeneficiarydelm.Kol_HNB_lb = yoyg0.getHNBPrihvatljivost();
+            decl.loanbeneficiarydelm.Kol_B2IRB_lb = yoyg0.getB2IRBPrihvatljivost();    
+            
+            decl.loanbeneficiarydelm.Kol_ND_lb_dsc = yoyg0.getOpisNDPrihvatljivosti();
+            decl.loanbeneficiarydelm.Kol_B2_lb_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+            decl.loanbeneficiarydelm.Kol_HNB_lb_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+            decl.loanbeneficiarydelm.Kol_B2IRB_lb_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();        
+        
+        }                     
+	}//	execute
+}
+			  

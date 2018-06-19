@@ -1,0 +1,71 @@
+package hr.vestigo.modules.collateral.common.yoy4;
+
+
+import java.math.BigDecimal;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+import java.sql.SQLException;
+ 
+
+
+public class YOY47 { 
+
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy4/YOY47.sqlj,v 1.2 2014/11/12 14:13:48 hrazst Exp $";
+
+	private ConnCtx ctx = null;
+	private RemoteContext rc= null;
+	
+	public YOY47(RemoteContext rc) throws Exception {
+		this.ctx = rc.getContext();
+		this.rc=rc;
+
+	}
+// dohvaca podatke o hipoteci za id iz coll_head
+	
+	public HfPriorCheckData checkHfPrior(HfPriorCheckData chkObj) throws Exception{
+ 
+		rc.debug(".....Poceo YOY47");
+		rc.debug(".....Ulazni parametar je COL_HEA_ID : " + chkObj.col_hea_id);
+		// dohvatiti parametrizaciju statusa prema collateral type		
+		try {
+			#sql [ctx]{
+				SELECT 
+					hfs_value,
+                    hfs_value_date ,
+					hfs_value_last_one,
+					hfs_date_last_one ,
+					third_right_nom ,
+					third_right_date ,
+					thi_date_last_unt 
+              	INTO 	:(chkObj.hfs_value),
+						:(chkObj.hfs_value_date),
+						:(chkObj.hfs_value_last_one),
+						:(chkObj.hfs_date_last_one),
+						:(chkObj.third_right_nom),
+						:(chkObj.third_right_date),
+						:(chkObj.thi_date_last_unt)
+				FROM  coll_head   
+				WHERE col_hea_id = :(chkObj.col_hea_id)	};
+		
+		}catch(SQLException sqle){
+		}		
+		//thirdRightNom 
+		//hfsValue 
+		rc.debug(".....Izlazni parametar je hfs_value : " + chkObj.hfs_value);
+		rc.debug(".....Izlazni parametar je hfs_value_date : " + chkObj.hfs_value_date);
+		rc.debug(".....Izlazni parametar je hfs_value_last_one : " + chkObj.hfs_value_last_one);
+		rc.debug(".....Izlazni parametar je hfs_date_last_one) : " + chkObj.hfs_date_last_one);		
+		rc.debug(".....Izlazni parametar je third_right_nom : " + chkObj.third_right_nom);
+		rc.debug(".....Izlazni parametar je third_right_date : " + chkObj.third_right_date);
+		rc.debug(".....Izlazni parametar je thi_date_last_unt : " + chkObj.thi_date_last_unt);
+
+ 		return chkObj;
+	}
+}
+ 
+				
+			
+		
+		

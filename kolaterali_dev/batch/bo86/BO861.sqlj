@@ -1,0 +1,136 @@
+package hr.vestigo.modules.collateral.batch.bo86;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+import java.math.*;
+
+public class BO861 {
+    
+    #sql iterator ColProcIterator (
+            BigDecimal col_pro_id
+        );
+    #sql iterator Expiterator(
+            String cus_gro_code,
+            String cus_gro_name,
+            String register_no,
+            String name,
+            String cus_acc_no,
+            String cur_exp_char,
+            BigDecimal exp_balance_hrk,
+            String col_num,
+            String col_type_name,
+            String cur_col_char,
+            BigDecimal coll_amount,
+            BigDecimal exp_coll_amount
+);
+
+
+
+
+    
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo86/BO861.sqlj,v 1.6 2015/04/22 07:13:13 hraaks Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    //
+    public BO861(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+    
+    public ColProcIterator getData(Date value_date){
+        ColProcIterator iter = null;
+        try {
+            #sql [connCtx] iter = {select col_pro_id from COL_PROC where value_date = :(value_date) and proc_type ='M' with ur};
+        } catch (Exception e) {
+            bc.debug("Ne mogu otvoriti konekciju bo86.getData()"+e.toString());
+        }
+        return iter;
+    }
+    
+    public BigDecimal getExchangeRate(Date date, BigDecimal cur_id) throws Exception{ //978
+        BigDecimal midd_rate = null;
+        //BigDecimal eur_cur_id = new BigDecimal(64999);
+        try {
+            #sql [connCtx] { SELECT MIDD_RATE INTO :midd_rate from EXCHANGE_RATE where cur_id=:(cur_id) and :date between date_from and date_until};
+        } catch (Exception e) {
+           midd_rate = new BigDecimal(0);
+           bc.userLog("Ne mogu dohvatiti tecaj za datum:" + date );
+           bc.debug("Ne mogu dohvatiti tecaj za datum:" + date + "\n"+ e.toString());
+        }
+        
+        return midd_rate;
+    }
+    
+    public BigDecimal getCurrencyMiddRate(Date value_date, String code_char){
+        BigDecimal cur_id = null;
+        BigDecimal midd_rate = null;
+        try {
+            #sql [connCtx] {select cur_id into :cur_id from currency where code_char =:(code_char)};
+            
+            if(cur_id != null){
+                midd_rate = getExchangeRate(value_date, cur_id);
+            }
+        } catch (Exception e) {
+           bc.debug("bo86:getCurrencyMiddRate-->"+ e.toString());
+        }
+        
+        return midd_rate;
+        
+    }
+    
+    public Expiterator getReportData(BigDecimal col_proc_id, String client_type){
+        Expiterator iter = null;
+        int filterByClientType = -1;
+        
+        if ("P".equals(client_type)) filterByClientType = 1;                      // pravne osobe
+        else if ("F".equals(client_type)) filterByClientType = 2;                      // fizièke osobe
+        
+        bc.debug("client_type:'"+ client_type+"'");
+        try {
+            #sql [connCtx] iter = {SELECT 
+                                t.cus_gro_code        AS cus_gro_code,
+                                t.cus_gro_name        AS cus_gro_name,
+                                c.register_no          AS register_no,
+                                c.name                 AS name,
+                                ce.cus_acc_no          AS cus_acc_no,
+                                cur_exp.code_char      AS cur_exp_char,
+                                cec.exp_balance_hrk    AS exp_balance_hrk,
+                                ch.col_num             AS col_num,
+                                ct.coll_type_name      AS col_type_name,
+                                cur_col.code_char      AS cur_col_char,
+                                cec.coll_amount        AS coll_amount,
+                                cec.exp_coll_amount    AS exp_coll_amount
+                FROM cusacc_exp_coll cec
+                                INNER JOIN cusacc_exposure ce ON cec.cus_acc_id = ce.cus_acc_id
+                                INNER JOIN customer c ON cec.cus_id = c.cus_id
+                                INNER JOIN coll_head ch ON cec.col_hea_id = ch.col_hea_id
+                                INNER JOIN currency cur_exp ON cec.exp_cur_id  = cur_exp.cur_id
+                                INNER JOIN currency cur_col ON cec.exp_coll_cur_id  = cur_col.cur_id
+                                LEFT OUTER JOIN collateral_type ct ON ch.col_type_id = ct.coll_type_id 
+                                LEFT OUTER JOIN  ( SELECT cgc.CUS_ID, cg.cus_gro_code, cg.cus_gro_name  FROM cus_gro_customer cgc 
+                                INNER JOIN  customer_group cg on (cgc.cus_gro_id= cg.cus_gro_id and cg.cus_gro_typ_id= 5999) ) t on (c.cus_id=t.cus_id) 
+            WHERE    cec.col_pro_id = :(col_proc_id) 
+                AND     not (ch.col_cat_id in ( 617223, 625223))
+                and 
+            (            (:filterByClientType = 1 AND c.cus_typ_id IN (2999,2998,999)) OR 
+                         (:filterByClientType = 2 AND c.cus_typ_id IN (1999,1998))   
+            )
+                ORDER BY cus_gro_name, register_no, cus_acc_no
+                WITH UR   };
+        } catch (Exception e) {
+            bc.debug("bo86-->getReportData: "+ e.toString());
+        }
+        return iter;
+    }
+    
+
+}

@@ -1,0 +1,84 @@
+package hr.vestigo.modules.collateral.jcics.co22;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import java.util.Vector;
+import java.math.BigDecimal; 
+
+#sql iterator PTIter(BigDecimal col_cat_id, String code, String name, String screen_name);
+
+public class CO221 extends RemoteTransaction {
+public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co22/CO221.sqlj,v 1.3 2009/04/27 09:44:02 hramkr Exp $";
+
+	private DeclCO22 d = null;
+	public  PTIter iter;
+
+	public CO221(DeclCO22 d) {
+		this.d = d; 
+	}
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx connCtx = tc.getContext();
+		
+		#sql[connCtx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+
+/*			#sql[connCtx] iter = {SELECT
+										distinct(a.col_cat_id),
+										a.code,
+										a.name,
+										a.screen_name,
+									FROM
+										coll_category a, collateral_type b
+									WHERE 
+										a.col_cat_id = b.col_cat_id 
+									AND
+										b.coll_spec_status = 'A'
+			
+									ORDER BY a.code, a.name	};
+			
+*/	
+			#sql[connCtx] iter = {SELECT
+										distinct(a.col_cat_id),
+										a.code,
+										a.name,
+										a.screen_name,
+										a.order_num
+									FROM
+										coll_category a, collateral_type b
+									WHERE 
+										a.col_cat_id = b.col_cat_id 
+									AND
+										b.coll_spec_status = 'A'
+									ORDER BY a.order_num	};
+
+		try {
+
+			int count = 0;
+			while (iter.next()) {
+				Vector row = new Vector();
+				Vector hidden = new Vector();
+				
+				hidden.add(iter.col_cat_id());
+				hidden.add(iter.screen_name());
+				row.add(iter.code());
+				row.add(iter.name());
+				d.tblColTypeList.addRow(row, hidden);
+				count++;
+			}
+
+			if (count == 0) {
+				throw new VestigoTMException(1, "Prazan rowset pri dohvatu podataka!", "err012", null);
+			}
+		} finally {
+
+			try {
+				if (iter != null)
+					iter.close();
+
+			} catch (Exception e1) {
+
+			}
+		}
+	}
+}

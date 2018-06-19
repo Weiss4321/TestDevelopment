@@ -1,0 +1,81 @@
+package hr.vestigo.modules.collateral.jcics.coA6;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;   
+
+  
+public class COA63 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA6/COA63.sqlj,v 1.1 2010/12/08 14:19:37 hramkr Exp $";
+
+    public DeclCOA6 decl;
+    
+    public COA63(DeclCOA6 decl)
+    {
+        this.decl = decl;
+    }
+  
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        Timestamp current_timestamp = null;
+        try 
+        {
+            #sql[ctx] { 
+                SELECT current timestamp 
+                INTO :current_timestamp
+                FROM sysibm.sysdummy1
+            };                  
+        }
+        catch(Exception ex)
+        {
+           throw new VestigoTMException(1, "Transaction COA63: Error select sysibm.sysdummy1","err411a", null);
+        }  
+        
+        decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtUserLock = current_timestamp;
+         
+        try 
+        {
+            #sql[ctx] { 
+                SELECT use_id, login, user_name 
+                INTO    
+                        :(decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtUseId),
+                        :(decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtUserLogin),
+                        :(decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtUserName)
+                FROM app_user
+                WHERE 
+                    use_id = :(decl.collcashdepexceptionupdatem.use_id)
+            };                  
+        }
+        catch(Exception ex)
+        {
+           throw new VestigoTMException(1, "Transaction COA63: Error select sysibm.sysdummy1","err411a", null);
+        }  
+           
+        try
+        {
+
+            #sql [ctx]
+            {
+                UPDATE cashdep_exception SET
+                    date_from   = :(decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtDateFrom),
+                    date_until  = :(decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtDateUntil), 
+                    status      = :(decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtStatus), 
+                    use_id      = :(decl.collcashdepexceptionupdatem.use_id), 
+                    user_lock   = :(decl.collcashdepexceptionupdatem.CollCashDepExceptionDialog_txtUserLock)
+                WHERE 
+                    cas_exc_id = :(decl.collcashdepexceptionupdatem.cas_exc_id)
+            };
+         }
+         catch(Exception ex)
+         {
+            throw new VestigoTMException(1, "Transaction COA63: Error update cashdep partije!","err411a", null);
+         }
+         
+         
+    }  
+}

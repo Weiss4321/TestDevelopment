@@ -1,0 +1,148 @@
+package hr.vestigo.modules.collateral.jcics.co24;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//COLL_COURT  LIST
+/**
+ * CO241 class selects all data from table COLL_COURT into list screen and puts
+ * this data into vectors LDB.
+ *  
+ */
+
+//CO_ID
+
+//CO_CODE
+
+//CO_NAME
+
+//CO_POL_MAP_ID_CNT
+
+
+#sql iterator Iter1 ( BigDecimal co_id , 
+					  String co_code , 
+					  String co_name,
+					  BigDecimal co_pol_map_id_cnt, 
+					  String co_status,
+					  BigDecimal use_open_id,
+					  BigDecimal use_id,
+					  java.sql.Timestamp opening_ts,
+					  java.sql.Timestamp user_lock,
+					  BigDecimal code,
+					  String name,
+					  String user_name,
+					  String login,
+					  String desc_status,
+					  String chg_login,
+					  String chg_name
+);
+
+
+
+public class CO241 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co24/CO241.sqlj,v 1.7 2006/07/12 09:02:24 hraaks Exp $";
+
+	private DeclCO24 decl = null;
+
+	private Iter1 iter1 = null;
+
+	public CO241(DeclCO24 decl) {
+		this.decl = decl;
+	}
+
+	public void executeScrollable(TransactionContext tc) throws Exception {
+
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+     
+
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+			#sql [ctx] iter1 = {SELECT  c.co_id , 
+										c.co_code , 
+										c.co_name, 
+										c.co_pol_map_id_cnt, 
+										c.co_status, 
+										c.use_open_id, 
+										c.use_id,
+										c.opening_ts,
+										c.user_lock,
+										p.code,
+										p.name,
+										a.user_name,
+										a.login,
+										b.user_name as chg_login,
+										b.login as chg_name,
+										sd.desc_status
+										
+								FROM 		coll_court as c,
+											political_map as p,
+											app_user as a,
+											status_dictionary as sd,
+											app_user as b
+
+								WHERE c.co_pol_map_id_cnt = p.pol_map_id
+								AND c.use_open_id = a.use_id 
+								AND c.use_id = b.use_id 
+								AND sd.table_name='COLL_COURT' 
+								AND sd.attribute='COLL_COURT_STATUS' 
+								AND c.co_status=sd.status
+								ORDER BY c.co_code ASC
+							};
+		
+		
+
+	}
+
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+
+	public void close() {
+		if (iter1 != null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {
+			}
+		}
+	}
+
+	public void populateRowData() throws Exception {
+
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		//sifra suda
+
+		//naziv suda
+		
+		row.add(iter1.co_code());
+		row.add(iter1.co_name());
+		row.add(iter1.desc_status());
+		
+		
+
+		//hidden polja i id-evi username i login onoga koji je unio podatke
+		row1.add(iter1.co_id());
+		row1.add(iter1.co_pol_map_id_cnt());
+		row1.add(iter1.use_open_id());
+		row1.add(iter1.use_id());
+		row1.add(iter1.opening_ts());
+		row1.add(iter1.user_lock());
+		row1.add(iter1.code());
+		row1.add(iter1.name());
+		row1.add(iter1.user_name());
+		row1.add(iter1.login());
+		row1.add(iter1.chg_login());
+		row1.add(iter1.chg_name());	
+		row1.add(iter1.co_status());
+
+		decl.tblCollCourt.addRow(row, row1);
+
+	}
+
+}

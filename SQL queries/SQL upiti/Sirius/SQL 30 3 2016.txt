@@ -1,0 +1,606 @@
+
+SET CURRENT_SCHEMA = 'SIDEV'
+
+		select * from customer_account where cus_acc_no = '1135000772'
+
+		select * from customer_account where cus_acc_no = '1135000705'
+
+		select cus_acc_status from customer_account where cus_acc_no = '1135000004'
+	        
+			select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 		select cus_bil_exc_id, cus_bill_exch_no,maturity_date, payer_name,payer_acc_no, master_acc_no, ben_name,ben_iban, ext_int_flag, status, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 		update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 932682326;
+
+ 		update CUST_BILL_EXCH set maturity_date  = '23.03.2016' where cus_bil_exc_id = 936634326;
+
+ 		update CUST_BILL_EXCH set paid_amount = null, collected_amount = null where cus_bil_exc_id = 497881326;
+
+		commit;
+
+		----------
+
+		
+		
+
+		select * from customer_account where cus_acc_no = '1135000439' -- mora biti 4p
+
+		
+		SELECT  SUM(tabl.balance) balance,  SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount-tabl.ann_outgoing_trx) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  
+		FROM  EXCHANGE_RATE er,(SELECT  ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba   
+		WHERE   ba.cus_acc_id =  3152431823  
+		AND   ba.cus_id = 26738352  
+		AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx  FROM   cusacc_balance_last cb  
+		WHERE   cb.cus_acc_id = 3152431823   
+		AND cb.cus_id = 26738352
+		AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   
+		AND  '23.03.2016'  
+		BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc with ur;
+
+
+		
+
+
+		--- 1135000004
+
+
+		SELECT  SUM(tabl.balance) balance,  SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount-tabl.ann_outgoing_trx) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  
+		FROM  EXCHANGE_RATE er,(SELECT  ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba   
+		WHERE   ba.cus_acc_id =  3137830823  
+		AND   ba.cus_id = 26738352  
+		AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx  FROM   cusacc_balance_last cb  
+		WHERE   cb.cus_acc_id = 3137830823   
+		AND cb.cus_id = 26738352   AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   
+		AND  '23.03.2016'  
+		BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc with ur;
+
+
+
+		select cus_acc_status from customer_account where cus_acc_no = '1135000004'; -- cus_acc_id = 77393326   -- cus_id = 121406352
+
+		update customer_account set cus_acc_status = 'A' where cus_acc_id = 3137830823;
+
+		commit;
+
+		select * from customer_account where cus_acc_id = 3137830823
+
+		
+
+		select * from CUSACC_BALANCE_LAST where cus_acc_id = 3137830823 with ur;
+
+		select * from customer_account where  cus_acc_id = 3137830823
+
+		select * from customer_account where cus_acc_no = '1135000772';
+
+		commit;
+
+			--1135000772
+
+			--    HR9324020061100388373
+
+						SELECT 	CI.cus_id cus_id,
+						CI.offic_citizen_id code, 
+								CI.register_no register_no, 
+								CI.name name,
+								status status, 
+								CSU.cus_sub_typ_code sub_type_code,
+								CSU.name sub_type_name,
+								CI.surname surname, 
+								CI.short_name short_name,
+								CU.address address,
+			                    CU.tax_number tax_number
+							FROM citizen CI
+								LEFT OUTER JOIN customer_subtype CSU 
+									ON (CI.cus_sub_typ_id = CSU.cus_sub_typ_id), 
+								customer CU
+							WHERE CI.bank_sign LIKE 'RB'
+								AND CI.register_no = :(regNo)
+								AND CU.cus_typ_id in (1999, 1998)
+			    				AND CU.cus_id = CI.cus_id	
+			    				ORDER BY INTEGER(CI.register_no)
+
+			
+		3205011442
+
+		select * from customer_account where cus_acc_no = '3205011442';
+
+		update customer_account set cus_acc_status = 'A' where cus_acc_id = 929548326;
+
+		commit;
+
+
+		select * from citizen;
+
+		 select * from citizen where register_no = '2002876'  --  2040351705
+
+		 select * from customer where cus_id = 2040351705
+
+		 select * from citizen where cus_id = 2040351705
+
+
+		select * from VAT_REPORT_HEAD where cus_let_typ_id = 74999
+
+		select * from CUST_LETT_DELIVERY
+	where cus_let_id in (select cus_let_id from cust_letter
+	where cus_let_typ_id = 74999)
+
+	update CUST_LETT_DELIVERY set delivery_flag = '2'
+	where cus_let_id in (select cus_let_id from cust_letter
+	where cus_let_typ_id = 74999)
+
+	select * from CUST_LETT_DELIVERY where cus_let_id in (1705941385) with ur;
+
+	select * from CUST_LETT_DELIVERY order by user_lock desc;
+
+	select * from CUST_LETT_DELIVERY where cus_let_del_id = 164793330
+
+	update CUST_LETT_DELIVERY set delivery_flag = '1' where cus_let_del_id = 164793330;
+
+	commit;
+
+
+	select * from batch_log where bat_def_id = 4733000704 order by recording_time desc;
+
+	select * from batch_log where bat_def_id = 344447327 order by recording_time desc;
+
+	update batch_log set exec_status = 'D' where bat_log_id = 787321327;
+
+	commit;
+
+
+	
+
+		 update cust_lett_delivery set delivery_flag = '1'
+		where cus_let_id = ?
+
+
+		  SELECT
+                   *
+                   
+            FROM vat_report_head
+            WHERE
+                 vat_rep_hea_id = 1701816335
+
+                 select * from VAT_REPORT_HEAD where vat_rep_hea_id = 1797862335; 
+
+                  select * from VAT_REPORT_HEAD where fis_vat_inv_no = '750-99102-1-2016'
+
+                  update VAT_REPORT_HEAD set reversed = 'N' where vat_rep_hea_id = 1789741335;
+
+                  commit;
+
+
+                select * from VAT_REPORT_HEAD where vat_rep_hea_id = 1797862335; 
+
+                 select fis_vat_inv_no_orig from VAT_REPORT_ITEM where vat_rep_hea_id = 1797862335;  ---- fis_vat_inv_no_orig  =  131-99102-1-2016
+
+                     select * from VAT_REPORT_ITEM where vat_rep_hea_id = 1797862335;
+
+                -- update VAT_REPORT_ITEM set fis_vat_inv_no_orig  = null  where vat_rep_hea_id = 1797862335;
+
+             update VAT_REPORT_ITEM set fis_vat_inv_no_orig  = '131-99102-1-2016'  where vat_rep_hea_id = 1797862335;
+
+                 commit;
+
+                 -------------------------------
+
+
+                  select  vrh.vat_rep_hea_id,
+                    vri.vat_value,
+                    ct.code cus_typ_code,
+                    vrh.cus_sub_typ_code,
+                    vrh.register_no, 
+                    vrh.name, 
+                    cld.address, 
+                    cld.postal_code, 
+                    cld.city_name, 
+                    cou.eng_name cou_name,
+                    cou.cou_iso_code,
+                    vrh.cus_code,
+                    vrh.vat_invoice_no vat_invoice_no,
+                    vrh.invoice_ord_no,
+                    vrh.vat_invoice_date process_date, 
+                    vrh.tax_number, 
+                    clt.respiro, 
+                    vri.vat_rep_ite_id,
+                    'null' cus_acc_no,
+                    btc.ban_tar_user_code ban_tar_code, 
+                    bt.fee_percentage,
+                    0 due_debit_amo,
+                    cur.code_char dtt_code_char,
+                    cld.lan_cod_id,
+                    vrh.vat_invoice_date,
+                    vrh.reversed,
+                    btc.ban_tar_cod_dsc ban_tar_cod_name,
+                    vri.date_from service_start_date,
+                    vri.date_until service_close_date,
+                    'null' turnover_type_name,
+                    'null' turnover_reference,
+                    'null' turnover_desc,
+                    1 quantity,
+                    0 vat_amount,
+                    0 deb_amount,
+                    0 total_fee_amount,
+                    0 no_tax,
+                    0 tax_free,
+                    0 amount_with_VAT,
+                    0 VAT,
+                    0 total_invoice_amo,
+                    0 total_amount,
+                    0 deb_cur_id,
+                    'null' deb_cur_code,
+                    bt.fee_min_amount,
+                    bt.fee_max_amount,
+                    bt.fee_fix_amount,
+                    'null' bt_cur_code,
+                    0 cur_total_amount,
+                    0 cur_deb_amount,
+                    'null' cus_let_typ_code,
+                    cast(null as date) ici_date_from,
+                    cast(null as date) ici_date_until,
+                    'null' ich_code_char,
+                    0 capital_amount,
+                    0 int_rate,
+                    0 calc_no_day,
+                    0 interest_amount,
+                    'null' trx_account,
+                    '' inv_ref_no,
+                    vri.vat_inv_no_orig vat_inv_no_orig,
+                    cast(null as date) vat_inv_date_orig,
+                    '' notice,
+                    vrid.cmnt,
+                    ev.f_pay_id as f_pay_id,
+                    cast(null as date) maturity_date,
+                    0 vat_rate,
+                    vrh.fiscal_acc_flag,
+                    vrh.issue_time,
+                    vrh.issue_user,
+                    vrh.pay_type,
+                    vrh.vies_vat_id,
+                    vrh.ban_id_flag,
+                    vri.sta_mes_id,
+                    vrh.fis_vat_inv_no,
+                    vri.fis_vat_inv_no_orig,
+                    ca.cus_acc_no cusAccNo,
+                    ca.iban_acc_no,
+                    vri.mod_percentage,
+                    vrh.service_start_date serviceStartDatePeriod,
+                    vrh.service_close_date serviceCloseDatePeriod,
+                    vrid.pay_type pay_type_details,
+                    0 cred_amount
+                    from vat_report_head vrh left outer join customer_account ca ON ca.cus_acc_id = vrh.cus_acc_id,
+                    cust_lett_delivery cld left outer join country cou ON cld.COU_ID = cou.COU_ID, cust_lett_type clt,
+                    vat_report_item vri left outer join vat_rep_ite_details vrid on  VRI.vat_rep_ite_id = VRID.tur_id ,  currency cur,
+                    BANK_TARIFF_CODE btc, BANK_TARIFF bt, customer_type ct, event ev
+                    where vrh.vat_rep_hea_id = 1797862335
+                    and cld.cus_let_del_id = 175989330
+                    and vrh.cus_let_id = cld.cus_let_id
+                    and vrh.cus_let_typ_id = clt.cus_let_typ_id
+                    and vrh.vat_rep_hea_id = vri.vat_rep_hea_id
+                    and BTC.ban_tar_code = VRI.ban_tar_code
+                    and BT.ban_tar_code = VRI.ban_tar_code
+                    and bt.date_from <= '24.03.2016' and bt.date_until >= '24.03.2016' and ev.eve_id = vri.eve_id
+                    and ct.cus_typ_id = vrh.cus_typ_id
+                    and vri.deb_cur_id = cur.cur_id
+
+
+
+
+                    select * from account where account = '1254171'; 
+
+
+			select * from customer_account where cus_Acc_no =  '1135001929';
+
+                    1135001929
+
+                    select * from cusacc_balance_last where cus_Acc_id = 184039326; 
+
+                    select * from cusacc_balance where cus_Acc_id = 184039326; 
+
+                    184,039,326
+
+
+                    
+
+
+                    	SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id =  184039326
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '31.03.2016'
+                                                     )
+													 
+													 
+		-------------------
+
+			SET CURRENT_SCHEMA = 'SIP'
+
+
+select * from cust_lett_Delivery where cus_let_del_id = 678085224851
+
+select * from cust_letter where cus_let_id = 678085223851;
+
+select * from procedure_type  where pro_typ_id = 618080335;
+
+select * from customer_account where cus_acc_no = '1104795144'; -- cus_acc_id = 21186398522
+
+
+select * from CUSACC_BALANCE_LAST where cus_acc_id = 21186398522 and pro_typ_id = 618080335;
+
+
+
+select * from batch_log where bat_def_id = 344447327 order by recording_time desc;   -- bfZF: Obrada za kreiranje datoteke stanja PO
+
+select * from batch_def where bat_def_id = 344447327
+
+
+select * from batch_log where  bat_def_id = 1617844003 and param_value = 'RB#RET;Cp1250;X' order by recording_time desc; -- bn38
+
+
+    select * from VAT_REPORT_HEAD where cus_let_typ_id = 74999 and reversed = 'Y' order by recording_time desc;
+
+    select * from VAT_REPORT_ITEM where vat_rep_hea_id = 20045057976821;
+
+
+-- ponovno prijava 21074
+
+-- polje 29  F20 nije dohvacen za racun :   1101581564
+
+		select * from customer_account where cus_acc_no = '1101581564'; -- cus_acc_id = 845605522
+
+		     SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id =  845605522
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '29.03.2016'
+                                                    )
+                          AND CB.PRO_TYP_ID in (31598005,41999,499246005,967627005,1457653005,6358941797,243159335,618080335,618081335,618082335,956404335,
+						956408335,956414335)   
+
+
+						   SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance_last cb
+                          WHERE  
+                                cb.cus_acc_id =  845605522
+						and CB.PRO_TYP_ID in (31598005)
+
+						                       
+                      select * from procedure_type where pro_typ_id in       ( 31598005,
+					243159335,
+					41999 )
+                        
+
+					
+			  select * from procedure_type where pro_typ_id	in (31598005,41999,499246005,967627005,1457653005,6358941797,243159335,618080335,618081335,618082335,956404335,
+						956408335,956414335)  
+
+                                                     
+
+                    PRO_TYP_ID_417,
+                        PRO_TYP_ID_K42,
+                        PRO_TYP_ID_K43,
+                        PRO_TYP_ID_K44,  // 125ss70
+                        PRO_TYP_ID_042,
+                        PRO_TYP_ID_F80,                 // 125ss71
+                        PRO_TYP_ID_040,                                // 125ss72
+                        PRO_TYP_ID_044, 
+                        PRO_TYP_ID_459,
+                        PRO_TYP_ID_240,               // 12ss072
+                        PRO_TYP_ID_K03, 
+                        PRO_TYP_ID_021,
+                        PRO_TYP_ID_048    
+
+                                                                 
+
+		select * from procedure_type where pro_typ_id in (967627005,618080335, 618081335,618082335, 6358941797,956414335,31598005, 956404335, 1457653005, 499246005,243159335,  41999, 956408335    ) with ur;
+                                                     
+
+		   select * from account where account = '1254171'; 
+
+		select * from procedure_type where pro_Typ_code = 'F20';  -- amo_type 
+
+		select * from AMOUNT_TYPE;
+
+		select * from AMOUNT_TYPE where amo_type = 'F20'
+
+		select * from ban_pro_amo_type where amo_type = 'F20'  -- pro-Typ_id =  31598005
+
+		select * from procedure_type where  pro_typ_id = 31598005
+
+		select * from procedure_type where  pro_typ_id = 978774335
+
+			-- dohvat stanja YF30
+		   		SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id =  845605522
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '30.03.2016'
+                                                     )
+
+
+select * from cusacc_balance_last where cus_acc_id =  845605522
+
+		select * from procedure_type where pro_Typ_id = 243159335; -- K03
+
+		select * from procedure_type where pro_Typ_id in (422541335, 978774335); -- 573 i  593 
+
+		31,598,005  -- iznos bi trebao biti -7,652.42 za 040 VI F20
+
+		select * from procedure_type where pro_Typ_id in (36999,29342005,29355005,31598005,243159335,422541335,978774335,41999,47999,42999,29344005)
+
+
+		
+
+		select * from customer_account where cus_Acc_no =  '1101581564';  -- cus_Acc_id = 845605522
+
+		
+
+
+
+		 select
+                   pay_ord_id               
+                             
+                from payment_order
+                where related_reference = 'MQA300507777779300320160000000000000000106'
+
+                 select
+                   pay_ord_id               
+                             
+                from payment_order
+                where related_reference = 'MQA300507777779300320160000000000000000104'
+
+
+		11582930522
+
+		-- polje 27 --  	
+				
+
+		-- polje 24
+		select * from customer_account where cus_Acc_no =  '1104267793'; -- cus_acc_id = 11582930522
+		
+		select * from procedure_type where pro_typ_id in (44999) -- umjesto toga stanje na kontu 50ss17
+
+		select distinct amo_type from account_scheme where trim(account) like '50__17' -- amo_type je 640
+
+		select * from ban_pro_amo_type where amo_type in ('640') -- pro_Typ_id 6561936704
+
+		select * from procedure_type where pro_typ_id = 8271662797 -- P01
+
+		select pro_typ_id from procedure_type where pro_typ_code in ('P01', 'M02');
+
+		-- polje 24 iznos nedozvoljenog prtekoracenja 1104267793
+		
+		select * from customer_account where cus_Acc_no =  '1104267793'; -- cus_acc_id = 11582930522
+
+		select pro_typ_id from procedure_type where pro_typ_code in ('P01', 'M02')
+
+		select * from procedure_type where pro_typ_code in ('P01', 'M02')
+
+		  SELECT 
+                     SUM(REST_DUE_DEB_AMO)
+                
+                 FROM 
+                     DUE_TERM_TABLE
+                 WHERE CUS_ACC_ID = 11582930522
+                 AND REST_DUE_DEB_AMO !=0
+                 AND VALUE_DATE < current date
+                 AND PRO_TYP_ID IN (8271662797, 3850368797 )
+
+		
+		-----------------------------------------
+
+
+		
+
+		  SELECT
+                min(VALUE_DATE)
+          
+            FROM
+                due_term_table
+            WHERE
+                CUS_ACC_ID = 11582930522
+                AND  pro_typ_id in (6561936704 , 8271662797)
+
+                
+
+              --- za ovaj SQL imam podatak 03.03.2016  
+			  SELECT
+                min(VALUE_DATE)
+          
+            FROM
+                due_term_table
+            WHERE
+                CUS_ACC_ID = 11582930522
+
+------------------------
+                select * from customer_account where CUS_ACC_ID = 11582930522;
+                
+------------------------------------------
+                	  SELECT
+              *
+          
+            FROM
+                due_term_table
+            WHERE
+                CUS_ACC_ID = 11582930522
+
+      --------------------
+
+              --   polje 29 
+
+              
+
+              -- polja 34,35 i 36
+
+              
+		select * from customer_account where cus_Acc_no =  '1104750406'  -- status B i court_proc_status  je 0 dakle nije prema pravilu CLN-65
+
+
+		-- polje 27 
+
+		select * from customer_account where cus_Acc_no =  '1104795144' -- cus_acC_id = 21186398522
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		-----------------------------------
+
+		
+
+
+
+		
+													 

@@ -1,0 +1,168 @@
+package hr.vestigo.modules.collateral.batch.bo39;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Vector;
+
+
+public class BO391
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo39/BO391.sqlj,v 1.4 2014/03/10 13:29:10 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator ChangesIterator with (holdability = true)( 
+    	String login,
+    	String user_name,
+    	Date income_date,
+    	String coll_type_name,
+    	String col_num,
+    	String v_login,
+    	String v_user_name,
+    	Date release_date
+    );
+
+    public BO391(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	/**
+	 * Metoda ubacuje zapis u EVENT tablicu.
+	 * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+	 */
+    public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	BigDecimal eve_id = null;
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("2793904003"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Izvješæe o povijesti promjena");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+	/**
+	 * Metoda koja dohvaæa šifru i ime organizacijske jedinice na temelju ID-a organizacijske jedinice.
+	 * @param org_uni_id ID organizacijske jedinice.
+	 * @return Vektor sa šifrom i imenom zadane organizacijske jedinice ukoliko je metoda uspješno završila, inaèe null.
+	 */
+	public Vector selectOrgUnit(BigDecimal org_uni_id)
+	{
+		Vector vect = null;
+		try
+		{
+			String code = null;
+			String name = null;
+			#sql [connCtx] {
+				SELECT code, name
+				INTO :code, :name
+				FROM organization_unit
+				WHERE org_uni_id = :org_uni_id  
+			};
+			if(code == null || name == null) throw new SQLException("Sifra ili ime organizacijske jedinice je NULL!");
+			vect = new Vector();
+			vect.add(code);
+			vect.add(name);
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvata sifre i imena organizacijske jedinice! (ORG_UNI_ID="+org_uni_id+")", ex);
+			return null;
+		}
+		return vect;
+	}
+    
+    /**
+    * Metoda koja dohvaæa podatke o promjenama na kolateralima za zadanu organizacijsku jedinicu, referenta i period.
+	* @param org_uni_id ID organizacijske jedinice.
+	* @param use_id ID referenta. Ako je null, uzimaju se svi referenti iz zadane organizacijske jedinice.
+	* @param date_from Datum od
+	* @param date_until Datum do
+	* @return Iterator. Ako je došlo do greške, vraæa null.
+	*/
+    public ChangesIterator selectChanges(BigDecimal org_uni_id, BigDecimal use_id, Date date_from, Date date_until)
+	{
+		ChangesIterator iter = null;
+		try
+		{
+			int filterByUser = 1;
+			if(use_id == null) filterByUser = 0;
+			
+			#sql [connCtx] iter = {
+				SELECT
+					c1.login AS login,
+					c1.user_name AS user_name,
+					DATE(a.income_time) AS income_date,
+					c.coll_type_name AS coll_type_name,
+					b.col_num AS col_num,
+					c2.login AS v_login,
+					c2.user_name AS v_user_name,
+					DATE(a.release_time) AS release_date
+				FROM 
+					coll_list_q a,
+					coll_head b,
+					collateral_type c,
+					app_user c1,
+					app_user c2,
+					user_signing d
+				WHERE
+					DATE(a.income_time) BETWEEN :date_from AND :date_until AND
+					a.col_lis_typ_id = 698223 AND
+					a.action_type = 'VERIFICIRAJ' AND
+					DATE(a.release_time) >= DATE(a.income_time) AND
+					a.col_hea_id = b.col_hea_id AND
+					(:filterByUser = 0 OR b.use_id_ver_snd = :use_id) AND
+					b.use_id_ver_snd = d.use_id AND
+					d.org_uni_id = :org_uni_id AND
+					b.col_type_id = c.coll_type_id AND
+					b.use_id_ver_snd = c1.use_id AND
+					b.use_id_ver = c2.use_id
+				ORDER BY 1
+				WITH UR
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja povijesti promjena!", ex);
+		}
+		return iter;
+	}
+}

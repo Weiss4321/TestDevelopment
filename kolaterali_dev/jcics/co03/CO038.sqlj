@@ -1,0 +1,660 @@
+package hr.vestigo.modules.collateral.jcics.co03;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+import hr.vestigo.modules.collateral.common.yoyE.YOYE1;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.Vector;
+
+// brisanje hipoteke
+// dozvoljeno ako na hipoteku nisu vezani plasmani
+// ako je hipoteka dio okvirnog sporazuma moze se obrisati ako sporazum nije verificiran
+
+#sql iterator Iter38 (
+		BigDecimal coll_hf_prior_id,
+		String hf_priority);
+		 
+ 
+public class CO038 extends RemoteTransaction {
+// provjera da li je na hipoteku u korist RBA vezan koji plasman 
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co03/CO038.sqlj,v 1.8 2012/01/11 14:10:32 hramkr Exp $";
+	
+	private DeclCO03 d = null;
+	
+	private Iter38 iter38 = null;	
+	
+	public CO038(DeclCO03 d) {
+		this.d = d;
+	} 
+  
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		
+		int countLoan = 0;
+		int countMortgage = 0;
+		
+// za dohvat sloga koji brisem		
+		BigDecimal COLL_HF_PRIOR_ID = null;
+		BigDecimal HF_TABLE_ID = null;
+		BigDecimal HF_REF_ID = null;
+		BigDecimal HF_COLL_HEAD_ID = null;
+		BigDecimal HF_OWN_CUS_ID = null;
+		String HF_REGISTER_NO = null;
+		String HF_OWN_CODE = null;
+		String HF_OWN_FNAME = null;
+		String HF_OWN_LNAME = null;
+		BigDecimal HF_HFC_ID = null;
+		String HF_PRIORITY = null;
+		String HF_NOTARY_AGR = null;
+		BigDecimal HF_NOTARY_PLACE_ID = null;
+		Date HF_NOTARY_DATE = null;
+		BigDecimal HF_NOTARY = null;
+		String HF_NOT_FNAME = null;
+		String HF_NOT_LNAME = null;
+		Date HF_DATE_RECIV = null;
+		String HF_COURT_DECIS = null;
+		Date HF_DATE_EXTRACT = null;
+		String LAND_REGN = null;
+		String LAND_REGN_NEW = null;
+		BigDecimal JUDGE_ID = null;
+		String JUDGE_FNAME = null;
+		String JUDGE_LNAME = null;
+		BigDecimal COURT_ID = null;
+		BigDecimal HF_OFFI_LRD = null;
+		String HF_OFFILRD_FNAME = null;
+		String HF_OFFILRD_LNAME = null;
+		BigDecimal HF_REC_LOP_ID = null;
+		String HF_ADD_DATA = null;
+		BigDecimal HF_AMOUNT = null;
+		BigDecimal HF_CUR_ID = null;
+		BigDecimal AMOUNT_REF = null;
+		BigDecimal CUR_ID_REF = null;
+		BigDecimal EXC_RAT_REF = null;
+		Date EXC_RAT_REF_DATE = null;
+		BigDecimal HF_DRAW_AMO = null;
+		BigDecimal HF_AVAIL_AMO = null;
+		BigDecimal HF_DRAW_AMO_REF = null;
+		BigDecimal AVAIL_AMO_REF = null;
+		Date HF_AVAIL_DAT = null;
+		BigDecimal DRAW_BAMO = null;
+		BigDecimal AVAIL_BAMO = null;
+		BigDecimal DRAW_BAMO_REF = null;
+		BigDecimal AVAIL_BAMO_REF = null;
+		Date AVAIL_BDAT = null;
+		Date VAL_DATE_TURN = null;
+		Date VAL_DATE_PROC = null;
+		Date HF_DATE_HFC_FROM = null;
+		Date HF_DATE_HFC_UNTIL = null;
+		String HF_STATUS = null;
+		String HF_SPEC_STAT = null; 
+		Date HF_DATE_FROM = null;
+		Date HF_DATE_UNTIL = null;
+		BigDecimal USE_OPEN_ID = null;
+		BigDecimal USE_ID = null;
+		Timestamp OPENING_TS = null;
+		Timestamp USER_LOCK = null;
+		BigDecimal EVE_ID = null;
+		String BANK_SIGN = null;
+		BigDecimal HOW_COVER = null;
+		String IS_PART_AGREEM = null;
+		BigDecimal REM_RE_NOMI_VALU = null;
+		String REC_LOP = null;
+		Date DATE_TO_LOP = null;
+		Date DATE_REC_LOP = null;
+		String STATUS = null;
+		String VEH_CON_NUM = null;
+		String AGREEMENT = null;
+		BigDecimal FRA_AGR_ID = null;
+		BigDecimal REG_INS = null;
+		
+		BigDecimal rba_hf = new BigDecimal("1602772003.00");
+		
+
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};		
+		tc.debug ( "......poceo CO038     " +d.mrtgdelmap.COLL_HF_PRIOR_ID + "____" + d.mrtgdelmap.CollHfPriorDialog_txtHfRecLopSysCodeValue);
+		
+		
+//		
+//		 dohvat sloga koji brisem
+		
+		try {
+			#sql [ctx] {SELECT	
+								COLL_HF_PRIOR_ID,
+								HF_TABLE_ID,
+								HF_REF_ID,
+								HF_COLL_HEAD_ID,
+								HF_OWN_CUS_ID,
+								HF_REGISTER_NO,
+								HF_OWN_CODE,
+								HF_OWN_FNAME,
+								HF_OWN_LNAME,
+								HF_HFC_ID,
+								HF_PRIORITY,
+								HF_NOTARY_AGR,
+								HF_NOTARY_PLACE_ID,
+								HF_NOTARY_DATE,
+								HF_NOTARY,
+								HF_NOT_FNAME,
+								HF_NOT_LNAME,
+								HF_DATE_RECIV,
+								HF_COURT_DECIS,
+								HF_DATE_EXTRACT,
+								LAND_REGN,
+								LAND_REGN_NEW,
+								JUDGE_ID,
+								JUDGE_FNAME,
+								JUDGE_LNAME,
+								COURT_ID,
+								HF_OFFI_LRD,
+								HF_OFFILRD_FNAME,
+								HF_OFFILRD_LNAME,
+								HF_REC_LOP_ID,
+								HF_ADD_DATA,
+								HF_AMOUNT,
+								HF_CUR_ID,
+								AMOUNT_REF,
+								CUR_ID_REF,
+								EXC_RAT_REF,
+								EXC_RAT_REF_DATE,
+								HF_DRAW_AMO,
+								HF_AVAIL_AMO,
+								HF_DRAW_AMO_REF,
+								AVAIL_AMO_REF,
+								HF_AVAIL_DAT,
+								DRAW_BAMO,
+								AVAIL_BAMO,
+								DRAW_BAMO_REF,
+								AVAIL_BAMO_REF,
+								AVAIL_BDAT,
+								VAL_DATE_TURN,  
+								VAL_DATE_PROC,
+								HF_DATE_HFC_FROM,
+								HF_DATE_HFC_UNTIL,
+								HF_STATUS,
+								HF_SPEC_STAT,
+								HF_DATE_FROM,
+								HF_DATE_UNTIL,
+								USE_OPEN_ID,
+								USE_ID,
+								OPENING_TS,
+								USER_LOCK,
+								EVE_ID,
+								BANK_SIGN,
+								HOW_COVER,
+								IS_PART_AGREEM,
+								REM_RE_NOMI_VALU,
+								REC_LOP,
+								DATE_TO_LOP,
+								DATE_REC_LOP,
+								STATUS,
+								VEH_CON_NUM,
+								AGREEMENT,
+								FRA_AGR_ID,
+								REG_INS
+						INTO
+								:(COLL_HF_PRIOR_ID),
+								:(HF_TABLE_ID),
+								:(HF_REF_ID),
+								:(HF_COLL_HEAD_ID),
+								:(HF_OWN_CUS_ID),
+								:(HF_REGISTER_NO),
+								:(HF_OWN_CODE),
+								:(HF_OWN_FNAME),
+								:(HF_OWN_LNAME),
+								:(HF_HFC_ID),
+								:(HF_PRIORITY),
+								:(HF_NOTARY_AGR),
+								:(HF_NOTARY_PLACE_ID),
+								:(HF_NOTARY_DATE),
+								:(HF_NOTARY),
+								:(HF_NOT_FNAME),
+								:(HF_NOT_LNAME),
+								:(HF_DATE_RECIV),
+								:(HF_COURT_DECIS),
+								:(HF_DATE_EXTRACT),
+								:(LAND_REGN),
+								:(LAND_REGN_NEW),
+								:(JUDGE_ID),
+								:(JUDGE_FNAME),
+								:(JUDGE_LNAME),
+								:(COURT_ID),
+								:(HF_OFFI_LRD),
+								:(HF_OFFILRD_FNAME),
+								:(HF_OFFILRD_LNAME),
+								:(HF_REC_LOP_ID),
+								:(HF_ADD_DATA),
+								:(HF_AMOUNT),
+								:(HF_CUR_ID),
+								:(AMOUNT_REF),
+								:(CUR_ID_REF),
+								:(EXC_RAT_REF),
+								:(EXC_RAT_REF_DATE),
+								:(HF_DRAW_AMO),
+								:(HF_AVAIL_AMO),
+								:(HF_DRAW_AMO_REF),
+								:(AVAIL_AMO_REF),
+								:(HF_AVAIL_DAT),
+								:(DRAW_BAMO),
+								:(AVAIL_BAMO),
+								:(DRAW_BAMO_REF),
+								:(AVAIL_BAMO_REF),
+								:(AVAIL_BDAT),
+								:(VAL_DATE_TURN),
+								:(VAL_DATE_PROC),
+								:(HF_DATE_HFC_FROM),
+								:(HF_DATE_HFC_UNTIL),
+								:(HF_STATUS),
+								:(HF_SPEC_STAT),
+								:(HF_DATE_FROM),
+								:(HF_DATE_UNTIL),
+								:(USE_OPEN_ID),
+								:(USE_ID),
+								:(OPENING_TS),
+								:(USER_LOCK),
+								:(EVE_ID),
+								:(BANK_SIGN),
+								:(HOW_COVER),
+								:(IS_PART_AGREEM),
+								:(REM_RE_NOMI_VALU),
+								:(REC_LOP),
+								:(DATE_TO_LOP),
+								:(DATE_REC_LOP),
+								:(STATUS),
+								:(VEH_CON_NUM),
+								:(AGREEMENT),
+								:(FRA_AGR_ID),
+								:(REG_INS)
+						FROM 	COLL_HF_PRIOR
+						WHERE coll_hf_prior_id = :(d.mrtgdelmap.COLL_HF_PRIOR_ID)    
+						AND   user_lock = :(d.mrtgdelmap.USER_LOCKCollHfPrior)
+					};                                                          			
+		} catch(SQLException e){
+			if (e.getErrorCode()!=100) throw e;
+			else
+				throw new VestigoTMException(1, "Transaction CO038: Hipoteka obrisana ili mijenjana ","errclt7", null);					
+		}		
+		
+		
+//HF_REC_LOP_ID		
+		tc.debug ( "......DOHVACENA HIPOTEKA  " + HF_REC_LOP_ID + "__" +  AGREEMENT + "__SPRAZUM: " + FRA_AGR_ID);
+		tc.debug ( "......DOHVACENA HIPOTEKA__ ldb__ " + d.mrtgdelmap.USER_LOCKCollHfPrior + "___" + USER_LOCK);
+		
+		if (HF_REC_LOP_ID.compareTo(rba_hf) == 0) {
+// hipoteka je u korist RBA		
+// provjeriti da li je dio okvirnog sporazuma
+			if (AGREEMENT != null && AGREEMENT.equalsIgnoreCase("D")) {
+// da li je hipoteka zadnja hipoteka vezana na verificirani ugovor-ako je ne moze ju se obrisati
+				try{  
+				 	
+					#sql [ctx] {SELECT count(a.coll_hf_prior_id) INTO :(countMortgage)
+						FROM
+							coll_hf_prior a, frame_agreement b
+						WHERE
+							a.fra_agr_id = :(FRA_AGR_ID)
+						AND
+							a.agreement = 'D'
+						AND	
+							a.hf_status = 'A' 
+						AND
+							((a.hf_date_hfc_until is null) or
+							(a.hf_date_hfc_until >= current date))
+						AND
+							a.hf_own_cus_id = 8218251
+						AND
+							a.fra_agr_id = b.fra_agr_id 
+						AND 
+							b.status = 'A'
+						AND 
+							b.date_until >= current date
+						AND
+							b.proc_status = '2'
+					};  
+					} catch(SQLException e){
+						if (e.getErrorCode()!=100) throw e;
+					}				      	      				
+					tc.debug("1. Num_of_RBA hipoteka vezanih za sporazum: "+countMortgage);		
+					if (countMortgage < 2) {
+						throw new VestigoTMException(1, "Transaction CO038: Veza hipoteka - ugovor! ","colErr019", null);	
+					}					
+				
+			} else {
+// nije dio sporazuma			
+// provjeriti da li ima veznih plasmana
+				try {
+				
+					#sql [ctx] {SELECT count(loan_ben_id) INTO :(countLoan)
+						FROM
+							loan_beneficiary
+						WHERE
+							coll_hf_prior_id = :(d.mrtgdelmap.COLL_HF_PRIOR_ID)
+						AND 
+							status = 'A' 
+						AND 
+							date_from <= current date 
+						AND 
+							date_until = '9999-12-31'
+					};
+				}catch(SQLException e){
+					if (e.getErrorCode()!=100) throw e;
+				}			
+				tc.debug("2. Num_of_RBA plasmana vezanih za hipoteku: "+countLoan);		
+				if (countLoan > 0) {
+					throw new VestigoTMException(1, "Transaction CO038: Veza hipoteka-plasman! ","colErr026", null);	
+				}	
+			}	
+		} 
+		
+// nema vezanih plasmana ili je hipoteka u korist trece osobe:
+// obrisati hipoteku
+// ažurirati redoslijed preostalih hipoteka 
+	
+// ako je obrisana hipoteka dio sporazuma treba obrisati i pripadajuce veze s plasmanima	
+		if (HF_REC_LOP_ID.compareTo(rba_hf) == 0) {
+			if (AGREEMENT != null && AGREEMENT.equalsIgnoreCase("D")) {
+			
+				try{	
+					#sql [ctx]{ UPDATE LOAN_BENEFICIARY
+                            set status = 'D',
+				                date_until = current date,
+                                user_lock = current timestamp
+							WHERE
+								coll_hf_prior_id = :(d.mrtgdelmap.COLL_HF_PRIOR_ID)
+							AND 
+								fra_agr_id = :(FRA_AGR_ID)
+					};
+				    
+//                    #sql [ctx]{ DELETE from LOAN_BENEFICIARY 
+//                        WHERE
+//                            coll_hf_prior_id = :(d.mrtgdelmap.COLL_HF_PRIOR_ID)
+//                        AND 
+//                            fra_agr_id = :(FRA_AGR_ID)
+//                };
+				}catch(SQLException e){
+					if (e.getErrorCode()!=100) throw e;
+					else
+						throw new VestigoTMException(1, "Transaction CO038: Plasman obrisan ili mijenjan ","errclt7", null);		
+				} 
+			
+				tc.debug ( "......HIPOTEKA u sporazumu... obrisani plasmani " );			
+//	 	 hipoteka je razvezana - treba maknuti flag s okvirnog sporazuma ako je bila zadnja 
+				chkFrameHypo(ctx,tc,FRA_AGR_ID);	
+			}
+		}
+		
+//		 brisanje sloga hipoteke		
+		try{	
+			#sql [ctx]{ UPDATE COLL_HF_PRIOR
+		                SET
+		                    hf_status = 'D',
+		                    hf_priority = 'NA',
+		                    user_lock = current timestamp
+						WHERE coll_hf_prior_id = :(d.mrtgdelmap.COLL_HF_PRIOR_ID)    
+
+	    	};
+		    
+//	          #sql [ctx]{ DELETE from COLL_HF_PRIOR 
+//                  WHERE coll_hf_prior_id = :(d.mrtgdelmap.COLL_HF_PRIOR_ID)    
+//                  AND   user_lock = :(USER_LOCK)
+//		    };
+		    
+		}catch(SQLException e){
+			if (e.getErrorCode()!=100) throw e;
+			else
+				throw new VestigoTMException(1, "Transaction CO038: Hipoteka obrisana ili mijenjana ","errclt7", null);		
+		} 
+		tc.debug ( "......HIPOTEKA obrisana " );
+		
+// promjena redosljeda hipoteka
+		tc.debug ( "......PROMJENA redosljeda " );	
+		
+		chgMortgagePriority(ctx,tc,HF_COLL_HEAD_ID,HF_PRIORITY);
+		
+// postavljanje indikatora da li je upisano pravo banke na prvom ekranu
+// provjeriti da li na kolateralu postoji jos koja aktivna hipoteka
+// za kolaterala koji nisu dio okvirnog sporazuma ili ovo vrijedi za sve ????		
+		tc.debug ( "......POSTAVLJANJE flaga o upisanom pravu " );	
+		
+		
+		tc.debug ( "......HF_COLL_HEAD_ID " + HF_COLL_HEAD_ID);	
+		tc.debug ( "......COLL_HF_PRIOR_ID " +  d.mrtgdelmap.COLL_HF_PRIOR_ID);
+		tc.debug ( "......POSTAVLJANJE flaga o upisanom pravu " );	
+		
+		chkMortgageRecorded(ctx,tc,HF_COLL_HEAD_ID, d.mrtgdelmap.COLL_HF_PRIOR_ID);
+		
+// 09.08.2010 - dodati postavljanje ovisnih prihvatljivosti
+
+// postaviti prihvatljivosti ovisne o polici osiguranja        
+// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = HF_COLL_HEAD_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+ 
+        yoyg0.azurirajPrihvatljivosti();
+        d.mrtgdelmap.Kol_ND =yoyg0.getNDPrihvatljivost();
+        d.mrtgdelmap.Kol_B2 = yoyg0.getB2StandPrihvatljivost();
+        d.mrtgdelmap.Kol_HNB = yoyg0.getHNBPrihvatljivost();
+        d.mrtgdelmap.Kol_B2IRB = yoyg0.getB2IRBPrihvatljivost();    
+        
+        d.mrtgdelmap.Kol_ND_dsc = yoyg0.getOpisNDPrihvatljivosti();
+        d.mrtgdelmap.Kol_B2_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+        d.mrtgdelmap.Kol_HNB_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+        d.mrtgdelmap.Kol_B2IRB_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();     
+        
+// izracunati sumu tudjih i sumu rba hipoteka i azurirati
+        YOYE1 YOYE1_find = new YOYE1(tc);
+        d.mrtgdelmap.Coll_txtThirdRightInNom = new BigDecimal("0.00");
+        d.mrtgdelmap.Coll_txtThirdRightInNom = YOYE1_find.getMortgagesSum(col_hea_id, HF_CUR_ID);  // tudje hipoteke
+        tc.debug("--------CO38 -other_mortgages    "+d.mrtgdelmap.Coll_txtThirdRightInNom);
+        
+//        YOYE1 YOYE1_find_RBA = new YOYE1(tc);
+        d.mrtgdelmap.Coll_txtHfsValue = new BigDecimal("0.00");
+        d.mrtgdelmap.Coll_txtHfsValue = YOYE1_find.getRBAMortgagesSum(col_hea_id, HF_CUR_ID);  // tudje hipoteke
+        tc.debug("--------CO38 -rba_mortgages    "+d.mrtgdelmap.Coll_txtHfsValue);
+        
+        // pronaci zadnju vazecu RBA hipoteku
+        Vector rba_last_hf_prior = YOYE1_find.getLastRBAMortgage(col_hea_id);
+        
+        d.mrtgdelmap.CollHfPriorDialog_txtHfAmount = (BigDecimal) rba_last_hf_prior.elementAt(0);
+        d.mrtgdelmap.CollHfPriorDialog_txtHfDateHfcUntil = (Date) rba_last_hf_prior.elementAt(1);
+        
+        updCollMortgage(ctx,tc,HF_COLL_HEAD_ID); 
+ 
+	} // execute
+	  
+	public void updCollMortgage (ConnCtx hCtx, TransactionContext tc, BigDecimal col_hea_id) {
+        tc.debug ( "......HF_COLL_HEAD_ID " + col_hea_id);  	    
+         
+        try{  
+            #sql [hCtx] {UPDATE COLL_HEAD
+                            SET third_right_nom = :(d.mrtgdelmap.Coll_txtThirdRightInNom),
+                                third_right_date = current date,
+                                hfs_value = :(d.mrtgdelmap.Coll_txtHfsValue),
+                                hfs_value_date = current date,
+                                hfs_value_last_one = :(d.mrtgdelmap.CollHfPriorDialog_txtHfAmount),
+                                hfs_date_last_one = :(d.mrtgdelmap.CollHfPriorDialog_txtHfDateHfcUntil),
+                                user_lock = current timestamp
+                 WHERE col_hea_id = :(col_hea_id)
+       
+                };          
+        } catch(SQLException e){
+        
+        }                        
+	}   
+	
+	public void chkMortgageRecorded (ConnCtx hCtx, TransactionContext tc, BigDecimal col_hea_id, BigDecimal coll_hf_prior_id) {
+//		 zbrojiti sve RBA hipoteke
+	 	int num_of_RBA; 
+	 	num_of_RBA=0;
+	 	int num_of_RBA_right;
+	 	num_of_RBA_right=0;
+	 	BigDecimal  rba_CusId = new BigDecimal("8218251.0");
+	 	tc.debug ( "......HF_COLL_HEAD_ID " + col_hea_id);	
+	 	tc.debug( "......COLL_HF_PRIOR_ID " +  coll_hf_prior_id);
+//Mika, 12.11.2008 - promjena - flag da li je upisano pravo banke na kolateralu postavlja se na D ako je upisana barem jedna vazeca RBA hipoteka		
+		 		 
+	 	tc.debug ( "......num_of_RBA " + num_of_RBA);			
+	 	try{  
+		 	  
+	 			#sql [hCtx] {SELECT count(coll_hf_prior_id)
+							INTO :num_of_RBA_right
+							FROM coll_hf_prior
+							WHERE hf_coll_head_id = :(col_hea_id) AND   
+									hf_own_cus_id = :(rba_CusId) AND
+	 								coll_hf_prior_id <> :(coll_hf_prior_id) AND
+									rec_lop = 'D' AND
+	 								hf_status = 'A'};
+	 	} catch(SQLException e){
+	 		
+	 	}				       	      								
+	 	tc.debug ( "......num_of_RBA_right " + num_of_RBA_right);	
+	 	if (num_of_RBA_right > 0) {
+	 		d.mrtgdelmap.RealEstate_txtRecLop = "D";			 		
+	 	} else {
+	 		d.mrtgdelmap.RealEstate_txtRecLop = "N";			 		
+	 	}	 	
+ 	   
+//moram napraviti update atributa u tabeli COLL_HEAD				 		
+	 		
+	 	try{  
+			    #sql [hCtx] {UPDATE COLL_HEAD
+	    			SET rec_lop = :(d.mrtgdelmap.RealEstate_txtRecLop),
+	 	                user_lock = current timestamp 
+     				WHERE col_hea_id = :(col_hea_id)
+           
+	 				};	    	
+		} catch(SQLException e){
+			
+		}			 					  
+	}
+	
+	
+	public void chkFrameHypo (ConnCtx hCtx, TransactionContext tc, BigDecimal h_fra_agr_id) {
+//		 da li je iskljucena hipoteka bila zadnja na okvirnom sporazumu?
+//		 ako je zadnja treba napraviti update pripadajuceg flag-a
+				
+		int num_mort;
+		num_mort=0;
+		tc.debug("PROVJERA da li je obrisana hipoteka zadnja za sporazum broj: " + h_fra_agr_id);				
+		try{  
+					  
+				#sql [hCtx] {SELECT count(coll_hf_prior_id)
+								INTO :(num_mort)
+								FROM 
+										coll_hf_prior a, frame_agreement b
+								WHERE	
+									a.fra_agr_id = :(h_fra_agr_id)
+								AND	
+									a.hf_status = 'A' 
+								AND
+									((a.hf_date_hfc_until is null) or
+									(a.hf_date_hfc_until >= current date))
+								AND
+									a.hf_own_cus_id = 8218251
+								AND 
+									a.fra_agr_id = b.fra_agr_id 
+								};
+						
+		} catch(SQLException e){
+
+		}				      	      				
+		tc.debug("3. DOHVATIO  num_mort hipoteka vezanih za sporazum: "+num_mort);		
+		
+		if (num_mort < 2) {
+			tc.debug("NAPRAVHEN UPDATE flag-a na sporazumu");					
+//		 zadnja hipoteka			
+		 	try{  
+			    #sql [hCtx] {UPDATE FRAME_AGREEMENT
+		 					SET hipo_status = '0',
+		 	                    user_lock = current timestamp 
+				     		WHERE fra_agr_id = :(h_fra_agr_id)
+							};	    	
+		 	} catch(SQLException e){
+		 	}		 			
+		}	
+	}
+	
+	public void chgMortgagePriority (ConnCtx hCtx, TransactionContext tc, BigDecimal col_hea_id, String priority) {
+		
+		BigDecimal col_hf_id = null;
+// HF_PRIORITY
+// pokupiti u iterator sve hipoteke koje imaju prioritet veci od obrisane
+		String oldPriority = null;
+		String newPriority = null;
+		int newIntPriority = 0;
+	
+		tc.debug("Promjena prioriteta za hipoteke nizeg reda od.... " + priority + "...kolateral..."+col_hea_id);
+		
+		
+		try {
+			#sql [hCtx] iter38 = { SELECT 
+										coll_hf_prior_id as coll_hf_prior_id,
+										hf_priority as hf_priority
+								FROM
+										coll_hf_prior 
+								WHERE
+										hf_coll_head_id = :(col_hea_id)      
+								AND
+										hf_priority > :(priority)  
+								AND
+										hf_status = 'A'
+				};          			
+		} catch (SQLException se) {
+
+		} 						 
+		 
+		if (iter38 != null) { 
+			tc.debug("Usao u iterator iter38.... ");			
+//	vrtim iterator i radim update prioriteta	
+			try {
+				while (iter38.next()) {
+					col_hf_id = iter38.coll_hf_prior_id();
+					oldPriority = iter38.hf_priority();
+					newPriority = oldPriority.trim();
+
+					try{
+						newIntPriority = Integer.parseInt(newPriority);
+						newIntPriority--;
+					}catch(NumberFormatException e){
+					
+					}	
+				
+					if (newIntPriority < 10) 
+						newPriority = "0" + newIntPriority + "";
+					else
+						newPriority = newIntPriority + "";
+				
+					tc.info ( "....ITERACIJA hipoteka.....update prioriteta  " + col_hf_id + "stari.." +oldPriority+ "novi.." + newPriority);
+				
+					try{  
+						#sql [hCtx] {UPDATE COLL_HF_PRIOR
+			 					SET hf_priority = :(newPriority) ,
+					                user_lock = current timestamp
+					     		WHERE coll_hf_prior_id = :(col_hf_id)
+								};	    	
+					} catch(SQLException e){
+					}		 			
+				
+				
+				}
+			} catch (SQLException e){
+			}  
+		}
+		
+		if(iter38!=null) {
+			try {
+				iter38.close();
+			} catch (Exception ignored) {}
+		}
+		
+	}  
+}  
+
+

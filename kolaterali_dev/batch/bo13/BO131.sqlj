@@ -1,0 +1,431 @@
+package hr.vestigo.modules.collateral.batch.bo13;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+#sql  iterator IteratorCollHfPrior with(holdability = true)(
+		BigDecimal coll_hf_prior_id,
+		BigDecimal cur_id_ref,
+		BigDecimal exc_rat_ref,
+		BigDecimal hf_amount,
+		BigDecimal contract_cur_id
+	);
+
+#sql iterator IteratorColProcId (java.math.BigDecimal col_pro_id);
+
+
+public class BO131{
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo13/BO131.sqlj,v 1.1 2007/07/09 13:38:08 hraamh Exp $";
+	
+	
+	
+	public boolean debug=true;
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+	
+	private BigDecimal col_pro_id=null;
+	private HashMap hardcode=null;
+	private BigDecimal col_cat_id=null;
+	private BigDecimal org_uni_id=null;
+	private BigDecimal col_type_id=null;
+	private BigDecimal use_id=null;
+	private BigDecimal eve_id=null;
+	private BigDecimal col_lis_typ_id=null;
+	private BigDecimal hf_table_id=null;
+	private String bankName=null;
+	private Map exchangeRate=null;
+	
+	private String bankSign=null;
+	private Date today=null;
+	
+	public BO131(BatchContext bc,BigDecimal org_uni_id, BigDecimal use_id) throws Exception{
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+		this.hardcode=new HashMap();
+		this.exchangeRate= new HashMap();
+		this.bankSign=bc.getBankSign();
+		
+		this.org_uni_id=org_uni_id;
+		this.use_id=use_id;
+		
+		col_cat_id=new BigDecimal(624223);
+		col_type_id=new BigDecimal(14777);
+		col_lis_typ_id=new BigDecimal(700223);
+		hf_table_id= new BigDecimal(1602610003);
+		
+		today=new Date(System.currentTimeMillis());
+		eve_id=new BigDecimal("100000000000000");
+		hardcoding();
+	}
+	
+	private void hardcoding(){
+		/*this.hardcode.put("OSOBNAUTO",new BigDecimal(1333));
+		this.hardcode.put("MOTOCIKLI",new BigDecimal(2333));
+		this.hardcode.put("KAMBUSPRV",new BigDecimal(3333));
+		this.hardcode.put("GRADJVOZI",new BigDecimal(4333));
+		this.hardcode.put("OSTALVOZI",new BigDecimal(5333));*/
+		
+		this.hardcode.put("KAMION",new BigDecimal(1444));
+		this.hardcode.put("AUTOBUS",new BigDecimal(2444));
+		this.hardcode.put("TRAMVAJ",new BigDecimal(3444));
+		this.hardcode.put("VLAK",new BigDecimal(4444));
+		
+		this.exchangeRate.put(new BigDecimal("63999"),new BigDecimal(1));
+	}
+	
+	/**
+	 * dohvaca id batch obrade. ako vec postoji vraca id, ako ne (nova obrada) kreira id
+	 * 
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal getColProId() throws Exception{
+		if(this.col_pro_id==null){
+			YOY00 yoy00=new YOY00(this.connCtx);
+			this.col_pro_id=yoy00.getNewId();
+		}
+		return this.col_pro_id;
+	}
+	/**
+	 * postavlja id obrade
+	 * @param col_pro_id
+	 */
+	public void setColProId(BigDecimal col_pro_id){
+		this.col_pro_id=col_pro_id;
+	}
+	/**
+	 * Insert u tablicu evenata
+	 * @param eve_typ_id tip dogadaja
+	 * @param org_uni_id id OJ-a
+	 * @throws Exception
+	 */
+	public void insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id) throws Exception{
+        bc.debug("sqlj insertIntoEvent");		
+         
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(bc);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	this.eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",this.eve_id);
+		  	event.put("eve_typ_id", eve_typ_id);
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za preuzimanje podataka o vozilima iz PKR modula."); 
+		  	event.put("use_id", this.use_id);
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", bc.getBankSign());
+		   	event.put("org_uni_id", org_uni_id); 
+		  	bc.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	
+		  	/* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+		  	 * i koji se nalazi u commonu yxyA. Radi se update: 
+		  	 *    UPDATE batch_log
+		  	 *    SET eve_id = :newEveId
+			 *    WHERE bat_log_id = :batLogId 
+		  	*/
+		  	bc.updateEveID(this.eve_id);		
+	  
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}
+	/**
+	 * Dohvat obrade unosa vozila
+	 * 
+	 * @param proc_type tip obrade- za vozila je "V"
+	 * @param status status=0 -> zapoceta obrada; status=1 ->uspjesno zavrsena obrada
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal selectColProc(String proc_type,String status) throws Exception{
+		BigDecimal result=null;
+		IteratorColProcId iter=null;
+		try{
+			#sql [connCtx]iter={
+				select 
+					col_pro_id 
+				from col_proc 
+					where 		
+						proc_status=:(status)
+						and proc_type=:(proc_type)
+		        };
+			if(iter!=null){			
+				while(iter.next()){
+					result =  iter.col_pro_id();
+				    break;
+				}
+	        }
+		        
+		}catch(SQLException e){
+			bc.debug(".....BO131.sqlj selectColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO131.sqlj selectColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO131.sqlj selectColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		
+		}
+		return result;
+	}
+	/**
+	 * Dohvat neispravnih hipoteka
+	 * 
+	 * @return iterator s podacima
+	 * @throws Exception
+	 */
+	public IteratorCollHfPrior selectCollHfPriors() throws Exception{
+		IteratorCollHfPrior result= null;
+		
+		#sql [connCtx] result = {
+			select 
+				b.coll_hf_prior_id,
+				b.cur_id_ref,
+				b.exc_rat_ref,
+				b.hf_amount,
+				e.contract_cur_id
+			from 
+				coll_head a,
+				coll_hf_prior b,
+				loan_beneficiary d,
+				cusacc_exposure e
+			where
+				a.col_cat_id = 624223 and
+				a.use_open_id = 1 and
+				a.col_hea_id = b.hf_coll_head_id and
+				b.coll_hf_prior_id = d.coll_hf_prior_id and
+				d.la_acc_id = e.cus_acc_id and
+				b.cur_id_ref <> e.contract_cur_id 
+				WITH UR
+			};
+		
+		return result;
+	}
+	
+	/**
+	 * insert u tablicu IN_DATA_DWH_ITEM
+	 * 
+	 * @param col_pro_id id batcha
+	 * @param input_id id ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param input_code kod ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param status status zapisa
+	 * @param output_id id unesenog sloga
+	 * @throws Exception
+	 */
+	public void insertInDataDwhItem(BigDecimal col_pro_id,BigDecimal input_id, String input_code, String status, BigDecimal output_id) throws Exception{
+		try{
+		
+		#sql [connCtx]{
+			insert into in_data_dwh_item (
+				col_pro_id,
+				input_id,
+				input_code,
+				status,
+				output_id
+			)VALUES (
+				:(col_pro_id),
+				:(input_id),
+				:(input_code),
+				:(status),
+				:(output_id)
+			)
+		};
+		}catch(SQLException e){
+			bc.debug(".....BO131.sqlj insertInDataDwhItem        Message  : " + e.getMessage());
+			bc.debug(".....BO131.sqlj insertInDataDwhItem      Error code : " + e.getErrorCode());
+			bc.debug(".....BO131.sqlj insertInDataDwhItem        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+	
+	/**
+	 * Unos sloga u COL_PROC tablicu. poziva se na pocetku obrade
+	 * 
+	 * @param map mapa s parametrima
+	 * @return timestamp upisa
+	 * @throws Exception
+	 */
+	public Timestamp insertColProc(Map map) throws Exception{
+        bc.debug("sqlj insertColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=new Timestamp(System.currentTimeMillis());
+    	bc.debug("\n col_pro_id: "+col_pro_id);
+    	bc.debug("\n proc_date: "+proc_date);
+    	bc.debug("\n value_date: "+value_date);
+    	bc.debug("\n proc_type: "+proc_type);
+    	bc.debug("\n proc_way: "+proc_way);
+    	bc.debug("\n proc_status: "+proc_status);
+    	bc.debug("\n col_number: "+col_number);
+    	bc.debug("\n org_uni_id: "+org_uni_id);
+    	bc.debug("\n use_id: "+use_id);
+    	bc.debug("\n user_lock: "+user_lock);
+    	
+        try{
+        	#sql [connCtx]{
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(proc_date),
+					:(value_date),
+					:(proc_type),
+					:(proc_way),
+					:(proc_status),
+					:(col_number),
+					current timestamp,
+					:(org_uni_id),
+					:(use_id),
+        			:(user_lock)
+					)
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO131.sqlj insertColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO131.sqlj insertColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO131.sqlj insertColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}  
+		return user_lock;
+	}
+	/**
+	 * Updata COL_PROC tablice
+	 * 
+	 * @param map mapa s parametrima
+	 * @return timestamp updata
+	 * @throws Exception
+	 */
+	public Timestamp updateColProc(Map map) throws Exception{
+        bc.debug("sqlj updateColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=(Timestamp) map.get("user_lock");
+    	
+        try{
+        	#sql [connCtx]{
+				UPDATE  col_proc SET
+					proc_date= :(proc_date),
+					value_date= :(value_date),
+					proc_type= :(proc_type),
+					proc_way= :(proc_way),
+					proc_status=:(proc_status),
+					col_number=:(col_number),
+					org_uni_id=:(org_uni_id),
+					use_id=:(use_id),
+					user_lock=current timestamp				
+				WHERE
+        			col_pro_id=:(col_pro_id)
+        			
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO131.sqlj updateColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO131.sqlj updateColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO131.sqlj updateColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		} 
+		return user_lock;
+	}
+	
+	public void updateCollHfPrior(BigDecimal coll_hf_prior_id, BigDecimal cur_id_ref, BigDecimal exc_rat_ref, BigDecimal hf_amount) throws Exception{		
+		 try{
+        	#sql [connCtx]{
+				UPDATE  coll_hf_prior SET
+					cur_id_ref= :(cur_id_ref),
+					exc_rat_ref= :(exc_rat_ref),
+					hf_amount= :(hf_amount)		
+				WHERE
+        			coll_hf_prior_id=:(coll_hf_prior_id)	
+		        };			
+		}catch(SQLException e){
+			bc.debug(".....BO131.sqlj updateCollHfPrior        Message  : " + e.getMessage());
+			bc.debug(".....BO131.sqlj updateCollHfPrior      Error code : " + e.getErrorCode());
+			bc.debug(".....BO131.sqlj updateCollHfPrior        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		} 
+	}
+
+	/**
+	*
+	* Dohvat broja obradenih slogova (bez onih koji nisu upisani zbog gresaka)
+	* @return broj obradenih slogova
+	* 
+	*/
+	public BigDecimal getRecordCount(){
+		BigDecimal result=null;
+		try{
+		    #sql [connCtx]{
+					select 
+						count(*) 
+					into 
+						:(result)
+					from 
+						in_data_dwh_item 
+					where 
+						col_pro_id=:(col_pro_id) and 
+						status<>'1' and 
+						status<>'6' and 
+						status<>'A' 
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO131.sqlj getRecordCount        Message  : " + e.getMessage());
+			bc.debug(".....BO131.sqlj getRecordCount      Error code : " + e.getErrorCode());
+			bc.debug(".....BO131.sqlj getRecordCount        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			//throw(e);
+			return null;
+		}
+		return result;
+	}
+	
+	
+	
+}

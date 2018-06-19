@@ -1,0 +1,370 @@
+package hr.vestigo.modules.collateral.batch.bo73;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+public class BO731
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo73/BO731.sqlj,v 1.9 2016/07/06 11:24:05 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    #sql iterator CollateralIterator with(holdability = true) (
+        BigDecimal col_hea_id,
+        String col_num,
+        String cus_acc_no,
+        BigDecimal col_cat_id,
+        String coll_cat_code,
+        String coll_type_code,
+        BigDecimal real_est_nomi_valu,
+        BigDecimal real_est_nomi_cur
+    );
+
+    private BigDecimal eve_id;
+    
+    private BigDecimal real_estate_col_cat_id = new BigDecimal("618223");
+    private BigDecimal vehicle_col_cat_id = new BigDecimal("624223");
+    private BigDecimal vessel_col_cat_id = new BigDecimal("620223");
+    private BigDecimal movable_col_cat_id = new BigDecimal("621223");
+    private BigDecimal inspolicy_col_cat_id = new BigDecimal("616223");
+    
+
+    public BO731(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+    
+    /**
+     * Metoda evidentira dogaðaj izvoðenja obrade u tablicu EVENT.
+     * @return EVE_ID novostvorenog zapisa u tablici EVENT.
+     */
+    public BigDecimal insertIntoEvent() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("insertIntoEvent");
+            bc.beginTransaction();
+
+            eve_id = new YXYD0(connCtx).getNewId();
+            bc.debug("EVE_ID = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("5851703704"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Kreiranje datoteke s kolateralima za ComDebts");
+            event.put("use_id", bc.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", bc.getBankSign());
+
+            new YXYB0(bc).insertEvent(event);
+            bc.updateEveID(eve_id);
+
+            bc.commitTransaction();
+            bc.debug("Evidentirano izvodjenje obrade u tablicu EVENT.");
+            bc.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska pri evidentiranju izvodjenja obrade u tablicu EVENT! (EVE_ID=" + eve_id + ")", ex);
+            bc.userLog("Dogodila se nepredvidjena greska pri evidentiranju pocetka izvodjenja obrade!");
+            throw ex;
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o aktivnim kolateralima koji su vezani na aktivne plasmane èiji je vlasnik u ZBK oznaèen da je pod naplatom.
+     * @return iterator s podacima
+     */
+    public CollateralIterator selectCollaterals() throws Exception
+    {
+        bc.startStopWatch("selectCollaterals");
+        bc.debug("Dohvacam kolaterale.");
+        
+        try
+        {
+            CollateralIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    e.col_hea_id            AS col_hea_id,
+                    e.col_num               AS col_num,
+                    b.cus_acc_no            AS cus_acc_no,
+                    e.col_cat_id            AS col_cat_id,
+                    f.code                  AS coll_cat_code,
+                    g.coll_type_code        AS coll_type_code,
+                    e.real_est_nomi_valu    AS real_est_nomi_valu,
+                    h.code_num              AS real_est_nomi_cur
+                FROM customer a
+                    LEFT OUTER JOIN citizen a1 ON a.cus_id = a1.cus_id
+                    LEFT OUTER JOIN craftsman a2 ON a.cus_id = a2.cus_id
+                    LEFT OUTER JOIN legal_entity a3 ON a.cus_id = a3.cus_id
+                    INNER JOIN cusacc_exposure b ON a.cus_id = b.cus_id
+                    INNER JOIN loan_beneficiary c ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                    INNER JOIN coll_hf_prior d ON c.coll_hf_prior_id = d.coll_hf_prior_id
+                    INNER JOIN coll_head e ON d.hf_coll_head_id = e.col_hea_id 
+                    INNER JOIN coll_category f ON e.col_cat_id = f.col_cat_id
+                    INNER JOIN collateral_type g ON e.col_type_id = g.coll_type_id
+                    LEFT OUTER JOIN currency h ON e.real_est_nm_cur_id = h.cur_id
+                WHERE
+                    ( a1.pay_list_flag = '1' OR (a2.pay_list_flag = '1' AND a.basel_cus_type = '20') OR (a3.pay_list_flag = '1' AND a.basel_cus_type = '20') ) AND
+                    ( b.cus_acc_status='A' OR
+                        ( b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR  
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                        )
+                    )
+                    AND c.status = 'A'  
+                    AND d.hf_status = 'A'
+                    AND e.collateral_status IN ('0','1','2','3')
+
+                UNION
+
+                SELECT
+                    e.col_hea_id            AS col_hea_id,
+                    e.col_num               AS col_num,
+                    b.cus_acc_no            AS cus_acc_no,
+                    e.col_cat_id            AS col_cat_id,
+                    f.code                  AS coll_cat_code,
+                    g.coll_type_code        AS coll_type_code,
+                    e.real_est_nomi_valu    AS real_est_nomi_valu,
+                    h.code_num              AS real_est_nomi_cur
+                FROM customer a
+                    LEFT OUTER JOIN citizen a1 ON a.cus_id = a1.cus_id
+                    LEFT OUTER JOIN craftsman a2 ON a.cus_id = a2.cus_id
+                    LEFT OUTER JOIN legal_entity a3 ON a.cus_id = a3.cus_id
+                    INNER JOIN cusacc_exposure b ON a.cus_id = b.cus_id
+                    INNER JOIN loan_beneficiary c ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                    INNER JOIN coll_head e ON c.col_hea_id = e.col_hea_id
+                    INNER JOIN coll_category f ON e.col_cat_id = f.col_cat_id
+                    INNER JOIN collateral_type g ON e.col_type_id = g.coll_type_id
+                    LEFT OUTER JOIN currency h ON e.real_est_nm_cur_id = h.cur_id
+                WHERE
+                    ( a1.pay_list_flag = '1' OR (a2.pay_list_flag = '1' AND a.basel_cus_type = '20') OR (a3.pay_list_flag = '1' AND a.basel_cus_type = '20') ) AND
+                    ( b.cus_acc_status='A' OR
+                        ( b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                        )
+                    )
+                    AND c.status = 'A'  
+                    AND e.collateral_status IN ('0','1','2','3')
+
+                ORDER BY 2, 3
+
+                WITH UR
+            };
+            bc.debug("Dohvaceni kolaterali.");
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata kolaterala!", ex);
+            bc.userLog("Dogodila se nepredvidjena greska kod dohvata kolaterala!");
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollaterals");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa glavnog vlasnika zadanog kolaterala.
+     * @param data objekt s podacima o kolateralu
+     */
+    public void selectCollOwner(CollateralData data) throws Exception
+    {
+        bc.startStopWatch("selectCollOwner");
+        try
+        { 
+            #sql[connCtx] {
+                SELECT c.register_no  
+                INTO :(data.owner_register_no) 
+                FROM coll_owner a
+                INNER JOIN customer c ON a.cus_id = c.cus_id
+                WHERE a.col_hea_id = :(data.col_hea_id)
+                AND a.date_until = '9999-12-31'
+                AND a.main_owner = 'D'  
+                ORDER BY a.ser_num
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() == 100)
+            {
+                return;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata glavnog vlasnika kolaterala (sifra kolaterala = " + data.col_num + ")!", ex);
+                bc.userLog("Dogodila se nepredvidjena greska kod dohvata glavnog vlasnika kolaterala (sifra kolaterala = " + data.col_num + ")!");
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollOwner");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa adresu zadanog kolaterala. Adresa se dohvaæa samo za nekretnine.
+     * @param data objekt s podacima o kolateralu
+     */
+    public void selectCollAddress(CollateralData data) throws Exception
+    {
+        if(!real_estate_col_cat_id.equals(data.col_cat_id)) return;
+        
+        bc.startStopWatch("selectCollAddress");
+        
+        try
+        { 
+            #sql[connCtx] {
+                SELECT a.street, a.housenr, b.code, c.postal_code
+                INTO :(data.street), :(data.housenr), :(data.city_code), :(data.postal_code)
+                FROM coll_restate a
+                LEFT OUTER JOIN political_map b ON a.pol_map_id_ad = b.pol_map_id
+                LEFT OUTER JOIN post_office c ON a.pos_off_id_ad = c.pos_off_id
+                WHERE a.col_hea_id = :(data.col_hea_id)
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() == 100)
+            {
+                return;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata adrese kolaterala (sifra kolaterala = " + data.col_num + ")!", ex);
+                bc.userLog("Dogodila se nepredvidjena greska kod dohvata adrese kolaterala (sifra kolaterala = " + data.col_num + ")!");
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollAddress");
+        }
+    }
+
+    
+    /**
+     * Metoda koja dohvaæa šifru podvrste zadanog kolaterala.
+     * @param data objekt s podacima o kolateralu
+     */
+    public void selectCollSubtypeCode(CollateralData data) throws Exception
+    {
+        bc.startStopWatch("selectCollSubtypeCode");
+        
+        try
+        {
+            if(real_estate_col_cat_id.equals(data.col_cat_id))  // Nekretnine
+            {
+                #sql [connCtx]
+                { 
+                    SELECT b.real_es_type_code
+                    INTO :(data.coll_subtype_code)
+                    FROM coll_restate a
+                    INNER JOIN real_estate_type b ON a.real_est_type = b.real_es_type_id
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if(vehicle_col_cat_id.equals(data.col_cat_id))  // Vozila
+            {
+                #sql [connCtx]
+                { 
+                    SELECT b.veh_gro_code
+                    INTO :(data.coll_subtype_code)
+                    FROM coll_vehicle a
+                    INNER JOIN vehicle_group b ON a.veh_group_id = b.veh_gro_id
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR 
+                };
+            }
+            else if(vessel_col_cat_id.equals(data.col_cat_id))  // Plovila
+            {
+                #sql [connCtx]
+                { 
+                    SELECT b.ves_code
+                    INTO :(data.coll_subtype_code)
+                    FROM coll_vessel a
+                    INNER JOIN vessel_type b ON a.ves_typ_id = b.ves_typ_id
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if(movable_col_cat_id.equals(data.col_cat_id))   // Pokretnine
+            {
+                #sql [connCtx]
+                { 
+                    SELECT b.mov_typ_code
+                    INTO :(data.coll_subtype_code)
+                    FROM coll_movable a
+                    INNER JOIN movable_type b ON a.mov_typ_id = b.mov_typ_id 
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };
+            }
+            else if(inspolicy_col_cat_id.equals(data.col_cat_id))   // Police osiguranja
+            {
+                #sql [connCtx]
+                { 
+                    SELECT b.int_pol_type_code
+                    INTO :(data.coll_subtype_code)
+                    FROM coll_inspolicy a
+                    INNER JOIN insu_policy_type b ON a.ip_type_id = b.int_pol_type_id
+                    WHERE a.col_hea_id = :(data.col_hea_id)
+                    WITH UR
+                };  
+            }
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() == 100)
+            {
+                return;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podvrste kolaterala (sifra kolaterala = " + data.col_num + ")!", ex);
+                bc.userLog("Dogodila se nepredvidjena greska kod dohvata podvrste kolaterala (sifra kolaterala = " + data.col_num + ")!");
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollSubtypeCode");
+        }
+    }
+}

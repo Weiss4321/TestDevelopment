@@ -1,0 +1,211 @@
+package hr.vestigo.modules.collateral.batch.bo24;
+
+import java.sql.*;
+
+  
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.collateral.batch.bo24.Bo24Data;
+import hr.vestigo.modules.collateral.batch.bo24.InParamsData;
+
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.*;
+
+
+public class BO241 { 
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo24/BO241.sqlj,v 1.12 2008/08/19 10:44:34 hraaks Exp $";   
+    #sql public iterator Iter (
+            String veh_vin_num,
+            String veh_veh_licence,
+            String lic_ret_own_dat,
+            BigDecimal col_hea_id,
+            String col_num,
+            String acc_no,
+            String request_no,
+            BigDecimal cus_id,
+			String register_no,
+            String name,
+            String address,
+            String postoffice,
+            String city,
+            BigDecimal org_uni_id,
+            String org_uni_code,
+            String org_uni_name
+    );
+    
+    private BigDecimal eve_id = null;
+    
+    private ConnCtx connCtx;
+    
+    private hr.vestigo.framework.remote.batch.BatchContext bc;
+    
+    private Iter iter = null;
+    
+    public BO241(BatchContext bc) {
+        this.bc = bc;
+        try {
+            this.connCtx = bc.getContext();
+        }catch (SQLException e) {
+            bc.debug("CAN'T MAKE CONTEXT "+e.toString());
+        }
+    }
+    public BigDecimal insertIntoEvent() {
+        eve_id = null;
+    
+        try {
+            YXYB0 eve1 = new YXYB0(bc); 
+            YXYD0 genId = new YXYD0(bc);
+            eve_id = genId.getNewId();
+            
+            HashMap event = new HashMap();
+            
+            event.put("eve_id",eve_id);
+            event.put("eve_typ_id",new BigDecimal("2329868003"));
+            event.put("event_date",new java.sql.Date(System.currentTimeMillis()));
+            event.put("cmnt","Izvješæe za knjižice vozila");
+            event.put("use_id",bc.getUserID());
+            event.put("ext_event_code",null);
+            event.put("ext_event_num",null);
+            //event.put("org_uni_id", new BigDecimal("53253"));
+            event.put("bank_sign",bc.getBankSign());
+            eve1.insertEvent(event);
+            bc.updateEveID(eve_id);
+        }
+        catch(Exception e) {
+            return null;
+        }
+        return eve_id;
+    }
+    
+    public Iter fetchData(InParamsData p_data)
+    {
+        Date date_from = p_data.date_from;
+        Date date_until= p_data.date_until;
+        // sakaceva guba fora :)
+        int filterByOrgUnit= 1;
+        BigDecimal org_uni_id = p_data.organization_unit;
+        if(org_uni_id==null || "".equals(org_uni_id)) filterByOrgUnit=0;
+        
+        int filterByVehicle=1;
+        String vehicle_flag = p_data.vehicle_flag;
+        if(vehicle_flag == null || "".equals(vehicle_flag)) filterByVehicle=0;
+        else if("N".equals(vehicle_flag)) filterByVehicle=1;
+        else filterByVehicle=2;
+        
+        int filterByClientType=1;
+        String client_type= p_data.client_type;
+        if(client_type == null || "".equals(client_type)) filterByClientType=0;
+        else if ("F".equals(client_type)) filterByClientType=1;//fizicke
+        else filterByClientType=2; // pravne
+        try {
+            #sql [connCtx] iter = {SELECT 
+                                a.veh_vin_num as veh_vin_num, 
+                                a.veh_veh_licence as veh_veh_licence, 
+                                a.lic_ret_own_dat as lic_ret_own_dat, 
+                                b.col_hea_id as col_hea_id, 
+                                b.col_num as col_num,  
+                                d.acc_no as acc_no, 
+                                d.request_no as request_no,  
+                                e.cus_id as cus_id, 
+                                f.register_no as register_no,
+                                f.name as name, 
+                                f.address as address, 
+                                f.xpostoffice as postoffice, 
+                                f.xcity as city,
+                                g.org_uni_id as org_uni_id, 
+                                g.code as org_uni_code, 
+                                g.name as org_uni_name
+                            FROM 
+                                coll_vehicle a, 
+                                coll_head b,  
+                                coll_hf_prior c, 
+                                loan_beneficiary d, 
+                                cusacc_exposure e, 
+                                customer f, 
+                                organization_unit g
+                            WHERE
+                                a.lic_ret_own_dat between :(date_from) and :(date_until)
+                                AND  ((:filterByVehicle=0) OR (:filterByVehicle=1 AND (a.lic_ret_own=:vehicle_flag OR a.lic_ret_own is null)) OR (:filterByVehicle=2 AND a.lic_ret_own=:(vehicle_flag)))
+                                AND  ((:filterByOrgUnit=0) OR (:filterByOrgUnit=1 AND e.org_uni_id=:org_uni_id))
+                                AND  ((:filterByClientType=0) OR (:filterByClientType=1 AND f.cus_typ_id in(1998,1999)) OR(:filterByClientType=1 AND f.cus_typ_id in(2999,2998,999)))
+                                and
+                                a.col_hea_id = b.col_hea_id
+                                and
+                                b.col_hea_id = c.hf_coll_head_id
+                                and
+                                c.hf_own_cus_id = 8218251
+                                and
+                                c.coll_hf_prior_id = d.coll_hf_prior_id
+                                and
+                                (d.la_acc_id = e.cus_acc_id or d.acc_no = e.cus_acc_no or d.request_no = e.request_no)
+                                and
+                                e.cus_acc_status <> 'A'
+                                and
+                                e.cus_id = f.cus_id
+                                and
+                                e.org_uni_id = g.org_uni_id
+                                order by g.org_uni_id, e.cus_id
+                                };
+        } catch (Exception e) {
+           bc.debug(""+e.toString());
+        }
+        return iter;
+        
+        
+    }
+    
+    public void fetchCollOwner(BigDecimal col_hea_id, Bo24Data data){
+    	String ser_num = null;
+        try {
+            #sql [connCtx]{SELECT 
+                                a.ser_num, 
+                                b.register_no, 
+                                b.name
+                           INTO 
+                                :ser_num,
+                                :(data.owner_register_no),
+                                :(data.owner_name)
+                            FROM
+                                coll_owner a, customer b
+                            WHERE
+                                a.col_hea_id = :(col_hea_id)
+                            and
+                                a.date_until = '9999-12-31'
+                            and
+                                a.cus_id = b.cus_id
+                                order by a.ser_num desc 
+                                fetch first row only};
+
+        } catch (Exception e) {
+           bc.debug("CAN'T FETCH COLL OWNER FOR COL_HEA_ID"+col_hea_id+ " "+e.toString());
+        }
+        return;
+        
+    }
+    
+    public void fetchCollUserAddress(BigDecimal cus_id,Bo24Data data){
+        
+        try {
+            #sql [connCtx]{ select 
+                                a.address, a.postoffice, a.city_name 
+                            into
+                                :(data.user_address),:(data.user_post_office),:(data.user_city)   
+                            from 
+                                cust_address a, address_type b 
+                            where 
+                                a.cus_id = :(cus_id)
+                            and
+                            a.add_typ_id = b.add_typ_id
+                            and
+                            upper(rtrim(ltrim(b.add_typ_id)))='MAINADDRESS' };
+
+        } catch (Exception e) {
+            bc.debug("CAN'T FETCH address from cust addres for cus_id "+cus_id + "\n "+e.toString());
+        }
+        return;
+    }
+}

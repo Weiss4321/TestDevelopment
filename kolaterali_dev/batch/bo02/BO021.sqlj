@@ -1,0 +1,669 @@
+package hr.vestigo.modules.collateral.batch.bo02;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.interfaces.DealCollateralCoverage;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.rba.util.DecimalUtils;
+
+#sql iterator IteratorCusaccExposure with(holdability = true)(java.math.BigDecimal cus_acc_id);
+#sql iterator IteratorColProcId (java.math.BigDecimal col_pro_id);
+#sql iterator IteratorCusaccExpColl (java.math.BigDecimal cus_acc_id,java.math.BigDecimal diff);
+#sql iterator IteratorCusaccExpCollFix (java.math.BigDecimal cus_acc_exp_col_id,
+										java.math.BigDecimal exp_coll_amount,
+										java.math.BigDecimal exp_balance_hrk,
+										java.math.BigDecimal exp_coll_cur_id,
+										java.math.BigDecimal exp_cur_id);
+ 
+public class BO021{
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo02/BO021.sqlj,v 1.21 2013/07/16 11:12:49 hradnp Exp $";
+	
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+	private BigDecimal eve_id = null;
+	private BigDecimal colProId=null;
+	private Map exchangeRate=null;
+	private Date valueDate=null;
+	
+	public BO021(BatchContext bc) throws Exception{
+		this.exchangeRate= new HashMap();
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+		hardcoding();
+	}
+	
+	private void hardcoding(){
+		this.exchangeRate.put(new BigDecimal("63999"),new BigDecimal(1));
+	}
+	
+    public void insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id) throws Exception
+    {
+        bc.startStopWatch("BO021.insertIntoEvent");
+        bc.debug("sqlj insertIntoEvent");		
+         
+	  	try
+	  	{
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(bc);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	this.eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",this.eve_id);
+		  	event.put("eve_typ_id", eve_typ_id);
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za izracun pokrivenosti plasmana kolateralima."); //TODO vidjeti sto staviti
+		  	event.put("use_id", bc.getUserID());
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", bc.getBankSign());
+		   	event.put("org_uni_id", org_uni_id); 
+		  	bc.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	
+		  	/* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+		  	 * i koji se nalazi u commonu yxyA. Radi se update: 
+		  	 *    UPDATE batch_log
+		  	 *    SET eve_id = :newEveId
+			 *    WHERE bat_log_id = :batLogId 
+		  	*/
+		  	bc.updateEveID(this.eve_id);
+	        bc.stopStopWatch("BO021.insertIntoEvent");		  	
+	  } 
+	  catch(Exception e)
+	  {
+		  throw e;
+	  }
+	}  
+	
+    /**
+	*Dohvat broja plasmana u cusacc_exposure tablici
+	*/
+	public long fetchCusAccExposureCount(BigDecimal col_pro_id, Date exposure_date, String exp_type_ind)
+	{
+		bc.startStopWatch("BO021.fetchCusAccExposureCount");
+	    long result=-1;
+		try
+		{
+			#sql [connCtx]{
+				SELECT count(distinct a.cus_acc_id)
+				INTO
+					:(result)
+				FROM 
+					cusacc_exposure_new a,
+					loan_beneficiary b
+				WHERE 
+					b.acc_no = a.cus_acc_no and
+					a.exposure_balance > 0 and
+					a.cus_acc_id NOT IN
+					(SELECT 
+						distinct cus_acc_id 
+						FROM CUSACC_EXP_COLL 
+						WHERE col_pro_id=:(col_pro_id)
+					) and
+					a.cus_acc_id NOT IN
+					(SELECT 
+						distinct cus_acc_id 
+						FROM col_proc_gar 
+						WHERE col_pro_id=:(col_pro_id)
+					) and
+		            a.exposure_date = :(exposure_date) and
+		            a.exp_type_ind = :(exp_type_ind)
+		    };
+		}
+		catch(SQLException e)
+		{
+			bc.debug(".....BO021.sqlj fetchCusAccExposureCount        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj fetchCusAccExposureCount      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj fetchCusAccExposureCount        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}
+		bc.stopStopWatch("BO021.fetchCusAccExposureCount");
+		return result;
+	}
+	
+	
+	
+	public long fetchCusAccExpCollCount(BigDecimal col_pro_id)
+	{
+		bc.startStopWatch("BO021.fetchCusAccExpCollCount");
+	    long result=-1;
+		try
+		{
+			#sql [connCtx]{
+				SELECT 
+					count(distinct cus_acc_id)
+				INTO
+					:(result)
+				FROM
+					cusacc_exp_coll 
+				WHERE 
+					col_pro_id =:(col_pro_id)					
+		    };
+		}
+		catch(SQLException e)
+		{
+			bc.debug(".....BO021.sqlj fetchCusAccExpCollCount        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj fetchCusAccExpCollCount      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj fetchCusAccExpCollCount        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}
+		bc.stopStopWatch("BO021.fetchCusAccExpCollCount");
+		return result;
+	}
+	
+	public Timestamp insertColProc(HashMap map) throws Exception
+	{
+        bc.startStopWatch("BO021.insertColProc");
+	    bc.debug("sqlj insertColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=new Timestamp(System.currentTimeMillis());
+    	bc.debug("\n col_pro_id: "+col_pro_id);
+    	bc.debug("\n proc_date: "+proc_date);
+    	bc.debug("\n value_date: "+value_date);
+    	bc.debug("\n proc_type: "+proc_type);
+    	bc.debug("\n proc_way: "+proc_way);
+    	bc.debug("\n proc_status: "+proc_status);
+    	bc.debug("\n col_number: "+col_number);
+    	bc.debug("\n org_uni_id: "+org_uni_id);
+    	bc.debug("\n use_id: "+use_id);
+    	bc.debug("\n user_lock: "+user_lock);
+    	
+        try
+        {
+        	#sql [connCtx]{
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(proc_date),
+					:(value_date),
+					:(proc_type),
+					:(proc_way),
+					:(proc_status),
+					:(col_number),
+					current timestamp,
+					:(org_uni_id),
+					:(use_id),
+        			:(user_lock)
+                )
+            };
+		}
+        catch(SQLException e)
+        {
+			bc.debug(".....BO021.sqlj insertColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj insertColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj insertColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+        finally
+        {
+            bc.stopStopWatch("BO021.insertColProc"); 
+        }
+		return user_lock;
+	}
+	
+	public Timestamp updateColProc(HashMap map) throws Exception
+	{
+        bc.startStopWatch("BO021.updateColProc");
+	    bc.debug("sqlj updateColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=(Timestamp) map.get("user_lock");
+    	
+        try
+        {
+        	#sql [connCtx]{
+				UPDATE  col_proc SET
+					proc_date= :(proc_date),
+					value_date= :(value_date),
+					proc_type= :(proc_type),
+					proc_way= :(proc_way),
+					proc_status=:(proc_status),
+					col_number=:(col_number),
+					org_uni_id=:(org_uni_id),
+					use_id=:(use_id),
+					user_lock= current timestamp					
+				WHERE
+        			col_pro_id=:(col_pro_id)
+		        };
+		}
+        catch(SQLException e)
+		{
+			bc.debug(".....BO021.sqlj updateColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj updateColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj updateColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+        finally
+        {
+            bc.stopStopWatch("BO021.updateColProc");
+        }
+		return user_lock;
+	}
+	
+	public void setColProId(BigDecimal colProId) {
+		this.colProId = colProId;
+	}
+	
+	public BigDecimal getColProId() throws Exception{
+		if(this.colProId==null){
+			YOY00 yoy00=new YOY00(this.connCtx);
+			this.colProId=yoy00.getNewId();
+		}
+		return this.colProId;
+	}
+	
+	
+    /**
+     * dohvat plasmana za obradu pokrivenosti
+     * 
+     * @return
+     * @throws Exception
+     */
+	public IteratorCusaccExposure getPlacementsNew(Date exposure_date, String exp_type_ind, int eligibility) throws Exception
+	{
+        bc.startStopWatch("BO021.getPlacementsNew");
+	    IteratorCusaccExposure iter=null;
+        BigDecimal col_pro_id=getColProId();
+        
+        if(eligibility == DealCollateralCoverage.RBA_MICRO)
+        {
+            #sql [connCtx] iter = {
+                select cus_acc_id 
+                from 
+                    cusacc_exposure_new a
+                    inner join customer b on a.cus_id = b.cus_id 
+                where 
+                ( cus_acc_status='A' OR
+                    ( cus_acc_status='C' AND (
+                        (module_code='TRC' AND cus_acc_orig_st='E') OR 
+                        (module_code='PKR' AND cus_acc_orig_st='T') OR 
+                        (module_code='PPZ' AND cus_acc_orig_st IN ('SS', 'NM')) OR 
+                        (module_code='KRD' AND cus_acc_orig_st='SS') OR 
+                        (module_code='GAR' AND cus_acc_orig_st='SS') OR 
+                        (module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+                        (module_code='LOC' AND cus_acc_orig_st='SS') )
+                        )
+                ) and cus_acc_id NOT IN
+                    (select 
+                        distinct cus_acc_id 
+                        from col_proc_gar 
+                        where col_pro_id=:(col_pro_id)
+                    )
+                and exposure_date = :(exposure_date)
+                and exp_type_ind = :(exp_type_ind)
+                and basel_cus_type = '20'
+            };
+        }
+        else
+        {
+            #sql [connCtx] iter = {
+                select cus_acc_id 
+                from 
+                    cusacc_exposure_new
+                where 
+                ( cus_acc_status='A' OR
+                    ( cus_acc_status='C' AND (
+                    (module_code='TRC' AND cus_acc_orig_st='E') OR 
+                    (module_code='PKR' AND cus_acc_orig_st='T') OR 
+                    (module_code='PPZ' AND cus_acc_orig_st IN ('SS', 'NM')) OR 
+                    (module_code='KRD' AND cus_acc_orig_st='SS') OR 
+                    (module_code='GAR' AND cus_acc_orig_st='SS') OR 
+                    (module_code='KKR' AND cus_acc_orig_st IN ('94','95')) OR 
+                    (module_code='LOC' AND cus_acc_orig_st='SS') )
+                    )
+                ) and cus_acc_id NOT IN
+                    (select 
+                        distinct cus_acc_id 
+                        from col_proc_gar 
+                        where col_pro_id=:(col_pro_id)
+                    )
+                and exposure_date = :(exposure_date)
+                and exp_type_ind = :(exp_type_ind)
+        };
+        }
+        bc.stopStopWatch("BO021.getPlacementsNew");
+        return iter;
+	}
+	
+
+	/**
+	 * 
+	 * @param cus_acc_id
+	 * @return
+	 * @throws Exception
+	 */
+	public String getColProcGarStatus(BigDecimal cus_acc_id) throws Exception
+	{
+		bc.startStopWatch("BO021.getColProcGarStatus");
+	    String result=null;
+		BigDecimal col_pro_id=getColProId();
+		try
+		{
+			#sql [connCtx] {
+				select status
+				into :(result)
+				from col_proc_gar 
+				where col_pro_id=:(col_pro_id)
+				and cus_acc_id=:(cus_acc_id)
+			};
+			return result;
+		}
+		catch(SQLException e)
+		{
+			if(e.getErrorCode()==100){
+				return null;
+			}else{
+				bc.debug(".....BO021.sqlj getColProcGarStatus        Message  : " + e.getMessage());
+				bc.debug(".....BO021.sqlj getColProcGarStatus      Error code : " + e.getErrorCode());
+				bc.debug(".....BO021.sqlj getColProcGarStatus        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}	
+		}
+		finally
+		{
+		    bc.stopStopWatch("BO021.getColProcGarStatus");
+		}
+	}
+	
+	public Date getValueDate(String exp_type_ind) throws Exception
+	{
+		bc.startStopWatch("BO021.getValueDate");
+	    if(valueDate==null)
+		{
+			try
+			{
+				#sql [connCtx] {
+					select 
+						max(exposure_date) 
+					into
+						:(valueDate)
+					from cusacc_exposure_new
+					where exposure_balance > 0
+			        and exp_type_ind = :(exp_type_ind)
+			    };
+			}
+			catch(SQLException e)
+			{
+				bc.debug(".....BO021.sqlj getValueDate        Message  : " + e.getMessage());
+				bc.debug(".....BO021.sqlj getValueDate      Error code : " + e.getErrorCode());
+				bc.debug(".....BO021.sqlj getValueDate        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}
+			finally
+			{
+			    bc.stopStopWatch("BO021.getValueDate");
+			}
+		}	
+		return valueDate;
+	}
+	
+	public BigDecimal selectColProc(Date value_date,String proc_type,String status) throws Exception
+	{
+		bc.startStopWatch("BO021.selectColProc");
+	    BigDecimal result=null;
+		IteratorColProcId iter=null;
+		try
+		{
+			#sql [connCtx]iter={
+				select 
+					col_pro_id 
+				from col_proc 
+					where 
+						value_date=:(value_date)		
+						and proc_status=:(status)
+						and proc_type=:(proc_type)
+		    };
+			if(iter!=null){			
+				while(iter.next()){
+					result =  iter.col_pro_id();
+				    break;
+				}
+	        }
+		}
+		catch(SQLException e)
+		{
+			bc.debug(".....BO021.sqlj selectColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj selectColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj selectColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}
+		bc.stopStopWatch("BO021.selectColProc");
+		return result;
+	}
+	
+	
+	public void insertGarbage(BigDecimal cus_acc_id,String status) throws Exception
+	{
+	    bc.startStopWatch("BO021.insertGarbage");
+	    BigDecimal col_pro_id=getColProId();
+        try
+        {
+        	#sql [connCtx]{
+				INSERT INTO col_proc_gar (
+					col_pro_id,
+					cus_acc_id,
+        			status
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(cus_acc_id),
+					:(status)
+				)
+            };
+		}
+        catch(SQLException e)
+        {
+			bc.debug(".....BO021.sqlj insertGarbage        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj insertGarbage      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj insertGarbage        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+        finally
+        {
+            bc.stopStopWatch("BO021.insertGarbage");
+        }
+	}
+	
+	
+    /**
+     * ovi se plasmani odmah oznace u col_proc_gar tablici i ne obraduju se jer uzrokuju pucanje obrade. nisu uparivi.
+     * 
+     * @throws Exception
+     */
+	public void markUnacceptableAgreementPlacements(Date exposure_date, String exp_type_ind) throws Exception
+	{
+		bc.startStopWatch("BO021.markUnacceptableAgreementPlacements");
+	    IteratorCusaccExposure iter=null;
+		BigDecimal col_pro_id=getColProId();
+		try
+		{
+			#sql [connCtx] iter = {
+			select 
+				distinct ce.cus_acc_id
+				from
+					cusacc_exposure_new ce,
+					loan_beneficiary lb,
+					frame_agreement fa
+				where
+					lb.acc_no = ce.cus_acc_no and
+					lb.fra_agr_id=fa.fra_agr_id and
+					fa.status <>'A' 
+					and ce.cus_acc_id NOT IN
+					    (select 
+						    distinct ce2.cus_acc_id
+					    from
+						    cusacc_exposure_new ce2,
+						    loan_beneficiary lb2,
+						    frame_agreement fa2
+					    where
+						    lb2.acc_no = ce2.cus_acc_no and
+						    lb2.fra_agr_id=fa2.fra_agr_id and
+						    fa2.status ='A' and
+		                    ce2.exposure_date = :(exposure_date) and
+		                    ce2.exp_type_ind = :(exp_type_ind)
+					    )
+					and ce.cus_acc_id NOT IN
+					    (select distinct 
+						    a.cus_acc_id 
+					    from 
+						    cusacc_exposure_new a,
+						    loan_beneficiary b
+					    where 
+						    b.acc_no = a.cus_acc_no and
+						    a.exposure_balance > 0 and
+		                    a.exposure_date = :(exposure_date) and
+		                    a.exp_type_ind = :(exp_type_ind) and
+						    b.status='A' and
+						    coll_hf_prior_id is not null and
+						    fra_agr_id is null)
+		            and ce.exposure_date = :(exposure_date)
+		            and ce.exp_type_ind = :(exp_type_ind)
+		    };
+		    bc.stopStopWatch("BO021.markUnacceptableAgreementPlacements");
+			if(iter!=null){			
+				while(iter.next()){
+				    insertGarbage(iter.cus_acc_id(),"N");
+					//insertInDataDwhItem(col_pro_id, iter.cus_acc_id(), null, "N", null);
+				}
+	        }
+		}
+		catch(SQLException e)
+		{
+			bc.debug(".....BO021.sqlj markUnacceptableAgreementPlacements        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj markUnacceptableAgreementPlacements      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj markUnacceptableAgreementPlacements        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+		finally
+		{
+		    if(iter != null){ 
+				try{
+					iter.close();
+				}catch(SQLException e){
+					bc.debug("..2..BO021.sqlj markUnacceptableAgreementPlacements        Message  : " + e.getMessage());
+					bc.debug("..2..BO021.sqlj markUnacceptableAgreementPlacements      Error code : " + e.getErrorCode());
+					bc.debug("..2..BO021.sqlj markUnacceptableAgreementPlacements        SQLState : " + e.getSQLState());
+					e.printStackTrace();
+					throw(e);
+				}	
+			}	
+		}
+	}
+	
+	
+	public boolean isDataLoadedForDate(Date value_date)
+	{
+		bc.startStopWatch("BO021.isDataLoadedForDate");
+	    long number=-1;
+		try
+		{
+			#sql[connCtx]{
+				select count(*)
+				into :(number) 
+				from loan_beneficiary_d 
+                where :(value_date) between load_date_from and load_date_until
+			};
+			
+			if((number==0)||(number==-1)){
+				return false;
+			}
+			number=-1;
+			#sql[connCtx]{
+				select count(*)
+				into :(number) 
+				from coll_hf_prior_d 
+                where :(value_date) between load_date_from and load_date_until
+			};
+			
+			if((number==0)||(number==-1)){
+				return false;
+			}
+			number=-1;
+			#sql[connCtx]{
+				select count(*)
+				into :(number) 
+				from frame_agreement_d 
+                where :(value_date) between load_date_from and load_date_until
+			};
+			
+			if((number==0)||(number==-1)){
+				return false;
+			}
+			number=-1;
+			#sql[connCtx]{
+				select count(*)
+				into :(number) 
+				from coll_head_d 
+			    where :(value_date) between load_date_from and load_date_until
+			};
+			
+			if((number==0)||(number==-1)){
+				return false;
+			}
+			return true;
+		}
+		catch(SQLException e)
+		{
+			bc.debug(".....BO021.sqlj isDataLoadedForDate        Message  : " + e.getMessage());
+			bc.debug(".....BO021.sqlj isDataLoadedForDate      Error code : " + e.getErrorCode());
+			bc.debug(".....BO021.sqlj isDataLoadedForDate        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			return false;
+		}
+		finally
+		{
+		    bc.stopStopWatch("BO021.isDataLoadedForDate");		    
+		}
+	}
+	
+}

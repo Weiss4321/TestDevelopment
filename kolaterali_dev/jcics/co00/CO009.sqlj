@@ -1,0 +1,90 @@
+package hr.vestigo.modules.collateral.jcics.co00;
+
+import java.math.*;
+import java.util.*;
+
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+import java.sql.Date;
+/**
+ *  CO009.sqlj
+ *  Transakcija za dohvat podataka o recovery amount history-ju
+ */
+
+#sql iterator RecoveryIter (
+    BigDecimal recovery_amount,
+    BigDecimal realization_amount,
+    Date datum_promjene,
+    String code_char,
+    String realization_code_char,
+    String user_name    
+);
+
+public class CO009 extends RemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co00/CO009.sqlj,v 1.2 2017/07/19 08:04:22 hrazst Exp $";
+
+	public DeclCO00 decl = null;
+
+	public CO009 (DeclCO00 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();
+		RecoveryIter rec=null;
+		tc.debug("decl.recoveryamounthistorymapping.RealEstate_COL_HEA_ID = " + decl.recoveryamounthistorymapping.RealEstate_COL_HEA_ID); 
+
+		try{ 
+			#sql[ctx] rec = { 
+			        SELECT recovery_amount, realization_amount,date(a.user_lock) as datum_promjene, c.code_char, c1.code_char as realization_code_char, b.user_name 
+			        FROM COLL_HEAD_D a
+			        INNER JOIN app_user b ON a.use_id=b.use_id
+			        LEFT OUTER JOIN currency c ON c.cur_id=a.recovery_cur_id
+			        LEFT OUTER JOIN currency c1 ON c1.cur_id=a.realization_cur_id
+			        WHERE col_hea_id=:(decl.recoveryamounthistorymapping.RealEstate_COL_HEA_ID) AND (RECOVERY_AMOUNT is not null OR realization_amount is not null)
+			        ORDER BY a.user_lock
+				};
+		} catch(java.sql.SQLException e){
+			tc.debug (".......CO009.sqlj ..... Select from  coll_head unsuccessful.");
+			tc.debug ( "......CO009.sqlj Select from  coll_head_d  SQL ErrorCode " + e.getErrorCode());
+			tc.debug ( "......CO009.sqlj Select from  coll_head_d  SQL SQLState " + e.getSQLState());
+			tc.debug ( "......CO009.sqlj Select from  coll_head_d   SQL Message " + e.getMessage());
+			
+			e.printStackTrace();
+			if (e.getErrorCode()!=100) 
+				throw e;
+		}			
+		BigDecimal lastAmount=new BigDecimal("-1");
+		BigDecimal lastAmountRealization=new BigDecimal("-1");
+		while(rec.next()){	
+		    //ako se ni jedan od iznosa nije promijenio nastavljamo dalje
+	        boolean recSame = isSame(lastAmount, rec.recovery_amount());
+	        boolean realSame = isSame(lastAmountRealization, rec.realization_amount());
+	        if(recSame && realSame) continue;	        
+      		    
+		    Vector row=new Vector();
+		    Vector unique = new Vector();
+		    BigDecimal recovery_amount=null, realization_amount=null;
+		    String code_char=null, realization_code_char=null;
+		    
+            lastAmount=rec.recovery_amount();
+            row.add(rec.recovery_amount());
+            row.add(rec.code_char());
+            lastAmountRealization=rec.realization_amount();
+            row.add(rec.realization_amount());
+            row.add(rec.realization_code_char());
+		                
+            row.add(rec.datum_promjene());
+            row.add(rec.user_name());
+            decl.recoveryamounthistorymapping.RecoveryAmountHistoryTable.addRow(row, unique);          
+		}
+	}
+	
+	private boolean isSame(BigDecimal first, BigDecimal second){
+	    if(first==null && second==null) return true;
+	    if((first==null && second!=null) || (first!=null && second==null)) return false;
+	    if(first.compareTo(second)==0) return true;	    	    
+	    return false;
+	}
+}

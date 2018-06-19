@@ -1,0 +1,61 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+select * from customer_account where cus_acc_no = '1103817492'
+
+
+select * from customer_account where cus_acc_no = '3221794175';
+
+select * from customer where cus_id = 8462624551;
+
+	select employee_flag from citizen where cus_id = 8462624551 -- employee_flag  = 1 
+
+
+
+	  SELECT
+                                fch.fee_cal_hea_id,
+                                fch.cus_id,
+                                fch.fee_cur_id,
+                                c.name,
+                                c.code,
+                                c.register_no,
+                                fch.total_fee_amount,
+                                cur.code_num,
+                                fch.amo_type,
+                                fch.starting_date,
+                                fch.closing_date,
+                                fc.fee_cod_dsc,
+                                ca.cus_acc_no,
+                                btc.ban_tar_user_code
+                            FROM
+                                fee_calc_head fch,
+                                customer c,
+                                currency cur,
+                                fee_code fc,
+                                customer_account ca,
+                                fee_calc_item fci,
+                                bank_tariff_code btc
+                            WHERE
+                                fch.cus_id=c.cus_id
+                            AND
+                                fch.fee_cur_id=cur.cur_id
+                            AND
+                                c.cus_id = ca.cus_id 
+                            AND
+                                fch.fee_cod_id=fc.fee_cod_id
+                            AND 
+                                fci.fee_cal_hea_id =  fch.fee_cal_hea_id                            
+                            AND      
+                                fci.ban_tar_code = btc.ban_tar_code
+                            AND   
+                                (0=0   ) 
+                             AND 
+                                (0=0   )
+                            AND 
+                                fch.module_name = 'PAY'
+                            ORDER BY
+                                fch.closing_date DESC
+
+
+
+                                select count(*) from interface_coll_tbl 
+				where orig_trx_date = '15.06.2016' with ur;

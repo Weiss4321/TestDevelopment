@@ -1,0 +1,204 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+	select * from customer_account where cus_acc_no = '1103473705';
+
+	polje 29 
+	
+		PRO_TYP_ID_459, 1457653005
+		PRO_TYP_ID_040, 31598005
+		PRO_TYP_ID_044, 956404335
+		PRO_TYP_ID_F80, 956414335 
+		PRO_TYP_ID_K03, 243159335
+		PRO_TYP_ID_048 956408335
+
+
+		select * from customer_account where cus_acc_no = '1104437714';  -- 13640855522
+		
+
+		  		SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id =  13640855522
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '11.04.2016'
+                                                   )       
+				and cb.pro_Typ_id in (1457653005,31598005,956404335,956414335,243159335,956408335 )
+
+
+			618083335
+
+
+			    SELECT SUM(BALANCE)
+                
+                     FROM cusacc_balance_last
+                     WHERE CUS_ACC_ID = 11242557522       
+                 AND amo_type IN ('023','025')
+
+                 -- dohvat polje 33
+			    SELECT SUM(BALANCE)
+                
+                     FROM cusacc_balance_last
+                     WHERE CUS_ACC_ID = 11242557522       
+                 AND amo_type IN ('023','025', '029','027')
+
+                 -- 
+                 select * from customer_account where cus_acc_no = '1104437714';
+
+				   SELECT SUM(BALANCE)
+                
+                     FROM cusacc_balance_last
+                     WHERE CUS_ACC_ID = 13640855522       
+                 AND amo_type IN ('023','025', '029','027')
+
+                 select pro_typ_id from procedure_type where pro_typ_code in ('P01', 'M02')
+
+                 3850368797
+		       3850368797
+
+                 8271662797
+                 8271662797	
+
+               select * from procedure_type where pro_typ_id  = 8271662797;
+
+
+                  select * from   ban_pro_amo_type where amo_type =  '022' and ban_pro_typ_id = 6561936704; 
+
+                  select * from   ban_pro_amo_type where amo_type =  '640' and ban_pro_typ_id = 6561936704; 
+
+                  -- polje 27
+
+			 select * from   ban_pro_amo_type where amo_type   IN  ('K44', 'K07', '524', 'K42')  and ban_pro_typ_id = 6561936704; 
+
+			 41,999
+
+			 
+			243160335
+			243160335
+			
+			618080335
+			618080335
+			  
+			618082335 
+			618082335
+
+				 select * from   ban_pro_amo_type where amo_type   IN  ('022')  and ban_pro_typ_id = 6561936704; 
+
+				3850368797
+                    3850368797
+                              
+
+				----------------------
+				
+				SET CURRENT_SCHEMA = 'SIDEV'
+
+		select  *from CUST_BILL_EXCH
+
+		-- za polje 29 sve vrste iznosa koje fale dodati 338 032 F20 F80 F22 F81 F53 F83 K03  026
+
+		 -- 1  338 
+		 select * from   ban_pro_amo_type where amo_type =  '338' and ban_pro_typ_id = 6561936704; 
+		 select * from procedure_type where  pro_typ_id =    1457653005  ;  -- 459 Dospjela potraživanja-mangement fee
+
+		 -- 2  F20
+		 select * from   ban_pro_amo_type where amo_type =  'F20' and ban_pro_typ_id = 6561936704; 
+		 select * from procedure_type where  pro_typ_id =    31598005  ; -- 040 Naknada po računu u kunama
+		 
+	    -- 3  032
+		select * from   ban_pro_amo_type where amo_type =  '032' and ban_pro_typ_id = 6561936704; 
+		
+		 select * from procedure_type where  pro_typ_id =    956404335  ; -- 044 Dospjela potraživanja-mangement fee - WO
+
+		  -- 4  F80
+		select * from   ban_pro_amo_type where amo_type =  'F80' and ban_pro_typ_id = 6561936704; 
+		
+		 select * from procedure_type where  pro_typ_id =    956414335  ; -- F80 Naknada po računu u kunama - WO
+
+		   -- 5  F22
+		select * from   ban_pro_amo_type where amo_type =  'F22' and ban_pro_typ_id = 6561936704; 
+
+		 select * from procedure_type where  pro_typ_id =    31598005  ; -- 040 Naknada po računu u kunama
+
+		 -- 6 F81 
+
+		 select * from   ban_pro_amo_type where amo_type =  'F81' and ban_pro_typ_id = 6561936704; 
+
+		 select * from procedure_type where  pro_typ_id =    956414335  ; -- F80 Naknada po računu u kunama - WO
+
+		 -- 7 F53
+
+		  select * from   ban_pro_amo_type where amo_type =  'F53' and ban_pro_typ_id = 6561936704; 
+
+		 select * from procedure_type where  pro_typ_id =    31598005  ; -- 040 Naknada po računu u kunama 
+
+		-- 8 F83 
+
+		 select * from   ban_pro_amo_type where amo_type =  'F83' and ban_pro_typ_id = 6561936704; 
+
+		 select * from procedure_type where  pro_typ_id =    956414335  ; -- F80 Naknada po računu u kunama - WO
+		
+		-- 9  K03  
+
+			 select * from   ban_pro_amo_type where amo_type =  'K03' and ban_pro_typ_id = 6561936704; 
+
+		 select * from procedure_type where  pro_typ_id =    243159335  ; -- K03 Zatezna kamata u kunama na naknadu
+		
+		-- 10 026
+
+		  select * from   ban_pro_amo_type where amo_type =  '026' and ban_pro_typ_id = 6561936704; 
+
+		 select * from procedure_type where  pro_typ_id =    956408335  ; -- 048 Zatezna kamata u kunama na naknadu - WO
+
+
+		select * from customer_account where cus_acc_no = '1135001664'; -- cus_acc_id = 182205326
+
+		 select * from cusacc_balance_last where cus_acc_id = 182205326;
+
+
+		     SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id =  182205326
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '11.04.2016'
+                                                   )        
+		 -- tu dobijem 5 i -0.25
+
+
+		SELECT  ci.cal_date
+		FROM    calendar_item ci , calendar c
+		WHERE   c.cou_id = 999
+		AND     c.cal_id = ci.cal_id
+	    AND     ci.cal_date >= '12.04.2016'
+	     AND     ci.cal_date >= '12.04.2016'
+	     AND     ci.work_ind = 'N'
+		order by ci.cal_date asc
+		fetch first 1 rows only
+
+		
+		 
+		
+
+							  

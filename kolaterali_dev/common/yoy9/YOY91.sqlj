@@ -1,0 +1,418 @@
+package hr.vestigo.modules.collateral.common.yoy9;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.RemoteConstants;
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+public class YOY91{
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy9/YOY91.sqlj,v 1.23 2017/03/22 10:31:43 hrazst Exp $";
+	
+    private RemoteContext remoteContext;
+    private BigDecimal eve_id = null;
+    private ConnCtx ctx; //ostalo
+    
+    public YOY91(RemoteContext rc) {
+        this.remoteContext = rc;
+        try {
+            this.ctx = remoteContext.getContext();
+        }
+        catch (SQLException e) {
+            remoteContext.debug("Nema connCtx u podtransakciji!");
+        }  
+    }
+    
+    #sql iterator IterMortgage (
+    						String hf_priority, 
+    						BigDecimal hf_own_cus_id, 
+    						BigDecimal amount
+    						); 
+    
+    public BigDecimal getEveId(){
+    	return this.eve_id; 
+    }    
+    
+    public YOY9Data fillDataObjectYOY9Data(BigDecimal collHeaId) throws Exception{
+    	YOY9Data collData=new YOY9Data();
+    	
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx]{ 
+				SELECT col_hea_id, col_type_id, col_num, real_est_nomi_valu, real_est_nm_cur_id, use_open_id, origin_org_uni_id, a.col_cat_id
+				INTO
+    				:(collData.colHeaId),
+    	            :(collData.colTypeId),
+					:(collData.colNum), 
+    				:(collData.realEstNomiValu), 
+    				:(collData.realEstNmCurId),
+    				:(collData.useOpenId),
+    				:(collData.originOrgUniId),
+    				:(collData.colCatId)
+				FROM coll_head a
+				INNER JOIN coll_category b ON (a.col_cat_id = b.col_cat_id AND b.accounting_indic='1')
+				WHERE a.col_hea_id= :collHeaId
+		};            
+ 		}catch(SQLException sqle){
+	    		if (sqle.getErrorCode()!=100){
+	    			remoteContext.debug ( "YOY91.sqlj fillDataObjectYOY9Data SQL ErrorCode = " + sqle.getErrorCode());
+ 					remoteContext.debug ( "YOY91.sqlj fillDataObjectYOY9Data SQL SQLState = " + sqle.getSQLState());
+	    			remoteContext.debug ( "YOY91.sqlj fillDataObjectYOY9Data SQL Message = " + sqle.getMessage());
+	    			throw sqle;	
+	    		}else{
+	    			return null;
+	    		}
+		}
+    	return collData;
+    }
+    
+    public BigDecimal getCashDepozitCdeCusId(BigDecimal colHeaId) throws SQLException{
+		BigDecimal cdeCusId=null;
+    	
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx]{ 
+				SELECT	cde_cus_id 
+				INTO	:cdeCusId
+				FROM	coll_cashdep
+				WHERE	col_hea_id = :colHeaId 	
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode()!=100){
+	    		remoteContext.debug ( "YOY91.sqlj getCashDepozitid SQL ErrorCode = " + sqle.getErrorCode());
+	    		remoteContext.debug ( "YOY91.sqlj getCashDepozitid SQL SQLState = " + sqle.getSQLState());
+	    		remoteContext.debug ( "YOY91.sqlj getCashDepozitid SQL Message = " + sqle.getMessage());
+	    		throw sqle;
+			}
+		}	
+		return cdeCusId;
+    }
+   
+    /**
+     * Vraca iterator hipoteka za zadani kolateral
+    */    
+    public IterMortgage getThirdRightsMortgage(BigDecimal colHeaId) throws SQLException{
+        IterMortgage pomIter=null;
+        
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx] pomIter={ 
+    				SELECT hf_priority, hf_own_cus_id, coalesce(amount_ref * c.midd_rate/b.midd_rate,0.00) as amount
+    				FROM coll_hf_prior a
+    				INNER JOIN exchange_rate b ON (a.hf_cur_id=b.cur_id AND current date between b.date_from AND b.date_until)
+    				INNER JOIN exchange_rate c ON (a.cur_id_ref=c.cur_id AND current date between c.date_from AND c.date_until)
+					WHERE hf_coll_head_id = :colHeaId 
+    	    		AND	hf_status = 'A'
+    	    		ORDER BY hf_priority ASC
+    		};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode()!=100){
+	    		remoteContext.debug ( "YOY91.sqlj getThirdRightsMortgage SQL ErrorCode = " + sqle.getErrorCode());
+	    		remoteContext.debug ( "YOY91.sqlj getThirdRightsMortgage SQL SQLState = " + sqle.getSQLState());
+	    		remoteContext.debug ( "YOY91.sqlj getThirdRightsMortgage SQL Message = " + sqle.getMessage());
+	    		throw sqle;
+			}
+		}	
+		return pomIter;
+    }
+    
+    public Date getMaxBalanceDate(BigDecimal colHeaId) throws SQLException{
+    	Date pomDate=null;
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx]{ 
+						SELECT	max(balance_date)
+						INTO	:pomDate
+						FROM	cusacc_balance
+						WHERE	cus_acc_id = :colHeaId
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode()!=100){
+	    		remoteContext.debug ( "YOY91.sqlj getMaxBalanceDate SQL ErrorCode = " + sqle.getErrorCode());
+	    		remoteContext.debug ( "YOY91.sqlj getMaxBalanceDate SQL SQLState = " + sqle.getSQLState());
+	    		remoteContext.debug ( "YOY91.sqlj getMaxBalanceDate SQL Message = " + sqle.getMessage());
+	    		throw sqle;
+			}
+		}	    	
+    	return pomDate;
+    }
+  
+    public Vector getBalanceState(BigDecimal colHeaId, Date maxDate) throws SQLException{
+		
+    	Vector balance = new Vector();
+    	BigDecimal currentDebitTotal = null;
+    	BigDecimal currentCreditTotal = null;
+    	BigDecimal currentBalance = null;
+    	
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx]{ 
+						SELECT	debit_total, 
+								credit_total, 
+								balance
+						INTO	:currentDebitTotal,
+								:currentCreditTotal,
+								:currentBalance
+						FROM	cusacc_balance
+						WHERE	cus_acc_id = :colHeaId
+						AND     balance_date = :maxDate
+						AND     account like '96%'
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode()!=100){
+	    		remoteContext.debug ( "YOY91.sqlj getBalanceState SQL ErrorCode = " + sqle.getErrorCode());
+	    		remoteContext.debug ( "YOY91.sqlj getBalanceState SQL SQLState = " + sqle.getSQLState());
+	    		remoteContext.debug ( "YOY91.sqlj getBalanceState SQL Message = " + sqle.getMessage());
+	    		throw sqle;
+			}
+		}
+		balance.add(currentDebitTotal);
+		balance.add(currentCreditTotal);
+		balance.add(currentBalance);		
+		return balance;
+    }
+    
+    public Vector getCollOwner(BigDecimal colHeaId) throws Exception{		
+    	Vector owner = new Vector();
+    	BigDecimal cusIdOwner = null;
+    	String registerNoOwner = null;
+    	 
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx]{    		
+					SELECT	a.cus_id,
+							b.register_no
+					INTO	:cusIdOwner,
+							:registerNoOwner
+					FROM	customer_account a, customer b
+					WHERE	a.cus_acc_id = :colHeaId
+    				AND 	a.cus_id=b.cus_id
+			};  
+    		
+    		/*STARI SELECT CUSTOMERA
+					SELECT	coll_owner.cus_id,
+							coll_owner.register_no
+					INTO	:cusIdOwner,
+							:registerNoOwner
+					FROM	coll_owner, customer
+					WHERE	col_hea_id = :colHeaId
+					AND 	coll_owner.cus_id=customer.cus_id
+    				AND		customer.status not in('1') 
+					ORDER BY ser_num ASC
+					fetch first 1 rows only 
+			*/
+		}catch(SQLException sqle){
+	    		remoteContext.debug ( "YOY91.sqlj getCollOwner SQL ErrorCode = " + sqle.getErrorCode());
+	    		remoteContext.debug ( "YOY91.sqlj getCollOwner SQL SQLState = " + sqle.getSQLState());
+	    		remoteContext.debug ( "YOY91.sqlj getCollOwner SQL Message = " + sqle.getMessage());
+				throw new Exception(".......YOY91.sqlj ..... SELECT CUS_ID FROM COLL_OWNER UNSUCCESSFUL - nema aktivnog. \n Error code=" + sqle.getErrorCode());
+		}
+		
+		if(cusIdOwner==null && registerNoOwner==null) {
+			return null;
+		}else{
+			owner.add(cusIdOwner);
+			owner.add(registerNoOwner);
+			return owner;
+		}
+    }
+    
+    public String getCurrencyNumCode(BigDecimal curId) throws SQLException{
+    	String curCodeNum=null;
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx]{ 
+						SELECT	code_num
+						INTO	:curCodeNum
+						FROM	currency
+						WHERE	cur_id = :curId
+			};
+		}catch(SQLException sqle){
+    		remoteContext.debug ( "YOY91.sqlj getCurrencyNumCode SQL ErrorCode = " + sqle.getErrorCode());
+    		remoteContext.debug ( "YOY91.sqlj getCurrencyNumCode SQL SQLState = " + sqle.getSQLState());
+    		remoteContext.debug ( "YOY91.sqlj getCurrencyNumCode SQL Message = " + sqle.getMessage());
+    		throw sqle;
+		}	    	
+    	return curCodeNum;
+    }
+    
+    public String getUserAbb(BigDecimal userId) throws SQLException{
+    	String useOpenAbbreviation=null;
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+			#sql [ctx]{ 
+				SELECT	rtrim(abbreviation)
+				INTO	:useOpenAbbreviation
+				FROM	app_user
+				WHERE	use_id = :userId	 
+    		};
+		}catch(SQLException sqle){
+    		remoteContext.debug ( "YOY91.sqlj getUserAbb SQL ErrorCode = " + sqle.getErrorCode());
+    		remoteContext.debug ( "YOY91.sqlj getUserAbb SQL SQLState = " + sqle.getSQLState());
+    		remoteContext.debug ( "YOY91.sqlj getUserAbb SQL Message = " + sqle.getMessage());
+    		throw sqle;
+		}	    	
+    	return useOpenAbbreviation;
+    }
+    
+    public String getOrgCode(BigDecimal orgId) throws SQLException{
+    	String originOrgUniCode=null;
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+    		#sql [ctx]{ 
+						SELECT	code
+						INTO	:originOrgUniCode
+						FROM	organization_unit
+						WHERE	org_uni_id = :orgId
+    		};
+		}catch(SQLException sqle){
+    		remoteContext.debug ( "YOY91.sqlj getOrgCode SQL ErrorCode = " + sqle.getErrorCode());
+    		remoteContext.debug ( "YOY91.sqlj getOrgCode SQL SQLState = " + sqle.getSQLState());
+    		remoteContext.debug ( "YOY91.sqlj getOrgCode SQL Message = " + sqle.getMessage());
+    		throw sqle;
+		}	    	
+    	return originOrgUniCode;
+    }
+    
+    public BigDecimal getOrgId(String orgCode) throws SQLException{
+        BigDecimal orgUniId=null;
+        try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ 
+                        SELECT  org_uni_id
+                        INTO    :orgUniId
+                        FROM    organization_unit
+                        WHERE   code = :orgCode
+            };
+        }catch(SQLException sqle){
+            remoteContext.debug ( "YOY91.sqlj getOrgId SQL ErrorCode = " + sqle.getErrorCode());
+            remoteContext.debug ( "YOY91.sqlj getOrgId SQL SQLState = " + sqle.getSQLState());
+            remoteContext.debug ( "YOY91.sqlj getOrgId SQL Message = " + sqle.getMessage());
+            throw sqle;
+        }           
+        return orgUniId;
+    }
+    
+    public BigDecimal getAccountOrgId(BigDecimal cusAccId) throws SQLException{
+        BigDecimal orgUniId=null;
+        try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+            #sql [ctx]{ 
+                    SELECT  org_uni_id
+                    INTO    :orgUniId
+                    FROM    customer_account
+                    WHERE  cus_acc_id = :(cusAccId)
+            };
+        }catch(SQLException sqle){
+            remoteContext.debug ( "YOY91.sqlj getAccountOrgId SQL ErrorCode = " + sqle.getErrorCode());
+            remoteContext.debug ( "YOY91.sqlj getAccountOrgId SQL SQLState = " + sqle.getSQLState());
+            remoteContext.debug ( "YOY91.sqlj getAccountOrgId SQL Message = " + sqle.getMessage());
+            throw sqle;
+        }           
+        return orgUniId;
+    }
+        
+    public void updateFinStatus(BigDecimal cusHeaId, String status) throws SQLException{
+    	String originOrgUniCode=null;
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            //20.03.2017 - logika za update vremena azuriranja zapisa 
+            //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS, a posebno za tranakcije
+    	    if(this.remoteContext.getCallerID()==RemoteConstants.VESTIGO_BATCH){
+                #sql [ctx]{ 
+                    UPDATE  coll_head
+                    SET     financial_flag = :status,
+                            CHG_NOM_VAL_PROC_TS = current timestamp
+                    WHERE   col_hea_id = :cusHeaId  
+                };    	        
+    	    }else{
+    	           #sql [ctx]{ 
+                       UPDATE  coll_head
+                       SET     financial_flag = :status,
+                               user_lock = current timestamp
+                       WHERE   col_hea_id = :cusHeaId  
+    	           };
+    	    } 	
+		}catch(SQLException sqle){
+    		remoteContext.debug ( "YOY91.sqlj updateFinStatus SQL ErrorCode = " + sqle.getErrorCode());
+    		remoteContext.debug ( "YOY91.sqlj updateFinStatus SQL SQLState = " + sqle.getSQLState());
+    		remoteContext.debug ( "YOY91.sqlj updateFinStatus SQL Message = " + sqle.getMessage());
+    		throw sqle;
+		}	    	
+    }
+    
+    public boolean checkValutnaKlauzula(BigDecimal cusAccId) throws SQLException{
+        BigDecimal currType=null;
+        BigDecimal currIndic=null;
+        
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+    		#sql [ctx]{ 
+    	    	SELECT currency_type, currency_indicator
+    	    	INTO :currType, :currIndic
+    	    	FROM customer_account
+    	    	WHERE cus_acc_id = :cusAccId
+    		};
+		}catch(SQLException sqle){
+    		remoteContext.debug ( "YOY91.sqlj checkValutnaKlauzula SQL ErrorCode = " + sqle.getErrorCode());
+    		remoteContext.debug ( "YOY91.sqlj checkValutnaKlauzula SQL SQLState = " + sqle.getSQLState());
+    		remoteContext.debug ( "YOY91.sqlj checkValutnaKlauzula SQL Message = " + sqle.getMessage());
+    		throw sqle;
+		}
+        
+		if (currType!=null && currIndic!=null
+		        && currType.compareTo(new BigDecimal("3"))==0
+		        && currIndic.compareTo(new BigDecimal("5"))==0){
+		    //throw new VestigoTMException(1," Usao sa true; currType=" + currType + "currIndic=" + currIndic,"fin_err413", null);
+		    return true;
+		}else{
+		    //throw new VestigoTMException(1," Usao sa false; currType=" + currType + "currIndic=" + currIndic,"fin_err413", null);
+		    return false;
+		}
+    } 
+    
+    public BigDecimal getValueInEuro(BigDecimal iznos, BigDecimal curId) throws SQLException{
+    	BigDecimal valueAmountEuro=null;
+        BigDecimal valueEuroCurrency=null;
+    	BigDecimal valueCurIdCurrency=null;
+    	BigDecimal curIdEuro = new BigDecimal("64999");
+    	
+    	try {
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            
+    		#sql [ctx]{  
+    	    	SELECT b.midd_rate, a.midd_rate
+    	    	INTO :valueCurIdCurrency, :valueEuroCurrency
+    	    	FROM exchange_rate a, exchange_rate b
+    	    	WHERE a.cur_id=:curIdEuro AND b.cur_id=:curId
+    	    	AND current date between a.date_from AND a.date_until
+    	    	AND current date between b.date_from AND b.date_until
+    		};
+		}catch(SQLException sqle){
+    		remoteContext.debug ( "YOY91.sqlj getValueInEuro SQL ErrorCode = " + sqle.getErrorCode());
+    		remoteContext.debug ( "YOY91.sqlj getValueInEuro SQL SQLState = " + sqle.getSQLState());
+    		remoteContext.debug ( "YOY91.sqlj getValueInEuro SQL Message = " + sqle.getMessage());
+    		throw sqle;
+		}
+		valueAmountEuro=iznos.multiply(valueCurIdCurrency.divide(valueEuroCurrency,BigDecimal.ROUND_HALF_UP));
+		return valueAmountEuro.setScale(2,BigDecimal.ROUND_HALF_UP);
+    } 
+    
+     
+    
+}

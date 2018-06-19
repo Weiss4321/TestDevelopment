@@ -1,0 +1,118 @@
+package hr.vestigo.modules.collateral.batch.bo68;
+
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.util.StringUtils;
+import java.sql.Timestamp;
+
+public class BO681{
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo68/BO681.sqlj,v 1.5 2016/07/06 11:24:05 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+
+    #sql public iterator CustDataIterator with (holdability=true)(
+    String cus_acc_no,
+    String frame_cus_acc_no,
+    String register_no,
+    String name,                
+    BigDecimal col_hea_id,
+    BigDecimal coll_hf_prior_id); 
+
+
+    public BO681(BatchContext bc)throws Exception{
+        this.bc = bc;
+        connCtx = bc.getContext(); 
+    }
+
+
+    public CustDataIterator getCustData()throws SQLException {
+        CustDataIterator iter = null;
+
+        try{
+
+            #sql [connCtx] iter={select      a. cus_acc_no,
+                                                a.frame_cus_acc_no,
+                                                b.register_no,
+                                                b.name,                
+                                                d.col_hea_id,
+                                                d.coll_hf_prior_id
+                                from cusacc_exposure a, customer b, loan_beneficiary d
+                                where a.frame_cus_acc_no is not null
+                                and (a.cus_acc_status != 'C' OR (a.cus_acc_status = 'C'  AND ( (a.module_code='TRC' AND a.cus_acc_orig_st='E') OR 
+                                                                                               (a.module_code='PKR' AND a.cus_acc_orig_st='T') OR 
+                                                                                               (a.module_code='PPZ' AND a.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                                                                                               (a.module_code='SDR' AND a.cus_acc_orig_st IN ('SS', 'NM')) OR
+                                                                                               (a.module_code='KRD' AND a.cus_acc_orig_st='SS') OR 
+                                                                                               (a.module_code='GAR' AND a.cus_acc_orig_st='SS') OR 
+                                                                                               (a.module_code='KKR' AND a.cus_acc_orig_st IN ('94','95')) OR 
+                                                                                               (a.module_code='LOC' AND a.cus_acc_orig_st='SS')
+                                                                                                )
+                                     ))
+                                and a.cus_id=b.cus_id
+                                and a.cus_acc_no=d.acc_no
+                                with ur
+                                };
+
+        }catch (SQLException sqle) {
+            bc.debug("getCustData() - ERROR:"+sqle);
+            bc.error("getCustData() - ERROR", sqle);
+            throw sqle;
+        }
+
+        
+        
+        return iter;
+
+
+    }
+    
+    public BigDecimal getCollHeaId(BigDecimal coll_hf_prior_id)throws SQLException{
+        BigDecimal col_hea_id=null;
+
+        try {
+            #sql [connCtx] {select hf_coll_head_id 
+                        into :(col_hea_id)
+                        from coll_hf_prior where coll_hf_prior_id=:(coll_hf_prior_id)
+            };      
+
+
+        } catch(SQLException sqle) {
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+                bc.debug(" col_hea_id=null - COLL_HEA_ID  NE POSTOJI za trazeni coll_hf_prior_id:"+coll_hf_prior_id);
+                return col_hea_id;
+
+            }
+        }
+        return col_hea_id;
+    }
+    
+    
+    public String getCollNum(BigDecimal coll_hea_id)throws SQLException{
+        String col_num=null;
+
+        try {
+            #sql [connCtx] {select col_num 
+                        into :(col_num)
+                        from coll_head where col_hea_id=:(coll_hea_id)
+            };      
+
+
+        } catch(SQLException sqle) {
+            if(sqle.getErrorCode() == 100) { //nema zapisa
+                bc.debug(" col_num=null - COL_NUM  NE POSTOJI za trazeni coll_hea_id:"+coll_hea_id);
+                return col_num;
+
+            }
+        }
+        return col_num;
+    }
+
+}

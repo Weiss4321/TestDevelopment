@@ -1,0 +1,344 @@
+package hr.vestigo.modules.collateral.jcics.co11;
+
+import java.math.BigDecimal;
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyD.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.sql.SQLException;
+
+/**
+ *  * @author hramkr 
+ *  	
+ */
+      
+    
+public class CO112 extends RemoteTransaction {
+	
+public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co11/CO112.sqlj,v 1.28 2017/06/01 12:03:41 hrazst Exp $";
+
+	public DeclCO11 decl = null;
+	YOY63 SQLhelper = null;
+	
+	public CO112 (DeclCO11 decl) {
+		this.decl = decl;
+	} 
+
+	//obj za select sloga iz col_head
+	CollHeadSelectData chds = new CollHeadSelectData();
+
+	// 	obj za update tbl coll_head	
+	CollHeadUpdateData chd = new CollHeadUpdateData();		
+
+	// obj za update valute kolaterala u hipotekama
+	YOYDData mortgage = new YOYDData();
+	
+	public void execute(TransactionContext tc) throws Exception {
+	    ConnCtx ctx = tc.getContext();
+	    SQLhelper = new YOY63(tc);
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};		
+		BigDecimal col_cat_id=null;
+		try{	
+			if ((decl.collmovableupdatemapping.code).equalsIgnoreCase("POKR")) {		
+				#sql [ctx]{
+ 					SELECT
+							a.col_hea_id,
+							a.basic_data_status,
+							a.mortgage_status,
+							a.coll_data_status,
+							a.cover_indic,
+							a.origin_org_uni_id,
+			                a.crm_hnb,
+			                a.col_cat_id
+					INTO 
+							:(chds.COL_HEA_ID),    
+							:(chds.BASIC_DATA_STATUS),
+							:(chds.MORTGAGE_STATUS),
+							:(chds.COLL_DATA_STATUS),
+							:(chds.COVER_INDIC),
+							:(chds.ORIGIN_ORG_UNI_ID),
+			                :(chds.Kol_txtCRMHnb),
+			                :(col_cat_id)
+						FROM COLL_HEAD a, COLL_MOVABLE b
+						WHERE a.col_hea_id = :(decl.collmovableupdatemapping.COL_HEA_ID)
+						AND	  a.col_hea_id = b.col_hea_id
+					};
+			} else if ((decl.collmovableupdatemapping.code).equalsIgnoreCase("ZALI")) {
+				#sql [ctx]{
+					SELECT
+							a.col_hea_id,
+							a.basic_data_status,
+							a.mortgage_status,
+							a.coll_data_status,
+							a.cover_indic,
+							a.origin_org_uni_id,
+                            a.crm_hnb,
+			                a.col_cat_id
+					INTO 
+							:(chds.COL_HEA_ID),    
+							:(chds.BASIC_DATA_STATUS),
+							:(chds.MORTGAGE_STATUS),
+							:(chds.COLL_DATA_STATUS),
+							:(chds.COVER_INDIC),
+							:(chds.ORIGIN_ORG_UNI_ID),
+			                :(chds.Kol_txtCRMHnb),
+			                :(col_cat_id)
+						FROM COLL_HEAD a, COLL_SUPPLY b
+						WHERE a.col_hea_id = :(decl.collmovableupdatemapping.COL_HEA_ID)
+						AND	  a.col_hea_id = b.col_hea_id
+					};				
+			}
+  
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+			else {
+				throw new VestigoTMException(1, "CO112 - Cannot change, user_lock!", "errclt7", null);				
+			}
+		}
+		
+		chds.USER_LOCK = decl.collmovableupdatemapping.USER_LOCK;
+
+	
+//		napraviti update COLL_HEAD		
+//		 punjenje objekta chd iz decl-a		
+		fillCHDobj(col_cat_id); 
+		tc.debug("zovem update Head : "+chd.COL_HEA_ID);	
+		tc.debug("USER_LOCK_IN : "+chd.USER_LOCK_IN);			
+//		 update COLL_HEAD		
+		YOY43 headUpdate = new YOY43(tc, chd);
+		
+		headUpdate.updateCollHead(); 
+
+		tc.debug("gotov update Head : "+chd.COL_HEA_ID);        
+
+		tc.debug("gotov update Head PUNIM user_lock : "+chd.USER_LOCK);
+		
+		decl.collmovableupdatemapping.USER_LOCK = chd.USER_LOCK;
+        decl.collmovableupdatemapping.Coll_txtUserLock = chd.USER_LOCK; 
+//	 update satelitske tbl	
+		tc.debug("UPDATE SATELIT: "+decl.collmovableupdatemapping.COL_SEC_ID);    	
+		tc.debug( ".........CollateralSubCategory" + decl.collmovableupdatemapping.code);
+ 	
+		try{	
+			if ((decl.collmovableupdatemapping.code).equalsIgnoreCase("POKR")) {
+					#sql [ctx]{
+							UPDATE coll_movable
+								SET	mov_typ_id = :(decl.collmovableupdatemapping.SEC_TYP_ID), 
+										mov_model = :(decl.collmovableupdatemapping.Vehi_txtVehModel), 
+										mov_ser_num = :(decl.collmovableupdatemapping.Mov_txtSerNum), 
+										mov_made_year = :(decl.collmovableupdatemapping.Vehi_txtVehMadeYear), 
+										mov_reg_sign = :(decl.collmovableupdatemapping.Mov_txtRegSign),
+										mov_hr_reg = :(decl.collmovableupdatemapping.Mov_txtHrReg),
+										mov_dsc = :(decl.collmovableupdatemapping.Ves_txtDsc),
+										mov_address = :(decl.collmovableupdatemapping.Supp_txtAdresa),
+										mov_place_id = :(decl.collmovableupdatemapping.SUP_PLACE_ID),
+										mov_ins_date = :(decl.collmovableupdatemapping.Vehi_txtVehInsDate),
+			                            estimate_cus_id = :(decl.collmovableupdatemapping.Coll_txtEUsePersonCusId)
+							WHERE col_mov_id = :(decl.collmovableupdatemapping.COL_SEC_ID)
+				};
+			} else if ((decl.collmovableupdatemapping.code).equalsIgnoreCase("ZALI")) {
+					#sql [ctx]{ 
+							UPDATE coll_supply
+								SET	
+									sup_dsc = :(decl.collmovableupdatemapping.Ves_txtDsc), 
+									sup_keeper = :(decl.collmovableupdatemapping.Supp_txtKeeper), 
+									sup_loc = :(decl.collmovableupdatemapping.Supp_txtLocation), 
+									sup_address = :(decl.collmovableupdatemapping.Supp_txtAdresa), 
+									sup_place_id = :(decl.collmovableupdatemapping.SUP_PLACE_ID),
+									sup_ins_date = :(decl.collmovableupdatemapping.Vehi_txtVehInsDate),
+									sup_min_ind = :(decl.collmovableupdatemapping.Supp_txtMinValue),
+									sup_min_amount = :(decl.collmovableupdatemapping.Supp_txtMinAmount),
+                                    estimate_cus_id = :(decl.collmovableupdatemapping.Coll_txtEUsePersonCusId)
+
+							WHERE col_sup_id = :(decl.collmovableupdatemapping.COL_SEC_ID)
+					};
+			}			   		  
+		}catch(SQLException se){			
+			tc.debug ( "......CO112.sqlj update coll_movable,coll_supply SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO112.sqlj update coll_movable,coll_supply SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO0112.sqlj update coll_movable,coll_supply SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO112: Error updating coll_movable,coll_supply! ","err411a", null);
+		}
+
+		//ako se promijenila valuta kolaterala promijeniti i na svim vezanim hipotekama			
+		tc.debug("radim update hipoteka: "+mortgage.col_hea_id);	
+		
+		YOYD0 YOYD0 = new YOYD0(tc);
+		YOYDData mortgage = new YOYDData();   	
+		
+		mortgage.col_hea_id = decl.collmovableupdatemapping.COL_HEA_ID;
+		mortgage.cur_id = decl.collmovableupdatemapping.REAL_EST_NM_CUR_ID;;
+		
+		YOYD0.chgMortgageCurrencyAmount(mortgage); 
+		
+		tc.debug("gotov update hipoteka: "+mortgage.col_hea_id);
+		
+		// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collmovableupdatemapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collmovableupdatemapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.collmovableupdatemapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collmovableupdatemapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.collmovableupdatemapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();
+            
+        decl.collmovableupdatemapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collmovableupdatemapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collmovableupdatemapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collmovableupdatemapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();                   
+
+        this.fillDeclFromCHDObj();        
+	}//execute
+	 
+	private void fillCHDobj (BigDecimal col_cat_id) {
+        chd.COL_TYPE_ID = decl.collmovableupdatemapping.COL_TYPE_ID;
+        chd.COL_SUB_ID = decl.collmovableupdatemapping.SEC_TYP_ID;
+        chd.COL_GRO_ID = null;
+        chd.COL_CAT_ID = col_cat_id;
+		chd.Coll_txtAcouBDate = decl.collmovableupdatemapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.collmovableupdatemapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.collmovableupdatemapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.collmovableupdatemapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.collmovableupdatemapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.collmovableupdatemapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.collmovableupdatemapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.collmovableupdatemapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.collmovableupdatemapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.collmovableupdatemapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.collmovableupdatemapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.collmovableupdatemapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.collmovableupdatemapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.collmovableupdatemapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.collmovableupdatemapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtComDoc = decl.collmovableupdatemapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.collmovableupdatemapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.collmovableupdatemapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.collmovableupdatemapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.collmovableupdatemapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.collmovableupdatemapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.collmovableupdatemapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.collmovableupdatemapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.collmovableupdatemapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.collmovableupdatemapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.collmovableupdatemapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.collmovableupdatemapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.collmovableupdatemapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.collmovableupdatemapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.collmovableupdatemapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.collmovableupdatemapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.collmovableupdatemapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.collmovableupdatemapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.collmovableupdatemapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.collmovableupdatemapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.collmovableupdatemapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.collmovableupdatemapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.collmovableupdatemapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.collmovableupdatemapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.collmovableupdatemapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.collmovableupdatemapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.collmovableupdatemapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.collmovableupdatemapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.collmovableupdatemapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.collmovableupdatemapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.collmovableupdatemapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.collmovableupdatemapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.collmovableupdatemapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.collmovableupdatemapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.collmovableupdatemapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.collmovableupdatemapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.collmovableupdatemapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.collmovableupdatemapping.Coll_txtThirdRightInNom;
+		chd.REAL_EST_EUSE_ID = decl.collmovableupdatemapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.collmovableupdatemapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.collmovableupdatemapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.collmovableupdatemapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.collmovableupdatemapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.collmovableupdatemapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.collmovableupdatemapping.COL_PLACE;
+		chd.COL_COUNTY = decl.collmovableupdatemapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.collmovableupdatemapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.collmovableupdatemapping.COL_RESI_QUAR;
+		chd.USE_ID = decl.collmovableupdatemapping.USE_ID;
+		chd.INSPOL_IND = decl.collmovableupdatemapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.collmovableupdatemapping.Coll_txtDesc;	
+		chd.COL_HEA_ID = decl.collmovableupdatemapping.COL_HEA_ID;
+		chd.USER_LOCK_IN = decl.collmovableupdatemapping.USER_LOCK_IN;
+		chd.Coll_txtAcumBuyValue = decl.collmovableupdatemapping.Coll_txtAcumBuyValue;
+		chd.ORG_UNI_ID = decl.collmovableupdatemapping.ORG_UNI_ID;
+		chd.save_ver_aut_flag = decl.collmovableupdatemapping.save_ver_aut_flag;
+		chd.BASIC_DATA_STATUS = chds.BASIC_DATA_STATUS;			
+		chd.MORTGAGE_STATUS = chds.MORTGAGE_STATUS;
+		chd.COLL_DATA_STATUS = chds.COLL_DATA_STATUS;
+		chd.COVER_INDIC = chds.COVER_INDIC;
+		chd.COL_TYPE_ID = decl.collmovableupdatemapping.COL_TYPE_ID;
+		chd.ORIGIN_ORG_UNI_ID = chds.ORIGIN_ORG_UNI_ID; 
+		chd.ColRba_txtEligibility = decl.collmovableupdatemapping.ColRba_txtEligibility;
+		chd.KolLow_txtEligibility = decl.collmovableupdatemapping.KolLow_txtEligibility;
+		chd.Kol_txtRbaEligDsc = decl.collmovableupdatemapping.Kol_txtRbaEligDsc; 	
+        chd.SPEC_STATUS = decl.collmovableupdatemapping.SPEC_STATUS;    
+        chd.Kol_txtCRMHnb=decl.collmovableupdatemapping.Kol_txtCRMHnb;
+
+        chd.used_in_recovery = decl.collmovableupdatemapping.Coll_txtUsedInRecovery;
+        chd.kind_of_recovery = decl.collmovableupdatemapping.Coll_txtKindOfRecoveryCode;
+        chd.full_amount = decl.collmovableupdatemapping.Coll_txtFullAmountRecovery;
+        chd.full_amount_cur_id = decl.collmovableupdatemapping.CUR_ID_FULL_AMOUNT;
+        chd.recovery_amount = decl.collmovableupdatemapping.Coll_txtRecoveryAmount;
+        chd.recovery_cur_id = decl.collmovableupdatemapping.CUR_ID_RECOVERY_AMOUNT;
+        chd.recovery_comment = decl.collmovableupdatemapping.Coll_txtRecoveryComment;
+        chd.recovery_date = decl.collmovableupdatemapping.Coll_txtRecoveryDate;
+        chd.recovery_rate = decl.collmovableupdatemapping.Coll_txtRecoveryRate;
+        
+        chd.realization_amount = decl.collmovableupdatemapping.Coll_txtRealizationAmount;
+        chd.realization_cur_id = decl.collmovableupdatemapping.CUR_ID_REALIZATION_AMOUNT;
+        chd.realization_date = decl.collmovableupdatemapping.Coll_txtRealizationDate;
+        chd.realization_kind = decl.collmovableupdatemapping.Coll_txtKindOfRealization;
+        chd.realization_cost = decl.collmovableupdatemapping.Coll_txtCostRealization; 
+        
+        chd.realization_cost_cur_id=decl.collmovableupdatemapping.REALIZATION_COST_CUR_ID;
+        chd.for_sale=decl.collmovableupdatemapping.Coll_txtForSale;
+        chd.for_sale_date=decl.collmovableupdatemapping.Coll_txtForSaleDate;
+        
+        chd.b2_irb_insag_elig = decl.collmovableupdatemapping.Coll_txtB2IRB;
+        chd.b2_hnb_insag_elig = decl.collmovableupdatemapping.Coll_txtB2HNB;
+        chd.use_id_co = decl.collmovableupdatemapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.collmovableupdatemapping.Coll_txtTypeTVCode;
+        chd.prec_exec_est = decl.collmovableupdatemapping.Coll_txtAccuracyEstimatesCode;
+        chd.correct_value = decl.collmovableupdatemapping.Coll_txtFairnessValuesCode;
+        chd.respect_deadline = decl.collmovableupdatemapping.Coll_txtDeadLinesCode;
+        chd.prof_to_rba = decl.collmovableupdatemapping.Coll_txtProfByRBACode;
+        chd.prof_to_client = decl.collmovableupdatemapping.Coll_txtProfByClientCode;
+        chd.col_eco_life = decl.collmovableupdatemapping.Coll_txtEconomicLife;
+        chd.real_est_estn_int = decl.collmovableupdatemapping.Coll_txtInternalValuer;
+        chd.est_type = decl.collmovableupdatemapping.EST_TYPE_CODE;
+        chd.met_est_1 = decl.collmovableupdatemapping.Coll_txtAssessmentMethod1Code;
+        chd.met_est_2 = decl.collmovableupdatemapping.Coll_txtAssessmentMethod2Code;
+        chd.non_ins_reason = decl.collmovableupdatemapping.Coll_txtNonInsReasoneCode;
+        chd.ins_cov_coll = decl.collmovableupdatemapping.Coll_txtInsTotalCoverCode;
+        chd.recovery_proc_stat = decl.collmovableupdatemapping.Coll_txtRecoveryProcStat; 
+        chd.contract_type = decl.collmovableupdatemapping.Coll_txtContractTypeCode; 
+        
+
+	}
+	
+   private void fillDeclFromCHDObj () throws Exception{            
+        decl.collmovableupdatemapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.collmovableupdatemapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.collmovableupdatemapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.collmovableupdatemapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.collmovableupdatemapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.collmovableupdatemapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.collmovableupdatemapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.collmovableupdatemapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.collmovableupdatemapping.COL_HEA_ID);
+        decl.collmovableupdatemapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+    } 
+}	
+
+
+ 
+

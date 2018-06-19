@@ -1,0 +1,81 @@
+package hr.vestigo.modules.collateral.jcics.co39;
+
+
+/**
+ * mapping getCollateralRealEstateByNaturalKey
+ *
+*/
+public class CO396 extends AbstractLoxonRunnerData{
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co39/CO396.sqlj,v 1.8 2008/08/28 09:24:50 hraamh Exp $";
+	
+	
+	public CO396(DeclCO39 decl){
+		this.decl=decl;
+	}
+	
+	public void run() throws Exception{
+		String court=decl.getcollateralrealestatebynaturalkey.court;
+		String cadastralPlotNumber=decl.getcollateralrealestatebynaturalkey.cadastralPlotNumber;
+		String cadastralUnit=decl.getcollateralrealestatebynaturalkey.cadastralUnit;
+		String partOwnerShare=decl.getcollateralrealestatebynaturalkey.partOwnerShare;
+		String ZKUNubmer=decl.getcollateralrealestatebynaturalkey.ZKUNubmer;
+		String ZKUSubNumber=decl.getcollateralrealestatebynaturalkey.ZKUSubNumber;		
+		
+		int courtFlag=1;
+		if(isEmpty(court)){
+			courtFlag=0;
+		}
+		int cadastralPlotNumberFlag=1;
+		if(isEmpty(cadastralPlotNumber)){
+			cadastralPlotNumberFlag=0;
+		}
+		int cadastralUnitFlag=1;
+		if(isEmpty(cadastralUnit)){
+			cadastralUnitFlag=0;
+		}
+		int partOwnerShareFlag=1;
+		if(isEmpty(partOwnerShare)){
+			partOwnerShareFlag=0;
+		}
+		int ZKUNubmerFlag=1;
+		if(isEmpty(ZKUNubmer)){
+			ZKUNubmerFlag=0;
+		}
+		int ZKUSubNumberFlag=1;
+		if(isEmpty(ZKUSubNumber)){
+			ZKUSubNumberFlag=0;
+		}
+		
+		CollHeaIdIter iter=null;
+		#sql [connCtx] iter={
+			select
+				a.col_hea_id
+			from 
+				coll_restate a, 
+				coll_court b,
+				cadastre_map c
+			where
+				((:(cadastralPlotNumberFlag)=0) OR ((:(cadastralPlotNumberFlag)=1) and (a.real_est_land_part=:(cadastralPlotNumber)))) and
+				((:(ZKUNubmerFlag)=0) OR ((:(ZKUNubmerFlag)=1) AND (a.real_est_land_regn=:(ZKUNubmer)))) and
+				((:(ZKUSubNumberFlag)=0) OR ((:(ZKUSubNumberFlag)=1) AND (a.real_est_land_sub=:(ZKUSubNumber)))) and
+				((:(partOwnerShareFlag)=0) OR ((:(partOwnerShareFlag)=1) AND (a.coown=:(partOwnerShare)))) and
+				a.real_est_court_id=b.co_id  and
+				((:(courtFlag)=0) OR ((:(courtFlag)=1) AND (b.co_name=:(court)))) and
+				a.real_est_cada_munc=c.cad_map_id and
+				((:(cadastralUnitFlag)=0) OR ((:(cadastralUnitFlag)=1) AND (c.name=:(cadastralUnit))))
+		};
+		
+		if(iter!=null){
+			while(iter.next()){
+				getRunner().gatherByColHeaId(iter.col_hea_id());
+			}
+		}
+	}
+	
+	protected  DeclLoxonMappingInterface getMappingDecl(){
+		return (decl.getcollateralrealestatebynaturalkey);
+	}
+	
+	
+}

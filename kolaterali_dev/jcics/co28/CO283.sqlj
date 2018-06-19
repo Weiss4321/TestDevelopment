@@ -1,0 +1,142 @@
+package hr.vestigo.modules.collateral.jcics.co28;
+  
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+ 
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+ 
+#sql iterator Iter283 (
+    String cus_acc_no,
+    String contract_no,
+    String dwh_status,
+    String status,
+    String frame_acc_no,
+    String cur_code_char,
+    BigDecimal exposure_amount,
+    Date exposure_date,
+    String request_no
+);
+
+public class CO283 extends RemoteTransaction{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co28/CO283.sqlj,v 1.1 2011/05/20 07:22:43 hramkr Exp $";
+    private DeclCO28 d = null;
+    public CO283(DeclCO28 d) {
+        this.d = d;
+    }
+     
+    
+    public void execute(TransactionContext tc) throws Exception {
+
+        ConnCtx ctx = tc.getContext();
+        
+        Iter283 iter283=null;
+        #sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+        tc.debug("[d.kolcusaccexpselectm.CusAcc_txt ] " + d.kolcusaccexpselectm.CusAcc_txt);
+        tc.debug("[d.kolcusaccexpselectm.Customer_Id ] " + d.kolcusaccexpselectm.Customer_Id);
+        if (d.kolcusaccexpselectm.CusAcc_txt!= null) {
+            if (d.kolcusaccexpselectm.CusAcc_txt.equals("")) {
+                d.kolcusaccexpselectm.CusAcc_txt = null;
+            }else{
+                d.kolcusaccexpselectm.CusAcc_txt = d.kolcusaccexpselectm.CusAcc_txt.replace('*','%');
+            }
+        } 
+        tc.debug("[d.kolcusaccexpselectm.CusAcc_txt ] " + d.kolcusaccexpselectm.CusAcc_txt);
+        tc.debug("[d.kolcusaccexpselectm.Customer_Id ] " + d.kolcusaccexpselectm.Customer_Id);        
+        if (d.kolcusaccexpselectm.Customer_Id != null && d.kolcusaccexpselectm.CusAcc_txt == null) {
+            tc.debug("[ZADAN KOMITENT] " + d.kolcusaccexpselectm.Customer_Id);
+ 
+            #sql [ctx] iter283 = {    
+                    SELECT
+                        a.cus_acc_no as cus_acc_no,
+                        a.contract_no as contract_no,
+                        a.cus_acc_status as dwh_status,
+                        a.cus_acc_orig_st as status,
+                        a.frame_cus_acc_no as frame_acc_no,
+                        b.code_char as cur_code_char,
+                        a.exposure_balance as exposure_amount,
+                        a.exposure_date as exposure_date,
+                        a.request_no as request_no
+                    FROM cusacc_exposure a, currency b
+                    WHERE
+                        a.cus_id = :(d.kolcusaccexpselectm.Customer_Id)
+                    and
+                        a.exposure_cur_id = b.cur_id
+                    ORDER BY 3
+                    with ur
+            };            
+        } else if (d.kolcusaccexpselectm.Customer_Id == null && d.kolcusaccexpselectm.CusAcc_txt != null) {
+            tc.debug("[ZADANA PARTIJA] " + d.kolcusaccexpselectm.CusAcc_txt);
+            #sql [ctx] iter283 = {    
+                        SELECT
+                            a.cus_acc_no as cus_acc_no,
+                            a.contract_no as contract_no,
+                            a.cus_acc_status as dwh_status,
+                            a.cus_acc_orig_st as status,
+                            a.frame_cus_acc_no as frame_acc_no,
+                            b.code_char as cur_code_char,
+                            a.exposure_balance as exposure_amount,
+                            a.exposure_date as exposure_date,
+                            a.request_no as request_no
+                        FROM cusacc_exposure a, currency b
+                        WHERE
+                            a.cus_acc_no like :(d.kolcusaccexpselectm.CusAcc_txt)
+                        and
+                            a.exposure_cur_id = b.cur_id
+                        with ur
+            };
+        } else if(d.kolcusaccexpselectm.Customer_Id != null && d.kolcusaccexpselectm.CusAcc_txt != null) {
+            tc.debug("[ZADAN KOMITENT I PARTIJA] " + d.kolcusaccexpselectm.Customer_Id+ "--" +d.kolcusaccexpselectm.CusAcc_txt);
+            #sql [ctx] iter283 = {    
+                    SELECT
+                        a.cus_acc_no as cus_acc_no,
+                        a.contract_no as contract_no,
+                        a.cus_acc_status as dwh_status,
+                        a.cus_acc_orig_st as status,
+                        a.frame_cus_acc_no as frame_acc_no,
+                        b.code_char as cur_code_char,
+                        a.exposure_balance as exposure_amount,
+                        a.exposure_date as exposure_date,
+                        a.request_no as request_no
+                    FROM cusacc_exposure a, currency b
+                    WHERE
+                        a.cus_id = :(d.kolcusaccexpselectm.Customer_Id)
+                    and
+                        a.cus_acc_no like :(d.kolcusaccexpselectm.CusAcc_txt)
+                    and
+                        a.exposure_cur_id = b.cur_id
+                    ORDER BY 3
+                    with ur
+            };            
+        } 
+ 
+        while (iter283.next()){
+            tc.debug("[PUNIM TABELU] " );            
+            Vector row=new Vector(); 
+        
+            row.add(iter283.cus_acc_no());                        
+            row.add(iter283.contract_no());
+            row.add(iter283.dwh_status());                        
+            row.add(iter283.status());
+            row.add(iter283.frame_acc_no());                        
+            row.add(iter283.cur_code_char());
+            row.add(iter283.exposure_amount());                        
+            row.add(iter283.exposure_date());
+            row.add(iter283.request_no());                        
+                 
+            d.kolcusaccexpselectm.CusAcc_tbl.addRow(row,"");              
+       }            
+
+       if(iter283!=null) {
+            try {
+                iter283.close();
+            } catch (Exception ignored) {}
+        }
+    }
+}
+  

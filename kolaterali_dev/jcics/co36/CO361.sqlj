@@ -1,0 +1,95 @@
+package hr.vestigo.modules.collateral.jcics.co36;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+#sql iterator CollAmortWorkupsIter ( 
+						String col_pro_id,
+						Date proc_date,	
+						String proc_status,
+						BigDecimal col_number,
+						String user_name,
+						Date proc_ts
+			);	
+
+
+//dohvaca podatke o svim izvrsenim amortizacijama
+public class CO361 extends SQLJScrollableRemoteTransaction{
+
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co36/CO361.sqlj,v 1.5 2012/02/27 12:56:53 hramkr Exp $";
+
+    public DeclCO36 decl = null;
+
+
+    private CollAmortWorkupsIter iter = null; 
+
+    public CO361(DeclCO36 decl){
+        this.decl = decl;
+    }
+
+/**
+*
+*/ 
+
+    public void executeScrollable(TransactionContext tc) throws Exception {
+    	setLevel(decl.ActionListLevel);
+    	setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+    	ConnCtx ctx = tc.getContext();
+    
+    	#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+    
+    	tc.debug("1 .tu sam ");
+    	#sql [ctx] iter = {
+		SELECT 
+				a.col_pro_id, a.proc_date, a.proc_status, a.col_number, b.user_name, a.proc_ts
+		FROM
+				col_proc a,  app_user b
+		WHERE	
+				a.proc_type IN ('A','ARN','ARV') and
+				a.proc_status = '1' and
+				a.use_id =b.use_id
+		ORDER BY
+				2 desc
+
+    	};		
+    
+    } 
+
+    public boolean next() throws Exception {
+        return iter.next();
+    }
+
+    public void close() {
+    	if(iter!=null) {
+    		try {
+    			iter.close();
+    	} catch (Exception ignored) {}
+    	}
+    }
+
+    public void populateRowData() throws Exception {
+    	Vector row = new Vector();
+    	Vector hiddenRow = new Vector();
+    	//atributi koji se prikazuju u listi
+    
+    	row.add(iter.proc_date());
+    	row.add(iter.proc_status());
+    	row.add(iter.col_number());		
+    	row.add(iter.user_name());
+    	row.add(iter.proc_ts());
+    
+    	//skriveni atributi
+    
+    	hiddenRow.add(iter.col_pro_id());
+    
+    	decl.tblCollAmortWorkups.addRow(row,hiddenRow);
+    
+    }
+
+}

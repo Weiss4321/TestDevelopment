@@ -1,0 +1,94 @@
+package hr.vestigo.modules.collateral.jcics.coA0;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+import java.sql.Date;
+
+
+/**
+ *  * @author hramkr
+ *  	
+ */     
+public class COA01 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA0/COA01.sqlj,v 1.4 2014/10/07 10:54:19 hrazst Exp $";
+
+	public DeclCOA0 decl = null;
+
+	public COA01 (DeclCOA0 decl) {
+		this.decl = decl;
+	}
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		 
+		// ako postoji vazeci slog za poslani ponder treba ga deaktivirati 
+        Integer broj = new Integer(1);
+        
+		Date date_until = DateUtils.addOrDeductDaysFromDate(decl.Mvp_txtFrom, broj, false);
+		tc.debug("date_until : " + date_until);
+		 
+		try {
+			#sql [ctx]{
+				UPDATE coll_ponder
+				SET		
+					status			= 'N',
+					date_until		= :(date_until)
+				WHERE
+					col_hea_id = :(decl.Mvp_col_hea_id) AND ponder_type = :(decl.PONDER_TYPE)   
+				AND
+					status = 'A'
+				};  
+  
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+		}	
+		// insert novog sloga
+		YOY00 id_generator = new YOY00(ctx);
+		BigDecimal id = id_generator.getNewId();
+		tc.debug("dohvat id : " + id);			
+		// statusi. inicijalne vrijednosti 
+		decl.Mvp_txtUntil = Date.valueOf("9999-12-31");
+
+		try{	
+
+		    #sql [ctx]{   
+					INSERT INTO coll_ponder
+					(
+							col_pon_id,
+							col_hea_id,
+							ponder_type,
+							ponder_value,
+							status,
+							date_from,
+							date_until,
+							org_uni_id,
+							use_id,
+							create_ts)
+					VALUES(
+							:(id),    													                                                
+							:(decl.Mvp_col_hea_id),
+ 							:(decl.PONDER_TYPE), 	
+							:(decl.Mvp_txtNewValue),
+							'A',
+							:(decl.Mvp_txtFrom), 	
+							:(decl.Mvp_txtUntil),                   
+							:(decl.Mvp_org_uni_id),
+							:(decl.Mvp_use_id),
+							current timestamp)
+					};
+		}catch(SQLException se){
+			tc.debug ( "......COA01.sqlj insert into coll_ponder SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......COA01.sqlj insert into coll_ponder SQL SQLState " + se.getSQLState());
+			tc.debug ( "......COA01.sqlj insert into coll_ponder SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction COA01: Error inserting coll_ponder! ","err411a", null);
+		}
+	}
+}	 
+			

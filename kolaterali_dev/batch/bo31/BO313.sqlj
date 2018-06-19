@@ -1,0 +1,225 @@
+package hr.vestigo.modules.collateral.batch.bo31;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+ 
+/**
+ * SQLJ za garancije.
+ * @author hrakis
+ */
+public class BO313 extends ReportData
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo31/BO313.sqlj,v 1.18 2015/09/24 14:19:20 hrakis Exp $";
+    
+    #sql iterator GarancijeIterator with (holdability = true)(
+        Date datum_do_kada_vrijedi_garancija,
+        BigDecimal ISSUER_ID,
+        String id_izdavatelja, 
+        String naziv_izdavatelja,
+        String coconut_izdavatelja,
+        String rating_izdavatelja,
+        String respiro_period,
+        Date respiro_datum,
+        String broj_garancije,
+        String valutna_klauzula,
+        String amortizirajuca,
+        String na_prvi_poziv,
+        String vanjski_rating,
+        BigDecimal postotak_definiran_od_strane_garantora,
+        String iznos_garancije_je_odredjen_visinom_plasmana,
+        String drzava_izdavatelja,
+        String zbk_status_izdavatelja,
+        String b2_asset_class_izdavatelja
+    );
+    
+
+    public boolean hasMortgage()
+    {
+        return false;
+    }
+    
+    public String getFileName()
+    {
+        return "Garancije";
+    }
+    
+    public void setColumns()
+    {
+        // IZVJEŠTAJ 1
+        int idx = 0;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.iznos_garancije);
+        columns.get(idx).add(OutputData.valuta);
+        columns.get(idx).add(OutputData.tip);
+        columns.get(idx).add(OutputData.id_izdavatelja);
+        columns.get(idx).add(OutputData.zbk_status_izdavatelja);
+        columns.get(idx).add(OutputData.naziv_izdavatelja);
+        columns.get(idx).add(OutputData.coconut_izdavatelja);
+        columns.get(idx).add(OutputData.rating_izdavatelja);
+        columns.get(idx).add(OutputData.vanjski_rating);
+        columns.get(idx).add(OutputData.drzava_izdavatelja);
+        columns.get(idx).add(OutputData.datum_trzisne_vrijednosti_datum_nom_vrijed_c_o);
+        columns.get(idx).add(OutputData.datum_do_kada_vrijedi_garancija);
+        columns.get(idx).add(OutputData.respiro_period);
+        columns.get(idx).add(OutputData.respiro_datum);
+        columns.get(idx).add(OutputData.broj_garancije);
+        columns.get(idx).add(OutputData.valutna_klauzula);
+        columns.get(idx).add(OutputData.amortizirajuca);
+        columns.get(idx).add(OutputData.na_prvi_poziv);
+        columns.get(idx).add(OutputData.upisano_pravo_banke);
+        columns.get(idx).add(OutputData.vrsta_trzisne_vrijednosti);
+        columns.get(idx).add(OutputData.ces_ponder_prijedlog);
+        columns.get(idx).add(OutputData.coll_officer);
+        columns.get(idx).add(OutputData.vrsta_izdavatelja);
+        columns.get(idx).add(OutputData.obrada);
+        columns.get(idx).add(OutputData.b2_guarantee_value_b2wgv_to_the_loan);
+        columns.get(idx).add(OutputData.b2_allocated_guarantee_value);
+        columns.get(idx).add(OutputData.postotak_definiran_od_strane_garantora);
+        columns.get(idx).add(OutputData.iznos_garancije_je_odredjen_visinom_plasmana);
+        columns.get(idx).add(OutputData.weighted_guarantee_value_wgv);
+        
+        // IZVJEŠTAJ 2
+        idx = 1;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.iznos_garancije);
+        columns.get(idx).add(OutputData.valuta);
+        columns.get(idx).add(OutputData.misljenje_pravne_sluzbe);
+        columns.get(idx).add(OutputData.ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.hnb_ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.prihv_za_rezervacije);
+        columns.get(idx).add(OutputData.b2_hnb_stand_prihvatljivost);
+        columns.get(idx).add(OutputData.b2_irb_prihvatljivost);
+        columns.get(idx).add(OutputData.rba_prihvatljivost);
+        columns.get(idx).add(OutputData.nd_prihvatljivost);
+        columns.get(idx).add(OutputData.omega_id_korisnika_plasmana);
+        columns.get(idx).add(OutputData.zbk_status_korisnika_plasmana);
+        columns.get(idx).add(OutputData.naziv_korisnika_plasmana);
+        columns.get(idx).add(OutputData.partija_plasmana);
+        columns.get(idx).add(OutputData.plasman_osiguran);
+        columns.get(idx).add(OutputData.osiguravatelj);
+        columns.get(idx).add(OutputData.broj_zahtjeva);
+        columns.get(idx).add(OutputData.broj_zahtjeva_aps);
+        columns.get(idx).add(OutputData.broj_ugovora);
+        columns.get(idx).add(OutputData.valuta_izlozenosti);
+        columns.get(idx).add(OutputData.izlozenost_po_plasmanu);
+        columns.get(idx).add(OutputData.datum_izlozenosti);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_plasmana);
+        columns.get(idx).add(OutputData.dwh_status_plasmana);
+        columns.get(idx).add(OutputData.originalni_status_plasmana);
+        columns.get(idx).add(OutputData.datum_dospijeca_plasmana);
+        columns.get(idx).add(OutputData.sifra_liste_na_kojoj_se_nalazi_kolateral);
+        columns.get(idx).add(OutputData.login_referenta);
+        columns.get(idx).add(OutputData.ime_referenta);
+        columns.get(idx).add(OutputData.sifra_oj_referenta);
+        columns.get(idx).add(OutputData.naziv_oj_referenta);
+        columns.get(idx).add(OutputData.datum_unosa);
+        columns.get(idx).add(OutputData.datum_zadnje_promjene);
+        columns.get(idx).add(OutputData.unos_plasmana);
+        columns.get(idx).add(OutputData.im_suduznika);
+        columns.get(idx).add(OutputData.naziv_suduznika);
+        columns.get(idx).add(OutputData.uloga_suduznika);
+        columns.get(idx).add(OutputData.wcov_orig_valuta);
+        columns.get(idx).add(OutputData.kol_ponder_dfl);
+        columns.get(idx).add(OutputData.kolateral_ponder_co);
+        columns.get(idx).add(OutputData.realan_ponder);
+        columns.get(idx).add(OutputData.wcov);
+        columns.get(idx).add(OutputData.iskoristenost_garancije_wga);
+        columns.get(idx).add(OutputData.vrsta_ugovora);
+        columns.get(idx).add(OutputData.collateral_code_gctc_kolaterala);
+        columns.get(idx).add(OutputData.endorsement_type_gctc);
+        columns.get(idx).add(OutputData.object_type_gctc);
+        columns.get(idx).add(OutputData.property_type_gctc);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_local_level);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_group_level);
+        columns.get(idx).add(OutputData.suma_hipoteka_viseg_reda_do_prve_rba);
+        columns.get(idx).add(OutputData.raspoloziva_neponderirana_vrijednost);
+        columns.get(idx).add(OutputData.datum_izracuna_raspolozive_vrijednosti);
+    }
+
+    
+    public void selectAdditionalData(HashMap data, Date value_date, YRXX0 yrxx0) throws Exception
+    {
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        
+        data.put(OutputData.iznos_garancije, data.get(OutputData.trzisna_vrijednost));
+        data.put(OutputData.valuta, data.get(OutputData.valuta_procijenjene_vrijednosti));
+        
+        try
+        {
+            bc.startStopWatch("BO313.selectAdditionalData#basic");
+            
+            GarancijeIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    e.guar_datn_unti        AS datum_do_kada_vrijedi_garancija,
+                    e.guar_issuer_id        AS ISSUER_ID,
+                    e.guar_iss_regno        AS id_izdavatelja, 
+                    e.guar_issuer           AS naziv_izdavatelja,
+                    e.cocunut               AS coconut_izdavatelja,
+                    e.rating                AS rating_izdavatelja,
+                    e.respiro               AS respiro_period,
+                    e.respiro_date          AS respiro_datum,
+                    e.guar_no               AS broj_garancije,
+                    e.cur_ind               AS valutna_klauzula,
+                    e.amort_ind             AS amortizirajuca,
+                    e.first_call            AS na_prvi_poziv,
+                    e.ext_rating            AS vanjski_rating,
+                    e.guarantor_perc        AS postotak_definiran_od_strane_garantora,
+                    e.guar_amo_exp_flg      AS iznos_garancije_je_odredjen_visinom_plasmana,
+                    m.name                  AS drzava_izdavatelja,
+                    n.status                AS zbk_status_izdavatelja,
+                    n.basel_cus_type        AS b2_asset_class_izdavatelja
+                FROM coll_guarantee e
+                LEFT OUTER JOIN country m   ON e.guar_cou_id = m.cou_id
+                LEFT OUTER JOIN customer n  ON e.guar_issuer_id = n.cus_id
+                WHERE e.col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY      
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                fillDataFromIterator(iter, data, OutputData.class);
+            }
+            
+            bc.stopStopWatch("BO313.selectAdditionalData#basic");
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o garanciji! " + data.toString(), ex);
+            throw ex;
+        }
+        
+        bc.startStopWatch("BO313.selectAdditionalData#issuer");
+        String b2_asset_class_izdavatelja = (String)data.get(OutputData.b2_asset_class_izdavatelja);
+        String vrsta_izdavatelja = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT map_out_desc
+                INTO :(vrsta_izdavatelja)
+                FROM mapping_sch
+                WHERE map_type = 'b2_issuer_type'
+                AND map_in_cod1 = :(b2_asset_class_izdavatelja)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata vrste izdavatelja (B2 ASSET CLASS=" + b2_asset_class_izdavatelja + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }
+        data.put(OutputData.vrsta_izdavatelja, vrsta_izdavatelja);
+        bc.stopStopWatch("BO313.selectAdditionalData#issuer");
+    }
+}

@@ -1,0 +1,612 @@
+package hr.vestigo.modules.collateral.jcics.co03;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoyA.*;
+import hr.vestigo.modules.collateral.common.yoyE.YOYE1;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+import java.sql.Timestamp;
+import java.math.BigDecimal;
+
+
+import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.Vector;
+import java.sql.Date;
+import java.lang.reflect.Field;
+import hr.vestigo.modules.rba.util.*;
+
+/**
+ * CO003 class insert data into table COLL_HF_PRIOR	
+ *  	
+ */  
+public class CO032 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co03/CO032.sqlj,v 1.49 2015/05/28 11:25:26 hrazst Exp $";
+	
+	public DeclCO03 decl = null;
+	
+	private YXYB0 yxyB = null;
+	
+	Timestamp OpeningTs = null;
+	Timestamp UserLock = null;
+	
+	BigDecimal teretiRbaHfsValue = new BigDecimal("0.00");
+	BigDecimal tudiTeretiThirdRightNom = new BigDecimal("0.00");
+	BigDecimal pocteretiRbaHfsValue = new BigDecimal("0.00");
+	BigDecimal poctudiTeretiThirdRightNom = new BigDecimal("0.00");
+	BigDecimal zeroNumber =  new BigDecimal("0.00");
+	BigDecimal sumPrecedingHfAmount = new BigDecimal("0.00");
+	int precedingMaxIntPriority = 0;
+	
+	BigDecimal collWorthCO = zeroNumber; //vrijednost kolaterala koju je upisao collateral officer
+	BigDecimal residuecollWorthCO = new BigDecimal("0.00"); //Ostatak od collWorthCO = collWorthCO - suma ( prethodnih hipoteka na kolateralu)
+	
+	//Npr ako je collWorthCO 500.000,00 EUR
+	//a na kolateralu su upisane hipoteke 
+	// 30.000,00 EUR
+	// 80.000,00 EUR
+	// 120.000,00 EUR
+	// 50.000,00 EUR
+	//onda ce se u rem_re_nomi_valu upisivati redom
+	//500.000,00 EUR
+	//470.000,00
+	//390.000,00
+	//270.000,00
+	
+    BigDecimal coll_cur_id = null;	            
+
+	public CO032 (DeclCO03 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+	    ConnCtx ctx = tc.getContext();
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();				
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		
+		String maxPriority = null;
+		int maxIntPriority = 0;
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();  //COLATERAL_IDN
+	
+		java.sql.Date todaySQLDate = null;
+		hr.vestigo.modules.coreapp.common.yxyB.YXYB0 yxyBobj  = new hr.vestigo.modules.coreapp.common.yxyB.YXYB0(tc);
+		//insert into event
+		java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+		long timeT = calendar.getTime().getTime();
+		todaySQLDate = new java.sql.Date(timeT);
+		
+		BigDecimal eve_id = null;
+		BigDecimal eve_typ_id =  new BigDecimal("1602718003.0");		
+		
+		BigDecimal rigtInFavourRba = new BigDecimal ("1602772003.0");
+		BigDecimal rigtInFavourThird = new BigDecimal ("1602773003.0");
+		
+		if(decl.chpdinsmap.CUR_ID_REF==null || decl.chpdinsmap.CollHfPriorDialog_txtAmountRef==null){
+		    throw new VestigoTMException(1, "Transaction CO003: Error inserting coll_hf_prior CUR_ID_REF==null ili decl.chpdinsmap.CollHfPriorDialog_txtAmountRef==null ! ","infzstColl11", null);    
+		}
+				
+		try{
+			java.util.HashMap event = new java.util.HashMap();
+			event.put("eve_typ_id", eve_typ_id);
+			event.put("event_date", todaySQLDate);
+			event.put("cmnt", "Insert into coll_hf_prior");
+			event.put("use_id",decl.chpdinsmap.USE_ID);
+			event.put("ext_event_code", null);
+			event.put("ext_event_num", null);
+			event.put("bank_sign", tc.getBankSign());
+			eve_id = yxyBobj.insertEventWithGeneratedId(event);
+		}catch(java.sql.SQLException e){
+			tc.debug (".......CO032.sqlj ..... Insert into event unsuccessful.");
+			tc.debug ( "......CO032.sqlj insert into event  SQL ErrorCode " + e.getErrorCode());
+			tc.debug ( "......CO032.sqlj insert into event  SQL SQLState " + e.getSQLState());
+			tc.debug ( "......CO032.sqlj insert into event  SQL Message " + e.getMessage());
+			e.printStackTrace();
+			throw e;
+		}			
+		decl.chpdinsmap.COLL_HF_PRIOR_ID = collaterall_id;	
+		tc.debug("..........EVE_ID je " + eve_id);
+		
+		tc.debug("\n.............ISPIS DECL MAPPINGA chpdinsmap POCETAK.............");	
+		Field[] fields=decl.chpdinsmap.getClass().getDeclaredFields();
+		StringBuffer var=new StringBuffer();
+		for (int i=0;i<fields.length;i++) {
+    	    try {    	        
+    	        var.append("\n" + fields[i].getName() + "=" + fields[i].get(decl.chpdinsmap) + ",");
+    	      } catch ( IllegalAccessException ex ) {
+    	        tc.debug("Greska pri ispisu decl varijable...");
+    	      }
+        }
+		tc.debug("DECL chpdinsmap VARIJABLE=" + var.toString());
+		tc.debug("\n.............ISPIS DECL MAPPINGA chpdinsmap KRAJ.............");
+		
+		try{
+			#sql [ctx]{
+		        SELECT coalesce(third_right_nom,0.00), coalesce(hfs_value,0.00), real_est_nm_cur_id   
+				INTO :poctudiTeretiThirdRightNom, :pocteretiRbaHfsValue, :coll_cur_id
+				FROM coll_head
+				WHERE col_hea_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID)
+		    };	 	
+	 	}catch(java.sql.SQLException sel){	 		       
+	 		throw new VestigoTMException(1, "Transaction CO003: Error inserting coll_hf_prior! ","err411a", null);     
+	 	}
+	 	
+	 	try{
+        	#sql [ctx]{
+				SELECT max(hf_priority)  INTO :maxPriority
+				FROM coll_hf_prior
+				WHERE hf_coll_head_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID) AND hf_status = 'A'
+			};
+        	tc.debug("Maksimalni prioritet INICIJALNO DOHVACEN  AA: " + maxPriority );	
+        	if(maxPriority == null){
+        		maxPriority = "0";
+        	}        	
+	 	}catch(java.sql.SQLException sel){        	
+        	tc.debug("DOGODILA SE SQL GRESKA U CO032.sqlj  " );
+        	if (sel.getErrorCode()==100){
+        		 maxPriority = "0";
+        	} else {
+        		tc.debug ( "......CO032.sqlj SELECT max(hf_priority) FROM coll_hf_prior SQL ErrorCode " + sel.getErrorCode());
+        		tc.debug ( "......CO032.sqlj SELECT max(hf_priority) FROM coll_hf_prior SQL SQLState " + sel.getSQLState());
+        		tc.debug ( "......CO032.sqlj SELECT max(hf_priority) FROM coll_hf_prior SQL Message " + sel.getMessage());
+        		throw new VestigoTMException(1, "Transaction CO003: Error inserting coll_hf_prior! ","err411a", null);
+        	}        
+        }			    
+		
+		if(maxPriority != null){
+			maxPriority = maxPriority.trim();
+			tc.debug("Maksimalni prioritet razlicit od null je " + maxPriority );
+			try{
+				maxIntPriority = Integer.parseInt(maxPriority);
+				maxIntPriority++;
+			}catch(NumberFormatException e){}
+		}		
+		maxPriority=StringUtils.generateStringWithLeadingZeros(""+maxIntPriority, 2);		
+		//Odredivanje prioriteta hipoteke koja je prethodno upisana 25.09.2006
+		if(maxIntPriority > 0){
+			precedingMaxIntPriority = maxIntPriority - 1;
+		}		
+		//ako je precedingMaxIntPriority == 0 znaci nema jos upisane niti jedne hipoteke 25.09.2006		
+        tc.debug("Maksimalni INT prioritet maxIntPriority je " + maxIntPriority );						  
+        tc.debug("precedingMaxIntPriority prioritet je " + precedingMaxIntPriority );						
+		
+        //  Dohvaca vrijednost kolaterala koju je dao collateral officer  25.09.2006
+		try{
+			#sql [ctx]{
+				SELECT coalesce(real_est_nomi_valu,0.00)  INTO :collWorthCO
+				FROM coll_head
+				WHERE col_hea_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID)
+			};			
+		}catch(java.sql.SQLException sel){			
+			tc.debug("DOGODILA SE SQL GRESKA U CO032.sqlj  " );
+			if (sel.getErrorCode()==100){	 
+			} else {
+				tc.debug ( "......CO032.sqlj SELECT real_est_nomi_valu FROM coll_head SQL ErrorCode " + sel.getErrorCode());
+				tc.debug ( "......CO032.sqlj SELECT real_est_nomi_valu FROM coll_head SQL SQLState " + sel.getSQLState());
+				tc.debug ( "......CO032.sqlj SELECT real_est_nomi_valu FROM coll_head SQL Message " + sel.getMessage());
+				throw new VestigoTMException(1, "Transaction CO003: Error getting real_est_nomi_valu from coll_head! ","err411a", null);
+			}
+		}	
+		//Dohvat sume prethodno upisanih hipoteka 26.09.2006
+		if(precedingMaxIntPriority == 0){
+			sumPrecedingHfAmount = zeroNumber;		
+		}else{			
+			try{
+				#sql [ctx]{
+					SELECT sum(hf_amount)  INTO :sumPrecedingHfAmount
+					FROM coll_hf_prior
+					WHERE hf_coll_head_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID)
+					AND hf_status = 'A'
+					AND hf_priority <> 'NA'
+					AND int(hf_priority) <= :precedingMaxIntPriority
+				};
+			}catch(java.sql.SQLException sel){
+				tc.debug("DOGODILA SE SQL GRESKA U CO032.sqlj  " );
+				if (sel.getErrorCode()==100){	 
+				} else {
+					tc.debug ( "......CO032.sqlj SELECT sum(hf_amount) FROM coll_hf_prior SQL ErrorCode " + sel.getErrorCode());
+					tc.debug ( "......CO032.sqlj SELECT sum(hf_amount) FROM coll_hf_prior SQL SQLState " + sel.getSQLState());
+					tc.debug ( "......CO032.sqlj SELECT sum(hf_amount) FROM coll_hf_prior SQL Message " + sel.getMessage());
+					throw new VestigoTMException(1, "Transaction CO003: Error getting sum(hf_amount) from coll_hf_prior! ","err411a", null);
+				}
+			}
+		}
+		//Izracun preostale vrijednosti kolaterala za hipoteku 26.09.2006
+		residuecollWorthCO = collWorthCO.subtract(sumPrecedingHfAmount);		
+		tc.debug("INSERT ZA SPORAZUM: " + decl.chpdinsmap.fra_agr_id );		 
+		
+
+		//INSERT INTO coll_hf_prior		
+        try{			
+        	#sql [ctx]{
+					INSERT INTO coll_hf_prior
+							(	
+							 	coll_hf_prior_id, 
+								hf_table_id ,      
+								hf_ref_id , 
+								hf_coll_head_id,
+								hf_own_cus_id ,    
+								hf_register_no,    
+								hf_own_code,       
+								hf_own_fname,      
+								hf_own_lname,      
+								hf_hfc_id ,        
+								hf_priority ,      
+								hf_notary_agr,     
+								hf_notary_place_id,
+								hf_notary_date ,   
+								hf_notary,         
+								hf_not_fname,      
+								hf_not_lname,      
+								hf_date_reciv ,    
+								hf_court_decis,    
+								hf_date_extract,  
+								land_regn,
+								land_regn_new,
+								judge_id,
+								judge_fname,
+								judge_lname,
+								court_id,
+								hf_offi_lrd ,      
+								hf_offilrd_fname,  
+								hf_offilrd_lname , 
+								hf_rec_lop_id,
+								hf_add_data ,          
+								hf_amount,        
+								hf_cur_id , 
+								amount_ref , 			
+								cur_id_ref , 			
+								exc_rat_ref ,     
+								exc_rat_ref_date ,
+								hf_draw_amo,
+								hf_date_hfc_from ,
+								hf_date_hfc_until,
+								hf_avail_amo , 
+								hf_draw_amo_ref,
+								avail_amo_ref,
+								hf_avail_dat,
+								draw_bamo,    
+								avail_bamo ,   	
+								draw_bamo_ref ,  
+								avail_bamo_ref , 
+								avail_bdat , 
+								val_date_turn,    
+								val_date_proc,    
+								hf_status ,       
+								hf_spec_stat,     
+								hf_date_from ,    
+								hf_date_until,    
+								use_open_id,      
+								use_id ,          
+								opening_ts,       
+								user_lock ,       
+								eve_id ,          
+								bank_sign ,
+								how_cover,
+								is_part_agreem,
+								rem_re_nomi_valu,
+								rec_lop,
+								date_to_lop,
+								date_rec_lop,
+								veh_con_num,
+								agreement, 
+								fra_agr_id,
+								reg_ins ,
+								reg_place ,
+								con_num ,
+								con_date ,
+								reg_cou_id,
+                                sindic_ind,
+                                hbor_loan,
+                                rba_arang_sindic,
+                                rba_sindic_part,
+                                other_sindic_part,
+                                rba_sindic_amount,
+                                other_sindic_amount,
+                                sindic_desc,
+                                other_syndicate_cus_id,
+                                total_sindic_amount
+                                )
+					        VALUES( 		
+                                    :collaterall_id,   
+									:(decl.chpdinsmap.HF_TABLE_ID),           
+									:(decl.chpdinsmap.HF_REF_ID),
+									:(decl.chpdinsmap.HF_COLL_HEAD_ID),
+									:(decl.chpdinsmap.HF_OWN_CUS_ID),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfRegisterNo),            
+             						:(decl.chpdinsmap.CollHfPriorDialog_txtHfOwnCode),  
+                  					:(decl.chpdinsmap.CollHfPriorDialog_txtHfOwnFname),         
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfOwnLname),
+									:(decl.chpdinsmap.HF_HFC_ID), 
+									:maxPriority,  
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfNotaryAgr),  
+               						:(decl.chpdinsmap.HF_NOTARY_PLACE_ID), 
+               						:(decl.chpdinsmap.CollHfPriorDialog_txtHfNotaryDate),   
+               						:(decl.chpdinsmap.HF_NOTARY),  
+   									:(decl.chpdinsmap.CollHfPriorDialog_txtHfNotFname),  
+      								:(decl.chpdinsmap.CollHfPriorDialog_txtHfNotLname), 
+               						:(decl.chpdinsmap.CollHfPriorDialog_txtHfDateReciv),  
+                  					:(decl.chpdinsmap.CollHfPriorDialog_txtHfCourtDecis),  
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfDateExtract), 
+									:(decl.chpdinsmap.CollHfPriorDialog_txtLandRegn),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtLandRegnNew),
+									:(decl.chpdinsmap.CollHfPriorDialog_JUDGE_ID),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtJudgeFname),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtJudgeLname),
+									:(decl.chpdinsmap.CollHfPriorDialog_COURT_ID),
+               						:(decl.chpdinsmap.HF_OFFI_LRD),  
+          							:(decl.chpdinsmap.CollHfPriorDialog_txtHfOffildFname),  
+         							:(decl.chpdinsmap.CollHfPriorDialog_txtHfOffildLname), 
+               						:(decl.chpdinsmap.HF_REC_LOP_ID), 
+               						:(decl.chpdinsmap.CollHfPriorDialog_txtHfAddData),
+               						:(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount),  
+                  					:(decl.chpdinsmap.HF_CUR_ID), 
+									:(decl.chpdinsmap.CollHfPriorDialog_txtAmountRef),
+									:(decl.chpdinsmap.CUR_ID_REF),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtExcRatRef),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtExcRatRefDate),
+									:zeroNumber,
+               						:(decl.chpdinsmap.CollHfPriorDialog_txtHfDateHfcFrom),  
+                  					:(decl.chpdinsmap.CollHfPriorDialog_txtHfDateHfcUntil),  
+                 					:(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount), 
+									:zeroNumber,
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfAvailAmoRef),
+        							:(decl.chpdinsmap.CollHfPriorDialog_txtHfAvailDat),
+        							:zeroNumber,
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfAvailBAmo),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfDrawBAmoRef),
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfAvailBAmoRef),	
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfAvailBDat),
+									null,
+									null,
+									'A',
+               						'00' ,
+               						:(decl.chpdinsmap.CollHfPriorDialog_txtHfDateFrom ),         
+									:(decl.chpdinsmap.CollHfPriorDialog_txtHfDateUntil ), 
+									:(decl.chpdinsmap.USE_OPEN_ID),
+									:(decl.chpdinsmap.USE_ID),  
+									current timestamp,
+									current timestamp,
+									:eve_id,
+									:(tc.getBankSign()) ,
+									:(decl.chpdinsmap.CollHfPrior_HOW_COWER ),         
+									:(decl.chpdinsmap.CollHfPrior_txtIsPartAgreem ),
+									:residuecollWorthCO,
+									:(decl.chpdinsmap.CollHFP_txtRecLop),
+									:(decl.chpdinsmap.CollHFP_txtDateToLop),
+									:(decl.chpdinsmap.CollHFP_txtDateRecLop),
+									:(decl.chpdinsmap.CollHFP_txtVehConNum),
+									:(decl.chpdinsmap.Kol_txtFrameAgr),
+									:(decl.chpdinsmap.fra_agr_id),
+									:(decl.chpdinsmap.REG_INS),
+									:(decl.chpdinsmap.HfPror_txtRegPlace),
+									:(decl.chpdinsmap.HfPror_txtConcNum),
+									:(decl.chpdinsmap.HfPror_txtConcDate),
+									:(decl.chpdinsmap.REG_COU_ID),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtSyndicate),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtHBORCredit),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtRBAArranger),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtRBASyndicatePartValue),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtOtherSyndicatePartValue),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtRBASyndicateAmountValue),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtOtherSyndicateAmountValue),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtSyndicatedComment),
+                                    :(decl.chpdinsmap.OTHER_SYNDICATE_CUS_ID),
+                                    :(decl.chpdinsmap.CollHfPriorDialog_txtAmountSyndicate)
+                            )
+						};  
+						
+        }catch(java.sql.SQLException se){        
+                tc.debug ( "......CO032.sqlj insert into coll_hf_prior SQL ErrorCode " + se.getErrorCode());
+        		tc.debug ( "......CO032.sqlj insert into coll_hf_prior SQL SQLState " + se.getSQLState());
+        		tc.debug ( "......CO032.sqlj insert into coll_hf_prior SQL Message " + se.getMessage());
+        		throw new VestigoTMException(1, "Transaction CO002: Error inserting coll_hf_prior! ","err411a", null);        
+        }					
+		if(decl.chpdinsmap.HF_REC_LOP_ID.compareTo(rigtInFavourThird)== 0){
+    		poctudiTeretiThirdRightNom = poctudiTeretiThirdRightNom.add(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount);
+    		decl.chpdinsmap.Coll_txtThirdRightInNom = poctudiTeretiThirdRightNom;
+    		tc.debug("decl.chpdinsmap.Coll_txtThirdRightInNom  " + decl.chpdinsmap.Coll_txtThirdRightInNom);					
+					//AKO JE UPIS HIPOTEKE U KORIST TRECIH OSOBA
+					//Za tablicu coll_head vrijedi
+					//THIRD_RIGHT             
+					//THIRD_RIGHT_CUR_ID      
+					//Ove dvije vrijednosti se uvijek moraju postaviti kao i 
+					//third_right_nom
+					//THIRD_RIGHT_NOM  	  	  HFS_VALUE                                                              
+					//THIRD_RIGHT_DATE        HFS_VALUE_DATE          
+					//THI_LAST_ONE            HFS_VALUE_LAST_ONE      
+					//THI_DATE_LAST_ONE       HFS_DATE_LAST_ONE 
+					//UPDATE  THIRD RIGHT
+    		try{	
+    		    #sql [ctx, exCtx]{
+    		        UPDATE coll_head 
+					SET third_right_nom =  coalesce(third_right_nom,0.00) + :(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount),
+					    third_right 	=  coalesce(third_right,0.00) + :(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount),
+                        third_right_date = :(todaySQLDate),
+                        thi_last_one = :(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount),
+						thi_date_last_one = :(todaySQLDate),
+						thi_date_last_unt = :(decl.chpdinsmap.CollHfPriorDialog_txtHfDateHfcUntil ), 
+						avail_value =  coalesce(avail_value,0.00) - :(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount), 
+						avail_date = :(todaySQLDate),                                                       
+						use_id = :(decl.chpdinsmap.USE_ID),
+    		            user_lock = current timestamp
+		     	    WHERE col_hea_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID)				                                   	       
+    		    };
+    		}catch(java.sql.SQLException se){
+    			tc.debug ( "......CO032.sqlj update coll_head set  third_right_nom SQL ErrorCode " + se.getErrorCode());
+    			tc.debug ( "......CO032.sqlj update coll_head set  third_right_nom SQL SQLState " + se.getSQLState());
+    			tc.debug ( "......CO032.sqlj update coll_head set  third_right_nom SQL Message " + se.getMessage());
+    			
+    			throw new VestigoTMException(1, "Transaction CO032: Error update coll_head set  third_right_nom! ","errclt4", null);
+    		}
+    			if (exCtx.getUpdateCount() == 0) {
+    				throw new VestigoTMException(1, "Cannot change, user_lock!", "errclt9", null);
+    			}
+		}//if
+				
+        if(decl.chpdinsmap.HF_REC_LOP_ID.compareTo(rigtInFavourRba)== 0){
+        	//  UPDATE 
+        	//	HFS_VALUE, HFS_VALUE_DATE, HFS_VALUE_LAST_ONE, HFS_DATE_LAST_ONE
+        	pocteretiRbaHfsValue = pocteretiRbaHfsValue.add(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount);
+        	decl.chpdinsmap.Coll_txtHfsValue  = pocteretiRbaHfsValue;        
+        	tc.debug("decl.chpdinsmap.Coll_txtHfsValue  " + decl.chpdinsmap.Coll_txtHfsValue);        	
+        	//UPDATE  HFS_VALUE
+        	try{	
+        		#sql [ctx, exCtx]{
+					UPDATE coll_head 
+					SET hfs_value =  coalesce(hfs_value,0.00) + :(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount),
+                        hfs_value_date = :(todaySQLDate),
+					    hfs_value_last_one = :(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount),
+						hfs_date_last_one = :(decl.chpdinsmap.CollHfPriorDialog_txtHfDateHfcUntil),
+						avail_value =  coalesce(avail_value,0) - :(decl.chpdinsmap.CollHfPriorDialog_txtHfAmount),            	                                                                                  
+						avail_date = :(todaySQLDate),                                                               	                                                                                  
+						use_id = :(decl.chpdinsmap.USE_ID),
+        	            user_lock = current timestamp
+		     		WHERE col_hea_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID)             	       
+        	    };
+        	}catch(java.sql.SQLException se){
+        		tc.debug ( "......CO032.sqlj update coll_head set  hfs_value SQL ErrorCode " + se.getErrorCode());
+        		tc.debug ( "......CO032.sqlj update coll_head set  hfs_value SQL SQLState " + se.getSQLState());
+        		tc.debug ( "......CO032.sqlj update coll_head set  hfs_value SQL Message " + se.getMessage());        		
+        		throw new VestigoTMException(1, "Transaction CO032: Error update coll_head set  hfs_value! ","errclt6", null);        
+        	}        
+        	if (exCtx.getUpdateCount() == 0) {
+        		throw new VestigoTMException(1, "Cannot change, user_lock!", "errclt9", null);
+        	}      
+        }				
+		maxPriority = null;
+		eve_id = null;
+		eve_typ_id = null;
+		calendar = null;
+		todaySQLDate = null;
+		yxyBobj = null;
+		id_generator = null;
+		zeroNumber = null;
+			 
+		// Milka, 27.10.2006 - provjeriti da li je na sve upisane RBA hipoteke upisano pravo banke, ako je postaviti flag RealEstate_txtRecLop na D
+		// Mika, 12.11.2008 - promjena - flag da li je upisano pravo banke na kolateralu postavlja se na D ako je upisana barem jedna vazeca RBA hipoteka				
+			 	
+		// zbrojiti sve RBA hipoteke
+	 	int num_of_RBA; 
+	 	num_of_RBA=0;
+	 	int num_of_RBA_right;
+	 	num_of_RBA_right=0;
+	 	BigDecimal  rba_CusId = new BigDecimal("8218251.0");
+				
+	 	try{  
+	 			#sql [ctx] {
+	 	            SELECT count(coll_hf_prior_id)
+					INTO :num_of_RBA_right
+					FROM coll_hf_prior
+					WHERE hf_coll_head_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID) 
+	 	            AND hf_own_cus_id = :rba_CusId 
+	 	            AND rec_lop = 'D' 
+	 	            AND hf_status = 'A'
+	 	        };
+	 	} catch(SQLException e){
+	 		if (e.getErrorCode()!=100) throw e;
+	 	}
+	 	if (num_of_RBA_right > 0) {
+	 		decl.chpdinsmap.RealEstate_txtRecLop = "D";			 		
+	 	} else {
+	 		decl.chpdinsmap.RealEstate_txtRecLop = "N";			 		
+	 	}
+
+	 	//moram napraviti update atributa u tabeli COLL_HEAD	
+	 	try{  
+			    #sql [ctx] {
+	 	            UPDATE COLL_HEAD
+			    	SET rec_lop = :(decl.chpdinsmap.RealEstate_txtRecLop), user_lock = current timestamp 
+		     		WHERE col_hea_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID)             
+ 				};	    	
+		} catch(SQLException e){
+			if (e.getErrorCode()!=100) throw e;
+		}
+		// ako je hipoteka vezana na okvirni sporazum postaviti flag hipo_status na 1				 		
+		if (decl.chpdinsmap.Kol_txtFrameAgr != null && decl.chpdinsmap.Kol_txtFrameAgr.equalsIgnoreCase("D")) {
+		 	try{  
+			    #sql [ctx] {
+		 	        UPDATE FRAME_AGREEMENT
+			    	SET hipo_status = '1', user_lock = current timestamp
+		     		WHERE fra_agr_id = :(decl.chpdinsmap.fra_agr_id)
+			 	};	    	
+		 	} catch(SQLException e){
+		 		if (e.getErrorCode()!=100) throw e;
+		 	}	
+				 	
+		 	// ako je hipoteka dodana u okvirni sporazum na koji su vezani plasmani treba i tu hipoteku povezati s plasmanima
+			tc.debug("POVEZIVANJE HIPOTEKE S PLASMANIMA IZ SPORAZUMA  " + decl.chpdinsmap.fra_agr_id+"H.."+decl.chpdinsmap.COLL_HF_PRIOR_ID+"U.."+decl.chpdinsmap.USE_ID);
+			
+			YOYA0 YOYA0 = new YOYA0(tc);
+			YOYAData adata = new YOYAData();   	
+			
+			adata.fra_agr_id = decl.chpdinsmap.fra_agr_id;
+			adata.hf_id = decl.chpdinsmap.COLL_HF_PRIOR_ID;
+			adata.use_id = decl.chpdinsmap.USE_ID;
+			
+			YOYA0.addMortgage(adata); 
+		}
+		
+		// 09.08.2010 - dodati postavljanje ovisnih prihvatljivosti
+		
+		// postaviti prihvatljivosti ovisne o polici osiguranja        
+		// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.chpdinsmap.HF_COLL_HEAD_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+ 
+        yoyg0.azurirajPrihvatljivosti();
+        decl.chpdinsmap.Kol_ND =yoyg0.getNDPrihvatljivost();
+        decl.chpdinsmap.Kol_B2 = yoyg0.getB2StandPrihvatljivost();
+        decl.chpdinsmap.Kol_HNB = yoyg0.getHNBPrihvatljivost();
+        decl.chpdinsmap.Kol_B2IRB = yoyg0.getB2IRBPrihvatljivost();    
+        
+        decl.chpdinsmap.Kol_ND_dsc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.chpdinsmap.Kol_B2_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.chpdinsmap.Kol_HNB_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.chpdinsmap.Kol_B2IRB_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();       
+        
+        // izracunati sumu tudjih i sumu rba hipoteka i azurirati        
+        tc.debug ( "...... CO32 HF_COLL_HEAD_ID " + decl.chpdinsmap.HF_COLL_HEAD_ID);  
+        
+        YOYE1 YOYE1_find = new YOYE1(tc);
+        decl.chpdinsmap.Coll_txtThirdRightInNom = new BigDecimal("0.00");
+        decl.chpdinsmap.Coll_txtThirdRightInNom = YOYE1_find.getMortgagesSum(decl.chpdinsmap.HF_COLL_HEAD_ID, coll_cur_id);  // tudje hipoteke
+        tc.debug("--------CO32 -other_mortgages    "+decl.chpdinsmap.Coll_txtThirdRightInNom);
+        
+        decl.chpdinsmap.Coll_txtHfsValue = new BigDecimal("0.00");
+        decl.chpdinsmap.Coll_txtHfsValue = YOYE1_find.getRBAMortgagesSum(decl.chpdinsmap.HF_COLL_HEAD_ID, coll_cur_id);  // RBA hipoteke
+        tc.debug("--------CO32 -rba_mortgages    "+decl.chpdinsmap.Coll_txtHfsValue);
+        
+     // pronaci zadnju vazecu RBA hipoteku
+        Vector rba_last_hf_prior = YOYE1_find.getLastRBAMortgage(col_hea_id);
+        
+        decl.chpdinsmap.Kol_txtLastRBAMortgageAmount = (BigDecimal) rba_last_hf_prior.elementAt(0);
+        decl.chpdinsmap.Kol_txtLastRBAMortgageDate = (Date) rba_last_hf_prior.elementAt(1);        
+        
+        updCollMortgage(ctx,tc);  		
+	}//execute
+	
+    public void updCollMortgage (ConnCtx hCtx, TransactionContext tc) {
+        tc.debug ( "......HF_COLL_HEAD_ID " + decl.chpdinsmap.HF_COLL_HEAD_ID);          
+        
+        try{  
+            #sql [hCtx] {
+                UPDATE COLL_HEAD
+                SET third_right_nom = :(decl.chpdinsmap.Coll_txtThirdRightInNom),
+                    third_right_date = current date,
+                    hfs_value = :(decl.chpdinsmap.Coll_txtHfsValue),
+                    hfs_value_date = current date,
+                    hfs_value_last_one = :(decl.chpdinsmap.Kol_txtLastRBAMortgageAmount),
+                    hfs_date_last_one = :(decl.chpdinsmap.Kol_txtLastRBAMortgageDate),
+                    user_lock = current timestamp
+                WHERE col_hea_id = :(decl.chpdinsmap.HF_COLL_HEAD_ID)
+            };          
+        } catch(SQLException e){}                       
+    }	
+}	  
+			 

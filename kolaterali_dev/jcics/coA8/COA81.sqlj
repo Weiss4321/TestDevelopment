@@ -1,0 +1,137 @@
+package hr.vestigo.modules.collateral.jcics.coA8;
+
+import java.math.*;
+import java.util.Vector;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+#sql iterator Iter1(
+    BigDecimal ins_war_not_id,
+    String candidate_status,
+    String letter_type_name,
+    String ip_code,
+    Date ip_paid_until,
+    String ic_name,
+    String col_num,
+    String cus_acc_no,
+    Date due_date,
+    String register_no,
+    String name,
+    String org_uni_code
+);
+
+
+public class COA81 extends SQLJScrollableRemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA8/COA81.sqlj,v 1.4 2017/02/16 11:55:46 hrakis Exp $";
+
+    private DeclCOA8 decl;
+    private ConnCtx ctx;
+    private Iter1 iter;
+
+    public COA81(DeclCOA8 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void executeScrollable(TransactionContext tc) throws Exception
+    {
+        setLevel(decl.ActionListLevel);
+        ctx = tc.getContext();
+        
+        int filterByOrgUni = isEmpty(decl.ORG_UNI_ID) ? 0 : 1;
+        int filterByInsuCompany = isEmpty(decl.IC_ID) ? 0 : 1;
+        int filterByWrnStatus = isEmpty(decl.InsPolWarningNotesList_txtWrnStatus) ? 0 : 1;
+        int filterByCustomer = isEmpty(decl.CUS_ID) ? 0 : 1;
+        int filterByAccount = isEmpty(decl.CUS_ACC_ID) ? 0 : 1;
+        int filterByCandidateStatus = isEmpty(decl.InsPolWarningNotesList_txtCandidateStatus) ? 0 : 1;
+        
+        try
+        {
+            #sql [ctx] iter = {
+                SELECT
+                    a.ins_war_not_id    AS ins_war_not_id,
+                    s.sys_code_desc     AS candidate_status,
+                    l.cus_let_typname   AS letter_type_name,
+                    i.ip_code           AS ip_code,
+                    i.ip_vali_until     AS ip_paid_until,
+                    ic.ic_name          AS ic_name,
+                    c.col_num           AS col_num,
+                    e.cus_acc_no        AS cus_acc_no,
+                    e.due_date          AS due_date,
+                    cc.register_no      AS register_no,
+                    cc.name             AS name,
+                    o.code              AS org_uni_code
+                FROM ip_warning_notes a
+                LEFT OUTER JOIN system_code_value s ON (s.sys_cod_id = 'ip_candidate_stat' AND a.candidate_status = s.sys_code_value)
+                LEFT OUTER JOIN cust_lett_type l ON a.cus_let_typ_id = l.cus_let_typ_id
+                LEFT OUTER JOIN insurance_policy i ON a.ip_id = i.ip_id
+                LEFT OUTER JOIN insu_company ic ON i.ip_ic_id = ic.ic_id
+                LEFT OUTER JOIN coll_head c ON i.col_hea_id = c.col_hea_id
+                LEFT OUTER JOIN coll_hf_prior h ON (c.col_hea_id = h.hf_coll_head_id AND h.hf_status = 'A' AND h.hf_own_cus_id = 8218251)
+                LEFT OUTER JOIN loan_beneficiary l ON (h.coll_hf_prior_id = l.coll_hf_prior_id AND l.status = 'A')
+                LEFT OUTER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                LEFT OUTER JOIN customer cc ON e.cus_id = cc.cus_id
+                LEFT OUTER JOIN organization_unit o ON e.org_uni_id = o.org_uni_id 
+                WHERE a.ip_id IS NOT NULL
+                  AND a.candidate_status IN ('K','N','A')
+                  AND cc.basel_cus_type IN ('1','36')
+                  AND (:filterByOrgUni = 0 OR e.org_uni_id = :(decl.ORG_UNI_ID))
+                  AND (:filterByInsuCompany = 0 OR i.ip_ic_id = :(decl.IC_ID))
+                  AND (:filterByWrnStatus = 0 OR i.wrn_status = :(decl.InsPolWarningNotesList_txtWrnStatus))
+                  AND (:filterByCustomer = 0 OR e.cus_id = :(decl.CUS_ID))
+                  AND (:filterByAccount = 0 OR e.cus_acc_id = :(decl.CUS_ACC_ID))
+                  AND (:filterByCandidateStatus = 0 OR a.candidate_status = :(decl.InsPolWarningNotesList_txtCandidateStatus))
+                ORDER BY c.col_num, e.cus_acc_no
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA81: Error selecting from IP_WARNING_NOTES!", "fw_wrn_017", null, ex);
+        }
+    }
+
+    public boolean next() throws Exception
+    {
+        return iter.next();
+    }
+
+    public void close()
+    {
+        if (iter != null)
+        {
+            try {iter.close(); }
+            catch (Exception ignored) { }
+        }
+    }
+
+    public void populateRowData() throws Exception
+    {
+        Vector row = new Vector();
+        Vector rowHidden = new Vector();
+        
+        rowHidden.add(iter.ins_war_not_id());
+        
+        row.add(iter.candidate_status());
+        row.add(iter.letter_type_name());
+        row.add(iter.org_uni_code());
+        row.add(iter.register_no());
+        row.add(iter.name());
+        row.add(iter.cus_acc_no());
+        row.add(iter.col_num().trim());
+        row.add(iter.ip_code().trim());
+        row.add(iter.ip_paid_until());
+        row.add(iter.ic_name());
+        row.add(iter.due_date());
+
+        decl.tblInsPolWarningNotes.addRow(row, rowHidden);
+    }
+    
+    private boolean isEmpty(Object obj)
+    {
+        return (obj == null || obj.equals(""));
+    }
+}

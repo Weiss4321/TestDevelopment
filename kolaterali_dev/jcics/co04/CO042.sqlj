@@ -1,0 +1,130 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+             
+ 
+
+ 
+#sql iterator IterColMovSup (
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String mov_type ,      
+							String mov_name ,
+							String mov_unit ,
+							BigDecimal mov_num_of_unit ,
+							String mov_cond ,
+							java.sql.Date cond_date ,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id     
+                   );	
+
+public class CO042 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO042.sqlj,v 1.4 2006/05/08 13:27:59 hramkr Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterColMovSup iterColMovSup = null;
+	
+	public CO042 (DeclCO04 decl) { 
+		this.decl = decl;
+	}
+	
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.collmovablelistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		if(decl.collmovablelistmapping.CUS_ID == null ){
+			#sql [ctx] iterColMovSup = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.movt_type_code as mov_type, mova.movt_type_desc as mov_name, cols.mov_unit_mes as mov_unit, 
+									cols.mov_num_of_unit as mov_num_of_unit, cols.mov_condition as mov_cond, cols.mov_cond_date as cond_date,
+									ch.real_est_status as status, cols.col_mov_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id          
+							FROM
+									coll_head ch, coll_movable cols , movable_type mova 
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		cols.mov_typ_id = mova.mov_typ_id
+						ORDER BY	2
+							
+			};
+		
+		} 
+		 
+ 
+		
+		if(decl.collmovablelistmapping.CUS_ID != null ){
+			#sql [ctx] iterColMovSup = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									mova.movt_type_code as mov_type, mova.movt_type_desc as mov_name, cols.mov_unit_mes as mov_unit, 
+									cols.mov_num_of_unit as mov_num_of_unit, cols.mov_condition as mov_cond, cols.mov_cond_date as cond_date,
+									ch.real_est_status as status, cols.col_mov_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id       
+							FROM	
+									coll_head ch, coll_movable cols , movable_type mova 
+							WHERE	ch.cus_id = :(decl.collmovablelistmapping.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id
+							AND 	cols.mov_typ_id = mova.mov_typ_id
+						ORDER BY	2
+							
+			};
+		
+		}  
+	
+		 
+	}
+	
+	public boolean next() throws Exception {
+		return iterColMovSup.next(); 
+	}
+    
+	public void close() {
+		if(iterColMovSup!=null) {
+			try {
+				iterColMovSup.close();
+			} catch (Exception ignored) {}
+		}
+	} 
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();	
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterColMovSup.col_num());	
+		row.add(iterColMovSup.mov_type());	
+		row.add(iterColMovSup.mov_name());
+		row.add(iterColMovSup.mov_unit()); 
+		row.add(iterColMovSup.mov_num_of_unit());
+		row.add(iterColMovSup.mov_cond());	
+		row.add(iterColMovSup.cond_date());			
+		row.add(iterColMovSup.status()); 
+		
+		row1.add(iterColMovSup.col_hea_id());
+		row1.add(iterColMovSup.col_res_id());
+		row1.add(iterColMovSup.real_est_nm_cur_id());
+		
+		decl.collmovablelistmapping.tblCollMovable.addRow(row,row1);		
+ 
+//		decl.collmovablelistmapping.tblCollMovable.addRow(row,iterColMovSup.col_hea_id());   	
+		
+	}
+	
+}

@@ -1,0 +1,137 @@
+package hr.vestigo.modules.collateral.batch.bo61;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO611
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo61/BO611.sqlj,v 1.2 2011/07/04 14:23:48 hramkr Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator Iter1(
+            String col_num,
+            Date process_date,
+            String code_char,
+            BigDecimal wca_amount,
+            BigDecimal mcv_amount,
+            BigDecimal ponder_value,
+            BigDecimal other_mrtg, 
+            String nd_eligibility
+    );
+ 
+ 
+    public BO611(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);              
+            event.put("eve_typ_id", new BigDecimal("4639722704"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Lista izracunatih WCA vrijednosti");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa potrebne podatke za izvješæe.
+     * @param exception_type Vrsta izuzetka
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter1 selectData(Date reportDate, BigDecimal colCatId, String colNum, String exceptionType)
+    {
+        batchContext.startStopWatch("selectData");
+        Iter1 iter = null;
+        try
+        {
+            if (exceptionType.equalsIgnoreCase("S")) {
+                #sql [connCtx] iter = {
+                                SELECT
+                                        ch.col_num as col_num,
+                                        a.process_date as process_date,
+                                        b.code_char as code_char,
+                                        a.wca_amount as wca_amount,
+                                        a.mcv_amount as mcv_amount,
+                                        a.ponder_value as ponder_value,
+                                        a.other_mrtg as other_mrtg,
+                                        a.nd_eligibility as nd_eligibility
+                                FROM    wca_history a inner join coll_head ch on a.col_hea_id = ch.col_hea_id  
+                                                      left outer join currency b on a.cur_id = b.cur_id
+                                WHERE
+                                         ch.col_num = :(colNum)
+                                ORDER BY
+                                        a.process_date desc
+                                WITH UR
+                }; 
+            } else {
+                #sql [connCtx] iter = {
+                        SELECT
+                                ch.col_num as col_num,
+                                a.process_date as process_date,
+                                b.code_char as code_char,
+                                a.wca_amount as wca_amount,
+                                a.mcv_amount as mcv_amount,
+                                a.ponder_value as ponder_value,
+                                a.other_mrtg as other_mrtg,
+                                a.nd_eligibility as nd_eligibility
+                        FROM    wca_history a inner join coll_head ch on a.col_hea_id = ch.col_hea_id  
+                                                      left outer join currency b on a.cur_id = b.cur_id
+                        WHERE
+                                a.process_date = :(reportDate)
+                        AND
+                                ch.col_cat_id = :(colCatId)
+                        ORDER BY
+                                ch.col_num
+                        WITH UR                
+                };
+            }
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja podataka za izvjesce!", ex);
+        }
+        batchContext.stopStopWatch("selectData");
+        return iter;
+    }
+}

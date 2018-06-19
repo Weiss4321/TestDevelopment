@@ -1,0 +1,460 @@
+package hr.vestigo.modules.collateral.batch.bo45;
+
+import java.sql.*;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+
+public class BO451
+{
+    #sql public iterator Iter1 (
+        BigDecimal cus_id,
+        BigDecimal col_hea_id,
+        BigDecimal exp_coll_amount,
+        String register_no,
+        String name,
+        String b2_asset_class,
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        BigDecimal exp_balance_hrk,
+        BigDecimal col_cat_id,
+        BigDecimal col_type_id,
+        BigDecimal ponder,
+        String col_type_name,
+        String frame_cus_acc_no,
+        String module_code,
+        String cus_acc_orig_st,
+        BigDecimal exp_off_bal_lcy
+    );
+    
+    #sql iterator Iter2 (
+        BigDecimal cus_acc_id,        
+        BigDecimal exp_hrk
+    );
+    
+    #sql iterator Iter3 (
+        BigDecimal col_hea_id,
+        BigDecimal cus_acc_id,        
+        BigDecimal exp_hrk
+    );
+    
+    #sql iterator Iter4 (
+        BigDecimal cus_acc_id        
+    );
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo45/BO451.sqlj,v 1.24 2013/07/15 08:26:38 hrakis Exp $";
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+
+    public BO451(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("120228684"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "CRM izvjesce");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa ID obrade izraèuna pokrivenosti za zadani datum i ponder/prhivatljivost.
+     * @param report_date Datum izraèuna pokrivenosti.
+     * @param ponder Indikator pondera. Moguæe vrijednosti su P za ponderirano ili N za neponderirano.
+     * @param eligibility Prihvatljivost za koju se radi izvješæe. Moguæe vrijednosti su B1,B2,RBA,B2IRB,B2GK,RBAGK,RBAMICRO,RBACOLL.
+     * @return ID obrade izraèuna pokrivenosti. Ako obrada ne postoji ili se dogodila greška, vraæa null.
+     */
+    public BigDecimal selectColProId(Date report_date, String ponder, String eligibility)
+    {
+        batchContext.startStopWatch("selectColProId");
+        
+        // odredi indikator vrste obrade za zadanu vrstu pokrivenosti i ponderiranost
+        String proc_type = "";
+        boolean ponded = "P".equals(ponder);
+        if(eligibility.equals("B1"))
+        {
+           if(ponded) proc_type = "E"; else proc_type = "C";
+        }
+        else if(eligibility.equals("B2"))
+        {
+           if(ponded) proc_type = "I"; else proc_type = "H";
+        }
+        else if(eligibility.equals("RBA"))
+        {
+           if(ponded) proc_type = "P"; else proc_type = "N";
+        }
+        else if(eligibility.equals("B2IRB"))
+        {
+           if(ponded) proc_type = "K"; else proc_type = "J";
+        }
+        else if(eligibility.equals("ND"))
+        {
+           if(ponded) proc_type = "M"; else proc_type = "L";           
+        }
+        else if(eligibility.equals("B2GK"))
+        {
+           if(ponded) proc_type = "IG"; else proc_type = "HG";           
+        }
+        else if(eligibility.equals("RBAGK"))
+        {
+           if(ponded) proc_type = "PG"; else proc_type = "NG";           
+        }
+        else if(eligibility.equals("RBAMICRO"))
+        {
+           proc_type = "T";
+        }
+        else if(eligibility.equals("RBACOLL"))
+        {
+           proc_type = "W";
+        }
+        
+        // dohvati ID obrade izraèuna pokrivenosti za zadani datum i vrstu obrade
+        BigDecimal col_pro_id = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT col_pro_id
+                INTO :col_pro_id
+                FROM col_proc 
+                WHERE value_date = :(report_date)
+                  AND proc_type = :(proc_type)
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata ID obrade izracuna pokrivenosti!", ex);
+        }
+        batchContext.stopStopWatch("selectColProId");
+        return col_pro_id;
+    }
+      
+    /**
+     * Metoda koja dohvaæa sve potrebne podatke o plasmanima i pokrivenosti prema zadanim kriterijima
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param register_no Interni MB komitenta. Ako je null, u izvješæe ulaze sve pravne ili fizièke osobe. 
+     * @param client_type Tip komitenta. Moguæe vrijednosti su P za pravne osobe ili F za fizièke osobe.
+     * @return Iterator. Ako se dogodila greška, vraæa null.
+     */
+    public Iter1 selectData(BigDecimal col_pro_id, String register_no, String client_type, String eligibility)
+    { 
+        batchContext.startStopWatch("selectData");
+        
+        // odredi opseg izvješæa
+        int filterByClientType = -1;
+        if(register_no != null && !register_no.equals("")) filterByClientType = 0;    // jedan komitent
+        else if("P".equals(client_type)) filterByClientType = 1;                      // pravne osobe
+        else if("F".equals(client_type)) filterByClientType = 2;                      // fizièke osobe
+
+        String exp_type_ind = null;
+        if(eligibility.endsWith("GK")) exp_type_ind = "DGK";    // redovni podaci po datumu valute analitike
+        else exp_type_ind = "DVA";                              // podaci po datumu valute glavne knjige
+
+        Iter1 iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT 
+                    a.cus_id            AS cus_id,
+                    a.col_hea_id        AS col_hea_id,
+                    a.exp_coll_amount   AS exp_coll_amount,
+                    c.register_no       AS register_no,
+                    c.name              AS name,
+                    c.basel_cus_type    AS b2_asset_class,
+                    b.cus_acc_id        AS cus_acc_id,
+                    b.cus_acc_no        AS cus_acc_no,
+                    a.exp_balance_hrk   AS exp_balance_hrk,
+                    d.col_cat_id        AS col_cat_id,
+                    d.col_type_id       AS col_type_id,
+                    a.mvp_dfl           AS ponder,
+                    g.coll_type_name    AS col_type_name,
+                    b.frame_cus_acc_no  AS frame_cus_acc_no,
+                    b.module_code       AS module_code,
+                    b.cus_acc_orig_st   AS cus_acc_orig_st,
+                    a.exp_off_bal_lcy   AS exp_off_bal_lcy
+                FROM
+                    cusacc_exp_coll a
+                    INNER JOIN cusacc_exposure_new b ON a.cus_acc_id = b.cus_acc_id
+                    INNER JOIN customer c ON a.cus_id = c.cus_id
+                    LEFT OUTER JOIN coll_head d ON a.col_hea_id = d.col_hea_id
+                    LEFT OUTER JOIN collateral_type g ON d.col_type_id = g.coll_type_id 
+                WHERE
+                    a.col_pro_id = :(col_pro_id) AND
+                    b.exp_type_ind = :(exp_type_ind) AND
+                    (   (:filterByClientType = 0 AND c.register_no = :(register_no)) OR
+                        (:filterByClientType = 1 AND c.cus_typ_id IN (2999,2998,999)) OR
+                        (:filterByClientType = 2 AND c.cus_typ_id IN (1999,1998))   )
+                ORDER BY 4, 7, 13
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata podataka!",ex);
+        }
+        batchContext.stopStopWatch("selectData");
+        return iter;
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o plasmanima iz okvira i njihove pokrivenosti
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param register_no Interni MB komitenta. Ako je null, u izvješæe ulaze sve pravne ili fizièke osobe. 
+     * @param client_type Tip komitenta. Moguæe vrijednosti su P za pravne osobe ili F za fizièke osobe.
+     * @return Iterator. Ako se dogodila greška, vraæa null.
+     */
+    public Iter1 selectFrameAccounts(BigDecimal col_pro_id, String register_no, String client_type, String eligibility)
+    { 
+        batchContext.startStopWatch("selectFrameAccounts");
+        
+        // odredi opseg izvješæa
+        int filterByClientType = -1;
+        if(register_no != null && !register_no.equals("")) filterByClientType = 0;    // jedan komitent
+        else if("P".equals(client_type)) filterByClientType = 1;                      // pravne osobe
+        else if("F".equals(client_type)) filterByClientType = 2;                      // fizièke osobe
+        
+        String exp_type_ind = null;
+        if(eligibility.endsWith("GK")) exp_type_ind = "DGK";    // redovni podaci po datumu valute analitike
+        else exp_type_ind = "DVA";                              // podaci po datumu valute glavne knjige
+        
+        Iter1 iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT 
+                    c.cus_id            AS cus_id,
+                    a.col_hea_id        AS col_hea_id,
+                    a.acc_cov_amount_kn AS exp_coll_amount,
+                    c.register_no       AS register_no,
+                    c.name              AS name,
+                    c.basel_cus_type    AS b2_asset_class,
+                    b.cus_acc_id        AS cus_acc_id,
+                    b.cus_acc_no        AS cus_acc_no,
+                    a.acc_amount_kn     AS exp_balance_hrk,
+                    d.col_cat_id        AS col_cat_id,
+                    d.col_type_id       AS col_type_id,
+                    0                   AS ponder,
+                    g.coll_type_name    AS col_type_name,
+                    b.frame_cus_acc_no  AS frame_cus_acc_no,
+                    b.module_code       AS module_code,
+                    b.cus_acc_orig_st   AS cus_acc_orig_st,
+                    0                   AS exp_off_bal_lcy
+                FROM 
+                    frame_account_cov a
+                    INNER JOIN cusacc_exposure_new b ON a.cus_acc_id = b.cus_acc_id
+                    INNER JOIN customer c ON b.cus_id = c.cus_id
+                    LEFT OUTER JOIN coll_head d ON a.col_hea_id = d.col_hea_id
+                    LEFT OUTER JOIN collateral_type g ON d.col_type_id = g.coll_type_id
+                WHERE 
+                    a.ref_col_pro_id = :(col_pro_id) AND
+                    b.frame_cus_acc_no IS NOT NULL AND
+                    b.exp_type_ind = :(exp_type_ind) AND
+                    ((:filterByClientType = 0 AND c.register_no = :(register_no)) OR
+                    (:filterByClientType = 1 AND c.cus_typ_id IN (2999,2998,999)) OR
+                    (:filterByClientType = 2 AND c.cus_typ_id IN (1999,1998))   )
+                ORDER BY 4, 7, 13
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata plasmana iz okvira!",ex);
+        }
+        batchContext.stopStopWatch("selectFrameAccounts");
+        return iter;
+    }
+
+    /**
+    * Metoda koja dohvaæa dodatne podatke o podtipu kolaterala.
+    * @param data Data objekt s podacima o kolateralu.
+    * @return da li je metoda uspješno završila
+    */
+    public boolean selectAdditionalData(CRMData data)
+    {
+        if (data.col_cat_id == null || data.col_hea_id == null) return true;
+        
+        batchContext.startStopWatch("selectAdditionalData");
+        
+        try
+        {
+            if (data.col_cat_id.equals(new BigDecimal("618223")))  // nekretnine
+            {
+                #sql [connCtx] {
+                    SELECT real_est_type 
+                    INTO :(data.subtype_coll)
+                    FROM coll_restate
+                    WHERE col_hea_id = :(data.col_hea_id)
+                };
+            }
+            else if (data.col_cat_id.equals(new BigDecimal("624223")))  // vozila
+            {
+                #sql [connCtx] {
+                    SELECT veh_group_id 
+                    INTO :(data.subtype_coll)
+                    FROM coll_vehicle
+                    WHERE col_hea_id = :(data.col_hea_id)
+                };
+            }
+            else if (data.col_cat_id.equals(new BigDecimal("616223")))  // police osiguranja
+            {
+                #sql [connCtx] {
+                    SELECT b.int_pol_type_code
+                    INTO :(data.subtype_coll_str) 
+                    FROM 
+                       coll_inspolicy a, 
+                       insu_policy_type b
+                    WHERE 
+                       a.col_hea_id = :(data.col_hea_id) AND
+                       a.ip_type_id = b.int_pol_type_id
+                };
+            }
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata dodatnih podataka o kolateralu (COL_HEA_ID="+data.col_hea_id+")!",ex);
+            return false;
+        }
+        batchContext.stopStopWatch("selectAdditionalData");
+        return true;
+    }
+    
+    /**
+     * Metoda koja za zadanu partiju okvira dohvaæa zbroj izloženosti svih plasmana iz okvira.
+     * @param col_pro_id ID obrade
+     * @param frame_cus_acc_id ID partije okvira
+     * @return zbroj izloženosti svih plasmana iz okvira. Ako je došlo do greške, vraæa null.
+     */
+    public BigDecimal selectTotalExposureAmount(BigDecimal col_pro_id, BigDecimal frame_cus_acc_id)
+    {
+        batchContext.startStopWatch("selectTotalExposureAmount");
+        BigDecimal sum_kn = new BigDecimal("0.00");
+        Iter2 iter = null;
+        try
+        { 
+            #sql [connCtx] iter = {
+                SELECT DISTINCT
+                    cus_acc_id      AS cus_acc_id,
+                    acc_amount_kn   AS exp_hrk      
+                FROM frame_account_cov
+                WHERE ref_col_pro_id = :(col_pro_id)
+                  AND frame_cus_acc_id = :(frame_cus_acc_id)
+                WITH UR
+            };
+            while(iter.next()) sum_kn = sum_kn.add(iter.exp_hrk());
+            iter.close();
+        } 
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata izlozenosti svih plasmana iz okvira (FRAME_CUS_ACC_ID=" + frame_cus_acc_id + ", COL_PRO_ID=" + col_pro_id +")!", ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectTotalExposureAmount");
+        return sum_kn;
+    }
+
+    /**
+     * Metoda koja za zadanu partiju okvira dohvaæa zbroj pokrivenosti svih plasmana iz okvira.
+     * @param col_pro_id ID obrade
+     * @param frame_cus_acc_id ID partije okvira
+     * @return zbroj pokrivenosti svih plasmana iz okvira. Ako je došlo do greške, vraæa null.
+     */
+    public BigDecimal selectTotalCoverageAmount(BigDecimal col_pro_id, BigDecimal frame_cus_acc_id)
+    {
+        batchContext.startStopWatch("selectTotalCoverageAmount");
+        BigDecimal sum_kn = new BigDecimal("0.00");
+        Iter3 iter = null;
+        try
+        { 
+            #sql [connCtx] iter = {
+                SELECT DISTINCT
+                    col_hea_id          AS col_hea_id,
+                    cus_acc_id          AS cus_acc_id,
+                    acc_cov_amount_kn   AS exp_hrk      
+                FROM frame_account_cov
+                WHERE ref_col_pro_id = :(col_pro_id)
+                  AND frame_cus_acc_id = :(frame_cus_acc_id)
+                WITH UR
+            };
+            while(iter.next()) sum_kn = sum_kn.add(iter.exp_hrk());
+            iter.close();
+        } 
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata pokrivenosti svih plasmana iz okvira (FRAME_CUS_ACC_ID=" + frame_cus_acc_id + ", COL_PRO_ID=" + col_pro_id +")!", ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectTotalCoverageAmount");
+        return sum_kn;
+    }
+    
+    /**
+     * Metoda koja dohvaæa ID-eve svih partija koje se nalaze u evidenciji partija iz okvira koje se mogu vezati i samostalno.
+     * @return HashMap s ID-evima. Ako je došlo do greške, vraæa null.
+     */
+    public HashMap selectFrameAccExceptions()
+    {
+        batchContext.startStopWatch("selectFrameAccExceptions");
+        HashMap map = new HashMap();
+        Iter4 iter = null;
+        try
+        { 
+            #sql [connCtx] iter = {
+                SELECT cus_acc_id
+                FROM frame_acc_exception
+                WHERE exception_type = 'F'
+                AND status = 'A'
+                WITH UR
+            };
+            while(iter.next()) map.put(iter.cus_acc_id(), iter.cus_acc_id());
+            iter.close();
+        } 
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata partija iz okvira koje se mogu vezati i samostalno!", ex);
+            return null;
+        }
+        batchContext.stopStopWatch("selectFrameAccExceptions");
+        return map;
+    }
+}

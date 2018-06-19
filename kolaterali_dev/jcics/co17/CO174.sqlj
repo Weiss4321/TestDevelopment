@@ -1,0 +1,196 @@
+package hr.vestigo.modules.collateral.jcics.co17;
+
+
+import java.math.BigDecimal;
+import java.sql.SQLData;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+/**
+ * CO174
+ *  	
+ */
+
+
+
+public class CO174 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co17/CO174.sqlj,v 1.4 2006/06/06 08:21:22 hrajkl Exp $";
+	public DeclCO17 decl = null;
+	
+	public CO174 (DeclCO17 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();	
+			
+			java.sql.Date DateFrom = null;		
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			DateFrom = new java.sql.Date(timeT);
+			
+			java.sql.Date DateUntil = java.sql.Date.valueOf("9999-12-31");
+			
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			boolean change_flag = false;
+			BigDecimal coll_type_id 	= (BigDecimal)decl.realestatetypeupdatem.COLL_TYPE_ID;
+			BigDecimal coll_type_id_o	= (BigDecimal)decl.realestatetypeupdatem.COLL_TYPE_ID_O;
+			String act_noact			= (String)decl.realestatetypeupdatem.RealEstateDailog_txtRealEsActNoact;
+			String act_noact_o			= (String)decl.realestatetypeupdatem.RealEstateDailog_txtRealEsActNoact_O;
+			String code					= (String)decl.realestatetypeupdatem.RealEstateDailog_txtCode;
+			String code_o				= (String)decl.realestatetypeupdatem.RealEstateDailog_txtCode_O;
+			String desc					= (String)decl.realestatetypeupdatem.RealEstateDailog_txtDesc;
+			String desc_o				= (String)decl.realestatetypeupdatem.RealEstateDailog_txtDesc_O;
+			
+			if( !provjeraJednakosti(coll_type_id, coll_type_id_o) ) change_flag=true;
+			if( !provjeraJednakosti(act_noact,act_noact_o) )		change_flag=true;
+			if( !provjeraJednakosti(code,code_o) )					change_flag=true;
+			if( !provjeraJednakosti(desc,desc_o) )					change_flag=true;
+			
+			if( change_flag==true ){
+				try{	//INSERT  real_estate_type_a	
+			    	#sql [ctx]{ 
+							INSERT INTO real_estate_type_a 
+							(
+								REAL_ES_TYPE_ID,
+								REAL_ES_TYPE_CODE,
+								REAL_ES_TYPE_DESC,
+								COLL_TYPE_ID,
+								real_es_date_from,
+								real_es_date_unti,
+								REAL_ES_ACT_NOACT,
+								USE_OPEN_ID,
+								USE_ID,
+								OPENING_TS,
+								USER_LOCK,
+								BANK_SIGN
+							)
+							values
+							(
+								:(decl.realestatetypeupdatem.REAL_ES_TYPE_ID),
+								:(decl.realestatetypeupdatem.RealEstateDailog_txtCode_O),
+								:(decl.realestatetypeupdatem.RealEstateDailog_txtDesc_O),
+								:(decl.realestatetypeupdatem.COLL_TYPE_ID_O),
+								:(DateFrom),
+								:(DateUntil),
+								:(decl.realestatetypeupdatem.RealEstateDailog_txtRealEsActNoact_O),
+								:(decl.realestatetypeupdatem.USE_OPEN_ID),
+								:(decl.realestatetypeupdatem.USE_ID),
+								:(decl.realestatetypeupdatem.RealEstateDialog_txtOpeningTS),
+								:(decl.realestatetypeupdatem.RealEstateDialog_txtUseLock),
+								:(tc.getBankSign())
+							)
+ 		        	};
+				}catch(java.sql.SQLException se){
+							tc.debug ( "......CO174.sqlj insert into inserting real_state_type_a SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO174.sqlj insert into inserting real_state_type_a SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO174.sqlj insert into inserting real_state_type_a SQL Message " + se.getMessage());
+							throw new VestigoTMException(1, "Transaction CO174: Error inserting real_state_type_a! ","err411a", null);
+				}
+				
+				/*tc.debug ( "\n\n	CO174.sqlj		\n\n");
+				tc.debug ( "\n\n\n\n\n\n\n");
+				tc.debug ( "\n\n  REAL_ES_TYPE_ID:  " + (decl.realestatetypeupdatem.REAL_ES_TYPE_ID));
+				tc.debug ( "\n\n  RealEstateDailog_txtCode_O:  " + (decl.realestatetypeupdatem.RealEstateDailog_txtCode_O));
+				tc.debug ( "\n\n  RealEstateDailog_txtDesc_O:  " + (decl.realestatetypeupdatem.RealEstateDailog_txtDesc_O));
+				tc.debug ( "\n\n  realestatetypeupdatem.COLL_TYPE_ID_O:  " +(decl.realestatetypeupdatem.COLL_TYPE_ID_O));
+				tc.debug ( "\n\n  DateFrom:  " + (DateFrom));
+				tc.debug ( "\n\n  DateUntil:  " + (DateUntil));
+				tc.debug ( "\n\n  RealEstateDailog_txtRealEsActNoact_O:  " + (decl.realestatetypeupdatem.RealEstateDailog_txtRealEsActNoact_O));
+				tc.debug ( "\n\n  USE_OPEN_ID:  " + (decl.realestatetypeupdatem.USE_OPEN_ID));
+				tc.debug ( "\n\n  USE_ID:  " + (decl.realestatetypeupdatem.USE_ID));
+				tc.debug ( "\n\n  RealEstateDialog_txtOpeningTS:  " + (decl.realestatetypeupdatem.RealEstateDialog_txtOpeningTS));
+				tc.debug ( "\n\n  RealEstateDialog_txtUseLock:  " + (decl.realestatetypeupdatem.RealEstateDialog_txtUseLock));
+				tc.debug ( "\n\n  tc.getBankSign:  " + tc.getBankSign());
+				tc.debug ( "\n\n\n\n\n\n\n");*/
+				
+					int num = 0;
+					try {
+						#sql [ctx] {SELECT COUNT(*) INTO :num 
+			    			FROM 
+								real_estate_type 
+			    			WHERE 
+								real_es_type_code=:(decl.realestatetypeupdatem.RealEstateDailog_txtCode)
+								AND real_es_type_id	<> :(decl.realestatetypeupdatem.REAL_ES_TYPE_ID) 
+			    	};			    	
+					    	tc.debug ( " /n/n/n/n/n/n/n");
+					    	tc.debug ( "...broj postojecih zapisa: " + num);
+					    	tc.debug ( " /n/n/n/n/n/n/n");
+				    } catch (java.sql.SQLException  sqle) {
+		                tc.debug ( "......CO174.sqlj update real_state_type SQL ErrorCode " + sqle.getErrorCode());
+						tc.debug ( "......CO174.sqlj update real_state_type SQL SQLState " + sqle.getSQLState());
+						tc.debug ( "......CO174.sqlj update real_state_type SQL Message " + sqle.getMessage());
+						throw new VestigoTMException(1, "Transaction CO174: Error updating real_state_type! ","err411a", null);
+		            }
+				    if(num > 0){// ako vec postoji real_es_type_code
+					    throw new VestigoTMException(1, "Transaction CO174: Error updating real_state_type! ","errclt8", null);
+					}	
+				    
+					
+				try{	//UPDATE real_estate_type	
+				    	#sql [ctx, exCtx]{ UPDATE real_estate_type
+							SET
+							real_es_type_code	= :(decl.realestatetypeupdatem.RealEstateDailog_txtCode),
+							real_es_type_desc	= :(decl.realestatetypeupdatem.RealEstateDailog_txtDesc),
+							COLL_TYPE_ID		= :(decl.realestatetypeupdatem.COLL_TYPE_ID),
+							REAL_ES_ACT_NOACT	= :(decl.realestatetypeupdatem.RealEstateDailog_txtRealEsActNoact),
+							use_id				= :(decl.realestatetypeupdatem.use_id),		
+		    				user_lock			= current timestamp
+							WHERE
+							real_es_type_id		= :(decl.realestatetypeupdatem.REAL_ES_TYPE_ID) 
+							AND
+							user_lock			= :(decl.realestatetypeupdatem.USER_LOCK)
+     		        	};
+								
+		     		        	//uvjet za promjenu: ako je USER_LOCK(dohvacen pri select-u) jednak kao trenutni u tablici
+				}catch(java.sql.SQLException se){
+							tc.debug ( "......CO174.sqlj insert into inserting real_state_type SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO174.sqlj insert into inserting real_state_type SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO174.sqlj insert into inserting real_state_type SQL Message " + se.getMessage());
+							throw new VestigoTMException(1, "Transaction CO174: Error updating real_state_type! ","err411a", null);
+				}
+			}
+		
+		}//execute
+	
+	public boolean provjeraJednakosti(String prvi, String prviB){
+		String a=null, b=null;
+		
+		if (prvi!=null && prviB!=null){
+			a=prvi.trim();
+			b=prviB.trim();
+			return a.equals(b);
+		}else if(prvi==null && prviB==null){ 
+			return true;
+		}else{
+			return false;
+		}
+	}
+	
+	public boolean provjeraJednakosti(BigDecimal prvi, BigDecimal prviB){
+		int rez=0;
+		BigDecimal a=null, b=null;
+		a=prvi;
+		b=prviB;
+		
+		if (a!=null && b!=null){ 
+			rez=a.compareTo(b);
+		}else if(a==null && b==null){ 
+			rez=0;
+		}else{
+			rez=1;
+		}
+		
+		if (rez!=0){
+			return false;
+		}else{
+			return true;
+		}
+	}
+	
+
+}	

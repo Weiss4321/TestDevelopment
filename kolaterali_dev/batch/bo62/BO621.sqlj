@@ -1,0 +1,155 @@
+package hr.vestigo.modules.collateral.batch.bo62;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+
+import sqlj.runtime.ref.*;
+
+public class BO621 {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo62/BO621.sqlj,v 1.5 2011/12/01 12:20:17 hradnp Exp $";
+    
+    private BatchContext batchContext;
+    private BigDecimal eve_id = null;
+    private ConnCtx ctx; //ostalo
+    private ConnCtx ctx1;
+    
+    #sql iterator IteratorNeknjizeni(
+        BigDecimal col_hea_id,
+        String col_num,
+        Date first_entry_date,
+        String oj_code,
+        String oj_name,
+        String user_name,
+        String verification,
+        String code_char,
+        BigDecimal real_est_nomi_value, 
+        Date real_est_nomi_date,
+        String rba_eligibility,
+        String rba_eligibility_desc,
+        String collateral_status
+    );
+    
+    public BO621(BatchContext batchContext) {
+        this.batchContext = batchContext;
+        
+        try {
+            this.ctx = batchContext.getContext();
+            this.ctx1 = new ConnCtx(batchContext.getNewConnection());
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    // TST0400000083 - izmjenjen SQL tako da dohvaæa kolaterale koji nisu stigli do aktivne liste (neknjižene i ostale koji se ne knjiže, a nikad nisu stigli do aktivne liste).
+    // - izmjenjen SQL tako da dohvaæa i mjenice i zadužnice
+    // izbaèen dodatni uvjet na tablicu coll_category i INNER JOIN na tablicu currency zamjenjen s LEFT OUTER JOIN
+    public IteratorNeknjizeni selectNeknjizeni()throws SQLException{
+        IteratorNeknjizeni pomIterator=null;
+        
+        #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        batchContext.debug("SQLJ bo621 poceo.");
+        try{
+            #sql [ctx] pomIterator = {
+              SELECT a.col_hea_id,
+                     a.col_num,
+                     date(a.opening_ts) as first_entry_date,
+                     f.code as oj_code,
+                     f.name as oj_name,
+                     c.user_name,
+                     d.user_name as verification,
+                     g.code_char as code_char,
+                     a.real_est_nomi_valu as real_est_nomi_value,
+                     a.real_est_nomi_date as real_est_nomi_date,
+                     a.rba_eligibility as rba_eligibility,
+                     a.rba_elig_dsc as rba_eligibility_desc,
+                     h.sys_code_desc as collateral_status
+               FROM  coll_head a
+               LEFT OUTER JOIN coll_list_q b ON (a.col_hea_id = b.col_hea_id AND b.col_lis_typ_id in (697223,698223,699223) AND b.status = '0')  
+               LEFT OUTER JOIN app_user c ON (b.use_id = c.use_id)   
+               LEFT OUTER JOIN app_user d ON (a.use_id = d.use_id)   
+               INNER JOIN coll_category e ON (a.col_cat_id = e.col_cat_id)
+               INNER JOIN organization_unit f ON (a.org_uni_id = f.org_uni_id)
+               LEFT OUTER JOIN currency g ON (a.real_est_nm_cur_id = g.cur_id)
+               INNER JOIN system_code_value h ON (a.collateral_status = h.sys_code_value AND  
+                                                       h.sys_cod_id = 'kol_status_tekst')
+               WHERE a.collateral_status in ('0','1','2')
+               ORDER BY 13,6,7   
+            };
+            
+        batchContext.debug( "BO621.sqlj select uspješno izvrsen");
+        } catch (SQLException sqle) {
+            batchContext.debug("SQL BO621.sqlj(SELECT podataka)=" + sqle.toString());
+            throw sqle;
+        }       
+        return pomIterator;
+    }
+
+    // TST0400000083 dohvacanje referenta koji je zadnji obraðivao kolateral
+    public String getUser(BigDecimal col_hea_id)throws SQLException{
+        String user=null;
+        
+        #sql [ctx1] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        batchContext.debug("SQLJ getUser() poceo.");
+        try{
+            #sql [ctx1] {
+               SELECT b.user_name
+               INTO   :(user)
+               FROM   coll_head a
+               JOIN   app_user b ON (a.use_id = b.use_id)
+               WHERE  col_hea_id = :(col_hea_id)
+            };
+            
+        batchContext.debug( "BO621.sqlj getUser() uspješno izvrsen");
+        } catch (SQLException sqle) {
+            batchContext.debug("SQL BO621.sqlj getUser()=" + sqle.toString());
+            throw sqle;
+        }       
+        return user;
+    }
+    
+    public void insertIntoEvent() throws Exception{
+        batchContext.debug("sqlj insertIntoEvent");     
+
+        try{
+
+            YXYB0 eve1 = new YXYB0(batchContext);
+            YXYD0 genId = new YXYD0(ctx);           
+
+            //generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+            this.eve_id = genId.getNewId();
+
+            HashMap event = new HashMap();
+            event.put("eve_id",this.eve_id);
+            event.put("eve_typ_id", new BigDecimal("4663809704.0"));
+            event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+            event.put("cmnt", "Batch za kreiranje izvješæa o neknjiženim kolateralima sa referentskih lista."); 
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null); 
+            event.put("bank_sign", batchContext.getBankSign());
+            batchContext.debug("eve_id " + event.get("eve_id"));
+
+            eve1.insertEvent(event);
+
+            /* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+             * i koji se nalazi u commonu yxyA. Radi se update: 
+             *    UPDATE batch_log
+             *    SET eve_id = :newEveId
+             *    WHERE bat_log_id = :batLogId 
+             */
+            batchContext.updateEveID(this.eve_id);     
+            batchContext.debug("Gotov insert u event.");
+
+        } catch(Exception e){
+            throw e;
+        }
+    }  
+}

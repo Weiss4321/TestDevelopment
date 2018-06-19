@@ -1,0 +1,601 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+    
+ 
+public class CO06A extends RemoteTransaction {
+ 	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO06A.sqlj,v 1.22 2017/12/21 14:04:03 hrazst Exp $";
+	
+ 	private DeclCO06 decl = null;
+	private YOY63 SQLhelper = null;
+	CollHeadSelectData chs = new CollHeadSelectData();
+	
+	public CO06A(DeclCO06 decl) { 
+		this.decl = decl;
+	}
+	  
+	public void execute(TransactionContext tc) throws Exception {
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();
+        SQLhelper = new YOY63(tc);
+        
+        ConnCtx ctx = tc.getContext();
+		tc.debug ( "......COL_HEA_ID " + decl.vehselectmapping.COL_HEA_ID);
+   		  
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		//select iz COLL_HEAD		
+		YOY42 headSel = new YOY42(tc, chs);
+
+		chs.COL_HEA_ID = decl.vehselectmapping.COL_HEA_ID;		  
+		headSel.selectFromCollHead();
+		fillDeclFromCHSObj();	
+		tc.debug(chs.toString());
+        
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);		
+	 
+		try{
+ 
+			#sql [ctx] {SELECT 
+										col_veh_id , 
+										col_hea_id , 
+										veh_group_id , 
+										veh_subgr_id ,
+										veh_made ,
+										veh_type ,
+										veh_model ,
+										veh_colour ,
+										veh_chassis ,
+										veh_base_purpose ,
+										veh_producer ,
+										veh_cou_id_prod ,
+										veh_made_year ,
+										veh_sit_no ,
+										veh_sta_no ,
+										veh_lyi_no ,
+										veh_allow_load ,
+										veh_empty_mass ,
+										veh_max_allo_mass,
+										veh_max_velocity,
+										veh_axis_no,
+										veh_engine_type,
+										veh_power_kw,
+										veh_ccm,
+										veh_no_wheel,
+										veh_tracks,
+										veh_brake,
+										veh_km_trav,
+										veh_equipment ,
+										veh_veh_licence,
+										veh_f_plate,
+										veh_f_plate_dat,
+										veh_date_lic,
+										veh_date_lic_to,
+										veh_lic_return,
+										veh_lic_reamark,
+										veh_insurance,   
+										veh_con_num,
+										fid_typ,
+										veh_state,
+										veh_kasko,
+										veh_insdate,
+										veh_ins_id,
+										veh_vin_num,
+										lic_ret_own,
+										lic_ret_own_dat,
+										lic_ret_who,
+										lic_ret_own_rem,
+		                                estimate_cus_id
+				INTO  
+									:(decl.vehselectmapping.COL_SEC_ID),   													                                                
+									:(decl.vehselectmapping.COL_HEA_ID),
+ 									:(decl.vehselectmapping.SEC_TYP_ID), 	
+									:(decl.vehselectmapping.veh_subgr_id),
+									:(decl.vehselectmapping.Vehi_txtVehMade),
+									:(decl.vehselectmapping.Vehi_txtVehType), 	
+									:(decl.vehselectmapping.Vehi_txtVehModel),                   
+									:(decl.vehselectmapping.Vehi_txtVehColour),
+									:(decl.vehselectmapping.Vehi_txtVehChassis),
+									:(decl.vehselectmapping.Vehi_txtVehBasePurp),
+									:(decl.vehselectmapping.Vehi_txtVehProducer),
+									:(decl.vehselectmapping.veh_cou_id_prod),
+									:(decl.vehselectmapping.Vehi_txtVehMadeYear),
+									:(decl.vehselectmapping.Vehi_txtVehSitNo),
+									:(decl.vehselectmapping.Vehi_txtVehStaNo),
+									:(decl.vehselectmapping.Vehi_txtVehLyiNo),
+									:(decl.vehselectmapping.Vehi_txtVehAllowLoad),
+									:(decl.vehselectmapping.Vehi_txtVehEmptyMass),
+									:(decl.vehselectmapping.Vehi_txtVehAlloMass),
+									:(decl.vehselectmapping.Vehi_txtVehMaxVelocity),
+									:(decl.vehselectmapping.Vehi_txtVehAxisNo),
+									:(decl.vehselectmapping.Vehi_txtVehEngineType),
+									:(decl.vehselectmapping.Vehi_txtVehPowerKw),
+									:(decl.vehselectmapping.Vehi_txtVehCcm),
+									:(decl.vehselectmapping.Vehi_txtVehNoWheel),
+									:(decl.vehselectmapping.Vehi_txtVehTracks),
+									:(decl.vehselectmapping.Vehi_txtVehBrake),
+									:(decl.vehselectmapping.Vehi_txtVehKmTravel),
+									:(decl.vehselectmapping.Vehi_txtVehEquipment),
+									:(decl.vehselectmapping.Vehi_txtVehVehLicence),
+									:(decl.vehselectmapping.Vehi_txtVehFPlate),
+									:(decl.vehselectmapping.Vehi_txtVehFPlateDate),
+									:(decl.vehselectmapping.Vehi_txtVehDateLic),   
+									:(decl.vehselectmapping.Vehi_txtVehDateLicTo),
+									:(decl.vehselectmapping.Vehi_txtVehLicReturn),
+									:(decl.vehselectmapping.Vehi_txtVehLicRemark),
+									:(decl.vehselectmapping.Vehi_txtVehInsurance),
+									:(decl.vehselectmapping.Vehi_txtVehConNum),
+									:(decl.vehselectmapping.Vehi_txtFidTyp),
+									:(decl.vehselectmapping.Kol_txtVehState),
+									:(decl.vehselectmapping.Vehi_txtVehKasko),
+									:(decl.vehselectmapping.Vehi_txtVehInsDate),
+									:(decl.vehselectmapping.veh_ins_id),
+									:(decl.vehselectmapping.Vehi_txtVIN),
+									:(decl.vehselectmapping.Vehi_txtVehLicRetOwn),
+									:(decl.vehselectmapping.Vehi_txtVehLicRetDat),
+									:(decl.vehselectmapping.Vehi_txtVehLicRetWho),
+									:(decl.vehselectmapping.Vehi_txtVehLicRetRem),
+		                            :(decl.vehselectmapping.Coll_txtEUsePersonCusId)
+				FROM coll_vehicle
+				WHERE COL_HEA_ID = :(decl.vehselectmapping.COL_HEA_ID) };				  
+		}catch(SQLException se){ 
+			
+			tc.debug ( "......CO06A.sqlj select from coll_vehicle SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO06A.sqlj select from coll_vehicle SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO06A.sqlj select from coll_vehicle SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO06A: Error selecting coll_vehicle ","err411a", null);
+		}
+		tc.debug ( "......COL_HEA_ID " + decl.vehselectmapping.SEC_TYP_ID);	
+
+        if(decl.vehselectmapping.Coll_txtEUsePersonCusId != null){
+
+            try{
+                    #sql [ctx]  {SELECT register_no,
+                                        name,
+                                        tax_number
+                                INTO
+                                        :(decl.vehselectmapping.Coll_txtEUsePersonId),
+                                        :(decl.vehselectmapping.Coll_txtEUsePersonName),
+                                        :(decl.vehselectmapping.Coll_txtEUsePersonIdOIB)
+                                FROM  customer  
+                                WHERE cus_id =:(decl.vehselectmapping.Coll_txtEUsePersonCusId)
+                            }; 
+            }catch(SQLException e) {
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else { 
+                    throw e;
+                }
+            }
+        }
+        // dohvat iz tabele VEHICLE_GROUP
+			try{    
+				if (decl.vehselectmapping.SEC_TYP_ID != null){
+		
+						#sql [ctx] {SELECT veh_gro_code, veh_gro_desc
+	             			INTO	:(decl.vehselectmapping.Coll_txtSecTypeCode), :(decl.vehselectmapping.Coll_txtSecTypeName)
+	             			FROM 	VEHICLE_GROUP
+	     	       			WHERE 	veh_gro_id = :(decl.vehselectmapping.SEC_TYP_ID) };					
+					
+		    	}
+		    }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	    
+
+		    // dohvat iz tabele VEHICLE_SUBGROUP
+			try{    
+				if (decl.vehselectmapping.veh_subgr_id != null){
+		
+						#sql [ctx] {SELECT veh_sub_code, veh_sub_desc
+	             			INTO	:(decl.vehselectmapping.Vehi_txtVehSubCode), :(decl.vehselectmapping.Vehi_txtVehSubDesc)
+	             			FROM 	VEHICLE_SUBGROUP
+	     	       			WHERE 	veh_sub_id = :(decl.vehselectmapping.veh_subgr_id) };					
+					
+		    	}
+		    }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	    		    
+	 	    
+		    
+		    // dohvat iz tabele USER_CODE_VALUE
+			try{    
+				if (decl.vehselectmapping.Kol_txtVehState != null || (!decl.vehselectmapping.Kol_txtVehState.trim().equals(""))){
+		
+						#sql [ctx] {SELECT use_code_desc
+	             			INTO	:(decl.vehselectmapping.Kol_txtVehStateDsc)
+	             			FROM 	USER_CODE_VALUE
+	     	       			WHERE 	use_cod_id = 'vehicle_state' 
+							AND		use_code_value =  :(decl.vehselectmapping.Kol_txtVehState)};					
+					
+		    	}
+		    }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	    		    
+
+			try{    
+				if (decl.vehselectmapping.Vehi_txtFidTyp != null || (!decl.vehselectmapping.Vehi_txtFidTyp.trim().equals(""))){
+					
+						#sql [ctx] {SELECT use_code_desc
+		             			INTO	:(decl.vehselectmapping.Vehi_txtFidTypDsc)
+		             			FROM 	USER_CODE_VALUE
+		     	       			WHERE 	use_cod_id = 'fid_typ' 
+								AND		use_code_value =  :(decl.vehselectmapping.Vehi_txtFidTyp)};					
+												
+					
+		    	}
+		    }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	    		 
+		   
+  
+		    //dohvat iz tabele COUNTRY 
+			try{ 
+				if (decl.vehselectmapping.veh_cou_id_prod != null){ 
+					#sql [ctx] {
+			                    SELECT shortcut_num, shortcut_char, name
+			                        INTO :(decl.vehselectmapping.Vehi_txtVehCouNumCode),
+										 :(decl.vehselectmapping.Vehi_txtVehCouCharCode),
+										 :(decl.vehselectmapping.Vehi_txtVehCouName)
+			                        FROM country
+			                        WHERE cou_id = :(decl.vehselectmapping.veh_cou_id_prod)};
+				}
+		    }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	      				
+ 
+	        
+		    // dohvat iz tabele osiguravatelja INSU_COMPANY
+			try{ 
+				if (decl.vehselectmapping.veh_ins_id != null){ 
+							#sql [ctx] {
+			                    SELECT ic_code, ic_name
+			                        INTO :(decl.vehselectmapping.Vehi_txtInsId),
+										 :(decl.vehselectmapping.Vehi_txtInsName)
+			                        FROM INSU_COMPANY
+			                        WHERE ic_id = :(decl.vehselectmapping.veh_ins_id)};
+	      		}
+	        }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	      							        
+			        
+	        // dohvat iz tabele SYSTEM_CODE_VALUE
+			try{    
+				if (decl.vehselectmapping.Vehi_txtVehLicRetWho != null){	        
+		
+						#sql [ctx] {SELECT sys_code_desc
+	             			INTO	:(decl.vehselectmapping.Vehi_txtVehLicRetWhoDsc)
+	             			FROM 	SYSTEM_CODE_VALUE
+	     	       			WHERE 	sys_cod_id = 'kol_vehlicretwhoe' 
+							AND		sys_code_value =  :(decl.vehselectmapping.Vehi_txtVehLicRetWho)};					
+					
+				}
+		    }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	    		        
+		    
+	        CalculationData cData = SQLhelper.getAllCalculationData(decl.vehselectmapping.COL_HEA_ID);               
+	        decl.vehselectmapping.Kol_txtPonderMVP = cData.MVP_ponder;
+	        decl.vehselectmapping.Coll_txtWcaAmountDate = cData.wcov_date;
+	        decl.vehselectmapping.Coll_txtWcaAmount = cData.wcov_amount;
+	        decl.vehselectmapping.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+	        decl.vehselectmapping.Coll_txtUsedWCAAmount = cData.wca_amount;
+	        
+	        decl.vehselectmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+	        decl.vehselectmapping.Coll_txtRealPonderAmount=cData.real_ponder;
+		    
+            String add_request = decl.vehselectmapping.Vehi_txtVehKasko;  
+             
+            // kada je dohvacen ponder treba izracunati ponderiranu i raspolozivu vrijednost            
+            kolData.colHeaId = decl.vehselectmapping.COL_HEA_ID;
+            kolData.colCurId = decl.vehselectmapping.REAL_EST_NM_CUR_ID;
+            kolData.nominalAmount = decl.vehselectmapping.Coll_txtNomiValu;
+            
+            kolData.colCatId = decl.vehselectmapping.COL_CAT_ID;
+            kolData.colTypId = decl.vehselectmapping.COL_TYPE_ID;
+            kolData.colSubTypId = decl.vehselectmapping.SEC_TYP_ID;
+            kolData.addRequest = decl.vehselectmapping.Vehi_txtVehKasko;
+
+            yoye0.getNoPonderAndPonderRestAmount(kolData);
+          
+            decl.vehselectmapping.Coll_txtAcouValue = kolData.ponderAmount;
+            decl.vehselectmapping.Coll_txtAcouDate = todaySQLDate;
+            
+            decl.vehselectmapping.Coll_txtAvailValue = kolData.restAmount;
+            decl.vehselectmapping.Coll_txtAvailDate = kolData.coverDate; 
+            
+            decl.vehselectmapping.Coll_txtAvailPonValue = kolData.restPonAmount;
+            decl.vehselectmapping.Coll_txtNDAvailDate = kolData.NDCoverDate;
+            
+            decl.vehselectmapping.Coll_txtSumPartVal = kolData.exposureAmount;
+            decl.vehselectmapping.Coll_txtSumPartDat = kolData.exposureDate;   
+             
+            decl.vehselectmapping.Coll_txtCollMvpPonderMin = kolData.minPonder;
+            decl.vehselectmapping.Coll_txtCollMvpPonder = kolData.dflPonder;
+            decl.vehselectmapping.Coll_txtCollMvpPonderMax = kolData.maxPonder;
+            
+            //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja          
+            try{ 
+              #sql [ctx] {
+                      SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+                      INTO
+                      :(decl.vehselectmapping.Coll_txtCoConfirm),
+                      :(decl.vehselectmapping.Coll_txtCoConfirmUserId),
+                      :(decl.vehselectmapping.Coll_txtCoConfirmUserName),
+                      :(decl.vehselectmapping.Coll_txtCoConfirmTime)
+                      FROM co_chg_history as a, app_user as app
+                      WHERE 
+                             a.col_hea_id = :(decl.vehselectmapping.COL_HEA_ID)
+                      and    a.co_use_id=app.use_id
+                      and
+                              a.co_ind='D'
+                      and
+                              a.co_chg_ts is null
+                      and co_chg_use_id is null
+                      FETCH FIRST ROWS ONLY
+                     };  
+                  
+          }catch(SQLException e){
+              if (tc.getSQLExHandler().isEmptyRowset(e)) {
+              } else {
+                  throw e;
+              }
+          } 
+	}
+    /**
+     * Metoda koja puni decl podacima iz data objekta.
+     */	  
+	private void fillDeclFromCHSObj () throws Exception{	    
+		decl.vehselectmapping.COL_HEA_ID = chs.COL_HEA_ID;    													                                                
+		decl.vehselectmapping.COL_TYPE_ID = chs.COL_TYPE_ID;  
+		decl.vehselectmapping.Coll_txtCode = chs.Coll_txtCode; 
+		decl.vehselectmapping.Coll_txtDesc = chs.Coll_txtDesc;  
+		decl.vehselectmapping.REAL_EST_EUSE_ID = chs.REAL_EST_EUSE_ID;
+		decl.vehselectmapping.Coll_txtEstnValu = chs.Coll_txtEstnValu;                   
+		decl.vehselectmapping.Coll_txtEstnDate = chs.Coll_txtEstnDate;                   
+		decl.vehselectmapping.Coll_txtDatnFrom = chs.Coll_txtDatnFrom;                   
+		decl.vehselectmapping.Coll_txtDatnUnti = chs.Coll_txtDatnUnti;                   
+		decl.vehselectmapping.Coll_txtNomiDesc = chs.Coll_txtNomiDesc; 
+		decl.vehselectmapping.Coll_txtNomiValu = chs.Coll_txtNomiValu;                   		
+		decl.vehselectmapping.Coll_txtNomiDate = chs.Coll_txtNomiDate; 
+		decl.vehselectmapping.Coll_txtLiquValu = chs.Coll_txtLiquValu;                  		
+		decl.vehselectmapping.Coll_txtLiquDate = chs.Coll_txtLiquDate;                   		
+		decl.vehselectmapping.Coll_txtBptcValu = chs.Coll_txtBptcValu;                   		
+		decl.vehselectmapping.Coll_txtBptcDate = chs.Coll_txtBptcDate; 
+		decl.vehselectmapping.REAL_EST_NM_CUR_ID = chs.REAL_EST_NM_CUR_ID; 
+		decl.vehselectmapping.CUS_ID = chs.CUS_ID;   
+		decl.vehselectmapping.COLL_CUS_ID = chs.COLL_CUS_ID;   
+		decl.vehselectmapping.Coll_txtDateToLop = chs.Coll_txtDateToLop;   
+		decl.vehselectmapping.Coll_txtDateRecLop = chs.Coll_txtDateRecLop; 
+		decl.vehselectmapping.Coll_txtRecLop = chs.Coll_txtRecLop; 
+		decl.vehselectmapping.Coll_txtComDoc = chs.Coll_txtComDoc;                              		                                      
+		decl.vehselectmapping.Coll_txtMissingDoc = chs.Coll_txtMissingDoc;                          		                                      
+		decl.vehselectmapping.Coll_txtDateToDoc = chs.Coll_txtDateToDoc;                          		                                      
+		decl.vehselectmapping.Coll_txtDateRecDoc = chs.Coll_txtDateRecDoc;                     		                                    
+		decl.vehselectmapping.Coll_txtRevaCoefMan = chs.Coll_txtRevaCoefMan;
+		decl.vehselectmapping.Coll_txtRevaDate = chs.Coll_txtRevaDate;                            		                                           
+		decl.vehselectmapping.Coll_txtRevaDateAM = chs.Coll_txtRevaDateAM;                         		                                         
+		decl.vehselectmapping.Coll_txtRevaBValue = chs.Coll_txtRevaBValue;                          		                                          
+		decl.vehselectmapping.Coll_txtRevaBDate = chs.Coll_txtRevaBDate;                           		
+		decl.vehselectmapping.Coll_txtRevaBDateAM = chs.Coll_txtRevaBDateAM;                       	     
+		decl.vehselectmapping.Coll_txtAmortAge = chs.Coll_txtAmortAge;                            	    
+		decl.vehselectmapping.AMORT_PER_CAL_ID = chs.AMORT_PER_CAL_ID;                        	                            
+		decl.vehselectmapping.Coll_txtAmortValCal = chs.Coll_txtAmortValCal;
+		decl.vehselectmapping.Coll_txtNepoValue = chs.Coll_txtNepoValue;                           	                            
+		decl.vehselectmapping.Coll_txtNepoDate = chs.Coll_txtNepoDate;                            	                            
+		decl.vehselectmapping.Coll_txtNepoPerCal = chs.Coll_txtNepoPerCal; 
+		decl.vehselectmapping.Coll_txtThirdRight = chs.Coll_txtThirdRight;                          	                            
+		decl.vehselectmapping.THIRD_RIGHT_CUR_ID = chs.THIRD_RIGHT_CUR_ID;                   	                            
+		decl.vehselectmapping.Coll_txtThirdRightInNom = chs.Coll_txtThirdRightInNom;                      		                                         
+		decl.vehselectmapping.Coll_txtThirdRightDate = chs.Coll_txtThirdRightDate;                    	                                                        		                                         
+		decl.vehselectmapping.Coll_txtHfsValue = chs.Coll_txtHfsValue;                           	                                                        		                                         
+		decl.vehselectmapping.Coll_txtHfsValueDate = chs.Coll_txtHfsValueDate;                         		                                         
+		decl.vehselectmapping.Coll_txtHfsValueLastOne = chs.Coll_txtHfsValueLastOne;                      		                                         
+		decl.vehselectmapping.Coll_txtHfsDateLastOne = chs.Coll_txtHfsDateLastOne;     
+		decl.vehselectmapping.Coll_txtAcouValue = chs.Coll_txtAcouValue;
+		decl.vehselectmapping.Coll_txtAcouDate = chs.Coll_txtAcouDate;                          
+		decl.vehselectmapping.Coll_txtAcouBValue = chs.Coll_txtAcouBValue;                        
+		decl.vehselectmapping.Coll_txtAcouBDate = chs.Coll_txtAcouBDate;  
+		decl.vehselectmapping.Coll_txtSumLimitVal = chs.Coll_txtSumLimitVal;                                                     
+		decl.vehselectmapping.Coll_txtSumLimitDat = chs.Coll_txtSumLimitDat;                                                       
+		decl.vehselectmapping.Coll_txtSumPartVal = chs.Coll_txtSumPartVal;                                                         
+		decl.vehselectmapping.Coll_txtSumPartDat = chs.Coll_txtSumPartDat;
+		decl.vehselectmapping.Coll_txtAvailValue = chs.Coll_txtAvailValue;                                                       
+		decl.vehselectmapping.Coll_txtAvailPerCal = chs.Coll_txtAvailPerCal;                                                       
+		decl.vehselectmapping.Coll_txtAvailDate = chs.Coll_txtAvailDate;  
+		decl.vehselectmapping.INSPOL_IND = chs.INSPOL_IND;  
+		decl.vehselectmapping.COL_PLACE = chs.COL_PLACE; 
+		decl.vehselectmapping.COL_COUNTY = chs.COL_COUNTY; 
+		decl.vehselectmapping.COL_DISTRICT = chs.COL_DISTRICT; 
+		decl.vehselectmapping.COL_RESI_QUAR = chs.COL_RESI_QUAR; 
+		decl.vehselectmapping.Coll_txtCollMvpPonder = chs.Coll_txtCollMvpPonder;
+		decl.vehselectmapping.Coll_txtCollHnbPonder = chs.Coll_txtCollHnbPonder; 
+		decl.vehselectmapping.Coll_txtCollRzbPonder = chs.Coll_txtCollRzbPonder;
+		decl.vehselectmapping.Coll_txtDateFrom = chs.Coll_txtDateFrom;                   	                         
+		decl.vehselectmapping.Coll_txtDateUnti = chs.Coll_txtDateUnti;                   	 
+		decl.vehselectmapping.Coll_txtAddData = chs.Coll_txtAddData;  
+		decl.vehselectmapping.STATUS = chs.STATUS;                      		                          
+		decl.vehselectmapping.SPEC_STATUS = chs.SPEC_STATUS;  
+		decl.vehselectmapping.USE_OPEN_ID = chs.USE_OPEN_ID;
+		decl.vehselectmapping.USE_ID = chs.USE_ID;
+		decl.vehselectmapping.Coll_txtOpeningTs = chs.Coll_txtOpeningTs;
+		decl.vehselectmapping.Coll_txtUserLock = chs.Coll_txtUserLock; 				
+		decl.vehselectmapping.Coll_txtEUseIdLogin = chs.Coll_txtEUseIdLogin;
+		decl.vehselectmapping.Coll_txtEUseIdName = chs.Coll_txtEUseIdName;
+		decl.vehselectmapping.Coll_txtEUseIdLoginOIB=chs.Coll_txtEUseIdLoginOIB;
+		decl.vehselectmapping.Coll_txtEstnCurr = chs.Coll_txtEstnCurr;
+		decl.vehselectmapping.Coll_txtCarrierRegisterNo = chs.Coll_txtCarrierRegisterNo;
+		decl.vehselectmapping.Coll_txtCarrierName = chs.Coll_txtCarrierName;
+		decl.vehselectmapping.Coll_txtOwnerRegisterNo = chs.Coll_txtOwnerRegisterNo;
+		decl.vehselectmapping.Coll_txtOwnerName = chs.Coll_txtOwnerName;
+		decl.vehselectmapping.Coll_txtThirdRightCurCodeChar = chs.Coll_txtThirdRightCurCodeChar;	
+		decl.vehselectmapping.Coll_txtUseOpenIdLogin = chs.Coll_txtUseOpenIdLogin;
+		decl.vehselectmapping.Coll_txtUseOpenIdName = chs.Coll_txtUseOpenIdName;
+		decl.vehselectmapping.Coll_txtUseIdLogin = chs.Coll_txtUseIdLogin;
+		decl.vehselectmapping.Coll_txtUseIdName = chs.Coll_txtUseIdName; 					
+		decl.vehselectmapping.Coll_txtAmortPerCal = chs.Coll_txtAmortPerCal;
+		decl.vehselectmapping.Coll_txtCollTypeCode = chs.Coll_txtCollTypeCode;
+		decl.vehselectmapping.Coll_txtCollTypeName  = chs.Coll_txtCollTypeName;
+		decl.vehselectmapping.USER_LOCK = chs.USER_LOCK;
+		decl.vehselectmapping.Coll_txtNmValCurr = chs.Coll_txtNmValCurr;
+		decl.vehselectmapping.Coll_txtEligibility = chs.Coll_txtEligibility;
+		decl.vehselectmapping.Coll_txtEligDesc = chs.Coll_txtEligDesc;
+		decl.vehselectmapping.Coll_txtAcumBuyValue = chs.Coll_txtAcumBuyValue;
+
+		decl.vehselectmapping.ORIGIN_ORG_UNI_ID = chs.ORIGIN_ORG_UNI_ID;
+		decl.vehselectmapping.ORG_UNI_ID = chs.ORG_UNI_ID;
+		decl.vehselectmapping.USE_ID_VER = chs.USE_ID_VER;
+		decl.vehselectmapping.USE_ID_AUT = chs.USE_ID_AUT;
+		decl.vehselectmapping.VERIFICATION_TS = chs.VERIFICATION_TS;
+		decl.vehselectmapping.AUTORIZATION_TS = chs.AUTORIZATION_TS;
+		decl.vehselectmapping.MORTGAGE_STATUS = chs.MORTGAGE_STATUS;
+		decl.vehselectmapping.COLLATERAL_STATUS = chs.COLLATERAL_STATUS;
+		decl.vehselectmapping.WORKFLOW_INDIC = chs.WORKFLOW_INDIC;
+		decl.vehselectmapping.COVER_INDIC = chs.COVER_INDIC;
+		decl.vehselectmapping.VER_SEND_TS = chs.VER_SEND_TS;
+		decl.vehselectmapping.BASIC_DATA_STATUS = chs.BASIC_DATA_STATUS;
+		decl.vehselectmapping.COLL_DATA_STATUS = chs.COLL_DATA_STATUS;
+		decl.vehselectmapping.COL_CAT_ID = chs.COL_CAT_ID;		
+	
+		decl.vehselectmapping.USE_ID_VER_SND = chs.USE_ID_VER_SND;
+		decl.vehselectmapping.C_FINANCIAL_FLAG = chs.FINANCIAL_FLAG;		
+
+		decl.vehselectmapping.C_txtUseIdSndVerLogin = chs.C_txtUseIdSndVerLogin;
+		decl.vehselectmapping.C_txtUseIdSndVerName = chs.C_txtUseIdSndVerName;
+		decl.vehselectmapping.C_txtUseIdVerLogin = chs.C_txtUseIdVerLogin;
+		decl.vehselectmapping.C_txtUseIdVerName = chs.C_txtUseIdVerName;
+		decl.vehselectmapping.C_txtUseIdAutLogin = chs.C_txtUseIdAutLogin;
+		decl.vehselectmapping.C_txtUseIdAutName = chs.C_txtUseIdAutName;
+		
+		decl.vehselectmapping.Coll_txtBasicDataSt = chs.Coll_txtBasicDataSt;
+		decl.vehselectmapping.Coll_txtCollDataSt = chs.Coll_txtCollDataSt;
+		decl.vehselectmapping.Coll_txtCoverIndic = chs.Coll_txtCoverIndic;
+		decl.vehselectmapping.Coll_txtFinFlag = chs.Coll_txtFinFlag;
+		decl.vehselectmapping.Coll_txtMortgageSt = chs.Coll_txtMortgageSt;
+
+		decl.vehselectmapping.ColRba_txtEligibility = chs.ColRba_txtEligibility;
+		decl.vehselectmapping.ColRba_txtEligDesc = chs.ColRba_txtEligDesc;
+		decl.vehselectmapping.KolLow_txtEligibility = chs.KolLow_txtEligibility;
+		decl.vehselectmapping.KolLow_txtEligDesc = chs.KolLow_txtEligDesc;	
+
+		decl.vehselectmapping.Kol_txtVehiAmount = chs.Coll_txtEstnValu;  
+		decl.vehselectmapping.Kol_txtVehiCur = chs.Coll_txtNmValCurr;           
+		decl.vehselectmapping.veh_cur_id = chs.REAL_EST_NM_CUR_ID;
+
+		decl.vehselectmapping.Kol_txtRbaEligDsc = chs.Kol_txtRbaEligDsc; 	
+
+		decl.vehselectmapping.Coll_txtB1Eligibility = chs.Coll_txtB1Eligibility;
+		decl.vehselectmapping.Coll_txtB1EligDesc = chs.Coll_txtB1EligDesc;
+		decl.vehselectmapping.Coll_txtB2IRBEligibility = chs.Coll_txtB2IRBEligibility;
+		decl.vehselectmapping.Coll_txtB2IRBEligDesc = chs.Coll_txtB2IRBEligDesc;		
+
+		decl.vehselectmapping.Kol_txtCRMHnb=chs.Kol_txtCRMHnb;
+		
+		decl.vehselectmapping.Coll_txtNDEligibility=chs.Coll_txtNDEligibility;
+		decl.vehselectmapping.Coll_txtNDEligDesc=chs.Coll_txtNDEligDesc;
+		
+		//dodavanje novih polja
+		
+		decl.vehselectmapping.Coll_txtB2HNB= chs.b2_hnb_insag_elig;
+		decl.vehselectmapping.Coll_txtB2IRB= chs.b2_irb_insag_elig;
+		decl.vehselectmapping.Coll_txtB2HNB_OLD= chs.b2_hnb_insag_elig;
+        decl.vehselectmapping.Coll_txtB2IRB_OLD= chs.b2_irb_insag_elig;
+		decl.vehselectmapping.EST_TYPE_CODE= chs.est_type;
+		decl.vehselectmapping.Coll_txtTypelValuer= chs.est_type_desc; 
+		decl.vehselectmapping.Coll_txtInternalValuer= chs.real_est_estn_int; 
+		decl.vehselectmapping.Coll_txtAssessmentMethod1Code= chs.met_est_1;
+		decl.vehselectmapping.Coll_txtAssessmentMethod2Code= chs.met_est_2;
+		decl.vehselectmapping.Coll_txtInsTotalCoverCode= null;
+		decl.vehselectmapping.Coll_txtNonInsReasoneCode= chs.non_ins_reason;
+		decl.vehselectmapping.Coll_txtAccuracyEstimatesCode= chs.prec_exec_est;
+		decl.vehselectmapping.Coll_txtFairnessValuesCode= chs.correct_value; 
+		decl.vehselectmapping.Coll_txtDeadLinesCode= chs.respect_deadline;
+		decl.vehselectmapping.Coll_txtProfByRBACode= chs.prof_to_rba;
+		decl.vehselectmapping.Coll_txtProfByClientCode= chs.prof_to_client; 
+		decl.vehselectmapping.Coll_txtTypeTVCode= chs.real_est_nom_type; 
+		decl.vehselectmapping.Coll_txtTypeTV= chs.real_est_nom_type_desc; 
+		decl.vehselectmapping.USE_ID_CO= chs.use_id_co;
+		decl.vehselectmapping.Coll_txtCollOfficer= chs.use_id_co_name;
+		decl.vehselectmapping.Coll_txtContractTypeCode= chs.contract_type; 
+		decl.vehselectmapping.Coll_txtContractTypeDesc= chs.contract_type_desc; 
+		decl.vehselectmapping.Coll_txtRealPonderAmount= null; 
+		decl.vehselectmapping.Coll_txtWcaOrigCurrencyCode= null;
+		decl.vehselectmapping.Coll_txtUsedWCAAmount= null;
+
+		decl.vehselectmapping.Coll_txtUsedInRecovery= chs.used_in_recovery; 
+		decl.vehselectmapping.Coll_txtRecoveryProcStat= chs.recovery_proc_stat; 
+		decl.vehselectmapping.Coll_txtKindOfRecoveryCode= chs.kind_of_recovery; 
+		decl.vehselectmapping.Coll_txtKindOfRecoveryDesc= chs.kind_of_recovery_desc; 
+		decl.vehselectmapping.Coll_txtFullAmountRecovery= chs.full_amount; 
+		decl.vehselectmapping.Coll_txtFullAmountRecoveryCur= chs.full_amount_cur_codeChar;
+		decl.vehselectmapping.CUR_ID_FULL_AMOUNT= chs.full_amount_cur_id; 
+		decl.vehselectmapping.Coll_txtRecoveryAmount= chs.recovery_amount; 
+		decl.vehselectmapping.Coll_txtRecoveryAmountCur= chs.recovery_cur_codeChar;
+		decl.vehselectmapping.CUR_ID_RECOVERY_AMOUNT= chs.recovery_cur_id; 
+		decl.vehselectmapping.Coll_txtRecoveryDate= chs.recovery_date; 
+		decl.vehselectmapping.Coll_txtRecoveryRate= chs.recovery_rate; 
+		decl.vehselectmapping.Coll_txtRecoveryComment= chs.recovery_comment;
+		
+        decl.vehselectmapping.Coll_txtRealizationAmount=chs.realization_amount;
+        decl.vehselectmapping.CUR_ID_REALIZATION_AMOUNT=chs.realization_cur_id;
+        decl.vehselectmapping.Coll_txtRealizationAmountCur=chs.realization_cur_char;
+        decl.vehselectmapping.Coll_txtRealizationDate=chs.realization_date;
+        decl.vehselectmapping.Coll_txtKindOfRealization=chs.realization_kind;
+        decl.vehselectmapping.Coll_txtCostRealization=chs.realization_cost;   
+		
+        decl.vehselectmapping.REALIZATION_COST_CUR_ID=chs.realization_cost_cur_id;
+        decl.vehselectmapping.Coll_txtCostRealizationCur=chs.realization_cost_cur_code_char;
+        decl.vehselectmapping.Coll_txtForSale=chs.for_sale;
+        decl.vehselectmapping.Coll_txtForSaleDate=chs.for_sale_date;
+        decl.vehselectmapping.Coll_txtTakeOverBank=chs.takeover_from_bank;
+        
+		decl.vehselectmapping.Coll_txtCollateralGCTCCode= chs.gctc_code; 
+		decl.vehselectmapping.Coll_txtCollateralGCTCDesc= chs.gctc_desc; 
+		decl.vehselectmapping.Coll_txtEndorsementTypeGCTCCode= chs.endorsement_type_code;
+		decl.vehselectmapping.Coll_txtEndorsementTypeGCTCDesc= chs.endorsement_type_desc;
+		decl.vehselectmapping.Coll_txtObjectTypeGCTCCode= chs.object_type_code; 
+		decl.vehselectmapping.Coll_txtObjectTypeGCTCDesc= chs.object_type_desc; 
+		decl.vehselectmapping.Coll_txtPropertyTypeGCTCCode= chs.property_type_code; 
+		decl.vehselectmapping.Coll_txtPropertyTypeGCTCDesc= chs.property_type_desc; 
+		decl.vehselectmapping.Coll_txtB2ValueLLAmount= null;
+		decl.vehselectmapping.Coll_txtB2ValueLLCurCode= null; 
+		decl.vehselectmapping.Coll_txtB2ValueGLAmount= null;
+		decl.vehselectmapping.Coll_txtB2ValueGLCurCode= null; 
+		decl.vehselectmapping.Coll_txtEconomicLife = chs.col_eco_life; 
+		
+        decl.vehselectmapping.Coll_txtProccessing="";
+        decl.vehselectmapping.Coll_txtProccessingTimestamp=chs.chg_nom_val_proc_ts; 
+	} 
+}  
+ 

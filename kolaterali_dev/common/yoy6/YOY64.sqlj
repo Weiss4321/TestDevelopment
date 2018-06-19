@@ -1,0 +1,149 @@
+package hr.vestigo.modules.collateral.common.yoy6;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.DateUtils;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+public class YOY64 {
+    
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy6/YOY64.sqlj,v 1.5 2015/04/10 08:51:28 hrazst Exp $";
+	RemoteContext rc = null;
+	ConnCtx ctx = null;	
+	YOYM0 yoym_gctc = null;
+	YOYM0 yoym_object = null;
+	YOYM0 yoym_property = null;
+	YOYM0 yoym_endorsement = null;
+	
+	
+	public YOY64(RemoteContext rc) throws Exception {
+	    this.rc=rc;
+	    this.ctx=rc.getContext();
+	    yoym_gctc=new YOYM0(rc, "gctc", DateUtils.getCurrentDate());
+	    yoym_object=new YOYM0(rc, "object_type", DateUtils.getCurrentDate());
+	    yoym_property=new YOYM0(rc, "property_type", DateUtils.getCurrentDate());
+	    yoym_endorsement=new YOYM0(rc, "endorsement_type", DateUtils.getCurrentDate());
+	}
+	
+    /**
+     * Metoda dohvaæa sve GCTC(gctc,object_type,property_type,endorsement_type) podatke na koju je mapirana zadana RBA kategorija, vrsta i podvrsta kolaterala.
+     * @param col_cat_id ID kategorije kolaterala
+     * @param col_typ_id ID vrste kolaterala
+     * @param col_sub_id ID podvrste kolaterala
+     * @param col_gro_id ID grupe kolaterala 
+     * @return GCTCData object
+     */
+	public GCTCData getGCTCData(BigDecimal col_cat_id, BigDecimal col_typ_id, BigDecimal col_sub_typ_id, BigDecimal col_gro_id) throws Exception{
+	    GCTCData data=new GCTCData();	    
+	    
+        GcmTypeData gtd=yoym_gctc.resolve(col_cat_id, col_typ_id, col_sub_typ_id, col_gro_id);
+        if(gtd!=null){
+            data.gctc_id = gtd.col_gcm_typ_id;
+            data.gctc_code = gtd.code;
+            data.gctc_desc = gtd.name;
+        }
+
+        gtd=yoym_object.resolve(col_cat_id, col_typ_id, col_sub_typ_id, col_gro_id);
+        if(gtd!=null){
+            data.object_type_id = gtd.col_gcm_typ_id;
+            data.object_type_code = gtd.code;
+            data.object_type_desc = gtd.name;
+        }
+
+        gtd=yoym_property.resolve(col_cat_id, col_typ_id, col_sub_typ_id, col_gro_id);
+        if(gtd!=null){
+            data.property_type_id = gtd.col_gcm_typ_id;
+            data.property_type_code = gtd.code;
+            data.property_type_desc = gtd.name;
+        }
+
+        gtd=yoym_endorsement.resolve(col_cat_id, col_typ_id, col_sub_typ_id, col_gro_id);
+        if(gtd!=null){
+            data.endorsement_type_id = gtd.col_gcm_typ_id;
+            data.endorsement_type_code = gtd.code;
+            data.endorsement_type_desc = gtd.name;
+        }
+        return data;
+	}
+	
+    /**
+     * Metoda dohvaæa sve GCTC(gctc,object_type,property_type,endorsement_type) koja ima zadani ID za specifificirani tip
+     * @param gctc_id ID gctc
+     * @param object_type_id ID object_type
+     * @param property_type_id ID property_type
+     * @param endorsement_type_id ID endorsement_type
+     * @return GCTCData object
+     */
+    public GCTCData getGCTCDataByTypeId(BigDecimal gctc_id, BigDecimal object_type_id, BigDecimal property_type_id, BigDecimal endorsement_type_id) throws Exception{
+        GCTCData data=new GCTCData();
+           
+        GcmTypeData gtd=yoym_gctc.getGcmTypeById(gctc_id);
+        if(gtd!=null){
+            data.gctc_id = gtd.col_gcm_typ_id;
+            data.gctc_code = gtd.code;
+            data.gctc_desc = gtd.name;
+        }
+
+        gtd=yoym_object.getGcmTypeById(object_type_id);
+        if(gtd!=null){
+            data.object_type_id = gtd.col_gcm_typ_id;
+            data.object_type_code = gtd.code;
+            data.object_type_desc = gtd.name;
+        }
+
+        gtd=yoym_property.getGcmTypeById(property_type_id);
+        if(gtd!=null){
+            data.property_type_id = gtd.col_gcm_typ_id;
+            data.property_type_code = gtd.code;
+            data.property_type_desc = gtd.name;
+        }
+
+        gtd=yoym_endorsement.getGcmTypeById(endorsement_type_id);
+        if(gtd!=null){
+            data.endorsement_type_id = gtd.col_gcm_typ_id;
+            data.endorsement_type_code = gtd.code;
+            data.endorsement_type_desc = gtd.name;
+        }
+        return data;
+    }
+	
+   public void updateGCTCDataIDs(BigDecimal col_hea_id,BigDecimal gctc_id, BigDecimal object_type_id, BigDecimal property_type_id, BigDecimal endorsement_type_id) throws Exception{
+     //update GCTC polja nakon odreðivanja
+       try{    
+           debug("update gctc polja");          
+           #sql [ctx]{
+                   UPDATE coll_head
+                   SET gctc_id=:(gctc_id),
+                       endorsement_type_id=:(endorsement_type_id),
+                       object_type_id=:(object_type_id),
+                       property_type_id=:(property_type_id)     
+                   WHERE col_hea_id  = :(col_hea_id)
+               };
+       }catch(java.sql.SQLException se){            
+           info ( "update coll_restate SQL ErrorCode " + se.getErrorCode());
+           info ( "update coll_restate SQL SQLState " + se.getSQLState());
+           info ( "update coll_restate SQL Message " + se.getMessage());
+           throw new VestigoTMException(1, "Error updating gctc fields! ","err411a", null);
+       }
+    }
+	    
+    private void debug(String s){
+        rc.debug("---YOY64 -> " + s);
+    } 
+    
+    private void info(String s){
+        rc.info("---YOY64 -> " + s);
+    } 
+}  
+ 
+
+

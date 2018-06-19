@@ -1,0 +1,505 @@
+package hr.vestigo.modules.collateral.batch.bo54;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO541
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo54/BO541.sqlj,v 1.9 2015/03/11 12:06:46 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator Iter1 with (holdability = true)( 
+        String sifra_kolaterala,
+        String status_kolaterala,
+        Date datum_unosa_kolaterala,
+        Date datum_promjene_kolaterala,
+        BigDecimal col_cat_id,
+        String red_hipoteke,
+        String partija_plasmana,
+        String dwh_partija_plasmana,
+        String broj_zahtjeva,
+        String dwh_broj_zahtjeva,
+        String broj_ugovora,
+        String dwh_broj_ugovora,
+        Date datum_unosa_plasmana,
+        Date datum_promjene_plasmana,
+        String im_korisnika,
+        String korisnik,
+        String b2asset,
+        String dwh_status,
+        String status_u_modulu,
+        Date datum_izlozenosti,
+        BigDecimal izlozenost,
+        String valuta_izlozenosti
+    );
+
+    public BO541(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("3004334194"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Izvjesce o vezi kolateral plasman");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa podatke o kolateralima koji imaju hipoteku.
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter1 selectCollateralsWithMortgage(String cus_type,String rep_type)
+    {
+      batchContext.startStopWatch("selectCollateralsWithMortgage");
+      Iter1 iter = null;
+      if(rep_type.equalsIgnoreCase("0"))
+      {
+        if(cus_type.equalsIgnoreCase("P"))
+        {
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        b.hf_priority       AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                     FROM coll_head a
+                        LEFT OUTER JOIN coll_hf_prior b ON a.col_hea_id = b.hf_coll_head_id
+                        LEFT OUTER JOIN loan_beneficiary c ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type NOT IN ('1','36') OR d.basel_cus_type IS NULL)
+                    ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala (pravnih osoba) s hipotekama!", ex);
+            }
+        }
+        else if(cus_type.equalsIgnoreCase("F"))
+        {
+            // FBPr200010498 - dodan upit u sluèaju da je parametar F - d.basel_cus_type IN ('1','36')
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        b.hf_priority       AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                    FROM coll_head a
+                        LEFT OUTER JOIN coll_hf_prior b ON a.col_hea_id = b.hf_coll_head_id
+                        LEFT OUTER JOIN loan_beneficiary c ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type IN ('1','36') OR d.basel_cus_type IS NULL)
+                    ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala (fizièkih osoba) s hipotekama!", ex);
+            }
+        }
+      } 
+      else if (rep_type.equalsIgnoreCase("1"))
+      {//  Skraæeni izvještaj
+        
+        if(cus_type.equalsIgnoreCase("P"))
+        {
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        b.hf_priority       AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                     FROM coll_head a
+                        INNER JOIN COLLATERAL_TYPE ct on (a.col_type_ID=ct.coll_type_id and mortgage_flag='0')
+                        LEFT OUTER JOIN coll_hf_prior b ON (a.col_hea_id = b.hf_coll_head_id and  hf_own_cus_id = 8218251 and hf_priority  <> 'NA')
+                        LEFT OUTER JOIN loan_beneficiary c ON b.coll_hf_prior_id = c.coll_hf_prior_id 
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type NOT IN ('1','36') OR d.basel_cus_type IS NULL)
+                        AND a.collateral_status='3'
+                        AND ((e.cus_acc_status is null) or (e.cus_acc_status=''))
+                        AND (c.acc_no is null or not(UPPER(c.acc_no) like 'HBOR%'  or UPPER(c.acc_no) like 'IZOKV%' or c.acc_no like '111-11%' ))
+                        AND c.status = 'A'
+                    ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala (pravnih osoba) s hipotekama!", ex);
+            }
+        }
+        else if(cus_type.equalsIgnoreCase("F"))
+        {
+            // FBPr200010498 - dodan upit u sluèaju da je parametar F - d.basel_cus_type IN ('1','36')
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        b.hf_priority       AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                    FROM coll_head a
+                        INNER JOIN COLLATERAL_TYPE ct on (a.col_type_ID=ct.coll_type_id and mortgage_flag='0')
+                        LEFT OUTER JOIN coll_hf_prior b ON (a.col_hea_id = b.hf_coll_head_id and  hf_own_cus_id = 8218251 and hf_priority  <> 'NA')
+                        LEFT OUTER JOIN loan_beneficiary c ON b.coll_hf_prior_id = c.coll_hf_prior_id 
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type IN ('1','36') OR d.basel_cus_type IS NULL)
+                        AND a.collateral_status='3'
+                        AND ((e.cus_acc_status is null) or (e.cus_acc_status=''))
+                        AND (c.acc_no is null or not(UPPER(c.acc_no) like 'HBOR%'  or UPPER(c.acc_no) like 'IZOKV%' or c.acc_no like '111-11%' ))
+                        AND c.status = 'A'
+                    ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala (fizièkih osoba) s hipotekama!", ex);
+            }
+        }
+      }
+      //* Skraæeni izvještaj
+        
+      batchContext.stopStopWatch("selectCollateralsWithMortgage");
+      return iter;
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o kolateralima koji nemaju hipoteku.
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+    public Iter1 selectCollateralsWithoutMortgage(String cus_type,String rep_type)
+    {
+      batchContext.startStopWatch("selectCollateralsWithoutMortgage");
+      Iter1 iter = null;
+      if(rep_type.equalsIgnoreCase("0"))
+      {      
+          if(cus_type.equalsIgnoreCase("P"))
+          {
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        ''                  AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                    FROM coll_head a
+                        LEFT OUTER JOIN loan_beneficiary c ON a.col_hea_id = c.col_hea_id
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type NOT IN ('1','36') OR d.basel_cus_type IS NULL)
+                    ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala bez hipoteke!", ex);
+            }
+        }
+        else if(cus_type.equalsIgnoreCase("F"))
+        {
+            // FBPr200010498 - dodan upit u sluèaju da je parametar F - d.basel_cus_type IN ('1','36')
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        ''                  AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                    FROM coll_head a
+                        LEFT OUTER JOIN loan_beneficiary c ON a.col_hea_id = c.col_hea_id
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type IN ('1','36') OR d.basel_cus_type IS NULL)
+                    ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala bez hipoteke!", ex);
+            }
+        }
+      }
+    else if(rep_type.equalsIgnoreCase("1"))    
+    {
+       // Skraæeni izvještaj     
+        if(cus_type.equalsIgnoreCase("P"))
+        {
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        ''                  AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                    FROM coll_head a
+                        INNER JOIN COLLATERAL_TYPE ct on (a.col_type_ID=ct.coll_type_id and mortgage_flag='X')
+                        LEFT OUTER JOIN loan_beneficiary c ON a.col_hea_id = c.col_hea_id
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type NOT IN ('1','36') OR d.basel_cus_type IS NULL)
+                        AND a.collateral_status='3'
+                        AND ((e.cus_acc_status is null) or (e.cus_acc_status=''))
+                        AND (c.acc_no is null or not(UPPER(c.acc_no) like 'HBOR%'  or UPPER(c.acc_no) like 'IZOKV%' or c.acc_no like '111-11%' ))
+                      ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala bez hipoteke!", ex);
+            }
+        }
+        else if(cus_type.equalsIgnoreCase("F"))
+        {
+            // FBPr200010498 - dodan upit u sluèaju da je parametar F - d.basel_cus_type IN ('1','36')
+            try
+            {
+                #sql [connCtx] iter = {
+                    SELECT
+                        a.col_num           AS sifra_kolaterala,
+                        a.collateral_status AS status_kolaterala,
+                        DATE(a.opening_ts)  AS datum_unosa_kolaterala,
+                        DATE(a.user_lock)   AS datum_promjene_kolaterala,
+                        a.col_cat_id        AS col_cat_id,
+                        ''                  AS red_hipoteke,
+                        c.acc_no            AS partija_plasmana,
+                        e.cus_acc_no        AS dwh_partija_plasmana,
+                        c.request_no        AS broj_zahtjeva,
+                        e.request_no        AS dwh_broj_zahtjeva,
+                        c.acc_no_old        AS broj_ugovora,
+                        e.contract_no       AS dwh_broj_ugovora,
+                        DATE(c.opening_ts)  AS datum_unosa_plasmana,
+                        DATE(c.user_lock)   AS datum_promjene_plasmana,
+                        d.register_no       AS im_korisnika,
+                        d.name              AS korisnik,
+                        d.basel_cus_type    AS b2asset,
+                        e.cus_acc_status    AS dwh_status,
+                        e.cus_acc_orig_st   AS status_u_modulu,
+                        e.exposure_date     AS datum_izlozenosti,
+                        e.exposure_balance  AS izlozenost,
+                        f.code_char         AS valuta_izlozenosti
+                    FROM coll_head a
+                        INNER JOIN COLLATERAL_TYPE ct on (a.col_type_ID=ct.coll_type_id and mortgage_flag='X')
+                        LEFT OUTER JOIN loan_beneficiary c ON a.col_hea_id = c.col_hea_id
+                        LEFT OUTER JOIN customer d ON c.cus_id = d.cus_id
+                        LEFT OUTER JOIN cusacc_exposure e ON (c.la_acc_id = e.cus_acc_id OR c.acc_no = e.cus_acc_no OR c.request_no = e.request_no)
+                        LEFT OUTER JOIN currency f ON e.exposure_cur_id = f.cur_id
+                    WHERE (d.basel_cus_type IN ('1','36') OR d.basel_cus_type IS NULL)
+                        AND a.collateral_status='3'
+                        AND ((e.cus_acc_status is null) or (e.cus_acc_status=''))
+                        AND (c.acc_no is null or not(UPPER(c.acc_no) like 'HBOR%'  or UPPER(c.acc_no) like 'IZOKV%' or c.acc_no like '111-11%' ))
+                      ORDER BY 2
+                    WITH UR
+                };
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Greska kod dohvacanja kolaterala bez hipoteke!", ex);
+            }
+        }
+     }
+     batchContext.stopStopWatch("selectCollateralsWithoutMortgage");
+     return iter;
+    }
+}

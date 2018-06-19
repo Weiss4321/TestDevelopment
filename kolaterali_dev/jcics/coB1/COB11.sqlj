@@ -1,0 +1,102 @@
+package hr.vestigo.modules.collateral.jcics.coB1;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+import java.sql.Date;
+
+
+  
+#sql iterator Iter1 (
+                    BigDecimal est_id,
+                    BigDecimal est_cus_id,
+                    String REG_NO_EST,
+                    String NAME_EST,
+                    String REG_NO_EST_COMP,
+                    String NAME_EST_COMP,
+                    BigDecimal est_comp_cus_id,
+                    String est_type,
+                    String est_type_name,
+                    Date date_from,
+                    Date date_until,
+                    BigDecimal use_open_id,
+                    BigDecimal use_id,
+                    Timestamp opening_ts,
+                    Timestamp user_lock,
+                    String est_internal
+                    );
+ 
+public class COB11 extends SQLJScrollableRemoteTransaction {
+    
+    public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB1/COB11.sqlj,v 1.2 2017/11/29 09:46:19 hrazst Exp $";
+    public DeclCOB1 d=null;
+    private Iter1 iter=null;
+    
+    public COB11 (DeclCOB1 d) {
+        this.d = d;  
+    } 
+          
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        setLevel(d.ActionListLevel);
+        setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+        ConnCtx ctx = tc.getContext();
+        
+            #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+        
+            #sql [ctx] iter = {
+                            SELECT  e.EST_ID,
+                                    e.EST_CUS_ID,
+                                    cest.REGISTER_NO as REG_NO_EST,
+                                    cest.NAME as NAME_EST,
+                                    cestc.REGISTER_NO as REG_NO_EST_COMP,
+                                    cestc.NAME as NAME_EST_COMP,
+                                    e.EST_COMP_CUS_ID,
+                                    e.EST_TYPE,
+                                    scv.SYS_CODE_DESC as EST_TYPE_NAME,
+                                    e.DATE_FROM,
+                                    e.DATE_UNTIL,
+                                    e.USE_OPEN_ID,
+                                    e.USE_ID,
+                                    e.OPENING_TS,
+                                    e.USER_LOCK,
+                                    e.est_internal
+                            FROM ESTIMATOR e
+                            INNER JOIN CUSTOMER cest on e.EST_CUS_ID = cest.CUS_ID
+                            INNER JOIN CUSTOMER cestc on e.EST_COMP_CUS_ID = cestc.CUS_ID
+                            INNER JOIN SYSTEM_CODE_VALUE scv on e.EST_TYPE = scv.SYS_CODE_VALUE AND scv.SYS_COD_ID = 'est_type'  
+                            };        
+    }
+    
+    public boolean next() throws Exception {
+        return iter.next();
+    }
+    
+    public void close() {
+        if(iter!=null) {
+            try {
+                iter.close();
+            } catch (Exception ignored) {}
+        }
+    }
+ 
+    
+    public void populateRowData() throws Exception {
+                    
+        Vector row=new Vector();
+        
+        row.add(iter.REG_NO_EST());
+        row.add(iter.NAME_EST());
+        row.add(iter.REG_NO_EST_COMP());
+        row.add(iter.NAME_EST_COMP());
+        row.add(iter.est_type_name());
+        row.add(iter.est_internal()); 
+        row.add(iter.date_from());
+        row.add(iter.date_until());            
+        Vector hidden = new Vector();        
+        hidden.add(iter.est_id());  
+        System.out.println(iter.est_id());
+        d.tblCollEstimatorList.addRow(row, hidden);       
+    }
+}

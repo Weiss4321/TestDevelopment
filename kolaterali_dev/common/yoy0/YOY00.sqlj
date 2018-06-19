@@ -1,0 +1,42 @@
+package hr.vestigo.modules.collateral.common.yoy0;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+/**
+/* Collateral common methods
+*/
+
+public class YOY00 {
+public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy0/YOY00.sqlj,v 1.2 2007/09/03 12:19:31 vu00225 Exp $";
+
+	private ConnCtx connCtx=null;
+	private RemoteContext rc=null;
+	
+	public YOY00(ConnCtx connCtx){
+		this.connCtx=connCtx;
+	}
+	public YOY00(RemoteContext rc) throws SQLException {
+		this.rc=rc;
+		this.connCtx = rc.getContext();	
+	}
+	
+	public BigDecimal getNewId()  throws Exception{
+		BigDecimal r = null;
+	    #sql [connCtx] {select NEXT VALUE FOR COLLATERAL_SEQ INTO : r from sysibm.sysdummy1};
+		return r;
+	}
+	
+//	public BigDecimal getNewId() throws Exception{
+//		BigDecimal r = null;
+//		#sql [connCtx] {insert into collateral_idn values(default)};
+//		
+//		#sql [connCtx] {select identity_val_local() into :r from sysibm.sysdummy1};		
+//			
+//		return r;
+//	}
+		 
+}

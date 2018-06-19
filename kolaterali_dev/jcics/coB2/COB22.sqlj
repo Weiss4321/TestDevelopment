@@ -1,0 +1,69 @@
+package hr.vestigo.modules.collateral.jcics.coB2;
+
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+import hr.vestigo.framework.remote.transaction.*;   
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+
+public class COB22 extends RemoteTransaction {
+
+public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB2/COB22.sqlj,v 1.1 2015/12/03 08:51:11 hraziv Exp $";
+    
+    public DeclCOB2 decl = null;
+    
+    public COB22 (DeclCOB2 decl) {
+        this.decl = decl;    
+    }
+    public void  execute(TransactionContext tc) throws Exception {
+        ConnCtx ctx = tc.getContext(); 
+        
+        #sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        try{            
+            #sql [ctx] {SELECT  prm.POL_MAP_ID, 
+                                prm.REGION_ID,
+                                pm.CODE as pol_map_code, 
+                                pm.NAME as pol_map_name, 
+                                scv.SYS_CODE_VALUE as region_value, 
+                                scv.SYS_CODE_DESC as region_desc,
+                                au.login,
+                                au.user_name,
+                                prm.RECORDING_TIMESTAMP,
+                                prm.POL_REGION_MAP_ID,
+                                prm.DATE_FROM,
+                                prm.DATE_UNTIL
+                        INTO    :(decl.collpolmapregiondialogdetailsmapping.POL_MAP_ID),
+                                :(decl.collpolmapregiondialogdetailsmapping.SysCodValueId),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolRegionMapDialog_txtPolMapCode),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolRegionMapDialog_txtPolMapName),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolMapRegionDialog_txtRegionCode),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolMapRegionDialog_txtRegionName),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolRegionMapDialog_txtUseLogin),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolRegionMapDialog_txtUseName),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolRegionMapDialog_txtUserLock),
+                                :(decl.collpolmapregiondialogdetailsmapping.POL_REGION_MAP_ID),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolMapRegionDialog_txtDateFrom),
+                                :(decl.collpolmapregiondialogdetailsmapping.CollPolMapRegionDialog_txtDateUntil)
+                        FROM POL_REGION_MAP prm
+                        INNER JOIN POLITICAL_MAP pm ON pm.POL_MAP_ID = prm.POL_MAP_ID
+                        INNER JOIN SYSTEM_CODE_VALUE scv ON scv.SYS_COD_VAL_ID = prm.REGION_ID and scv.SYS_COD_ID = 'coll_region'
+                        INNER JOIN APP_USER au ON prm.USER_ID = au.USE_ID
+                        WHERE prm.POL_REGION_MAP_ID = :(decl.collpolmapregiondialogdetailsmapping.POL_REGION_MAP_ID)
+                };                                                         
+                                                                                                                                  
+        }catch(java.sql.SQLException se){
+            tc.debug ( "......COB22.sqlj  SQLException   decl.collpolmapregiondialogdetailsmapping.POL_REGION_MAP_ID     " + decl.collpolmapregiondialogdetailsmapping.POL_REGION_MAP_ID );
+            throw new VestigoTMException(1, "Transaction COB22: Error selecting from POL_REGION_MAP ! ","errclt1", null);
+        }
+    }
+    
+
+}

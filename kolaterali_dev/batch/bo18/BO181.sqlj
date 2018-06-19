@@ -1,0 +1,218 @@
+package hr.vestigo.modules.collateral.batch.bo18;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.*;
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+
+public class BO181 {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo18/BO181.sqlj,v 1.7 2008/05/09 13:45:54 hraaks Exp $";
+    
+    #sql public iterator VheicleIterator with (holdability = true) (
+                    String col_num,
+                    String veh_vin_num,
+                    Date date_to_lop,
+                    String acc_no,
+                    String register_no,
+                    String name);
+    
+    private BatchContext bc;
+    private ConnCtx connCtx1; //inicijalni context za selectove
+    private BigDecimal eve_id;
+
+    
+    /**
+     * @return the eve_id
+     */
+    public BigDecimal getEve_id() {
+        return eve_id;
+    }
+
+    public BO181(BatchContext bc)  throws Exception {
+        this.connCtx1 =bc.getContext(); //inicjanlni kontext
+        this.bc = bc;
+    }
+
+    public void setIsolationLevelRC() throws Exception {
+        #sql [connCtx1] { SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+    }
+    
+    public List getData(Date datumOd, Date DatumDo){
+        List lst = new ArrayList();
+        VheicleIterator iterator = null;
+        try {
+            #sql[connCtx1]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            #sql[connCtx1] iterator = {SELECT 
+                                        a.col_num,
+                                        b.veh_vin_num,
+                                        c.date_to_lop,
+                                        d.acc_no,
+                                        f.register_no,
+                                        f.name
+                                      FROM 
+                                        COLL_HEAD a,
+                                        COLL_VEHICLE b,
+                                        COLL_HF_PRIOR  c,
+                                        LOAN_BENEFICIARY d,
+                                        COLL_OWNER e,
+                                        CUSTOMER f
+                                      WHERE
+                                        a.col_cat_id = 624223 
+                                        and
+                                        a.collateral_status in ('0','1','2','3')
+                                        and
+                                        a.col_hea_id = b.col_hea_id
+                                        and
+                                        a.col_hea_id = c.hf_coll_head_id
+                                        and
+                                        c.hf_own_cus_id = 8218251
+                                        and
+                                        c.hf_status = 'A'
+                                        and
+                                        c.rec_lop = 'N'
+                                        and
+                                        c.date_to_lop  between :(datumOd) and :(DatumDo)
+                                        and
+                                        c.coll_hf_prior_id = d.coll_hf_prior_id
+                                        and
+                                        a.col_hea_id = e.col_hea_id
+                                        
+                                        and
+                                        e.cus_id = f.cus_id with ur};
+            int i =0;
+            while(iterator.next()){
+                i++;
+                VheicleData data = new VheicleData();
+                data.nr=i;
+                data.col_num= iterator.col_num();
+                data.veh_vin_num= iterator.veh_vin_num();
+                data.date_to_loop=iterator.date_to_lop();
+                data.acc_no=iterator.acc_no();
+                data.register_no=iterator.register_no();
+                data.name= iterator.name();
+                lst.add(data);
+            }
+        } catch (Exception e) {
+            bc.debug("getData exception :"+e.toString());
+            close(iterator);
+        }
+        close(iterator);
+        return lst;
+    }
+    
+    
+    public List getData(){
+        List lst = new ArrayList();
+        VheicleIterator iterator = null;
+        try {
+            #sql[connCtx1]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+            #sql[connCtx1] iterator = {SELECT 
+                                        a.col_num,
+                                        b.veh_vin_num,
+                                        c.date_to_lop,
+                                        d.acc_no,
+                                        f.register_no,
+                                        f.name
+                                      FROM 
+                                        COLL_HEAD a,
+                                        COLL_VEHICLE b,
+                                        COLL_HF_PRIOR  c,
+                                        LOAN_BENEFICIARY d,
+                                        COLL_OWNER e,
+                                        CUSTOMER f
+                                      WHERE
+                                        a.col_cat_id = 624223 
+                                        and
+                                        a.collateral_status in ('0','1','2','3')
+                                        and
+                                        a.col_hea_id = b.col_hea_id
+                                        and
+                                        a.col_hea_id = c.hf_coll_head_id
+                                        and
+                                        c.hf_own_cus_id = 8218251
+                                        and
+                                        c.hf_status = 'A'
+                                        and
+                                        c.rec_lop = 'N'
+                                        and
+                                        c.date_to_lop < '9999-12-31'
+                                        and
+                                        c.coll_hf_prior_id = d.coll_hf_prior_id
+                                        and
+                                        a.col_hea_id = e.col_hea_id
+                                       
+                                        and
+                                        e.cus_id = f.cus_id with ur};
+            int i =0;
+            while(iterator.next()){
+                i++;
+                VheicleData data = new VheicleData();
+                data.nr=i;
+                data.col_num= iterator.col_num();
+                data.veh_vin_num= iterator.veh_vin_num();
+                data.date_to_loop=iterator.date_to_lop();
+                data.acc_no=iterator.acc_no();
+                data.register_no=iterator.register_no();
+                data.name= iterator.name();
+                lst.add(data);
+            }
+        } catch (Exception e) {
+            bc.debug("getData exception :"+e.toString());
+            close(iterator);
+        }
+        close(iterator);
+        return lst;
+    }
+    
+    
+    public void close(sqlj.runtime.NamedIterator iter){
+        if(iter!=null)
+            {
+                try {
+                    iter.close();
+            }
+            catch (Exception ignored) {}
+        }
+    }
+
+    public void insertIntoEvent() {
+        bc.debug("USAO U EVENT");
+        try{
+            YXYB0 eve1 = new YXYB0(bc);
+            YXYD0 genId = new YXYD0(connCtx1);
+            //generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+            eve_id = genId.getNewId();
+            HashMap event = new HashMap();
+            event.put("eve_id",eve_id);
+            event.put("eve_typ_id", new BigDecimal("1928629003"));// ovaj je pravi al sam mu podvalio
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", " Batch za koji se poziva s ekrana pitati Andriju"); //TODO vidjeti sto staviti
+            event.put("use_id", bc.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            //event.put("org_uni_id", new BigDecimal("53253"));
+            event.put("bank_sign", "RB");
+            eve1.insertEvent(event);
+
+            /* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+             * i koji se nalazi u commonu yxyA. Radi se update:
+             *    UPDATE batch_log
+             *    SET eve_id = :newEveId
+             *    WHERE bat_log_id = :batLogId
+            */
+            bc.updateEveID(eve_id);
+
+      } catch(Exception e){
+          bc.debug("CAN'T INSERT INTO EVENT "+e.toString());
+      }
+      bc.debug("PROSAO EVENT");
+    }
+
+}

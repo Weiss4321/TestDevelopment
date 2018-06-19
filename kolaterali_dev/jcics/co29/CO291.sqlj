@@ -1,0 +1,205 @@
+package hr.vestigo.modules.collateral.jcics.co29;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import java.util.Vector;
+
+
+
+ 
+#sql iterator Iter1 (java.math.BigDecimal col_hea_id,
+					 String col_num	);
+
+
+public class CO291 extends RemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co29/CO291.sqlj,v 1.3 2006/10/07 15:34:21 hramkr Exp $";
+	private DeclCO29 decl = null;
+   	
+	private String ind;
+	   	
+	public CO291(DeclCO29 decl) {
+			this.decl = decl;
+		}
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx connCtx0 = tc.getContext();
+		Iter1 iter1 = null;		
+       	
+		#sql[connCtx0] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+  
+		
+		//acc_no (Partija plasmana)				je iz loan_beneficiary   
+		//cus_id (Korisnik plasmana)			je iz loan_beneficiary
+		//Uvjet spajanja ako su zadani cus_id i/ili acc_no je 
+		//
+		//loan_beneficiary.coll_hf_prior_id  = coll_hf_prior.coll_hf_prior_id 
+		//AND coll_hf_prior.hf_coll_head_id = coll_head.col_hea_id
+		
+			//cus_id, col_num, acc_no  
+
+//		 broj partije
+
+		if (decl.acc_no!= null) {
+			if (decl.acc_no.equals("")) { 
+				decl.acc_no = null;
+			}else{
+				decl.acc_no = decl.acc_no.replace('*','%');
+			}
+		} 		
+
+//   broj kolaterala
+		
+		if (decl.col_num!= null) {
+			if (decl.col_num.equals("")) { 
+				decl.col_num = null;
+			}else{
+				decl.col_num = decl.col_num.replace('*','%');
+			}
+		} 		
+		
+
+			if ((decl.cus_id == null) && (decl.col_num == null) &&  (decl.acc_no == null)) {				
+									#sql [connCtx0] iter1 =	{
+			    						SELECT 
+											ch.col_hea_id as col_hea_id,
+											ch.col_num as col_num
+										FROM
+											coll_head ch 
+									};				
+
+
+			} 
+			
+			else if (!(decl.cus_id == null) && (decl.col_num == null) &&  (decl.acc_no == null)) {				
+				#sql [connCtx0] iter1 =	{
+			    	SELECT 
+			    		ch.col_hea_id as col_hea_id,
+			    		ch.col_num as col_num
+			    	FROM
+			    			loan_beneficiary loben, coll_hf_prior chp, coll_head ch
+			    	WHERE	loben.cus_id = :(decl.cus_id) AND
+							loben.coll_hf_prior_id  = chp.coll_hf_prior_id AND 
+			    			chp.hf_coll_head_id = ch.col_hea_id 
+			    			
+			    	
+  				};				
+			} 
+			
+			else if (!(decl.cus_id == null) && !(decl.col_num == null) &&  (decl.acc_no == null)) {				
+				#sql [connCtx0] iter1 =	{ 
+			    	SELECT 
+			    		ch.col_hea_id as col_hea_id,
+			    		ch.col_num as col_num
+			    	FROM
+			    			loan_beneficiary loben, coll_hf_prior chp, coll_head ch  
+			    	WHERE	loben.cus_id = :(decl.cus_id) AND 	
+							loben.coll_hf_prior_id  = chp.coll_hf_prior_id AND 
+			    			chp.hf_coll_head_id = ch.col_hea_id AND
+			    			ch.col_num like :(decl.col_num)
+				};				
+			} 
+			else if (!(decl.cus_id == null) && !(decl.col_num == null) &&  !(decl.acc_no == null)) {				
+				#sql [connCtx0] iter1 =	{ 
+			    	SELECT 
+			    		ch.col_hea_id as col_hea_id,
+			    		ch.col_num as col_num
+			    	FROM
+			    			loan_beneficiary loben, coll_hf_prior chp, coll_head ch
+			    	WHERE 	loben.cus_id = :(decl.cus_id) AND
+							loben.acc_no like :(decl.acc_no) AND
+							loben.coll_hf_prior_id  = chp.coll_hf_prior_id AND 
+			    			chp.hf_coll_head_id = ch.col_hea_id AND
+			    			ch.col_num like :(decl.col_num)
+				};				
+			}
+			else if ((decl.cus_id == null) && !(decl.col_num == null) &&  !(decl.acc_no == null)) {				
+				#sql [connCtx0] iter1 =	{ 
+			    	SELECT 
+			    		ch.col_hea_id as col_hea_id,
+			    		ch.col_num as col_num
+			    	FROM
+			    			coll_head ch, coll_hf_prior chp, loan_beneficiary loben 
+			    	WHERE	ch.col_num like :(decl.col_num) AND
+							ch.col_hea_id  = chp.hf_coll_head_id  AND
+							chp.coll_hf_prior_id = loben.coll_hf_prior_id AND
+							loben.acc_no like :(decl.acc_no) 	
+			    			
+				};				
+			}
+			else if ((decl.cus_id == null) && (decl.col_num == null) &&  !(decl.acc_no == null)) {				
+				#sql [connCtx0] iter1 =	{ 
+			    	SELECT 
+			    		ch.col_hea_id as col_hea_id,
+			    		ch.col_num as col_num
+			    	FROM
+			    			loan_beneficiary loben, coll_hf_prior chp, coll_head ch 
+			    	WHERE 	loben.acc_no like :(decl.acc_no) AND
+							loben.coll_hf_prior_id  = chp.coll_hf_prior_id AND 
+			    			chp.hf_coll_head_id = ch.col_hea_id 
+			    			 
+			    	
+				};				
+			}
+			else if ((decl.cus_id == null) && !(decl.col_num == null) &&  (decl.acc_no == null)) {				
+			    #sql [connCtx0] iter1 =	{	
+			    	SELECT 
+	    				ch.col_hea_id as col_hea_id,
+	    				ch.col_num as col_num
+	    			FROM
+	    				coll_head ch
+	    			WHERE
+	    			     ch.col_num like :(decl.col_num)
+			    	};
+			}
+			 
+			else if (!(decl.cus_id == null) && (decl.col_num == null) &&  !(decl.acc_no == null)) {				
+				#sql [connCtx0] iter1 =	{
+			    	SELECT 
+			    		ch.col_hea_id as col_hea_id,
+			    		ch.col_num as col_num  
+			    	FROM
+			    			loan_beneficiary loben, coll_hf_prior chp, coll_head ch
+			    	WHERE 	loben.cus_id = :(decl.cus_id) AND
+							loben.acc_no like :(decl.acc_no) AND 
+							loben.coll_hf_prior_id  = chp.coll_hf_prior_id AND 
+			    			chp.hf_coll_head_id = ch.col_hea_id 
+			    			
+			    	
+				};				 
+			} 
+		   
+			  
+			
+		int number_of_rows=10;//tc.LOOKUP_FETCH_SIZE;
+		int level=decl.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+		int count=0;
+		int count_returned=0;
+		while (iter1.next()){
+			if(start<=count && start+number_of_rows>count){
+				Vector row=new Vector();
+				Vector unique = new Vector();
+
+				row.add(iter1.col_num());						
+				
+				unique.add(iter1.col_hea_id());	
+				
+				decl.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			} 
+			count++;  
+		}
+	
+		if(count_returned==0){
+			throw new VestigoTMException(1, "Transaction CO291: No more data! ","wrn090", null);
+		} 
+		
+		if(iter1 != null) iter1.close();    
+				
+			
+	}
+}  

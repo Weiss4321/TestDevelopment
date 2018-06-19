@@ -1,0 +1,97 @@
+package hr.vestigo.modules.collateral.jcics.coA3;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;   
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+
+
+public class COA32 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA3/COA32.sqlj,v 1.1 2009/09/25 11:33:01 hrakis Exp $";
+
+    public DeclCOA3 decl;
+    
+    public COA32(DeclCOA3 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        try
+        {
+            YOY00 id_generator = new YOY00(ctx);
+            BigDecimal id = id_generator.getNewId();
+            
+            int col_sub_id_empty = 0;
+            if (decl.collponderinsertm.COL_SUB_ID == null) col_sub_id_empty = 1;
+            
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+          
+            #sql [ctx]
+            {
+                UPDATE dfl_col_ponder SET 
+                    status = 'N', 
+                    date_until = CURRENT DATE, 
+                    org_uni_id_chg = :(decl.collponderinsertm.org_uni_id), 
+                    use_id_chg = :(decl.collponderinsertm.use_id), 
+                    user_lock = CURRENT TIMESTAMP 
+                WHERE 
+                    user_lock IS NULL AND
+                    col_cat_id = :(decl.collponderinsertm.COL_CAT_ID) AND
+                    col_typ_id = :(decl.collponderinsertm.COL_TYP_ID) AND
+                    (:col_sub_id_empty = 1 OR col_sub_id = :(decl.collponderinsertm.COL_SUB_ID)) AND
+                    add_request = :(decl.collponderinsertm.CollPonderDialog_txtAddRequest) AND
+                    ponder_type = :(decl.collponderinsertm.CollPonderDialog_txtPonderType)
+            };
+        
+            #sql [ctx]
+            {
+                INSERT INTO dfl_col_ponder (
+                    dfl_col_pon_id,
+                    col_cat_id,
+                    col_typ_id,
+                    col_sub_id,
+                    add_request,
+                    ponder_type,
+                    min_value,
+                    dfl_value,
+                    max_value,
+                    status,
+                    date_from,
+                    date_until,
+                    org_uni_id,
+                    use_id,
+                    create_ts
+                )
+                VALUES (
+                    :id, 
+                    :(decl.collponderinsertm.COL_CAT_ID), 
+                    :(decl.collponderinsertm.COL_TYP_ID),
+                    :(decl.collponderinsertm.COL_SUB_ID),
+                    :(decl.collponderinsertm.CollPonderDialog_txtAddRequest),
+                    :(decl.collponderinsertm.CollPonderDialog_txtPonderType),
+                    :(decl.collponderinsertm.CollPonderDialog_txtPonderMin),
+                    :(decl.collponderinsertm.CollPonderDialog_txtPonderDefault),
+                    :(decl.collponderinsertm.CollPonderDialog_txtPonderMax),
+                    'A',
+                    CURRENT DATE,
+                    '9999-12-31',
+                    :(decl.collponderinsertm.org_uni_id),
+                    :(decl.collponderinsertm.use_id),
+                    CURRENT TIMESTAMP
+                 )
+            };
+         }
+         catch(Exception ex)
+         {
+            throw new VestigoTMException(1, "Transaction COA32: Error inserting ponder!","err411a", null);
+         }
+    }
+}

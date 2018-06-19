@@ -1,0 +1,379 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+	-- prijava 28229
+	select * from customer_account where cus_acc_no = '3221794175';
+
+	select * from customer where cus_id = 8462624551;
+
+	select * from citizen where cus_id = 8462624551
+
+	-- prijava 27750 
+
+	select * from customer_account where cus_acc_no = '1103817492';
+
+	select * from turnover where tur_id = 4015683768303;
+
+	select * from payment_order where order_trn = '4015683768303';
+
+
+	-- --- prijava za bn38 ne šalje se za jedan raèun
+
+		-- 1500193466 i 1500154837 a ne šalje po raèunu 1100603496. 
+
+	select * from customer_account where cus_acc_no = '1500193466'; -- ok cus_acc_id = 552835471522
+
+	
+                            SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 552835471522
+                   AND pro_typ_id IN (42999, 36999) 
+
+	select * from customer_account where cus_acc_no = '1500154837'; -- ok  cus_acc_id = 865380522
+
+	            SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 865380522
+                   AND pro_typ_id IN (42999, 36999) 
+
+	select * from customer_account where cus_acc_no = '1100603496'; -- NOK za ovaj raèun -- cus_acc_id = 865387522
+
+	
+	            SELECT               
+                   *            
+               FROM
+                   cusacc_balance
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999, 36999) 
+
+                   select * from currency where code_num = '826';  -- funta 60999
+
+                    SELECT   *   FROM   cusacc_balance where cus_id = 6402251   AND pro_typ_id IN (42999, 36999) and cur_id = 60999  order by user_lock desc with ur; 
+
+                      SELECT   *   FROM   cusacc_balance where cus_id = 6402251   AND pro_typ_id IN (42999, 36999) and cur_id = 60999  order by balance_date desc with ur; 
+
+                       SELECT   *   FROM   cusacc_balance where cus_id = 6402251   AND pro_typ_id IN (42999, 36999)  order by user_lock desc with ur; 
+
+	
+	            SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999, 36999)  -- ima stanje 1100603496
+
+
+                
+                   
+
+                       SELECT               
+                   *               
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999, 36999) 
+
+                        SELECT               
+                   *               
+               FROM
+                   cusacc_balance
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999, 36999) 
+
+
+                    SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999, 36999)  
+
+
+	select * from customer where cus_id = 6402251;
+
+	-- korak po korak SQL -ovi  -- step 20
+
+	   			SELECT
+                        ban_sub_typ_id                  
+                    FROM
+                        bank_subserv_type
+                    WHERE
+                        code = '15'
+                    AND
+                        bank_sign = 'RB'
+
+	-- rezulatat : ban_sub_typ_id = 23053019
+
+		-- step 30
+
+			  SELECT
+                        cbs.cus_id
+                        , c.register_no
+                        , cbs.cus_ban_subserv_id
+                        , ca.cus_acc_id
+                        , ca.cus_acc_no
+                        , ca.ban_pro_typ_id
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c ,                    
+                        customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+                        AND cbs.status = '2'
+                        AND cbs.cus_id = ca.cus_id
+                        AND c.cus_id = ca.cus_id
+                        AND cbs.cus_id = ca.cus_id
+                        AND ca.cus_acc_status  IN ('A','B') 
+                        AND current_date >= cbs.date_from AND current_date <= cbs.date_until
+                        AND ca.ban_rel_typ_id in  
+                                                 ( 
+                                                    SELECT ban_rel_typ_id 
+                                                    FROM bank_relation_type 
+                                                    WHERE  ban_rel_type IN 
+                                                                            ( SELECT sys_code_value 
+                                                                               FROM system_code_value
+                                                                                WHERE sys_cod_id = 'sms_brt_pay') )
+                        AND cbs.bank_sign = 'RB'
+
+
+                        ----------  nova provjera za komitenta  cus_id 6402251 -- dohvate se sva tri raèuna
+ 
+                         SELECT
+                        cbs.cus_id
+                        , c.register_no
+                        , cbs.cus_ban_subserv_id
+                        , ca.cus_acc_id
+                        , ca.cus_acc_no
+                        , ca.ban_pro_typ_id
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c ,                    
+                        customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+                        AND cbs.status = '2'
+                        AND cbs.cus_id = ca.cus_id
+                        AND c.cus_id = ca.cus_id
+                        AND c.cus_id = 6402251
+                        AND cbs.cus_id = ca.cus_id
+                        AND ca.cus_acc_status  IN ('A','B') 
+                        AND current_date >= cbs.date_from AND current_date <= cbs.date_until
+                        AND ca.ban_rel_typ_id in  
+                                                 ( 
+                                                    SELECT ban_rel_typ_id 
+                                                    FROM bank_relation_type 
+                                                    WHERE  ban_rel_type IN 
+                                                                            ( SELECT sys_code_value 
+                                                                               FROM system_code_value
+                                                                                WHERE sys_cod_id = 'sms_brt_pay') )
+                        AND cbs.bank_sign = 'RB'
+
+			------------------------------------------------------------------------------------ do ovdje je ok
+
+			 SELECT
+                	cc.com_adress com_address
+                FROM
+                	cust_communication cc
+                	, cusacc_sserv_com csc
+                WHERE
+                csc.cus_ban_subserv_id = 30005169181522            
+                AND 
+                    current_date >= csc.date_from AND current_date <= csc.date_until              
+                AND 
+                    current_date >= cc.date_from AND current_date <= cc.date_until
+                AND
+                    cc.cus_com_code=csc.cus_com_code
+
+                    --------------------------  dohvate se dva broja i oni su u datoteci ali nema sloga za treæi raèun
+
+                    38598213407 i 385989812786
+
+           	-------  zatim ulazimo u iteriranje po brojevima mobitela   
+
+           	---        
+
+
+                        -- raèun je dohvaæen : 1100603496
+
+		   select * from batch_log where bat_deF_ID = '1617844003' ORDER BY recording_time desc;
+
+                   -- obrada je puštena danas u 2016-07-06 07:00:09.159925 sa parametrom za dohvat stanja RB#PAY;cp1250;S
+
+                   -- Step 40 dohvat brojeva mobitel -- to je bilo OK
+
+				-- step 50 dohvat stanja iz cus_acc_balance_last
+
+				  SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999, 36999) 
+
+                   	  SELECT               
+                  *             
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999, 36999) 
+                   AND user_lock <'2016-07-06 05:04:24.687534'
+
+
+                   SELECT               
+                  *             
+               FROM
+                   cusacc_balance
+               WHERE
+                   cus_acc_id = 865387522
+                   AND pro_typ_id IN (42999) order by balance_date desc
+
+                   
+                 
+			select * from event where eve_typ_id = 1617845003 order by user_lock desc;
+                    
+
+                            SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = :(cus_acc_id)
+                   AND pro_typ_id IN (42999, 36999) 
+
+
+                   select * from batch_log where bat_deF_ID = '1617844003' ORDER BY recording_time desc;  -- bn38
+
+
+                   -------  još neki primjeri koji nisu dobri
+
+                   Imamo više reklamacija klijenata da stanja koja im se šalju nisu ispravna što je i utvðeno pregledom stanja u siriusu.
+					Æuk d.o.o. ID 896356
+				H.A.B. D.O.O. ID 1098906
+				Primjer u prilogu za klijneta Æuk d.o.o. ID 896356
+					Molim HITNO provjeru i ispravak
+
+
+				select * from customer;	
+
+			----------- provjera podataka za ÆUK D.O.O
+
+				select * from customer where register_no = '896356'; -- ÆUK D.O.O.  -- 24,491,679,551
+
+				select * from customer_account where cus_id = 24491679551;  -- ima jedan raèun  1103516177 ,, cus_acc_id = 436508473522
+
+						
+                SELECT   *      FROM     cusacc_balance_last where cus_id =    24491679551;
+
+                 SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 436508473522
+                   AND pro_typ_id IN (42999, 36999)
+
+                   -------------  u datoteci je 62,034.65 koliko je dohvaæeno i iz tablice cusacc_balance_last u 18:28
+
+                      SELECT               
+                  *            
+               FROM
+                   cusacc_balance
+               WHERE
+                   cus_acc_id = 436508473522
+                   AND pro_typ_id IN (42999, 36999) 
+                   AND cur_id = 63999
+                   ORDER BY balance_date desc;
+                           
+              -------------  u datoteci je 62,034.65 u tablici cusacc_balance u 18:28 je takoðer isto stanje 62,034.65;
+
+              --- provjera za H.A.B. D.O.O. ID 1098906
+
+              	select * from customer where register_no = '1098906'; --H.A.B.D.O.O. cus_id  -- 73261440551
+
+				select * from customer_account where cus_id = 73261440551;  -- ima tri raèuna ali samo ovaj ulazi  1104515796 ,, cus_acc_id = 13881528522
+
+			-- 	385912689705 072929292 \n\nRACUN\n1104515796\nSTANJE\n+980.04EUR\n-2377.32HRK    zapis u datoteci
+
+				      SELECT               
+                  *            
+               FROM
+                   cusacc_balance
+               WHERE
+                   cus_acc_id = 13881528522
+                   AND pro_typ_id IN (42999, 36999) 
+                
+                   ORDER BY balance_date desc;  -- dohvaæeno je  -2,407.32 HRK i  980.04 eur
+
+
+                         SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 13881528522
+                   AND pro_typ_id IN (42999, 36999)    -- isto je dohvaææeno 980.04 EUR i -2,407.32 HRK 
+
+			-- 385912689705 072929292 \n\nRACUN\n1104515796\nSTANJE\n+980.04EUR\n-2377.32HRK
+-------------------------------------------- kraj za H.A.B.D.O.O --------------
+				
+                SELECT               
+                 *             
+               FROM
+                   cusacc_balance_last where cus_id = 24491679551 order by user_lock desc with ur;
+                   
+
+                SELECT   *   FROM   cusacc_balance where cus_id = 24491679551 order by user_lock desc with ur;           
+                           
+              -- ima stanje glavnice kunskog depozita
+              select * from PROCEDURE_TYPE where pro_Typ_id = 42999; -- Glavnica kunskog depozita po viðenju pravne osobe
+			-- u cusacc_balance ima stanje 62,034.65 sa datumom stanja 04.07.2016 62,034.65
+             
+                 SELECT   *   FROM   cusacc_balance where cus_id = 24491679551 and  pro_typ_id = 42999 order by user_lock desc with ur;       
+
+                  SELECT   *   FROM   cusacc_balance where cus_id = 24491679551 and  pro_typ_id = 42999 order by balance_date desc with ur;      
+
+                   
+
+                   	----------- provjera podataka za ÆUK D.O.O  -- KRAJ
+                   	
+		-----------------------------------
+
+		select * from interface_coll_tbl;
+
+
+		select * from interface_coll_tbl 
+				where orig_trx_date between '15.06.2016' and '17.06.2016'
+		order by recording_time desc;
+
+
+		select count(*) from interface_coll_tbl 
+				where orig_trx_date between '15.06.2016' and '17.06.2016'
+
+				
+		select count(*) from interface_coll_tbl 
+				where orig_trx_date = '15.06.2016' with ur;
+
+				
+		order by recording_time desc;
+                   

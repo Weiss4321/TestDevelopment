@@ -1,0 +1,1597 @@
+package hr.vestigo.modules.collateral.common.yoy8;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.interfaces.DealCollateralCoverage;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy8.PlacementData;
+import hr.vestigo.modules.collateral.common.yoy8.CollateralData;
+import hr.vestigo.modules.collateral.common.yoy8.MortgageData;
+
+/**
+ * 
+ * 
+ * @author hraamh
+ *
+ */ 
+
+#sql iterator CollateralIterator (	
+		BigDecimal loan_ben_id,
+		BigDecimal col_hea_id,
+		BigDecimal col_cat_id,
+		String col_num,
+		BigDecimal real_est_nomi_valu,
+		BigDecimal real_est_nm_cur_id,
+		Date real_est_nomi_date,
+		Timestamp opening_ts,
+		BigDecimal col_type_id,
+        String inspol_ind
+);
+
+#sql iterator PlacementIterator (	
+		BigDecimal loan_ben_id,
+		BigDecimal cus_id,
+		String acc_no,
+		BigDecimal cus_acc_id,
+		BigDecimal exposure_balance,
+		BigDecimal exposure_cur_id,
+		BigDecimal exposure_bal_lcy,
+		BigDecimal exp_off_bal_lcy
+);
+
+#sql iterator MortgageIterator (	
+		BigDecimal coll_hf_prior_id,
+		BigDecimal hf_own_cus_id,
+		String hf_priority,
+		BigDecimal hf_rec_lop_id,
+		BigDecimal amount_ref,
+		BigDecimal cur_id_ref,
+		String agreement,
+		BigDecimal fra_agr_id
+);
+
+#sql iterator AgreementIterator (
+		BigDecimal agreement_no,
+		BigDecimal amount,
+		BigDecimal cur_id
+);
+
+public class YOY81 {
+	
+	public static String cvsident =	"@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy8/YOY81.sqlj,v 1.54 2014/04/03 13:07:09 hrakis Exp $";
+
+	private RemoteContext rc;
+	private ConnCtx connCtx;
+	private String bankSign=null;
+	private boolean debug=false;
+	private HashMap hardcode=null;
+	private HashMap agreements=null;
+	private Date value_date=null;
+	private String exp_type_ind=null;
+	
+	
+	
+	/**
+	 * 
+	 */
+	public YOY81(RemoteContext rc,boolean debug,Date value_date,String exp_type_ind) throws Exception {
+		try{
+			this.connCtx =rc.getContext();
+			this.rc=rc;
+			this.debug=debug;
+			this.value_date=value_date;
+			this.exp_type_ind=exp_type_ind;
+			this.bankSign= rc.getBankSign();
+			this.hardcode=new HashMap();
+			this.agreements= new HashMap();
+			hardCoding();
+			//this.extras= new HashMap();
+		}catch(Exception e){
+			rc.debug("Error during construction YOY81 object");
+			throw e;
+		}
+	}
+	
+	public void hardCoding(){
+		this.hardcode.put("RBA_RIGHT",new BigDecimal(1602772003));
+		this.hardcode.put("OTHER_RIGHT",new BigDecimal(1602773003));
+		this.hardcode.put("NEKRETNINE",new BigDecimal(618223));
+		this.hardcode.put("VOZILA",new BigDecimal(624223));
+		this.hardcode.put("PLOVILA",new BigDecimal(620223));
+		this.hardcode.put("POKRETNINE",new BigDecimal(621223));
+		this.hardcode.put("POLICE",new BigDecimal(616223));
+		
+	}
+	/**
+	 * dohvat mape s OS-ima
+	 * 
+	 * @return mapa s okvirnim sporazumima
+	 */
+	public Map getAgreements(){
+		return this.agreements;
+	}
+	
+	/**
+	 * brise zapise okvirnih sporazuma. poziva se prije svakog novog dohvata domene
+	 *
+	 */
+	public void clearAgreements(){
+		this.agreements.clear();
+	}
+	
+	
+	public Vector selectPlacements(CollateralData collateral){
+		if (debug) rc.debug("\nYOY80->selectPlacements start za col_id: "+collateral.getId());
+		Vector result= new Vector();
+		PlacementIterator placementIter=null;
+		MortgageIterator mortgageIter=null;
+		BigDecimal col_hea_id= collateral.getId();
+		//pravo trece osobe 1602773003
+		//pravo rba 1602772003
+		try{
+			//dohvat plasmana koji se direktno vezu na kolateral
+			rc.startStopWatch("YOY81.selectPlacements_1");
+		    #sql [connCtx] placementIter = {
+				SELECT 
+					a.loan_ben_id,
+					b.cus_id,
+					b.cus_acc_no as acc_no,
+					b.cus_acc_id,
+					b.exposure_balance,
+					b.exposure_cur_id,
+					b.exposure_bal_lcy,
+					b.exp_off_bal_lcy
+				FROM
+					loan_beneficiary_d a,
+					cusacc_exposure_new b
+				WHERE 
+					a.col_hea_id = :(col_hea_id) and
+					:(value_date) between a.load_date_from and a.load_date_until and
+					a.status='A' and
+					(a.la_acc_id=b.cus_acc_id OR  a.acc_no = b.cus_acc_no OR a.request_no=b.request_no)and		
+		
+		            ( b.cus_acc_status='A' OR
+                        ( b.cus_acc_status='C' AND (
+                        (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                        (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                        (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                        (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                        (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                        (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                        (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                        )
+		            ) and
+			        b.exposure_date = :(value_date) and
+			        b.exp_type_ind = :(exp_type_ind) and
+					b.exposure_balance > 0
+		        };	        
+	        if(placementIter!=null){
+	        	if (debug) rc.debug("\nYOY80->selectPlacements direktno");
+				while(placementIter.next()){
+				    PlacementData placement =  new PlacementData(placementIter.cus_acc_id(),placementIter.acc_no(),placementIter.exposure_cur_id(),placementIter.exposure_balance(),placementIter.cus_id(),placementIter.loan_ben_id());
+				    placement.setExposureBalLcy(placementIter.exposure_bal_lcy());
+				    placement.setExpOffBalLcy(placementIter.exp_off_bal_lcy());
+				    collateral.putPlacement(placement);
+				    result.add(placement);
+				    if (debug) rc.debug("\nYOY80->selectPlacements direktno dodan "+placement.getId());
+				}
+	        }
+	        rc.stopStopWatch("YOY81.selectPlacements_1");
+	        
+        	//ako nismo dobili niti jedan plasman direktno vezan na kolateral
+        	//onda probamo preko veze s hipotekama/fiducijama 
+	        BigDecimal rbaRight=(BigDecimal)this.hardcode.get("RBA_RIGHT");
+        	if (debug) rc.debug("\nYOY80->selectPlacements preko hipoteke ");
+        	//dohvat hipoteka
+ 
+            rc.startStopWatch("YOY81.selectPlacements_2");
+        	#sql [connCtx] mortgageIter = {
+                    SELECT
+                        coll_hf_prior_id,
+                        hf_own_cus_id,
+                        hf_priority,
+                        hf_rec_lop_id,
+                        amount_ref,
+                        cur_id_ref,
+                        agreement,
+                        fra_agr_id
+                    FROM
+                        coll_hf_prior_d
+                    WHERE
+                        hf_coll_head_id=:(col_hea_id) and
+                        :(value_date) between load_date_from and load_date_until and
+                        hf_status='A' and
+                        bank_sign=:(bankSign) and
+                        hf_priority<=
+                        (
+                        select max(a.hf_priority)
+                        FROM
+                            coll_hf_prior_d a,
+                            loan_beneficiary_d b,
+                            cusacc_exposure_new c
+                        WHERE
+                            a.hf_coll_head_id=:(col_hea_id) and
+                            :(value_date) between a.load_date_from and a.load_date_until and
+                            a.hf_status='A' and
+                            a.hf_rec_lop_id=:(rbaRight) and
+                            a.bank_sign=:(bankSign) and
+                            ((a.hf_date_hfc_until >= current date) OR (a.hf_date_hfc_until is null)) and
+                            a.coll_hf_prior_id=b.coll_hf_prior_id and
+                            (b.la_acc_id=c.cus_acc_id OR  b.acc_no = c.cus_acc_no OR b.request_no=c.request_no)and
+                            :(value_date) between b.load_date_from and b.load_date_until and
+                            b.status='A' and
+                            ( c.cus_acc_status='A' OR
+                                ( c.cus_acc_status='C' AND (
+                                    (c.module_code='TRC' AND c.cus_acc_orig_st='E') OR 
+                                    (c.module_code='PKR' AND c.cus_acc_orig_st='T') OR 
+                                    (c.module_code='PPZ' AND c.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                                    (c.module_code='KRD' AND c.cus_acc_orig_st='SS') OR 
+                                    (c.module_code='GAR' AND c.cus_acc_orig_st='SS') OR 
+                                    (c.module_code='KKR' AND c.cus_acc_orig_st IN ('94','95')) OR 
+                                    (c.module_code='LOC' AND c.cus_acc_orig_st='SS') )
+                                )
+                            ) and
+                            c.exposure_date = :(value_date) and
+                            c.exp_type_ind = :(exp_type_ind) and
+                            c.exposure_balance > 0 
+                        )
+            };
+            rc.stopStopWatch("YOY81.selectPlacements_2");
+        	
+        	
+        	if(mortgageIter!=null){
+        		if (debug) rc.debug("\nYOY80->selectPlacements hipotekom");
+        		//podaci o okvirnom sporazumu
+        		AgreementData agreement=null;
+        		//podaci o hipoteci
+        		MortgageData mortgage=null;
+				while(mortgageIter.next()){
+					agreement=null;
+					mortgage=null;
+					//inicijalno postavljam da se ne radi o hipoteci preko Os-a
+					boolean agreementFlag=false;
+					int priority=-1;
+					String priorityString=mortgageIter.hf_priority();
+					if(priorityString!=null){
+						priority=Integer.parseInt(priorityString.trim());
+					}
+					if(rbaRight.compareTo(mortgageIter.hf_rec_lop_id())==0){
+						//ako je RBA hipoteka/fiducija
+						String s_agreement=mortgageIter.agreement();
+						BigDecimal agreementId=mortgageIter.fra_agr_id();
+						
+						if((s_agreement!=null)&&(agreementId!=null)&&(s_agreement.trim().equalsIgnoreCase("D"))){
+							//ovo je hipoteka okvirnog sporazuma
+							agreement=(AgreementData)this.agreements.get(AbstractData.makeHashKey(agreementId));
+							if(agreement==null){
+								if(debug) rc.debug("\ndohvat OS-a za id:"+agreementId);
+								//ako jos dosad nije dohvacen OS onda ga treba dohvatiti
+								agreement=getAgreementData(agreementId);
+								if(debug) rc.debug("\ndohvacen OS: "+agreement);
+								//postavljam OS u mapu OS-a
+								if (agreement!=null)
+									this.agreements.put(AbstractData.makeHashKey(agreementId),agreement);
+							}else{
+								if(debug) rc.debug("\nnije null"+agreement);
+							}
+							if(agreement!=null){
+								//postavljam flag da se radi o hipoteci OS-a
+								agreementFlag=true;
+								mortgage= new MortgageData(mortgageIter.coll_hf_prior_id(),mortgageIter.cur_id_ref(),mortgageIter.amount_ref(),priority,MortgageData.RBA_AGREEMENT);
+							}
+						}else{
+							//obicna RBA hipoteka
+							mortgage= new MortgageData(mortgageIter.coll_hf_prior_id(),mortgageIter.cur_id_ref(),mortgageIter.amount_ref(),priority,MortgageData.RBA);
+						}
+						if(mortgage!=null){
+							if (debug) rc.debug("\nYOY80->selectPlacements hipoteka id: "+mortgage.getId());
+							BigDecimal mortgageId=mortgageIter.coll_hf_prior_id();
+							//dohvat svih plasmana za rba hipoteku/fiduciju
+				            rc.startStopWatch("YOY81.selectPlacements_3");
+							#sql [connCtx] placementIter = {
+									SELECT 
+										a.loan_ben_id,
+										b.cus_id,
+										b.cus_acc_no as acc_no,
+										b.cus_acc_id,
+										b.exposure_balance,
+										b.exposure_cur_id,
+										b.exposure_bal_lcy,
+										b.exp_off_bal_lcy
+									FROM
+										loan_beneficiary_d a,
+										cusacc_exposure_new b
+									WHERE 
+										a.coll_hf_prior_id = :(mortgageId) and
+                                        :(value_date) between a.load_date_from and a.load_date_until and
+										a.status='A' and
+										(a.la_acc_id=b.cus_acc_id OR  a.acc_no = b.cus_acc_no OR a.request_no=b.request_no)and
+							            ( b.cus_acc_status='A' OR
+                                            ( b.cus_acc_status='C' AND (
+                                                (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                                                (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                                                (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                                                (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                                                (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                                                (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                                                (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                                            )
+							            ) and
+				                        b.exposure_date = :(value_date) and
+				                        b.exp_type_ind = :(exp_type_ind) and
+										b.exposure_balance > 0 
+				            };
+				            rc.stopStopWatch("YOY81.selectPlacements_3");
+				            
+						        if(placementIter!=null){
+						        	boolean hasSome=false;
+									while(placementIter.next()){
+									    PlacementData placement =  new PlacementData(placementIter.cus_acc_id(),placementIter.acc_no(),placementIter.exposure_cur_id(),placementIter.exposure_balance(),placementIter.cus_id(),placementIter.loan_ben_id());
+									    placement.setExposureBalLcy(placementIter.exposure_bal_lcy());
+									    placement.setExpOffBalLcy(placementIter.exp_off_bal_lcy());
+									    collateral.putPlacement(placement);
+									    mortgage.putPlacement(placement);
+									    result.add(placement);
+									    hasSome=true;
+									    //ako je hipoteka OS-a punim sve plasmane vezane na nju
+									    if(agreementFlag){
+									    	
+									    	agreement.putPlacement(placement);
+									    	if (debug) rc.debug("\nYOY80->selectPlacements dodan preko OS: "+agreement.getId()+" plasman: "+placement.getId());
+									    }else{
+									    	if (debug) rc.debug("\nYOY80->selectPlacements dodan preko hip: "+mortgage.getId()+" plasman:"+placement.getId());
+									    }
+									    
+									}		
+									//dodajem hipoteku/fiduciju na kolateral ako ima ijedan plasman koji ulazi u izracun
+								    if (hasSome){
+								    	collateral.putMortgage(mortgage);
+								    	 if(agreementFlag){
+								    	 	if(!agreement.containsCollateral(collateral.getId())){
+								    	 		//ako kolateral vec nije upisan na OS
+								    	 		agreement.putCollateral(collateral);
+								    	 	}
+								    	 	//dodajem hipoteku okvirnog sporazuma na okvirni sporazum
+								    	 	mortgage.setFraAgrId(agreement.getId());
+								    	 	agreement.putMortgage(collateral.getId(),mortgage);    	 	
+								    	 }
+								    	if (debug) rc.debug("\nYOY80->selectPlacements dodana hipoteka "+mortgage.getId());
+								    }
+								    
+						        }	
+						}
+					}else{
+						mortgage= new MortgageData(mortgageIter.coll_hf_prior_id(),mortgageIter.cur_id_ref(),mortgageIter.amount_ref(),priority,MortgageData.OTHER);
+//							dodajem hipoteku/fiduciju na kolateral
+					    collateral.putMortgage(mortgage);
+					}
+					
+				}
+	        }        
+       	        
+		}catch(SQLException e){
+			rc.debug(".....YOY81.sqlj selectPlacements        Message  : " + e.getMessage());
+			rc.debug(".....YOY81.sqlj selectPlacements      Error code : " + e.getErrorCode());
+			rc.debug(".....YOY81.sqlj selectPlacements        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}finally{
+			if(placementIter != null){ 
+				try{
+					placementIter.close();
+				}catch(SQLException e){
+					rc.debug("..2..YOY81.sqlj selectPlacements        Message  : " + e.getMessage());
+					rc.debug("..2..YOY81.sqlj selectPlacements      Error code : " + e.getErrorCode());
+					rc.debug("..2..YOY81.sqlj selectPlacements        SQLState : " + e.getSQLState());
+					e.printStackTrace();
+				}	
+			}	
+			if(mortgageIter != null){ 
+				try{
+					mortgageIter.close();
+				}catch(SQLException e){
+					rc.debug("..2..YOY81.sqlj selectPlacements        Message  : " + e.getMessage());
+					rc.debug("..2..YOY81.sqlj selectPlacements      Error code : " + e.getErrorCode());
+					rc.debug("..2..YOY81.sqlj selectPlacements        SQLState : " + e.getSQLState());
+					e.printStackTrace();
+				}	
+			}	
+		}	    
+		if (debug) rc.debug("\nYOY80->selectPlacements kraj");
+		return result;
+	}
+	
+	
+	public Vector selectCollaterals(PlacementData placement, int eligibility, boolean ponded){
+		if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals start");
+		BigDecimal vehicle_type=(BigDecimal)this.hardcode.get("VOZILA");
+		BigDecimal real_est_type=(BigDecimal)this.hardcode.get("NEKRETNINE");
+		BigDecimal vessel_type=(BigDecimal)this.hardcode.get("PLOVILA");
+		BigDecimal movable_type=(BigDecimal)this.hardcode.get("POKRETNINE");
+		BigDecimal insurance=(BigDecimal)this.hardcode.get("POLICE");
+		BigDecimal col_hea_id=null;
+		BigDecimal col_cat_id=null;
+		BigDecimal col_sub_id=null;
+		BigDecimal col_type_id=null;
+		Vector result= new Vector();
+		BigDecimal zero=new BigDecimal(0);
+		CollateralIterator collateralIter=null;
+//		CollateralIterator collateralIter=null;
+		String acc_no=placement.getCode();
+		if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals plasman_no: "+acc_no);
+		try{
+			if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals direktno");
+			//dohvat kolaterala koji se direktno vezu na plasman
+			collateralIter=selectDirectCollateral(acc_no, eligibility);
+	        if(collateralIter!=null){
+	        	
+				while(collateralIter.next()){
+				
+					BigDecimal ponder=null;
+					String s_priority=null;
+					col_hea_id=collateralIter.col_hea_id();
+					col_cat_id=collateralIter.col_cat_id();
+					col_type_id=collateralIter.col_type_id();
+					if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals direktno dohvaceni id:"+col_hea_id);
+					
+					col_sub_id=null;
+					
+					//ako je nekretnina idem po podatke o podtipu
+					if((col_cat_id!=null)&&(col_cat_id.compareTo(real_est_type)==0)){
+						col_sub_id=selectRealEstateSubId(col_hea_id);
+					}else if((col_cat_id!=null)&&(col_cat_id.compareTo(vehicle_type)==0)){
+						col_sub_id=selectVehicleSubId(col_hea_id);
+					}else if((col_cat_id!=null)&&(col_cat_id.compareTo(vessel_type)==0)){
+						col_sub_id=selectVesselSubId(col_hea_id);
+					}else if((col_cat_id!=null)&&(col_cat_id.compareTo(movable_type)==0)){
+						col_sub_id=selectMovableSubId(col_hea_id);
+					}else if((col_cat_id!=null)&&(col_cat_id.compareTo(insurance)==0)){
+						if(!checkPolicy(col_hea_id)){
+							if (debug)  rc.debug("Polica se ne uzima u izracun");
+							continue;
+						}else{
+							if (debug)  rc.debug("Polica se uzima u izracun");
+						}
+					}
+					/*
+                     * Izmjena dohvata pondera
+					 */
+                    ponder=getCollateralDirectPonder(collateralIter.col_hea_id());
+					if(ponder==null){
+                        String add_request=collateralIter.inspol_ind();
+                        if((add_request!=null) &&(add_request.toUpperCase().equals("D"))){
+                            add_request="D";
+                        }else{
+                            add_request="N";
+                        }
+                        ponder=getCollateralDFLPonder(col_cat_id,col_type_id,col_sub_id,add_request);
+                    }					
+					s_priority=getCollateralPriority(col_cat_id,col_type_id,col_sub_id);
+					if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals ponder:"+ponder);
+					if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals prioritet:"+s_priority);
+				    
+					if((s_priority!=null)&&((((ponder!=null) && (ponder.compareTo(zero)>0)) || !ponded ))){
+				    	int priority=Integer.parseInt(s_priority.trim());
+				    	CollateralData collateral= new CollateralData(collateralIter.col_hea_id(),collateralIter.col_num(),collateralIter.real_est_nm_cur_id(),collateralIter.real_est_nomi_valu(),ponder,CollateralData.SIMPLE);					    
+					    collateral.setPriority(priority);
+					    collateral.setOpeningTS(collateralIter.opening_ts());
+					    collateral.setProcessedDate(collateralIter.real_est_nomi_date());
+					    result.add(collateral);
+					    if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals direktno dodan\n "+collateral);
+					}
+				}
+	        }  
+        	//ako nismo dobili niti jedan kolateral direktno vezan na plasman
+        	//onda probamo preko veze s hipotekama/fiducijama 
+	        if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals indirektno");
+        	collateralIter=selectMortgageCollateral(acc_no, eligibility);
+        	if(collateralIter!=null){
+				while(collateralIter.next()){
+					BigDecimal ponder=null;
+					String s_priority=null;
+					col_hea_id=collateralIter.col_hea_id();
+					col_cat_id=collateralIter.col_cat_id();
+					col_type_id=collateralIter.col_type_id();
+					if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals indirektno dohvaceni id:"+col_hea_id);
+					//ako je nekretnina idem po podatke o podtipu
+					col_sub_id=null;
+					if((col_cat_id!=null)&&(col_cat_id.compareTo(real_est_type)==0)){
+						col_sub_id=selectRealEstateSubId(col_hea_id);
+					}else if((col_cat_id!=null)&&(col_cat_id.compareTo(vehicle_type)==0)){
+						col_sub_id=selectVehicleSubId(col_hea_id);
+					}else if((col_cat_id!=null)&&(col_cat_id.compareTo(vessel_type)==0)){
+						col_sub_id=selectVesselSubId(col_hea_id);
+                    }else if((col_cat_id!=null)&&(col_cat_id.compareTo(movable_type)==0)){
+                        col_sub_id=selectMovableSubId(col_hea_id);
+                    }else if((col_cat_id!=null)&&(col_cat_id.compareTo(insurance)==0)){
+						if(!checkPolicy(col_hea_id)){
+							if (debug)  rc.debug("Polica se ne uzima u izracun");
+							continue;
+						}else{
+							if (debug)  rc.debug("Polica se uzima u izracun");
+						}
+					}
+                    /*
+                     * Izmjena dohvata pondera
+                     */
+                    ponder=getCollateralDirectPonder(collateralIter.col_hea_id());
+                    if(ponder==null){
+                        String add_request=collateralIter.inspol_ind();
+                        if((add_request!=null) &&(add_request.toUpperCase().equals("D"))){
+                            add_request="D";
+                        }else{
+                            add_request="N";
+                        }
+                        ponder=getCollateralDFLPonder(col_cat_id,col_type_id,col_sub_id,add_request);
+                    }                  
+                    s_priority=getCollateralPriority(col_cat_id,col_type_id,col_sub_id);
+					if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals ponder:"+ponder);
+					if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals prioritet:"+s_priority);
+					
+                    if((s_priority!=null)&&((((ponder!=null) && (ponder.compareTo(zero)>0)) || !ponded ))){
+				    	int priority=Integer.parseInt(s_priority.trim());
+				    	CollateralData collateral= new CollateralData(collateralIter.col_hea_id(),collateralIter.col_num(),collateralIter.real_est_nm_cur_id(),collateralIter.real_est_nomi_valu(),ponder,CollateralData.COMPLEX);					    
+					    collateral.setPriority(priority);
+					    collateral.setOpeningTS(collateralIter.opening_ts());
+					    collateral.setProcessedDate(collateralIter.real_est_nomi_date());
+					    result.add(collateral);
+					    if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals indirektno dodan\n "+collateral);
+				    }
+				    
+				}
+	        }  
+
+	        	        
+		}catch(SQLException e){
+			rc.debug(".....YOY81.sqlj selectCollaterals        Message  : " + e.getMessage());
+			rc.debug(".....YOY81.sqlj selectCollaterals      Error code : " + e.getErrorCode());
+			rc.debug(".....YOY81.sqlj selectCollaterals        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}finally{
+			if(collateralIter != null){ 
+				try{
+					collateralIter.close();
+				}catch(SQLException e){
+					rc.debug("..2..YOY81.sqlj selectCollaterals        Message  : " + e.getMessage());
+					rc.debug("..2..YOY81.sqlj selectCollaterals      Error code : " + e.getErrorCode());
+					rc.debug("..2..YOY81.sqlj selectCollaterals        SQLState : " + e.getSQLState());
+					e.printStackTrace();
+				}	
+			}	
+		}	
+		if(debug) rc.debug("\nYOY81.sqlj: selectCollaterals kraj");
+		return result;
+	}
+	
+	
+	
+	/**
+	*Dohvat srednjeg tecaja za dani datum i id valute
+	*
+	*@param cur_id id valute
+	*@param date datum valute
+	*@return srednji tecaj
+	*/
+	public BigDecimal selectMiddRate(BigDecimal cur_id, Date date)
+	{
+		rc.startStopWatch("YOY81.selectMiddRate");
+	    if(debug) rc.debug("YOY81.sqlj: selectMiddRate poceo za cur_id: "+cur_id);
+		BigDecimal rate=null;
+		try
+		{
+			#sql[connCtx]{
+				SELECT midd_rate 
+				INTO :(rate)
+				FROM exchange_rate 
+				WHERE :(date) BETWEEN date_from AND date_until 
+				AND cur_id =:(cur_id)
+				AND BANK_SIGN=:(bankSign)
+			};
+		}
+		catch(SQLException e)
+		{
+			rc.debug(".....YOY81.sqlj selectMiddRate        Message  : " + e.getMessage());
+			rc.debug(".....YOY81.sqlj selectMiddRate      Error code : " + e.getErrorCode());
+			rc.debug(".....YOY81.sqlj selectMiddRate        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			if(e.getErrorCode() == 100){
+			    rate = null;
+			}
+		}
+		if(debug) rc.debug("YOY81.sqlj: selectMiddRate kraj");
+		rc.stopStopWatch("YOY81.selectMiddRate");
+		return rate;
+	}
+	
+	
+	/**
+	 * dohvat podataka o plasmanu
+	 * @param placementId id plasmana
+	 * @return podaci o plasmanu
+	 */
+	public PlacementData getPlacementDataNew(BigDecimal placementId)
+	{
+		rc.startStopWatch("YOY81.getPlacementDataNew");
+	    PlacementData data=null;
+		if(debug) rc.debug("YOY81.sqlj: getPlacementData za "+placementId);
+		BigDecimal cus_id=null;
+		String cus_acc_no=null;
+		BigDecimal cus_acc_id=null;
+		BigDecimal exposure_balance=null;
+		BigDecimal exposure_cur_id=null;
+		BigDecimal exposure_bal_lcy=null;
+		BigDecimal exp_off_bal_lcy=null;
+		
+		try
+		{
+			#sql [connCtx] {
+					SELECT 
+						cus_acc_id,
+						cus_acc_no,
+						cus_id,
+						exposure_balance,
+						exposure_cur_id,
+						exposure_bal_lcy,
+						exp_off_bal_lcy
+					INTO
+						:(cus_acc_id),
+						:(cus_acc_no),
+						:(cus_id),
+						:(exposure_balance),
+						:(exposure_cur_id),
+						:(exposure_bal_lcy),
+						:(exp_off_bal_lcy)
+					FROM
+						cusacc_exposure_new 
+					WHERE 
+						cus_acc_id=:(placementId) and
+		                exposure_date=:(value_date) and
+		                exp_type_ind=:(exp_type_ind)
+		    };
+			
+			data =  new PlacementData(cus_acc_id,cus_acc_no,exposure_cur_id,exposure_balance,cus_id,null);
+			data.setExposureBalLcy(exposure_bal_lcy);
+			data.setExpOffBalLcy(exp_off_bal_lcy);
+		}
+		catch(SQLException e)
+		{
+			if(e.getErrorCode()==100){
+				return null;
+			}
+			rc.debug(".....YOY81.sqlj getPlacementDataNew        Message  : " + e.getMessage());
+			rc.debug(".....YOY81.sqlj getPlacementDataNew      Error code : " + e.getErrorCode());
+			rc.debug(".....YOY81.sqlj getPlacementDataNew        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		}
+		finally
+		{
+		    rc.stopStopWatch("YOY81.getPlacementDataNew");
+		}
+		return data;
+	}
+
+	/**
+	 * upis podataka u CUSACC_EXP_COLL tablicu
+	 * 
+	 * @param cus_id
+	 * @param cus_acc_id
+	 * @param col_hea_id
+	 * @param col_pro_id
+	 * @param exp_coll_amount
+	 * @param exp_coll_cur_id valuta kolaterala
+	 * @param exp_fc_amount iznos u valuti plasmana
+	 * @param coll_fc_amount iznos u valuti kolaterala
+	 * @param cover_date datum pokrivenosti
+	 * @param use_id user id
+	 * @param coll_hf_prior_id id hipoteke
+	 * @param exp_percent postotak pokrivenosti
+	 * @param coll_value trzisna vrijednost kolaterala
+	 * @param ponder
+	 * @param exposure_bal_lcy ukupna bilancna izlozenost po plasmanu
+	 * @param exp_off_bal_lcy ukupna vanbilancna izlozenost po plasmanu
+	 * @param eligibility prihvatljivost: 0- RBA; 1-B1; 2-B2; 3-B2IRB;
+	 * @return
+	 * @throws Exception
+	 */
+	public boolean insertCusaccExpColl(BigDecimal cus_id, BigDecimal cus_acc_id, BigDecimal col_hea_id, BigDecimal col_pro_id,
+		BigDecimal exp_coll_amount, BigDecimal exp_coll_cur_id, BigDecimal exp_fc_amount,BigDecimal coll_fc_amount, Date cover_date, BigDecimal coll_hf_prior_id, 
+		BigDecimal exp_percent,BigDecimal fra_agr_id, BigDecimal exp_cur_id, BigDecimal exp_balance, BigDecimal exp_balance_hrk, BigDecimal coll_value, BigDecimal ponder,
+		BigDecimal exposure_bal_lcy,BigDecimal exp_off_bal_lcy, String eligibility) throws Exception
+	{
+	    rc.startStopWatch("YOY81.insertCusaccExpColl");
+		if(debug) rc.debug("YOY81.sqlj: insertCusaccExpColl poceo");
+		
+		YOY00 yoy00= new YOY00(this.rc);
+		BigDecimal cus_acc_exp_col_id= yoy00.getNewId();
+		
+		#sql [connCtx]{
+         	INSERT INTO cusacc_exp_coll (
+				cus_acc_exp_col_id,
+				cus_id,
+				cus_acc_id,
+				col_hea_id,
+				col_pro_id,
+				exp_coll_amount,
+				coll_amount,
+				exp_coll_cur_id,
+				exp_fc_amount,
+				coll_fc_amount,
+				cover_date,
+				coll_hf_prior_id,
+				exp_percent,
+				fra_agr_id,
+				exp_cur_id,
+				exp_balance,
+				exp_balance_hrk,
+				mvp_dfl,
+				exposure_bal_lcy,
+				exp_off_bal_lcy
+			)VALUES (
+				:(cus_acc_exp_col_id),
+				:(cus_id),
+				:(cus_acc_id),
+				:(col_hea_id),
+				:(col_pro_id),
+				:(exp_coll_amount),
+				:(coll_value),
+				:(exp_coll_cur_id),
+				:(exp_fc_amount),
+				:(coll_fc_amount),
+				:(cover_date),
+				:(coll_hf_prior_id),
+				:(exp_percent),
+				:(fra_agr_id),
+				:(exp_cur_id),
+				:(exp_balance),
+				:(exp_balance_hrk),
+				:(ponder),
+				:(exposure_bal_lcy),
+				:(exp_off_bal_lcy)
+			)
+		};
+		if(debug) rc.debug("YOY81.sqlj: insertCusaccExpColl kraj");
+		rc.stopStopWatch("YOY81.insertCusaccExpColl");
+		return true;
+	}
+
+	/**
+	 * vraca id podtipa nekretnine
+	 * 
+	 * @param col_hea_id id kolaterala
+	 * @return id podtipa nekretnine
+	 */
+	private BigDecimal selectRealEstateSubId(BigDecimal col_hea_id)
+	{
+		rc.startStopWatch("YOY81.selectRealEstateSubId");
+	    BigDecimal col_sub_id=null;
+		try
+		{
+			#sql [connCtx]  {
+				SELECT real_est_type 
+				INTO :(col_sub_id)
+				FROM coll_restate 
+				WHERE col_hea_id=:(col_hea_id)
+			};
+		}
+		catch(SQLException e)
+		{
+			if(e.getErrorCode()!=100){
+				rc.debug(".....YOY81.sqlj selectRealEstateSubId        Message  : " + e.getMessage());
+				rc.debug(".....YOY81.sqlj selectRealEstateSubId      Error code : " + e.getErrorCode());
+				rc.debug(".....YOY81.sqlj selectRealEstateSubId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+			}
+		}
+	    rc.stopStopWatch("YOY81.selectRealEstateSubId");
+		return col_sub_id;
+	}
+
+	/**
+	 * vraca id podtipa vozila
+	 * 
+	 * @param col_hea_id id kolaterala
+	 * @return id podtipa vozila
+	 */
+	private BigDecimal selectVehicleSubId(BigDecimal col_hea_id)
+	{
+        rc.startStopWatch("YOY81.selectVehicleSubId");
+	    BigDecimal col_sub_id=null;
+		try
+		{
+			#sql [connCtx]  {
+				SELECT veh_group_id 
+				INTO :(col_sub_id)
+				FROM coll_vehicle 
+				WHERE col_hea_id=:(col_hea_id)
+			};
+		}
+		catch(SQLException e)
+		{
+			if(e.getErrorCode()!=100){
+				rc.debug(".....YOY81.sqlj selectVehicleSubId        Message  : " + e.getMessage());
+				rc.debug(".....YOY81.sqlj selectVehicleSubId      Error code : " + e.getErrorCode());
+				rc.debug(".....YOY81.sqlj selectVehicleSubId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+			}
+		}
+		rc.stopStopWatch("YOY81.selectVehicleSubId");
+		return col_sub_id;
+	}
+
+	/**
+	 * vraca id podtipa plovila
+	 * 
+	 * @param col_hea_id id kolaterala
+	 * @return id podtipa plovila
+	 */
+	private BigDecimal selectVesselSubId(BigDecimal col_hea_id)
+	{
+        rc.startStopWatch("YOY81.selectVesselSubId");
+	    BigDecimal ves_typ_id=null;
+		try
+		{
+			#sql [connCtx]  {
+				SELECT ves_typ_id 
+				INTO :(ves_typ_id)
+				FROM coll_vessel 
+				WHERE col_hea_id=:(col_hea_id)
+			};
+		}
+		catch(SQLException e)
+		{
+			if(e.getErrorCode()!=100){
+				rc.debug(".....YOY81.sqlj selectVesselSubId        Message  : " + e.getMessage());
+				rc.debug(".....YOY81.sqlj selectVesselSubId      Error code : " + e.getErrorCode());
+				rc.debug(".....YOY81.sqlj selectVesselSubId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+			}
+		}
+		rc.stopStopWatch("YOY81.selectVesselSubId");
+		return ves_typ_id;
+	}
+	
+	/**
+	 * vraca id podtipa pokretnine
+	 * 
+	 * @param col_hea_id id kolaterala
+	 * @return id podtipa plovila
+	 */
+	private BigDecimal selectMovableSubId(BigDecimal col_hea_id)
+	{
+	    rc.startStopWatch("YOY81.selectMovableSubId");
+	    BigDecimal mov_typ_id=null;
+		try
+		{
+			#sql [connCtx]  {
+				SELECT mov_typ_id 
+				INTO :(mov_typ_id)
+				FROM coll_movable 
+				WHERE col_hea_id=:(col_hea_id)
+			};
+		}
+		catch(SQLException e)
+		{
+			if(e.getErrorCode()!=100){
+				rc.debug(".....YOY81.sqlj selectMovableSubId        Message  : " + e.getMessage());
+				rc.debug(".....YOY81.sqlj selectMovableSubId      Error code : " + e.getErrorCode());
+				rc.debug(".....YOY81.sqlj selectMovableSubId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+			}
+		}
+		rc.stopStopWatch("YOY81.selectMovableSubId");
+		return mov_typ_id;
+	}
+	
+	private boolean checkPolicy(BigDecimal col_hea_id)
+	{
+		rc.startStopWatch("YOY81.checkPolicy");
+	    String code=null;
+		try
+		{
+			#sql [connCtx]  {
+				select b.int_pol_type_code 
+				into :(code)
+				from  coll_inspolicy a,insu_policy_type b
+				where a.col_hea_id=:(col_hea_id)
+				and a.ip_type_id=b.int_pol_type_id
+			};
+			if((code.length()>=6)&&(code.substring(0,5).equalsIgnoreCase("MOZOS"))){
+				return true;
+			}else{
+				return false;
+			}
+		}
+		catch(SQLException e)
+		{
+			rc.debug(".....YOY81.sqlj checkPolicy        Message  : " + e.getMessage());
+			rc.debug(".....YOY81.sqlj checkPolicy      Error code : " + e.getErrorCode());
+			rc.debug(".....YOY81.sqlj checkPolicy        SQLState : " + e.getSQLState());
+			e.printStackTrace();	
+			return false;
+		}
+		finally
+		{
+		    rc.stopStopWatch("YOY81.checkPolicy");
+		}
+	}
+    
+    private BigDecimal getCollateralDirectPonder(BigDecimal col_hea_id) throws SQLException
+    {
+        rc.startStopWatch("YOY81.getCollateralDirectPonder");
+        BigDecimal result=null;
+        try
+        {
+            #sql [connCtx]{
+                select 
+                    ponder_value
+                into
+                    :(result)
+                from 
+                    coll_ponder
+                where 
+                    col_hea_id = :(col_hea_id) 
+                and 
+                    ponder_type = 'MVP'
+                and 
+                    status = 'A'
+                and
+                    date_from <= :(value_date)
+                and 
+                    date_until >=:(value_date)
+            };
+        }
+        catch(SQLException e)
+        {
+            if(e.getErrorCode()!=100){
+                throw e;
+            }else{
+                result=null;
+            }
+        }
+        rc.stopStopWatch("YOY81.getCollateralDirectPonder");
+        return result;
+    }
+    
+    private BigDecimal getCollateralDFLPonder(BigDecimal col_cat_id,BigDecimal col_typ_id,BigDecimal col_sub_id,String add_request) throws SQLException
+    {
+        rc.startStopWatch("YOY81.getCollateralDFLPonder");
+        BigDecimal result=null;
+        try
+        {
+            #sql [connCtx]{
+                select dfl_value
+                into :(result)
+                from dfl_col_ponder
+                where 
+                    col_cat_id = :(col_cat_id) and
+                    col_typ_id = :(col_typ_id) and
+                    (col_sub_id = :(col_sub_id) or col_sub_id is null) and
+                    ponder_type='MVP' and
+                    status = 'A' and
+                    add_request = :(add_request)
+            };
+            rc.stopStopWatch("YOY81.getCollateralDFLPonder");
+            return result;
+        }
+        catch(SQLException e)
+        {
+            if(e.getErrorCode()!=100){
+                throw e;
+            }
+        }
+        
+        if("D".equalsIgnoreCase(add_request))
+        {
+            try
+            {
+                #sql [connCtx]{
+                select dfl_value
+                into :(result)
+                from dfl_col_ponder
+                where 
+                    col_cat_id = :(col_cat_id) and
+                    col_typ_id = :(col_typ_id) and
+                    (col_sub_id = :(col_sub_id) or col_sub_id is null) and
+                    ponder_type='MVP' and
+                    status = 'A' and
+                    add_request = 'N'
+                };
+            }
+            catch(SQLException e)
+            {
+                if(e.getErrorCode()!=100){
+                    throw e;
+                }else{
+                    result= null;
+                }
+            }
+        }
+        rc.stopStopWatch("YOY81.getCollateralDFLPonder");
+        return result;
+    }
+   
+    
+    private String getCollateralPriority(BigDecimal col_cat_id,BigDecimal col_type_id,BigDecimal col_sub_id)
+    {
+        rc.startStopWatch("YOY81.getCollateralPriority");
+        String result=null;
+        try
+        {
+            if(col_sub_id!=null){
+                #sql [connCtx]  {
+                    SELECT col_prior 
+                    INTO :(result)
+                    FROM coll_atr 
+                    WHERE col_cat_id=:(col_cat_id)
+                    AND coll_type_id=:(col_type_id)
+                    AND col_sub_id=:(col_sub_id)
+                };
+            }else{
+                #sql [connCtx]  {
+                    SELECT col_prior 
+                    INTO :(result)
+                    FROM coll_atr 
+                    WHERE col_cat_id=:(col_cat_id)
+                    AND coll_type_id=:(col_type_id)
+                    AND col_sub_id is null
+                };
+            }
+            if(debug) rc.debug("\nYOY81.sqlj: getCollateralPriority s_priority:"+result);
+        }
+        catch(SQLException e)
+        {
+            if(e.getErrorCode()!=100){
+                rc.debug(".....YOY81.sqlj getCollateralPriority        Message  : " + e.getMessage());
+                rc.debug(".....YOY81.sqlj getCollateralPriority      Error code : " + e.getErrorCode());
+                rc.debug(".....YOY81.sqlj getCollateralPriority        SQLState : " + e.getSQLState());
+                e.printStackTrace();
+            }else{
+                result=null;
+            }
+        }
+        rc.stopStopWatch("YOY81.getCollateralPriority");
+        return result;
+    }
+    
+	/**
+	*dohvaca podatke o okvirnom sporazumu za dani id sporazuma
+	*
+	*@param fra_agr_id id sporazuma
+	*@return agreement data 
+	*/
+	private AgreementData getAgreementData(BigDecimal fra_agr_id)
+	{
+		rc.startStopWatch("YOY81.getAgreementData");
+	    String agreement_no=null;
+		BigDecimal amount=null;
+		BigDecimal cur_id=null;
+		AgreementData result=null;
+		if(fra_agr_id!=null)
+		{
+			try
+			{
+				#sql [connCtx]  {
+					SELECT 
+						agreement_no,
+						amount,
+						cur_id 
+					INTO
+						:(agreement_no),
+						:(amount),
+						:(cur_id)
+					FROM frame_agreement_d
+					WHERE fra_agr_id=:(fra_agr_id) AND					
+						status='A' AND
+                        :(value_date) between load_date_from and load_date_until
+				};
+				result=new AgreementData(fra_agr_id,amount,cur_id,agreement_no);
+			}
+			catch(SQLException e)
+			{
+				if(e.getErrorCode()!=100){
+					rc.debug(".....YOY81.sqlj getAgreementData        Message  : " + e.getMessage());
+					rc.debug(".....YOY81.sqlj getAgreementData      Error code : " + e.getErrorCode());
+					rc.debug(".....YOY81.sqlj getAgreementData        SQLState : " + e.getSQLState());
+					e.printStackTrace();
+				}
+			}
+		}
+		rc.stopStopWatch("YOY81.getAgreementData");
+		return result;
+	}
+
+	
+	public void insertColProcGar(BigDecimal cus_acc_id,String status, BigDecimal col_pro_id) throws Exception
+	{
+        rc.startStopWatch("YOY81.insertColProcGar");
+	    if(debug) rc.debug("insertColProcGar :"+cus_acc_id);	
+        try
+        {
+        	#sql [connCtx]{
+				INSERT INTO col_proc_gar (
+					col_pro_id,
+					cus_acc_id,
+        			status
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(cus_acc_id),
+					:(status)
+				)
+            };
+		}
+        catch(SQLException e)
+        {
+			rc.debug(".....YOY81.sqlj insertColProcGar        Message  : " + e.getMessage());
+			rc.debug(".....YOY81.sqlj insertColProcGar      Error code : " + e.getErrorCode());
+			rc.debug(".....YOY81.sqlj insertColProcGar        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+		rc.stopStopWatch("YOY81.insertColProcGar");
+	}
+	
+	public CollateralIterator selectDirectCollateral(String acc_no, int eligibility) throws SQLException
+	{
+		rc.startStopWatch("YOY81.selectDirectCollateral");
+	    CollateralIterator collateralIter=null;		
+		switch (eligibility)
+		{
+			case (DealCollateralCoverage.RBA):
+				#sql [connCtx] collateralIter = {
+						select 
+								a.loan_ben_id,
+								a.col_hea_id,
+								b.col_cat_id,
+								b.col_num,
+								b.real_est_nomi_valu,
+								b.real_est_nm_cur_id,
+								b.real_est_nomi_date,
+								b.opening_ts,
+								b.col_type_id,
+			                    a.inspol_ind
+							from 
+								cusacc_exposure_new c,
+								loan_beneficiary_d a, 
+								coll_head_d b
+							where 
+								c.cus_acc_no=:(acc_no) and
+								(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+			                    c.exposure_date = :(value_date) and
+			                    c.exp_type_ind = :(exp_type_ind) and
+                                :(value_date) between a.load_date_from and a.load_date_until and
+								a.status='A' and
+								a.col_hea_id = b.col_hea_id and		
+                                :(value_date) between b.load_date_from and b.load_date_until and
+								b.collateral_status='3' and
+								b.rba_eligibility = 'D' and
+								b.real_est_nomi_valu is not null and
+								b.real_est_nomi_valu > 0 and
+		            			b.col_cat_id not in (617223,625223) and
+			                    b.col_type_id NOT IN (76777,77777)
+				        };
+				break;
+			case (DealCollateralCoverage.B1):
+				#sql [connCtx] collateralIter = {
+						select 
+								a.loan_ben_id,
+								a.col_hea_id,
+								b.col_cat_id,
+								b.col_num,
+								b.real_est_nomi_valu,
+								b.real_est_nm_cur_id,
+								b.real_est_nomi_date,
+								b.opening_ts,
+								b.col_type_id,
+			                    a.inspol_ind
+							from 
+								cusacc_exposure_new c,
+								loan_beneficiary_d a, 
+								coll_head_d b
+							where 
+								c.cus_acc_no=:(acc_no) and
+								(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+                                c.exposure_date = :(value_date) and
+                                c.exp_type_ind = :(exp_type_ind) and				
+                                :(value_date) between a.load_date_from and a.load_date_until and
+								a.status='A' and
+								a.col_hea_id = b.col_hea_id and	
+                                :(value_date) between b.load_date_from and b.load_date_until and
+								b.collateral_status='3' and
+								b.b1_eligibility = 'D' and 
+								b.real_est_nomi_valu is not null and
+								b.real_est_nomi_valu > 0 and
+		            			b.col_cat_id not in (617223,625223) and
+                                b.col_type_id NOT IN (76777,77777)
+				        };
+				break;
+			case (DealCollateralCoverage.B2):
+				#sql [connCtx] collateralIter = {
+						select 
+								a.loan_ben_id,
+								a.col_hea_id,
+								b.col_cat_id,
+								b.col_num,
+								b.real_est_nomi_valu,
+								b.real_est_nm_cur_id,
+								b.real_est_nomi_date,
+								b.opening_ts,
+								b.col_type_id,
+			                    a.inspol_ind
+							from 
+								cusacc_exposure_new c,
+								loan_beneficiary_d a, 
+								coll_head_d b
+							where 
+								c.cus_acc_no=:(acc_no) and
+								(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+                                c.exposure_date = :(value_date) and
+                                c.exp_type_ind = :(exp_type_ind) and				
+                                :(value_date) between a.load_date_from and a.load_date_until and
+								a.status='A' and
+								a.col_hea_id = b.col_hea_id and	
+                                :(value_date) between b.load_date_from and b.load_date_until and
+								b.collateral_status='3' and
+								b.eligibility = 'D' and 
+								b.real_est_nomi_valu is not null and
+								b.real_est_nomi_valu > 0 and
+		            			b.col_cat_id not in (617223,625223) and
+			                    b.col_type_id NOT IN (76777,77777)
+				        };
+				break;
+			case (DealCollateralCoverage.B2IRB):
+				#sql [connCtx] collateralIter = {
+						select 
+								a.loan_ben_id,
+								a.col_hea_id,
+								b.col_cat_id,
+								b.col_num,
+								b.real_est_nomi_valu,
+								b.real_est_nm_cur_id,
+								b.real_est_nomi_date,
+								b.opening_ts,
+								b.col_type_id,
+			                    a.inspol_ind
+							from 
+								cusacc_exposure_new c,
+								loan_beneficiary_d a, 
+								coll_head_d b
+							where 
+								c.cus_acc_no=:(acc_no) and
+								(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+                                c.exposure_date = :(value_date) and
+                                c.exp_type_ind = :(exp_type_ind) and				
+                                :(value_date) between a.load_date_from and a.load_date_until and
+								a.status='A' and
+								a.col_hea_id = b.col_hea_id and		
+                                :(value_date) between b.load_date_from and b.load_date_until and
+								b.collateral_status='3' and
+								b.b2_irb_elig = 'D' and 
+								b.real_est_nomi_valu is not null and
+								b.real_est_nomi_valu > 0 and
+		            			b.col_cat_id not in (617223,625223) and
+			                    b.col_type_id NOT IN (76777,77777)
+				        };
+				break;
+	         case (DealCollateralCoverage.ND):
+	                #sql [connCtx] collateralIter = {
+	                        select 
+	                                a.loan_ben_id,
+	                                a.col_hea_id,
+	                                b.col_cat_id,
+	                                b.col_num,
+	                                b.real_est_nomi_valu,
+	                                b.real_est_nm_cur_id,
+	                                b.real_est_nomi_date,
+	                                b.opening_ts,
+	                                b.col_type_id,
+	                                a.inspol_ind
+	                            from 
+	                                cusacc_exposure_new c,
+	                                loan_beneficiary_d a, 
+	                                coll_head_d b
+	                            where 
+	                                c.cus_acc_no=:(acc_no) and
+	                                (c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+                                    c.exposure_date = :(value_date) and
+                                    c.exp_type_ind = :(exp_type_ind) and              
+                                    :(value_date) between a.load_date_from and a.load_date_until and
+	                                a.status='A' and
+	                                a.col_hea_id = b.col_hea_id and     
+                                    :(value_date) between b.load_date_from and b.load_date_until and
+	                                b.collateral_status='3' and
+	                                b.nd_eligibility = 'D' and 
+	                                b.real_est_nomi_valu is not null and
+	                                b.real_est_nomi_valu > 0 and
+	                                b.col_cat_id not in (617223,625223) and
+                                    b.col_type_id NOT IN (76777,77777)	                                
+	                        };
+	                break;
+	          case (DealCollateralCoverage.RBA_MICRO):
+	                #sql [connCtx] collateralIter = {
+	                        select 
+	                                a.loan_ben_id,
+	                                a.col_hea_id,
+	                                b.col_cat_id,
+	                                b.col_num,
+	                                b.real_est_nomi_valu,
+	                                b.real_est_nm_cur_id,
+	                                b.real_est_nomi_date,
+	                                b.opening_ts,
+	                                b.col_type_id,
+	                                a.inspol_ind
+	                            from 
+	                                cusacc_exposure_new c,
+	                                loan_beneficiary_d a, 
+	                                coll_head_d b
+	                            where 
+	                                c.cus_acc_no=:(acc_no) and
+	                                (c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+	                                c.exposure_date = :(value_date) and
+	                                c.exp_type_ind = :(exp_type_ind) and
+	                                :(value_date) between a.load_date_from and a.load_date_until and
+	                                a.status='A' and
+	                                a.col_hea_id = b.col_hea_id and     
+	                                :(value_date) between b.load_date_from and b.load_date_until and
+	                                b.collateral_status='3' and
+	                                b.rba_eligibility = 'D' and
+	                                b.real_est_nomi_valu is not null and
+	                                b.real_est_nomi_valu > 0 and
+                                    b.col_cat_id IN (618223,612223) and
+                                    b.col_type_id NOT IN (76777,77777)
+	                        };
+	                break;
+		}
+		rc.stopStopWatch("YOY81.selectDirectCollateral");
+		return collateralIter;
+	}
+	
+	public CollateralIterator selectMortgageCollateral(String acc_no, int eligibility) throws SQLException
+	{
+		rc.startStopWatch("YOY81.selectMortgageCollateral");
+	    CollateralIterator collateralIter=null;		
+		switch (eligibility)
+		{
+			case (DealCollateralCoverage.RBA):
+				#sql [connCtx] collateralIter = {
+					SELECT 
+	        			a.loan_ben_id,
+	        			b.col_hea_id,
+	        			b.col_cat_id,
+	        			b.col_num,
+	        			b.real_est_nomi_valu,
+	        			b.real_est_nm_cur_id,
+	        			b.real_est_nomi_date,
+						b.opening_ts,
+	        			b.col_type_id,
+			            b.inspol_ind
+	        		FROM
+	        			loan_beneficiary_d a,
+	        			coll_hf_prior_d d,
+	        			coll_head_d b, 
+						cusacc_exposure_new c
+	        		WHERE 
+						c.cus_acc_no=:(acc_no) and
+						(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and	
+			            c.exposure_date = :(value_date) and
+			            c.exp_type_ind = :(exp_type_ind) and
+                        :(value_date) between a.load_date_from and a.load_date_until and
+	        			a.status='A' and
+	        			a.coll_hf_prior_id = d.coll_hf_prior_id and
+                        :(value_date) between d.load_date_from and d.load_date_until and
+	        			d.hf_status='A' and
+	        			((d.hf_date_hfc_until >= current date) OR (d.hf_date_hfc_until is null)) and
+	        			d.hf_coll_head_id = b.col_hea_id and
+                        :(value_date) between b.load_date_from and b.load_date_until and
+	        			b.collateral_status='3' and
+	        			b.rba_eligibility = 'D' and 
+	        			b.real_est_nomi_valu is not null and
+						b.real_est_nomi_valu > 0 and
+			            b.col_type_id NOT IN (76777,77777)			
+			        };
+				break;
+			case (DealCollateralCoverage.B1):
+				#sql [connCtx] collateralIter = {
+					SELECT 
+	        			a.loan_ben_id,
+	        			b.col_hea_id,
+	        			b.col_cat_id,
+	        			b.col_num,
+	        			b.real_est_nomi_valu,
+	        			b.real_est_nm_cur_id,
+	        			b.real_est_nomi_date,
+						b.opening_ts,
+	        			b.col_type_id,
+			            b.inspol_ind
+	        		FROM
+	        			loan_beneficiary_d a,
+	        			coll_hf_prior_d d,
+	        			coll_head_d b, 
+						cusacc_exposure_new c
+	        		WHERE 
+						c.cus_acc_no=:(acc_no) and
+						(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+			            c.exposure_date = :(value_date) and
+			            c.exp_type_ind = :(exp_type_ind) and						
+                        :(value_date) between a.load_date_from and a.load_date_until and
+	        			a.status='A' and
+	        			a.coll_hf_prior_id = d.coll_hf_prior_id and
+                        :(value_date) between d.load_date_from and d.load_date_until and
+	        			d.hf_status='A' and
+	        			((d.hf_date_hfc_until >= current date) OR (d.hf_date_hfc_until is null)) and
+	        			d.hf_coll_head_id = b.col_hea_id and
+                        :(value_date) between b.load_date_from and b.load_date_until and
+	        			b.collateral_status='3' and
+	        			b.b1_eligibility = 'D' and 
+	        			b.real_est_nomi_valu is not null and
+						b.real_est_nomi_valu > 0 and
+                        b.col_type_id NOT IN (76777,77777)			
+			        };
+				break;
+			case (DealCollateralCoverage.B2):
+				#sql [connCtx] collateralIter = {
+					SELECT 
+	        			a.loan_ben_id,
+	        			b.col_hea_id,
+	        			b.col_cat_id,
+	        			b.col_num,
+	        			b.real_est_nomi_valu,
+	        			b.real_est_nm_cur_id,
+	        			b.real_est_nomi_date,
+						b.opening_ts,
+	        			b.col_type_id,
+			            b.inspol_ind
+	        		FROM
+	        			loan_beneficiary_d a,
+	        			coll_hf_prior_d d,
+	        			coll_head_d b, 
+						cusacc_exposure_new c
+	        		WHERE 
+						c.cus_acc_no=:(acc_no) and
+						(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+			            c.exposure_date = :(value_date) and
+			            c.exp_type_ind = :(exp_type_ind) and						
+                        :(value_date) between a.load_date_from and a.load_date_until and
+	        			a.status='A' and
+	        			a.coll_hf_prior_id = d.coll_hf_prior_id and
+                        :(value_date) between d.load_date_from and d.load_date_until and
+	        			d.hf_status='A' and
+	        			((d.hf_date_hfc_until >= current date) OR (d.hf_date_hfc_until is null)) and
+	        			d.hf_coll_head_id = b.col_hea_id and
+                        :(value_date) between b.load_date_from and b.load_date_until and
+	        			b.collateral_status='3' and
+	        			b.eligibility = 'D' and 
+	        			b.real_est_nomi_valu is not null and
+						b.real_est_nomi_valu > 0 and	
+                        b.col_type_id NOT IN (76777,77777)		
+			        };
+				break;
+			case (DealCollateralCoverage.B2IRB):
+				#sql [connCtx] collateralIter = {
+					SELECT 
+	        			a.loan_ben_id,
+	        			b.col_hea_id,
+	        			b.col_cat_id,
+	        			b.col_num,
+	        			b.real_est_nomi_valu,
+	        			b.real_est_nm_cur_id,
+	        			b.real_est_nomi_date,
+						b.opening_ts,
+	        			b.col_type_id,
+			            b.inspol_ind
+	        		FROM
+	        			loan_beneficiary_d a,
+	        			coll_hf_prior_d d,
+	        			coll_head_d b, 
+						cusacc_exposure_new c
+	        		WHERE 
+						c.cus_acc_no=:(acc_no) and
+						(c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and
+                        c.exposure_date = :(value_date) and
+                        c.exp_type_ind = :(exp_type_ind) and 						
+                        :(value_date) between a.load_date_from and a.load_date_until and
+	        			a.status='A' and
+	        			a.coll_hf_prior_id = d.coll_hf_prior_id and
+                        :(value_date) between d.load_date_from and d.load_date_until and
+	        			d.hf_status='A' and
+	        			((d.hf_date_hfc_until >= current date) OR (d.hf_date_hfc_until is null)) and
+	        			d.hf_coll_head_id = b.col_hea_id and
+                        :(value_date) between b.load_date_from and b.load_date_until and
+	        			b.collateral_status='3' and
+	        		    b.b2_irb_elig = 'D' and 
+	        			b.real_est_nomi_valu is not null and
+						b.real_est_nomi_valu > 0 and	
+                        b.col_type_id NOT IN (76777,77777)		
+			        };
+				break;
+	         case (DealCollateralCoverage.ND):
+	                #sql [connCtx] collateralIter = {
+	                    SELECT 
+	                        a.loan_ben_id,
+	                        b.col_hea_id,
+	                        b.col_cat_id,
+	                        b.col_num,
+	                        b.real_est_nomi_valu,
+	                        b.real_est_nm_cur_id,
+	                        b.real_est_nomi_date,
+	                        b.opening_ts,
+	                        b.col_type_id,
+	                        b.inspol_ind
+	                    FROM
+	                        loan_beneficiary_d a,
+	                        coll_hf_prior_d d,
+	                        coll_head_d b, 
+	                        cusacc_exposure_new c
+	                    WHERE 
+	                        c.cus_acc_no=:(acc_no) and
+	                        (c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and 
+                            c.exposure_date = :(value_date) and
+                            c.exp_type_ind = :(exp_type_ind) and                      
+                            :(value_date) between a.load_date_from and a.load_date_until and
+	                        a.status='A' and
+	                        a.coll_hf_prior_id = d.coll_hf_prior_id and
+                            :(value_date) between d.load_date_from and d.load_date_until and
+	                        d.hf_status='A' and
+	                        ((d.hf_date_hfc_until >= current date) OR (d.hf_date_hfc_until is null)) and
+	                        d.hf_coll_head_id = b.col_hea_id and
+                            :(value_date) between b.load_date_from and b.load_date_until and
+	                        b.collateral_status='3' and
+	                        b.nd_eligibility = 'D' and 
+	                        b.real_est_nomi_valu is not null and
+	                        b.real_est_nomi_valu > 0 and
+                            b.col_type_id NOT IN (76777,77777)            
+	                    };
+	                break;
+	          case (DealCollateralCoverage.RBA_MICRO):
+	                #sql [connCtx] collateralIter = {
+	                    SELECT 
+	                        a.loan_ben_id,
+	                        b.col_hea_id,
+	                        b.col_cat_id,
+	                        b.col_num,
+	                        b.real_est_nomi_valu,
+	                        b.real_est_nm_cur_id,
+	                        b.real_est_nomi_date,
+	                        b.opening_ts,
+	                        b.col_type_id,
+	                        b.inspol_ind
+	                    FROM
+	                        loan_beneficiary_d a,
+	                        coll_hf_prior_d d,
+	                        coll_head_d b, 
+	                        cusacc_exposure_new c
+	                    WHERE 
+	                        c.cus_acc_no=:(acc_no) and
+	                        (c.cus_acc_id=a.la_acc_id OR   c.cus_acc_no=a.acc_no  OR c.request_no=a.request_no) and 
+	                        c.exposure_date = :(value_date) and
+	                        c.exp_type_ind = :(exp_type_ind) and
+	                        :(value_date) between a.load_date_from and a.load_date_until and
+	                        a.status='A' and
+	                        a.coll_hf_prior_id = d.coll_hf_prior_id and
+	                        :(value_date) between d.load_date_from and d.load_date_until and
+	                        d.hf_status='A' and
+	                        ((d.hf_date_hfc_until >= current date) OR (d.hf_date_hfc_until is null)) and
+	                        d.hf_coll_head_id = b.col_hea_id and
+	                        :(value_date) between b.load_date_from and b.load_date_until and
+	                        b.collateral_status='3' and
+	                        b.rba_eligibility = 'D' and 
+	                        b.real_est_nomi_valu is not null and
+	                        b.real_est_nomi_valu > 0 and
+	                        b.col_cat_id IN (618223,612223) and
+                            b.col_type_id NOT IN (76777,77777)
+	                    };
+	                break;
+		}
+		rc.stopStopWatch("YOY81.selectMortgageCollateral");
+		return collateralIter;
+	}
+	
+} 

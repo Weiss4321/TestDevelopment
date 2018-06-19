@@ -1,0 +1,356 @@
+package hr.vestigo.modules.collateral.batch.bo75;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+public class BO751
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo75/BO751.sqlj,v 1.5 2017/06/29 08:41:03 hrakis Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    
+    #sql iterator CollateralIterator (
+        BigDecimal col_hea_id
+    );
+    
+    #sql iterator MortgagePlacementIterator (
+        BigDecimal coll_hf_prior_id,
+        String hf_priority,
+        BigDecimal amount_ref,
+        BigDecimal cur_id_ref,
+        String cur_code_char,
+        BigDecimal hf_own_cus_id,
+        BigDecimal loan_ben_id,
+        BigDecimal rvrd,
+        BigDecimal rvod,
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        Date usage_date
+    );
+    
+    
+
+    public BO751(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+    
+    
+    /**
+     * Metoda dohvaæa ID izvršene obrade izraèuna pokrivenosti za zadani datum.
+     * Ako se obrada nije izvršila u potpunosti ili se uopæe nije izvršila, metoda vraæa null.
+     * @param value_date Datum valute izraèuna pokrivenosti
+     * @return ID obrade izraèuna pokrivenosti; null ako se obrada nije izvršila
+     */
+    public BigDecimal selectColProId(Date value_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("selectColProId");
+            
+            BigDecimal col_pro_id = null;
+            #sql [connCtx] { 
+                SELECT col_pro_id
+                INTO :(col_pro_id)
+                FROM col_proc
+                WHERE value_date = :(value_date)
+                  AND proc_type IN ('P','N','M')
+                  AND proc_status = '1'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return col_pro_id;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata ID-a obrade izracuna pokrivenosti! (datum = " + value_date + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectColProId");
+        }
+    }
+    
+  
+    /** 
+     * Metoda dohvaæa najmanji datum koji postoji u arhivi podataka o kolateralima.
+     * @return datum
+     */
+    public Date selectMinHistoryDate() throws SQLException
+    {
+        bc.startStopWatch("selectMinHistoryDate");
+        try
+        {
+            Date min_history_date = null;
+            #sql [connCtx] {
+                SELECT MIN(load_date_from) INTO :(min_history_date) FROM coll_head_d WITH UR
+            };
+            bc.debug("Minimalni datum za koji postoje podaci u arhivi = " + min_history_date);
+            return min_history_date;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata najmanjeg datuma u arhivi podataka o kolateralima!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectMinHistoryDate");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa kolaterale koji ulaze u izraèun.
+     * U izraèun ulaze samo aktivne nekretnine.
+     * @param value_date Datum valute
+     * @return iterator s podacima
+     */
+    public CollateralIterator selectCollaterals(Date value_date) throws SQLException
+    {
+        bc.startStopWatch("selectCollaterals");
+        try
+        {
+            CollateralIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT col_hea_id
+                FROM coll_head_d
+                WHERE :(value_date) BETWEEN load_date_from AND load_date_until
+                AND collateral_status IN ('0','1','2','3')
+                AND col_cat_id = 618223
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata kolaterala koji ulaze u izracun!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollaterals");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa osnovne podatke o zadanom kolateralu. 
+     * @param col_hea_id ID kolaterala
+     * @param value_date Datum valute
+     * @return objekt s podacima o kolateralu, null ako kolateral ne postoji na zadani datum 
+     */
+    public CollateralData selectCollateralData(BigDecimal col_hea_id, Date value_date) throws SQLException
+    {
+        bc.startStopWatch("selectCollateralData");
+        try
+        {
+            CollateralData collateral = new CollateralData();
+            collateral.col_hea_id = col_hea_id;
+            #sql [connCtx] {
+                SELECT 
+                    a.col_num               AS col_num, 
+                    a.real_est_nomi_valu    AS real_est_nomi_valu, 
+                    a.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    c.code_char             AS real_est_nm_cur_code_char
+                INTO
+                    :(collateral.col_num),
+                    :(collateral.real_est_nomi_valu),
+                    :(collateral.real_est_nm_cur_id),
+                    :(collateral.real_est_nm_cur_code_char)
+                FROM coll_head_d a
+                INNER JOIN currency c ON a.real_est_nm_cur_id = c.cur_id
+                WHERE a.col_hea_id = :(col_hea_id)
+                  AND :(value_date) BETWEEN a.load_date_from AND a.load_date_until
+                  AND a.collateral_status IN ('0','1','2','3')
+                  AND a.col_cat_id = 618223
+                WITH UR
+            };
+            return collateral;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o kolateralu (COL_HEA_ID = " + col_hea_id + ", VALUE_DATE = " + value_date + ")!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectCollateralData");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja za zadani kolateral dohvaæa podatke o aktivnim hipotekama koje su vrijedile na zadani datum.
+     * @param col_hea_id ID kolaterala
+     * @param value_date Datum za koji vrijede podaci
+     * @return iterator s podacima
+     */
+    public MortgagePlacementIterator selectMortgagesAndPlacements(BigDecimal col_hea_id, Date value_date) throws SQLException
+    {
+        bc.startStopWatch("selectMortgagesAndPlacements");
+        try
+        {
+            MortgagePlacementIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    c.coll_hf_prior_id      AS coll_hf_prior_id,
+                    c.hf_priority           AS hf_priority,
+                    c.amount_ref            AS amount_ref,
+                    c.cur_id_ref            AS cur_id_ref,
+                    x.code_char             AS cur_code_char,
+                    c.hf_own_cus_id         AS hf_own_cus_id,
+                    b.loan_ben_id           AS loan_ben_id,
+                    b.rvrd                  AS rvrd,
+                    b.rvod                  AS rvod,
+                    a.cus_acc_id            AS cus_acc_id,
+                    a.cus_acc_no            AS cus_acc_no,
+                    a.usage_date            AS usage_date
+                FROM coll_hf_prior_d c
+                INNER JOIN currency x ON c.cur_id_ref = x.cur_id
+                LEFT OUTER JOIN loan_beneficiary_d b ON (b.coll_hf_prior_id = c.coll_hf_prior_id AND b.status = 'A' AND :(value_date) BETWEEN b.load_date_from AND b.load_date_until) 
+                LEFT OUTER JOIN cusacc_exposure a ON (a.cus_acc_id = b.la_acc_id OR a.cus_acc_no = b.acc_no OR a.request_no = b.request_no)
+                WHERE c.hf_coll_head_id = :(col_hea_id)
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND c.hf_status = 'A'
+                ORDER BY c.coll_hf_prior_id, a.approval_date
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata hipoteka i plasmana za kolateral (COL_HEA_ID = " + col_hea_id + ", VALUE_DATE = " + value_date + ")!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("selectMortgagesAndPlacements");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja vraæa izloženost zadanog plasmana.
+     * @param cus_acc_id ID plasmana
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @return izloženost zadanog plasmana u domaæoj valuti
+     */
+    public BigDecimal selectPlacementExposure(BigDecimal cus_acc_id, BigDecimal col_pro_id, YRXX0 yrxx0, BigDecimal domestic_cur_id, Date value_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("selectPlacementExposure");
+            
+            if (cus_acc_id == null) return new BigDecimal("0.00");
+            
+            BigDecimal exp_balance_hrk = null;
+            #sql [connCtx] { 
+                SELECT exp_balance_hrk
+                INTO :(exp_balance_hrk)
+                FROM cusacc_exp_coll
+                WHERE col_pro_id = :(col_pro_id)
+                  AND cus_acc_id = :(cus_acc_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            return exp_balance_hrk;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                BigDecimal exposure_balance, exposure_cur_id;
+                #sql [connCtx] { 
+                    SELECT exposure_balance, exposure_cur_id
+                    INTO :(exposure_balance), :(exposure_cur_id)
+                    FROM cusacc_exposure_new
+                    WHERE cus_acc_id = :(cus_acc_id)
+                    AND exp_type_ind = 'DVA'
+                    FETCH FIRST ROW ONLY
+                    WITH UR
+                };
+                return yrxx0.exchange(exposure_balance, exposure_cur_id, domestic_cur_id, value_date);
+            }
+            else
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata izlozenosti plasmana! (CUS_ACC_ID = " + cus_acc_id + ", COL_PRO_ID = " + col_pro_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectPlacementExposure");
+        }
+    }
+    
+   
+    
+    /**
+     * Metoda koja ažurira vrijednosti polja RVRD i RVOD.
+     * @param mortgage objekt s podacima o hipoteci
+     * @param domestic_cur_id ID domaæe valute 
+     */
+    public void updateLoanBeneficiary(MortgageData mortgage, BigDecimal domestic_cur_id) throws SQLException
+    {
+        if (mortgage.loan_ben_id == null || !mortgage.isRBA()) return;
+        
+        try
+        {
+            if (mortgage.rvod_new != null && !mortgage.rvod_new.equals(mortgage.rvod_current))
+            {
+                bc.startStopWatch("updateRVOD");
+                #sql [connCtx] {
+                    UPDATE loan_beneficiary
+                    SET rvod = :(mortgage.rvod_new),
+                        rvod_cur_id = :(domestic_cur_id),
+                        user_lock = CURRENT TIMESTAMP
+                    WHERE loan_ben_id = :(mortgage.loan_ben_id)
+                };
+                bc.stopStopWatch("updateRVOD");
+            }
+            
+            if (mortgage.rvrd_new != null && !mortgage.rvrd_new.equals(mortgage.rvrd_current))
+            {
+                bc.startStopWatch("updateRVRD");
+                #sql [connCtx] {
+                    UPDATE loan_beneficiary
+                    SET rvrd = :(mortgage.rvrd_new),
+                        rvrd_cur_id = :(domestic_cur_id),
+                        user_lock = CURRENT TIMESTAMP
+                    WHERE loan_ben_id = :(mortgage.loan_ben_id)
+                };
+                bc.stopStopWatch("updateRVRD");
+            }
+        }
+        catch(SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod azuriranja vrijednosti polja RVRD i RVOD!", ex);
+            throw ex;
+        }
+    }
+}

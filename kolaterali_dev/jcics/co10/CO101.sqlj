@@ -1,0 +1,61 @@
+package hr.vestigo.modules.collateral.jcics.co10;
+
+//Transaction checks sum inserted amount for one LA_ACC_ID in loan_component
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+
+
+public class CO101 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co10/CO101.sqlj,v 1.3 2006/02/17 11:05:41 hrasia Exp $";
+	private DeclCO10 decl = null;
+	
+	
+	public CO101(DeclCO10 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO101.sqlj     " );
+		tc.debug ( "......CO101.sqlj     decl.LoanComponentItem_laAccId " + decl.LoanComponentItem_laAccId);
+		java.math.BigDecimal numberZero = new java.math.BigDecimal("0.00");	
+		
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+	
+		
+		try{			
+			#sql [ctx] {SELECT  sum(lc_cov_amo) 
+						INTO    :(decl.curSumTotalFromLoanComponent)
+					    FROM 	loan_component   loc                                                                                          
+						WHERE  	loc.la_acc_id = :(decl.LoanComponentItem_laAccId)                                                 
+								
+				};                                                         
+		                                                                                                                          
+		}catch(java.sql.SQLException se){
+			tc.debug("......CO101.sqlj  SQLException   LoanComponentItem_laAccId     " + decl.LoanComponentItem_laAccId );
+			tc.debug("......CO101.sqlj  SQLException   curSumTotalFromLoanComponent     " + decl.curSumTotalFromLoanComponent );
+			
+			
+			
+			tc.debug ( "......CO101.sqlj select sum(lc_cov_amo) from loan_component SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO101.sqlj select sum(lc_cov_amo) from loan_component SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO101.sqlj select sum(lc_cov_amo) from loan_component SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO101: Error selecting sum(lc_cov_amo) from loan_component ! ","errclt1", null);
+		}
+		tc.debug("......CO101.sqlj  curSumTotalFromLoanComponent     " + decl.curSumTotalFromLoanComponent );
+		
+		if(decl.curSumTotalFromLoanComponent == null){
+			decl.curSumTotalFromLoanComponent = numberZero;
+		
+		}		                    
+
+	}
+	
+}
+

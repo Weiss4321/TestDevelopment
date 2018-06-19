@@ -1,0 +1,324 @@
+package hr.vestigo.modules.collateral.jcics.co11;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyF.YOYF0;
+import hr.vestigo.modules.collateral.common.yoyF.YOYFData;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+import hr.vestigo.modules.f_payment.share.newCheckTableForHNBSpec;
+
+
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */ 
+     
+     
+public class CO117 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co11/CO117.sqlj,v 1.32 2016/11/14 12:31:15 hrakis Exp $";
+	
+	public DeclCO11 decl = null;
+	YOY63 SQLhelper = null;
+	
+	public CO117 (DeclCO11 decl) {
+		this.decl = decl;
+	} 
+
+	//obj za select sloga iz col_head
+	CollHeadSelectData chds = new CollHeadSelectData();
+	// 	obj za update tbl coll_head	
+	CollHeadUpdateData chd = new CollHeadUpdateData();		
+	
+	public void execute(TransactionContext tc) throws Exception {		
+		ConnCtx ctx = tc.getContext();	
+	    SQLhelper = new YOY63(tc);
+	    BigDecimal col_cat_id=null;
+		
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+//		najprije provjeriti da li postoji u bazi polica kod istog osiguravatelja, iste vrste i istog broja police
+
+		int broj = 0;
+		try { 
+				#sql [ctx] {SELECT COUNT(*)
+									INTO :broj 
+    								FROM coll_inspolicy a, coll_head b
+    								WHERE 
+										a.ip_code = :(decl.collinspolupdatemapping.Coll_txtInsPolNumber)
+									AND
+										a.ip_type_id = :(decl.collinspolupdatemapping.SEC_TYP_ID)
+									AND
+										a.ip_cus_id = :(decl.collinspolupdatemapping.IP_CUS_ID) 
+									AND
+										a.col_ins_id <> :(decl.collinspolupdatemapping.COL_SEC_ID)
+									AND
+										a.col_hea_id = b.col_hea_id
+									AND
+										b.collateral_status <> '4'
+		    	};	    	
+		    	tc.debug ( "...broj: " + broj);
+		} catch (SQLException  sqle) {
+			throw sqle;
+		}
+			 
+		
+        //SE klijenti i mikro klijenti mogu imati police s istim brojem
+        if( broj > 0 && 
+                !(decl.collinspolupdatemapping.COL_TYPE_ID.equals(new BigDecimal("91777")) || decl.collinspolupdatemapping.COL_TYPE_ID.equals(new BigDecimal("93777"))) )
+        {
+            throw new VestigoTMException(1, "Transaction CO117: Error updating into coll_inspolicy! ","colErr029", null);
+        }
+		
+
+		try{
+		    #sql [ctx]{
+ 					SELECT
+							a.col_hea_id,
+							a.basic_data_status,
+							a.mortgage_status,
+							a.coll_data_status,
+							a.cover_indic,
+							a.origin_org_uni_id,
+		                    a.crm_hnb,
+		                    a.col_cat_id
+					INTO 
+							:(chds.COL_HEA_ID),    
+							:(chds.BASIC_DATA_STATUS),
+							:(chds.MORTGAGE_STATUS),
+							:(chds.COLL_DATA_STATUS),
+							:(chds.COVER_INDIC),
+							:(chds.ORIGIN_ORG_UNI_ID),
+		                    :(chds.Kol_txtCRMHnb),
+		                    :(col_cat_id)
+			        FROM COLL_HEAD a, COLL_INSPOLICY b
+			        WHERE a.col_hea_id = :(decl.collinspolupdatemapping.COL_HEA_ID)
+			        AND	  a.col_hea_id = b.col_hea_id           		                   
+		    }; 
+
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+			else {
+				throw new VestigoTMException(1, "CO117 - Cannot change, user_lock!", "errclt7", null);				
+			}
+		}
+		
+		// Saša, 16.5.2011 - FBPr200006766
+		// dohvat starog stanja - za povijest promjena
+        YOYFData data = new YOYFData();
+        data.col_ins_id = decl.collinspolupdatemapping.COL_SEC_ID;
+        data.use_id = decl.collinspolupdatemapping.USE_ID;
+        data.org_uni_id = decl.collinspolupdatemapping.ORG_UNI_ID;
+        YOYF0 yoyF0 = new YOYF0(tc, data);
+        try {
+            yoyF0.selectOldState();
+        }
+        catch(Exception ex) {
+            throw new VestigoTMException(1, "Transaction CO117: insurance policy change history", "err411a", null);
+        }
+		chds.USER_LOCK = decl.collinspolupdatemapping.USER_LOCK;		
+		//napraviti update COLL_HEAD		
+		//punjenje objekta chd iz decl-a		
+		fillCHDobj(col_cat_id); 
+		tc.debug("zovem update Head : "+chd.COL_HEA_ID);	
+		tc.debug("USER_LOCK_IN : "+chd.USER_LOCK_IN);			
+		//		 update COLL_HEAD		
+		YOY43 headUpdate = new YOY43(tc, chd);
+		
+		headUpdate.updateCollHead(); 
+
+		tc.debug("gotov update Head : "+chd.COL_HEA_ID);        
+
+		tc.debug("gotov update Head PUNIM user_lock : "+chd.USER_LOCK);
+			
+		decl.collinspolupdatemapping.USER_LOCK = chd.USER_LOCK;
+        decl.collinspolupdatemapping.Coll_txtUserLock = chd.USER_LOCK; 	
+        
+		tc.debug(" COL_HEA_ID : "+decl.collinspolupdatemapping.COL_HEA_ID);	
+		tc.debug(" ip_type_id : "+decl.collinspolupdatemapping.SEC_TYP_ID);	
+		tc.debug(" con_cus_id : "+decl.collinspolupdatemapping.CON_CUS_ID);	
+		tc.debug(" INS_CUS_ID : "+decl.collinspolupdatemapping.INS_CUS_ID);	
+			
+		tc.debug(" OSIGURAVATELJ , ip_cus_id: "+decl.collinspolupdatemapping.IP_CUS_ID);	
+		tc.debug(" VALUTA POLICE , IP_NOM_CUR_ID: "+decl.collinspolupdatemapping.IP_NOM_CUR_ID);			
+		tc.debug(" VALUTA PREMIJE , IP_AMO_CUR_ID: "+decl.collinspolupdatemapping.IP_AMO_CUR_ID);	 	  
+		try{
+		    
+					#sql [ctx]{
+							UPDATE coll_inspolicy
+								SET	ip_type_id			= :(decl.collinspolupdatemapping.SEC_TYP_ID), 
+										con_cus_id 		= :(decl.collinspolupdatemapping.CON_CUS_ID),
+										con_reg_no 		= :(decl.collinspolupdatemapping.Coll_txtIpConRegNo),
+										con_code 		= :(decl.collinspolupdatemapping.Coll_txtIpConCode),
+										con_data 		= :(decl.collinspolupdatemapping.Coll_txtIpConData),
+										ins_cus_id 		= :(decl.collinspolupdatemapping.INS_CUS_ID),
+										ins_reg_no 		= :(decl.collinspolupdatemapping.Coll_txtIpInsRegNo),
+										ins_code 		= :(decl.collinspolupdatemapping.Coll_txtIpInsCode),
+										ins_data 		= :(decl.collinspolupdatemapping.Coll_txtIpInsData),
+										ip_code 		= :(decl.collinspolupdatemapping.Coll_txtInsPolNumber),   
+										ip_cus_id 		= :(decl.collinspolupdatemapping.IP_CUS_ID),
+										ip_issue_date 	= :(decl.collinspolupdatemapping.Coll_txtIpIssueDate),
+										ip_valid_from 	= :(decl.collinspolupdatemapping.Coll_txtIpValiFrom),
+										ip_valid_until 	= :(decl.collinspolupdatemapping.Coll_txtIpValiUntil),
+										ip_nom_cur_id 	= :(decl.collinspolupdatemapping.IP_NOM_CUR_ID),
+										ip_nom_value 	= :(decl.collinspolupdatemapping.Coll_txtIpNomValue),
+										ip_amount 		= :(decl.collinspolupdatemapping.Coll_txtIpAmount),
+										ip_paid_from 	= :(decl.collinspolupdatemapping.Coll_txtIpPaidFrom),
+										ip_paid_until 	= :(decl.collinspolupdatemapping.Coll_txtIpPaidUntil),
+										ip_status		= :(decl.collinspolupdatemapping.Coll_txtIpStatus),
+										ip_amo_cur_id	= :(decl.collinspolupdatemapping.IP_AMO_CUR_ID),
+										ip_spec_stat	= :(decl.collinspolupdatemapping.Coll_txtIpSpecStatus),
+		                                wrn_status      = :(decl.collinspolupdatemapping.Coll_txtWrnStatusCode),
+		                                kmt_status      = :(decl.collinspolupdatemapping.Coll_txtKmtStatusCode)
+							WHERE col_ins_id = :(decl.collinspolupdatemapping.COL_SEC_ID)
+					};
+				
+		}catch(SQLException se){
+				
+			tc.debug ( "......CO117.sqlj update coll_inspolicy SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO117.sqlj update coll_inspolicy SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO117.sqlj update coll_inspolicy SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO117: Error update coll_inspolicy! ","err411a", null);
+		}
+
+        // poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collinspolupdatemapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collinspolupdatemapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.collinspolupdatemapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collinspolupdatemapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.collinspolupdatemapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();
+
+        decl.collinspolupdatemapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collinspolupdatemapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collinspolupdatemapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collinspolupdatemapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();   
+
+        // Saša, 16.5.2011 - FBPr200006766
+        // dohvat novog stanja i ažuriranje povijesti promjena
+        try {
+            yoyF0.selectNewState();
+            yoyF0.insertIntoIpChgHistory();
+        }
+        catch(Exception ex) {
+            throw new VestigoTMException(1, "Transaction CO117: insurance policy change history", "err411a", null);
+        }
+			
+        this.fillDeclFromCHDObj();
+	}//execute
+	
+	private void fillCHDobj (BigDecimal col_cat_id) {
+        chd.COL_TYPE_ID = decl.collinspolupdatemapping.COL_TYPE_ID;
+        chd.COL_CAT_ID = col_cat_id;
+        chd.COL_SUB_ID=decl.collinspolupdatemapping.SEC_TYP_ID;
+        chd.COL_GRO_ID = null;
+		chd.Coll_txtAcouBDate = decl.collinspolupdatemapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.collinspolupdatemapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.collinspolupdatemapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.collinspolupdatemapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.collinspolupdatemapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.collinspolupdatemapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.collinspolupdatemapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.collinspolupdatemapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.collinspolupdatemapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.collinspolupdatemapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.collinspolupdatemapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.collinspolupdatemapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.collinspolupdatemapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.collinspolupdatemapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.collinspolupdatemapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtComDoc = decl.collinspolupdatemapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.collinspolupdatemapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.collinspolupdatemapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.collinspolupdatemapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.collinspolupdatemapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.collinspolupdatemapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.collinspolupdatemapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.collinspolupdatemapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.collinspolupdatemapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.collinspolupdatemapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.collinspolupdatemapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.collinspolupdatemapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.collinspolupdatemapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.collinspolupdatemapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.collinspolupdatemapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.collinspolupdatemapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.collinspolupdatemapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.collinspolupdatemapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.collinspolupdatemapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.collinspolupdatemapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.collinspolupdatemapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.collinspolupdatemapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.collinspolupdatemapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.collinspolupdatemapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.collinspolupdatemapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.collinspolupdatemapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.collinspolupdatemapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.collinspolupdatemapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.collinspolupdatemapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.collinspolupdatemapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.collinspolupdatemapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.collinspolupdatemapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.collinspolupdatemapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.collinspolupdatemapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.collinspolupdatemapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.collinspolupdatemapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.collinspolupdatemapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.collinspolupdatemapping.Coll_txtThirdRightInNom;
+		chd.REAL_EST_EUSE_ID = decl.collinspolupdatemapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.collinspolupdatemapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.collinspolupdatemapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.collinspolupdatemapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.collinspolupdatemapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.collinspolupdatemapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.collinspolupdatemapping.COL_PLACE;
+		chd.COL_COUNTY = decl.collinspolupdatemapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.collinspolupdatemapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.collinspolupdatemapping.COL_RESI_QUAR;
+		chd.USE_ID = decl.collinspolupdatemapping.USE_ID;
+		chd.INSPOL_IND = decl.collinspolupdatemapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.collinspolupdatemapping.Coll_txtDesc;
+		chd.COL_HEA_ID = decl.collinspolupdatemapping.COL_HEA_ID;
+		chd.USER_LOCK_IN = decl.collinspolupdatemapping.USER_LOCK_IN;	
+		chd.Coll_txtAcumBuyValue = decl.collinspolupdatemapping.Coll_txtAcumBuyValue;
+		chd.ORG_UNI_ID = decl.collinspolupdatemapping.ORG_UNI_ID;	 
+		chd.save_ver_aut_flag = decl.collinspolupdatemapping.save_ver_aut_flag;		
+		chd.BASIC_DATA_STATUS = chds.BASIC_DATA_STATUS; 
+		chd.MORTGAGE_STATUS = chds.MORTGAGE_STATUS;
+		chd.COLL_DATA_STATUS = chds.COLL_DATA_STATUS;
+		chd.COVER_INDIC = chds.COVER_INDIC;
+		chd.COL_TYPE_ID = decl.collinspolupdatemapping.COL_TYPE_ID;
+		chd.ORIGIN_ORG_UNI_ID = chds.ORIGIN_ORG_UNI_ID; 
+		chd.ColRba_txtEligibility = decl.collinspolupdatemapping.ColRba_txtEligibility;
+		chd.KolLow_txtEligibility = decl.collinspolupdatemapping.KolLow_txtEligibility;		
+		chd.Kol_txtRbaEligDsc = decl.collinspolupdatemapping.Kol_txtRbaEligDsc; 
+        chd.SPEC_STATUS = decl.collinspolupdatemapping.SPEC_STATUS;     
+        chd.Kol_txtCRMHnb=decl.collinspolupdatemapping.Kol_txtCRMHnb;
+        
+        chd.use_id_co = decl.collinspolupdatemapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.collinspolupdatemapping.Coll_txtTypeTVCode;
+        chd.contract_type=decl.collinspolupdatemapping.Coll_txtContractTypeCode;  
+	}						    					 	
+
+	   private void fillDeclFromCHDObj () throws Exception{            
+	        decl.collinspolupdatemapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+	        decl.collinspolupdatemapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+	        decl.collinspolupdatemapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+	        decl.collinspolupdatemapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+	        decl.collinspolupdatemapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+	        decl.collinspolupdatemapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+	        decl.collinspolupdatemapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+	        decl.collinspolupdatemapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+	        
+	        CalculationData cData = SQLhelper.getAllCalculationData(decl.collinspolupdatemapping.COL_HEA_ID);
+	        decl.collinspolupdatemapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+	    } 
+}	 
+			
+

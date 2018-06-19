@@ -1,0 +1,24 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+--- update pay list flaga da dobijem raèune za testiranje - vratiti ih na kraju testiranja na 0
+-- ova 4 raèuna æu podesiti da su u sustavu naplate  - PAY_LIST_FLAG = 1
+
+select * from citizen where cus_id = 6813710551;  -- Jevrosima Stanimiroviæ
+select * from citizen where cus_id = 10789262605; -- Marijana Petkoviæi
+select * from citizen where cus_id = 13204869605; -- Iva Mikec
+select * from citizen where cus_id = 10820048605; -- Danka Vilet
+
+select cus_id,pay_list_flag from citizen where cus_id IN( 10820048605,13204869605,10789262605,6813710551);
+update  citizen set pay_list_flag = '1' where cus_id = 6813710551;
+commit;
+
+
+select tur_id,tur_typ_id, credit_amount,debit_amount from turnover where tur_id IN(2277910607,2267110607,2267119607,2267126607,2267133607); -- 5 prometa za testiranje
+
+select * from turnover where tur_id = 2277910607 ;
+--- update credit i debit amounta
+update turnover set credit_amount = '0' where tur_id = 2267133607
+
+update turnover set tur_typ_id = 4999 where tur_id = 2267133607
+
+commit;

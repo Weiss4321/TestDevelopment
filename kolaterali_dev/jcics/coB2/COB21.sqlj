@@ -1,0 +1,88 @@
+package hr.vestigo.modules.collateral.jcics.coB2;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+import java.sql.Date;
+
+    #sql iterator Iter1 (
+        BigDecimal POL_REGION_MAP_ID,
+        BigDecimal POL_MAP_ID,
+        BigDecimal REGION_ID,
+        Date DATE_FROM,
+        Date DATE_UNTIL,
+        BigDecimal USER_ID,
+        Timestamp RECORDING_TIMESTAMP,        
+        String pol_map_code,
+        String pol_map_name,
+        String region_value,
+        String region_desc              
+        );
+
+    public class COB21 extends SQLJScrollableRemoteTransaction {
+
+    public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB2/COB21.sqlj,v 1.3 2015/12/04 07:45:01 hraziv Exp $";
+    public DeclCOB2 d=null;
+    private Iter1 iter=null;
+
+    public COB21 (DeclCOB2 d) {
+        this.d = d;  
+    } 
+
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        setLevel(d.ActionListLevel);
+        setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+        ConnCtx ctx = tc.getContext();
+
+        #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+
+        #sql [ctx] iter = {
+                SELECT  prm.POL_REGION_MAP_ID, 
+                        prm.POL_MAP_ID, 
+                        prm.REGION_ID, 
+                        prm.DATE_FROM, 
+                        prm.DATE_UNTIL, 
+                        prm.USER_ID, 
+                        prm.RECORDING_TIMESTAMP,
+                        pm.CODE as pol_map_code, 
+                        pm.NAME as pol_map_name, 
+                        scv.SYS_CODE_VALUE as region_value, 
+                        scv.SYS_CODE_DESC as region_desc
+                 FROM POL_REGION_MAP prm
+                 INNER JOIN POLITICAL_MAP pm ON pm.POL_MAP_ID = prm.POL_MAP_ID
+                 INNER JOIN SYSTEM_CODE_VALUE scv ON scv.SYS_COD_VAL_ID = prm.REGION_ID and scv.SYS_COD_ID = 'coll_region'
+                 WHERE current date between prm.DATE_FROM  and prm.DATE_UNTIL
+                 ORDER BY pm.NAME
+                };        
+    }
+
+    public boolean next() throws Exception {
+        return iter.next();
+    }
+
+    public void close() {
+          if(iter!=null) {
+              try {
+                  iter.close();
+              } catch (Exception ignored) {}
+          }
+    }
+
+
+    public void populateRowData() throws Exception {
+    
+        Vector row=new Vector();
+
+        row.add(iter.pol_map_code());
+        row.add(iter.pol_map_name());
+        row.add(iter.region_desc());
+        row.add(iter.DATE_FROM());
+        row.add(iter.DATE_UNTIL());
+
+        Vector hidden = new Vector();        
+        hidden.add(iter.POL_REGION_MAP_ID());  
+        d.tblCollPolRegionMapList.addRow(row, hidden);      
+    }
+}

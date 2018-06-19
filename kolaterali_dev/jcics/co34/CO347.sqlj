@@ -1,0 +1,116 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import java.sql.SQLException;
+
+import java.sql.Timestamp;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy9.YOY90;
+// deaktiviranje kolaterala - slanje na listu verifikacije deaktivacije
+
+public class CO347 extends RemoteTransaction {
+
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co34/CO347.sqlj,v 1.2 2015/01/16 11:49:23 hrazst Exp $";
+	
+	private DeclCO34 d = null;
+	private Timestamp CREATE_DATE_TIME = null;	
+	
+	public CO347(DeclCO34 d) {
+		this.d = d;
+	} 
+  
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+		tc.debug ( "......poceo CO347... COL_HEA_ID..." +d.kolateralbeforedeact.col_hea_id );
+		
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};		
+		 
+		//dohvatiti parametrizaciju knjizenja i status	
+		String accounting_indic = "";
+		String lista = "";		
+	 	try{  
+		    #sql [ctx] {SELECT a.collateral_status, d.accounting_indic
+	 					INTO :(lista), 
+                             :(accounting_indic)
+	 					FROM
+							coll_head a, coll_category d
+			     		WHERE a.col_hea_id = :(d.kolateralbeforedeact.col_hea_id)
+	 					AND 
+							a.col_cat_id = d.col_cat_id
+						};	    	
+	 		
+	 	} catch(SQLException e){
+	 	}					
+
+	 	//UPDATE kolaterala na verifikaciju deaktivacije 			
+		try{  
+		    #sql [ctx] {
+		            UPDATE COLL_HEAD
+		 			SET collateral_status = '6', 
+                        user_lock = :(CREATE_DATE_TIME),
+                        use_id = :(d.kolateralbeforedeact.use_id),
+                        org_uni_id = :(d.kolateralbeforedeact.org_uni_id)
+				     	WHERE col_hea_id = :(d.kolateralbeforedeact.col_hea_id)
+			};	    	
+		 } catch(SQLException e){
+		 	throw e;
+		 }
+		    
+		tc.debug("NAPRAVLJEN UPDATE kolaterala na VERIFIKACIJU DEAKTIVACIJE.....");				 	
+		//insert dogadjaja u COLL_LIST_Q
+		//sa liste aktivnih/slobodnih na listu DEAKTIVACIJE VERIFIKACIJE
+		try {
+			YOY60 YOY60=new YOY60(tc);
+			
+		 	CollListQData plq=new CollListQData();   
+			 
+		 	plq.col_hea_id=d.kolateralbeforedeact.col_hea_id;	
+		 	plq.status="1";
+		 	plq.income_time = CREATE_DATE_TIME;
+		 	plq.use_id=d.kolateralbeforedeact.use_id;	
+		 	plq.release_time = CREATE_DATE_TIME;
+		 	plq.cmnt=d.kolateralbeforedeact.KolDeactCmnt_txtComment;
+		 	plq.action_type="DEAKTIVIRAJ";		 
+		 	plq.org_uni_id = d.kolateralbeforedeact.org_uni_id;
+		 	plq.coll_deact_reason=d.kolateralbeforedeact.KolDeactCmnt_txtReasoneCode;
+		 	
+		 	//odreduje se sa koje je liste dosao kolateral s liste slobodnih (710223) ili aktivnih kolaterala (7000223)
+	 		if (lista.equalsIgnoreCase("3")) plq.source_list = "700223";  // lista aktivnih		 			 		
+	 		else if (lista.equalsIgnoreCase("F")) plq.source_list = "710223";  // lista slobodnih
+	 		
+		 	plq.status_source_list = "1";
+		 	plq.target_list = "711223";  // lista verifikacije deaktivacije
+		 	plq.status_target_list = "0";			
+		 	plq.target_list_use_id = null;
+		 	plq.target_list_org_uni_id = null;
+	    
+		 	tc.debug("plq data .....:" + plq.toString());
+		 	
+		 	YOY60.update_insert_CollListQ(plq); 
+		} catch (Exception e){
+			throw e;
+		} 
+		
+		//ako je col_hf_prior_id razlicit od null to znaci da je deaktivacija kolaterala dosla sa liste hipoteka i 
+		//to kada se htjela deaktivirati zadnja hipoteka, pa tu zadnju hipoteku ne deaktiviram nego je ostavljam aktivnom
+		//dok neko ne verificira deaktivaciju kolaterala. Kad se verificira deaktivacija kolaterala tek onda ce se i deaktivirati 
+		//hipoteka. Sada se samo u histori deaktivacije hipoteke zapise razlog deaktivacije....
+		if(d.kolateralbeforedeact.col_hf_prior_id!=null){
+		    (new YOY62(tc)).insertIntoHfHistory(ctx, d.kolateralbeforedeact.col_hf_prior_id, d.kolateralbeforedeact.col_hea_id, d.kolateralbeforedeact.use_id, d.kolateralbeforedeact.KolDeactCmnt_txtCommentHip);		    
+		}		
+		tc.debug("NAPRAVLJEN insert workflow-a.....");	
+	}
+}  
+ 
+

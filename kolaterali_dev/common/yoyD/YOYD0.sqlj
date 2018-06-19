@@ -1,0 +1,176 @@
+package hr.vestigo.modules.collateral.common.yoyD;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+import java.sql.SQLException;
+
+
+import java.math.BigDecimal;
+
+// 
+ 
+
+
+#sql iterator Iter1 (BigDecimal col_hf_pri_id,
+                     BigDecimal amount_ref,
+                     BigDecimal cur_id_ref);
+
+public class YOYD0 {
+
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyD/YOYD0.sqlj,v 1.2 2011/12/02 12:55:05 hramkr Exp $";
+
+	private String bank_sign=null;
+	private ConnCtx ctx=null;
+	private RemoteContext rc=null;
+
+
+	private Iter1 iter1 = null;	
+	
+
+	public YOYD0(RemoteContext rc) throws Exception {
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc=rc;
+
+	}
+
+	public void chgMortgageCurrencyAmount(YOYDData hfData) throws Exception{
+// ako je promijenjena valuta kolaterala, treba svim vezanim hipotekama promijeniti valutu kolaterala i iznos u valuti kolaterala
+// pronaci sve aktivne hipoteke vezane na kolateral 
+		rc.info ( "......POCEO YOYD0......chgMortgageCurrencyAmount" + hfData.col_hea_id + hfData.cur_id);
+
+		BigDecimal col_hf_pri_id  = null;
+		
+
+		
+// za update u coll_hf_prior
+
+		BigDecimal hf_amount = null;  // iznos hipoteke u valuti kolaterala
+		BigDecimal amount_ref = null; // iznos hipoteke u valuti hipoteke
+		BigDecimal cur_id_ref = null; // valuta hipoteke
+		BigDecimal midd_rate_1 = null; // tecaj valute kolaterala
+		BigDecimal midd_rate_2 = null; // tecaj valute hipoteke
+		
+// iznos u valuti kolaterala = iznos u valuti hipoteke * (tecaj2/tecaj1)		
+		
+// dohvacam sve aktivne hipoteke vezane za kolateral 
+	
+		try {
+			#sql [ctx] iter1 = { SELECT 	
+									coll_hf_prior_id as col_hf_pri_id,
+									amount_ref as amount_ref,
+									cur_id_ref as cur_id_ref
+								FROM
+									coll_hf_prior 
+								WHERE
+									hf_coll_head_id = :(hfData.col_hea_id)                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+								AND
+									hf_status = 'A'
+								AND 
+									hf_cur_id <> :(hfData.cur_id) 
+					};          			
+		} catch (SQLException se) {
+
+		} 
+			 
+		rc.info ( "......DOHVATIO HIPOTEKE VEZANE NA KOLATERAL" + hfData.col_hea_id);	
+
+			
+		if (iter1 != null) { 
+// za svaku dohvacenu hipoteku preracunati iznos u valuti kolaterala i promijeniti valutu
+			while (iter1.next()) {
+			
+				col_hf_pri_id = iter1.col_hf_pri_id();
+				amount_ref = iter1.amount_ref();
+				cur_id_ref = iter1.cur_id_ref();
+				
+				rc.info ( "....ITERACIJA HIPOTEKA........IZRACUN I UPDATE  " + col_hf_pri_id);
+				rc.info ( "....IZRACUN I UPDATE....STARI IZNOS:  " + amount_ref);
+				rc.info ( "....IZRACUN I UPDATE....REF VALUTA:   " + cur_id_ref);
+// preracun iznosa
+				
+// dohvatiti tecaj za valutu kolaterala				
+				try {
+					#sql [ctx]{ SELECT midd_rate
+							INTO :(midd_rate_1)
+							FROM exchange_rate
+							WHERE
+								cur_id = :(hfData.cur_id)      
+							AND
+								date_from <= current date
+							AND
+								date_until >= current date
+
+					};          								
+				} catch (SQLException se) {
+
+				} 				
+				
+//				 dohvatiti tecaj za valutu hipoteke			
+				try {
+					#sql [ctx]{ SELECT midd_rate
+							INTO :(midd_rate_2)
+							FROM exchange_rate
+							WHERE
+								cur_id = :(cur_id_ref)      
+							AND
+								date_from <= current date
+							AND
+								date_until >= current date
+
+					};          								
+				} catch (SQLException se) {
+
+				} 								
+
+				
+				if((midd_rate_2 != null) && (midd_rate_1 != null)){
+					
+					hf_amount = amount_ref.multiply(midd_rate_2);
+					hf_amount = hf_amount.divide(midd_rate_1,2,java.math.BigDecimal.ROUND_HALF_UP);
+
+				
+				}				
+				
+			
+				rc.info ( "....IZRACUN I UPDATE....IZNOS U REF VALUTI: " + amount_ref);
+				rc.info ( "....IZRACUN I UPDATE....REF VALUTA:  " + cur_id_ref);
+				rc.info ( "....IZRACUN I UPDATE....TECAJ2:       " + midd_rate_2);		
+				rc.info ( "....IZRACUN I UPDATE....TECAJ1:       " + midd_rate_1);				
+				rc.info ( "....IZRACUN I UPDATE....NOVI IZNOS U VAL KOL:  " + hf_amount);
+				rc.info ( "....IZRACUN I UPDATE....VALUTA KOL:  " + hfData.cur_id);				
+				
+// update vrijednosti  
+				try {
+					#sql [ctx] { UPDATE coll_hf_prior
+									SET
+										hf_amount = :(hf_amount),
+										hf_cur_id = :(hfData.cur_id),
+				                        user_lock = current timestamp
+									WHERE
+										coll_hf_prior_id = :(col_hf_pri_id)      
+						};          			
+				} catch (SQLException se) {
+
+				} 				
+				
+				hf_amount = null;
+			
+			} 
+		}  
+		
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}	   
+ 
+	
+}
+ 
+				
+			
+		
+		

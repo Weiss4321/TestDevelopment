@@ -1,0 +1,219 @@
+package hr.vestigo.modules.collateral.jcics.co32;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.sql.SQLException;
+import java.sql.Date;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr
+ *  	
+ */ 
+            
+#sql iterator Iter4 (BigDecimal coll_hf_prior,
+					BigDecimal midd_rate_col);
+
+public class CO324 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co32/CO324.sqlj,v 1.7 2017/02/16 15:27:22 hrazst Exp $";
+	
+	public DeclCO32 decl = null;
+	
+	private Iter4 iter4 = null;	
+	BigDecimal hf_col_id = null;
+	BigDecimal exch_rate = null;
+	BigDecimal exch_rate_col = null;
+	BigDecimal hf_amount = null;
+    BigDecimal midd_rate_ref = null;
+    
+	public CO324 (DeclCO32 decl) {
+		this.decl = decl;
+	}  
+	    
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+//			 najprije provjeriti da li postoji u bazi ugovor s istim brojem a razlicitim id-em
+		int broj = 0;			
+		try {
+		    #sql [ctx] {SELECT COUNT(*)
+						INTO :broj 
+		    			FROM frame_agreement
+		    			WHERE 
+							agreement_no = :(decl.agrupdate.Agr_txtAgrNo)
+						AND	
+							fra_agr_id <> :(decl.agrupdate.fra_agr_id)
+		                AND
+		                    status = 'A'
+								
+	    	};	    	  
+	    	tc.debug ( "...broj: " + broj);
+	    } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO324.sqlj select from frame_agreement SQL ErrorCode " + sqle.getErrorCode());
+			tc.debug ( "......CO324.sqlj select from frame_agreement SQL SQLState " + sqle.getSQLState());
+			tc.debug ( "......CO324.sqlj select from frame_agreement SQL Message " + sqle.getMessage());
+			throw new VestigoTMException(1, "Transaction CO323: Error select from frame_agreement! ","err411a", null);
+        }
+        if(broj > 0){
+		    throw new VestigoTMException(1, "Transaction CO324: Error update frame_agreement! ","colErr016", null);
+		}	
+
+        
+//
+        
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(decl.agrupdate.user_lock)
+			FROM sysibm.sysdummy1
+		};
+		
+		 decl.agrupdate.Coll_txtUserLock = decl.agrupdate.user_lock;        
+		 
+          
+// update podataka			
+		try{	  
+    
+			#sql [ctx]{
+					UPDATE frame_agreement
+						SET		
+								cus_id			= :(decl.agrupdate.agr_cus_id),
+								register_no		= :(decl.agrupdate.Agr_txtRegNo),
+								agreement_no	= :(decl.agrupdate.Agr_txtAgrNo),
+								amount			= :(decl.agrupdate.Agr_txtAmount),
+								cur_id			= :(decl.agrupdate.agr_cur_id),
+								date_until		= :(decl.agrupdate.Agr_txtDateUntil),
+								num_of_bill		= :(decl.agrupdate.Agr_txtNumOfBill),
+								add_data		= :(decl.agrupdate.Agr_txtAddData),
+								use_id			= :(decl.agrupdate.use_id),
+								org_uni_id		= :(decl.agrupdate.org_uni_id),
+								user_lock		= :(decl.agrupdate.Coll_txtUserLock),
+		                        boe_stock_indicator = :(decl.agrupdate.txtSporazumMZ)
+					WHERE fra_agr_id = :(decl.agrupdate.fra_agr_id) 
+			};  
+					  
+		} catch(SQLException e) {
+			if (e.getErrorCode()!=100) throw e;
+			else {
+				throw new VestigoTMException(1, "CO324 - Cannot change, user_lock!", "errclt7", null);				
+			}
+		}
+		
+		
+// ako se promjena radi s liste aktivnih ugovora treba napraviti update sviz pripadajucih hipoteka
+// mijenja se iznos i dospijece hipoteke
+		
+		if (decl.agrupdate.update_flag.equalsIgnoreCase("A")) {
+			
+			tc.debug ( "......UPDATE AKTIVNOG SPORAZUMA " + decl.agrupdate.update_flag + decl.agrupdate.fra_agr_id);
+			
+//			 update podataka o hipotekama			
+// pronaci sve hipoteke vezane za ugovor
+// HF_CUR_ID - valuta kolaterala			
+// HF_AMOUNT - iznos u valuti kolaterala
+// CUR_ID_REF - valuta hipoteke, jednaka je valuti ugovora		
+// EXC_RAT_REF - tecaj valute hipoteke prema kuni
+// EXC_RAT_REF_DATE - datum tecaja			
+			
+// dohvatiti tecaj za valutu hipoteke za current date, valuta hipoteke je uvijek valuta okvirnog sporazuma
+			
+            try {
+                #sql [ctx]{
+                    SELECT
+                        midd_rate 
+                    INTO
+                        :(midd_rate_ref)
+                    FROM
+                        exchange_rate                        
+                    WHERE 
+                        cur_id = :(decl.agrupdate.agr_cur_id)
+                    AND
+                        date_from <= current date
+                    AND
+                        date_until >= current date
+                    };                  
+            } catch(SQLException e) {
+                tc.debug ( "......XXX " + e.getErrorCode());                
+            }
+            exch_rate = midd_rate_ref;			
+			try {  
+				#sql [ctx] iter4 = { SELECT 	
+										a.coll_hf_prior_id as coll_hf_prior,
+										c.midd_rate as midd_rate_col
+
+									FROM  	coll_hf_prior a, exchange_rate c
+									WHERE   a.fra_agr_id = :(decl.agrupdate.fra_agr_id)                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+									AND 	a.hf_status = 'A'
+									AND		a.hf_own_cus_id = 8218251
+									AND		((a.hf_date_hfc_until is null) or (a.hf_date_hfc_until >= current date))
+									AND		a.hf_cur_id = c.cur_id
+									AND		c.date_from <= current date
+									AND		c.date_until >= current date
+									};          					
+//                #sql [ctx] iter4 = { SELECT     
+//                        a.coll_hf_prior_id as coll_hf_prior,
+//                        b.midd_rate as midd_rate_ref,
+//                        c.midd_rate as midd_rate_col
+//
+//                    FROM    coll_hf_prior a, exchange_rate b, exchange_rate c
+//                    WHERE   a.fra_agr_id = :(decl.agrupdate.fra_agr_id)                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+//                    AND     a.hf_status = 'A'
+//                    AND     a.hf_own_cus_id = 8218251
+//                    AND     ((a.hf_date_hfc_until is null) or (a.hf_date_hfc_until >= current date))
+//                    AND     a.cur_id_ref = b.cur_id
+//                    AND     b.date_from <= current date
+//                    AND     b.date_until >= current date
+//                    AND     a.hf_cur_id = c.cur_id
+//                    AND     c.date_from <= current date
+//                    AND     c.date_until >= current date
+//                    };                                              
+			} catch(SQLException e) {
+				tc.debug ( "......XXX " + e.getErrorCode());				
+			}
+			tc.debug ( "......IDEM PO HIPOTEKE" + decl.agrupdate.fra_agr_id);			
+// update podataka za svaku hipoteku vezanu za okvirni sporazum		
+			while (iter4.next()) {
+			  
+				tc.debug ( "  ITERACIJA HIPOTEKA ........  ");
+				hf_col_id = iter4.coll_hf_prior();
+//				exch_rate = iter4.midd_rate_ref();
+
+				exch_rate_col = iter4.midd_rate_col();
+				hf_amount = ((decl.agrupdate.Agr_txtAmount).multiply(exch_rate)).divide(exch_rate_col, 2, BigDecimal.ROUND_HALF_UP);
+				tc.debug ( "  ITERACIJA HIPOTEKA ........  " + hf_col_id+exch_rate+exch_rate_col+hf_amount);
+				try{	  
+	     
+					#sql [ctx]{
+								UPDATE coll_hf_prior
+								SET		
+				                        cur_id_ref          = :(decl.agrupdate.agr_cur_id),
+										hf_amount			= :(hf_amount),
+										amount_ref			= :(decl.agrupdate.Agr_txtAmount),
+										exc_rat_ref			= :(exch_rate),
+										exc_rat_ref_date	= current date,
+										hf_date_hfc_until	= :(decl.agrupdate.Agr_txtDateUntil),
+										use_id 				= :(decl.agrupdate.use_id),
+										user_lock			= :(decl.agrupdate.Coll_txtUserLock)
+								WHERE 	coll_hf_prior_id	= :(hf_col_id) 
+								AND		fra_agr_id			= :(decl.agrupdate.fra_agr_id) 	
+				};  
+						  
+				} catch(SQLException e) {
+
+				}
+			
+			}
+		}
+		 
+  
+	}//execute
+	
+}	
+			
+
+  
+
+
+

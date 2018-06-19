@@ -1,0 +1,165 @@
+package hr.vestigo.modules.collateral.jcics.co09;
+
+//DIALOG COLL_HF_PRIOR in favour of RBA  on screen CollHfPriorDialogRba
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+
+public class CO092 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co09/CO092.sqlj,v 1.3 2006/02/04 14:22:02 hrasia Exp $";
+	private DeclCO09 decl = null;
+		
+	
+	public CO092(DeclCO09 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO092.sqlj     DIALOG COLL_HF_PRIOR in favour of RBA  on screen CollHfPriorDialogRba ");
+		tc.debug ( "......CO092.sqlj     decl.collhfpriordialogrbamapping.COLL_HF_PRIOR_ID " + decl.collhfpriordialogrbamapping.COLL_HF_PRIOR_ID);
+		tc.debug ( "......CO092.sqlj     decl.collhfpriordialogrbamapping.CUS_ID " + decl.collhfpriordialogrbamapping.CUS_ID);
+		
+		
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+	
+		
+		try{			
+			#sql [ctx] {SELECT     chp.coll_hf_prior_id , 
+								    chp.hf_table_id, scv1.sys_code_value,	scv1.sys_code_desc,									
+								    chp.hf_ref_id, chp.hf_coll_head_id, coh.col_num,
+								    chp.hf_own_cus_id, chp.hf_register_no , chp.hf_own_code, chp.hf_own_fname	, chp.hf_own_lname,	
+								    chp.hf_hfc_id,	scv3.sys_code_value,	scv3.sys_code_desc,	
+								    chp.hf_priority,		
+									chp.hf_notary_agr, chp.hf_notary_place_id, plac.name, chp.hf_notary_date, 
+									chp.hf_notary, custn.register_no , chp.hf_not_fname, chp.hf_not_lname	,	
+									chp.hf_date_reciv, chp.hf_court_decis,							
+									chp.hf_date_extract	, chp.hf_offi_lrd,  custo.register_no , chp.hf_offilrd_fname, chp.hf_offilrd_lname,
+									chp.hf_rec_lop_id, scv2.sys_code_value,	scv2.sys_code_desc,	
+									chp.hf_add_data,									             
+									chp.hf_amount, chp.hf_cur_id,	curr.code_char,   
+									chp.amount_ref, chp.cur_id_ref	,	curf.code_char, 
+									chp.exc_rat_ref	, chp.exc_rat_ref_date,						
+									chp.hf_draw_amo	, chp.hf_avail_amo,
+									chp.hf_draw_amo_ref,chp.avail_amo_ref,chp.hf_avail_dat,chp.draw_bamo,
+									chp.avail_bamo,
+									chp.draw_bamo_ref, chp.avail_bamo_ref, 							
+									chp.avail_bdat,
+									chp.val_date_turn, chp.val_date_proc,
+									chp.hf_date_hfc_from, chp.hf_date_hfc_until,
+									chp.hf_status, chp.hf_spec_stat,
+									chp.hf_date_from, chp.hf_date_until,
+									chp.use_open_id, opeus.login, opeus.user_name,
+									chp.use_id, chaus.login, chaus.user_name,
+									chp.opening_ts, chp.user_lock
+											
+																		
+									
+		
+							                                                                                                                
+		      	 				INTO                                                                                                             
+						  					:(decl.collhfpriordialogrbamapping.COLL_HF_PRIOR_ID), 
+						  					:(decl.collhfpriordialogrbamapping.HF_TABLE_ID),
+						  					:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfTableSysCodeValue),
+						  					:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfTableSysCodeDesc),
+						  					:(decl.collhfpriordialogrbamapping.HF_REF_ID),
+						  					:(decl.collhfpriordialogrbamapping.HF_COLL_HEAD_ID),
+						  					:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtColNum),	                            
+						                    :(decl.collhfpriordialogrbamapping.HF_OWN_CUS_ID),	  
+						                    :(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfRegisterNo),	                                                                                               
+						                    :(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfOwnCode),	  
+						                    :(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfOwnFname),	  
+						     	          	:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfOwnLname),
+						     	          	:(decl.collhfpriordialogrbamapping.HF_HFC_ID),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfHfcSysCodeValue),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfHfcSysCodeDesc),
+						     	          	:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfPriority),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfNotaryAgr),
+											:(decl.collhfpriordialogrbamapping.HF_NOTARY_PLACE_ID),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfNotaryPlace),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfNotaryDate),
+											:(decl.collhfpriordialogrbamapping.HF_NOTARY),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfNotaryRegisterNo),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfNotFname),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfNotLname),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDateReciv),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfCourtDecis),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDateExtract),
+											:(decl.collhfpriordialogrbamapping.HF_OFFI_LRD),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfOffildRegisterNo),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfOffildFname),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfOffildLname),
+											:(decl.collhfpriordialogrbamapping.HF_REC_LOP_ID),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfRecLopSysCodeValue),		
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfRecLopSysCodeDesc),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAddData),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAmount),            
+						     	         	:(decl.collhfpriordialogrbamapping.HF_CUR_ID),                                   
+						     	         	:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfCurIdCodeChar),     
+						     	            :(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtAmountRef ),          
+											:(decl.collhfpriordialogrbamapping.CUR_ID_REF	),		                            
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfCurIdRefCodeChar),	
+		                            		:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtExcRatRef),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtExcRatRefDate),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDrawAmo),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAvailAmo),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDrawAmoRef),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAvailAmoRef),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAvailDat),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDrawBAmo),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAvailBAmo), 
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDrawBAmoRef),    
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAvailBAmoRef ),  
+		  									:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfAvailBDat),  
+		  									:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtValDateTurn ),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtValDateProc),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDateHfcFrom),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDateHfcUntil),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfStatus),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfSpecStat),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDateFrom),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtHfDateUntil),
+											:(decl.collhfpriordialogrbamapping.USE_OPEN_ID), 
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtUseOpenIdLogin),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtUseOpenIdName  ),
+											:(decl.collhfpriordialogrbamapping.USE_ID),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtUseIdLogin),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtUseIdName),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtOpeningTs),
+											:(decl.collhfpriordialogrbamapping.CollHfPriorDialog_txtUserLock )
+											
+					     	                                                                                                            
+								FROM 	coll_hf_prior   chp                                                                                              
+								INNER JOIN system_code_value scv1 ON chp.hf_table_id = scv1.sys_cod_val_id 
+								INNER JOIN coll_head coh ON chp.hf_coll_head_id = coh.col_hea_id
+								INNER JOIN system_code_value scv2 ON chp.hf_rec_lop_id = scv2.sys_cod_val_id 
+								INNER JOIN currency curr ON chp.hf_cur_id = curr.cur_id
+								INNER JOIN app_user opeus ON chp.use_open_id = opeus.use_id
+								INNER JOIN app_user chaus ON chp.use_id = chaus.use_id
+								LEFT OUTER JOIN system_code_value scv3 ON chp.hf_hfc_id = scv3.sys_cod_val_id    
+								LEFT OUTER JOIN political_map plac ON chp.hf_notary_place_id = plac.pol_map_id
+								LEFT OUTER JOIN customer custn ON chp.hf_notary = custn.cus_id
+								LEFT OUTER JOIN customer custo ON chp.hf_offi_lrd = custo.cus_id
+			    				LEFT OUTER JOIN currency curf ON chp.cur_id_ref = curf.cur_id
+			    				WHERE  	chp.coll_hf_prior_id = :(decl.collhfpriordialogrbamapping.COLL_HF_PRIOR_ID)                                                 
+								AND 	coh.cus_id = :(decl.collhfpriordialogrbamapping.CUS_ID)  
+				};                                                         
+		                                                                                                                          
+		}catch(java.sql.SQLException se){
+			
+			tc.debug ( "......CO092.sqlj select from coll_hf_prior in favour of RBA SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO092.sqlj select from coll_hf_prior in favour of RBA SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO092.sqlj select from coll_hf_prior in favour of RBA SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO092: Error selecting DIALOG COLL_HF_PRIOR in favour of RBA  on screen CollHfPriorDialogRba! ","err411a", null);
+		}
+				                    
+
+	}
+	
+}
+

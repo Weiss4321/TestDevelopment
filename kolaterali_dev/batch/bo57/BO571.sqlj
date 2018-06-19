@@ -1,0 +1,330 @@
+//created 2010.09.27
+package hr.vestigo.modules.collateral.batch.bo57;
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+
+import java.sql.Timestamp;
+
+public class BO571{
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo57/BO571.sqlj,v 1.7 2016/07/06 11:24:02 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql public iterator FrameIterator with (holdability=true)(
+            BigDecimal cus_acc_id,
+            String cus_acc_no,
+            String request_no,
+            String contract_no);
+    
+    #sql public iterator FrameIteratorContract with (holdability=true)(
+            BigDecimal cus_acc_id,
+            String cus_acc_no,
+            String request_no,
+            String contract_no);
+    
+    #sql public iterator KRDIterator with (holdability=true)(
+            BigDecimal cus_acc_id,
+            String cus_acc_no,
+            String contract_no);
+    
+    #sql public iterator GarIterator with (holdability=true)(
+            BigDecimal cus_acc_id,
+            String cus_acc_no,
+            String contract_no);
+    
+    #sql public iterator OverdraftIterator with (holdability=true)(
+            BigDecimal cus_acc_id,
+            String cus_acc_no,
+            String contract_no);
+    
+    #sql public iterator LetterOfCreditIterator with (holdability=true)(
+            BigDecimal cus_acc_id,
+            String cus_acc_no,
+            String contract_no);
+
+
+    public BO571(BatchContext bc)throws Exception{
+        this.bc = bc;
+        connCtx = bc.getContext(); 
+    }
+
+    public FrameIteratorContract getFrameDataContract()throws SQLException{
+        FrameIteratorContract iter = null;
+         
+        try{
+            #sql [connCtx] iter={select distinct
+
+            a.cus_acc_id as cus_acc_id, 
+            a.cus_acc_no as cus_acc_no, 
+            a.request_no as request_no,
+            a.contract_no as contract_no
+
+            from 
+            cusacc_exposure a,
+            loan_beneficiary b
+
+            where
+            a.module_code = 'OKV'
+            and
+            (a.contract_no is not null and  a.contract_no <> '') 
+            and
+            a.cus_id = b.cus_id
+            and
+            a.contract_no = b.acc_no_old
+            and
+            (b.acc_no is null or b.acc_no ='')
+            with ur};
+
+        }catch (SQLException sqle) {
+            bc.debug("getFrameDataContract() - ERROR:"+sqle);
+            bc.error("getFrameDataContract() - ERROR", sqle);
+            throw sqle;
+
+        }
+
+        return iter;
+    }
+    
+    public FrameIterator getFrameData()throws SQLException{
+        FrameIterator iter = null;
+        
+        try{
+            #sql [connCtx] iter={select distinct
+
+            a.cus_acc_id as cus_acc_id, 
+            a.cus_acc_no as cus_acc_no, 
+            a.request_no as request_no,
+            a.contract_no as contract_no
+
+            from 
+            cusacc_exposure a,
+            loan_beneficiary b
+
+            where
+            a.module_code = 'OKV'
+            and
+            (a.request_no is not null and  a.request_no <> '') 
+            and
+            a.cus_id = b.cus_id
+            and
+            a.request_no = b.request_no
+            and
+            (b.acc_no is null or b.acc_no ='')
+            with ur};
+
+        }catch (SQLException sqle) {
+            bc.debug("getFrameData() - ERROR:"+sqle);
+            bc.error("getFrameData() - ERROR", sqle);
+            throw sqle;
+        }
+        
+        return iter;
+    }
+    
+    
+    public KRDIterator getKRDData()throws SQLException{
+        KRDIterator iter2 = null;
+
+        try{
+            #sql [connCtx] iter2={select distinct
+
+            a.cus_acc_id as cus_acc_id, 
+            a.cus_acc_no as cus_acc_no, 
+            a.contract_no as contract_no
+
+            from 
+            cusacc_exposure a,
+            loan_beneficiary b
+
+            where
+            a.module_code = 'KRD'
+            and
+            (a.contract_no is not null and  a.contract_no <> '') 
+            and
+            a.cus_id = b.cus_id
+            and
+            a.contract_no = b.acc_no_old
+            and
+            (b.acc_no is null or b.acc_no ='')
+            with ur
+            };
+
+        }catch (SQLException sqle) {
+            bc.debug("getKRDData() - ERROR:"+sqle);
+            bc.error("getKRDData() - ERROR", sqle);
+            throw sqle;
+        }
+        return iter2;
+    }
+
+    
+    public GarIterator getGarData()throws SQLException{
+        GarIterator iter3 = null;
+
+        try{
+            #sql [connCtx] iter3={select distinct
+
+            a.cus_acc_id as cus_acc_id, 
+            a.cus_acc_no as cus_acc_no, 
+            a.contract_no as contract_no
+
+            from 
+            cusacc_exposure a,
+            loan_beneficiary b
+
+            where
+            a.module_code = 'GAR'
+            and
+            (a.contract_no is not null and  a.contract_no <> '') 
+            and
+            a.cus_id = b.cus_id
+            and
+            a.contract_no = b.acc_no_old
+            and
+            (b.acc_no is null or b.acc_no ='')
+            with ur
+            };
+
+        }catch (SQLException sqle) {
+            bc.debug("getGarData() - ERROR:"+sqle);
+            bc.error("getGarData() - ERROR", sqle);
+            throw sqle;
+        }
+        return iter3;
+    }
+
+    public OverdraftIterator getOverdraftData()throws SQLException{
+        OverdraftIterator iter4 = null;
+
+        try{
+            #sql [connCtx] iter4={select distinct
+
+            a.cus_acc_id as cus_acc_id, 
+            a.cus_acc_no as cus_acc_no, 
+            a.contract_no as contract_no
+
+            from 
+            cusacc_exposure a,
+            loan_beneficiary b
+
+            where
+            a.module_code IN ('PPZ','SDR')
+            and
+            (a.contract_no is not null and  a.contract_no <> '') 
+            and
+            a.cus_id = b.cus_id
+            and
+            a.contract_no = b.acc_no_old
+            and
+            (b.acc_no is null or b.acc_no ='')
+            with ur
+            };
+
+        }catch (SQLException sqle) {
+            bc.debug("getOverdraftData() - ERROR:"+sqle);
+            bc.error("getOverdraftData() - ERROR", sqle);
+            throw sqle;
+        }
+        return iter4;
+    }
+    
+    public LetterOfCreditIterator getLetterOfCreditData()throws SQLException{
+        LetterOfCreditIterator iter5 = null;
+
+        try{
+            #sql [connCtx] iter5={select distinct
+
+            a.cus_acc_id as cus_acc_id, 
+            a.cus_acc_no as cus_acc_no, 
+            a.contract_no as contract_no
+
+            from 
+            cusacc_exposure a,
+            loan_beneficiary b
+
+            where
+            a.module_code = 'LOC'
+            and
+            (a.contract_no is not null and  a.contract_no <> '') 
+            and
+            a.cus_id = b.cus_id
+            and
+            a.contract_no = b.acc_no_old
+            and
+            (b.acc_no is null or b.acc_no ='')
+            with ur
+            };
+
+        }catch (SQLException sqle) {
+            bc.debug("getLetterOfCreditData() - ERROR:"+sqle);
+            bc.error("getLetterOfCreditData() - ERROR", sqle);
+            throw sqle;
+        }
+        return iter5;
+    }
+    
+     
+    public void updateLoanBen(BigDecimal cus_acc_id, String cus_acc_no, String request_no) throws Exception{
+
+        try {
+            #sql[connCtx]{ UPDATE LOAN_BENEFICIARY 
+            set la_acc_id =:cus_acc_id , 
+            acc_no =  :cus_acc_no,
+            user_lock=current timestamp
+            where request_no = :request_no 
+            and la_acc_id is null
+            };
+
+        }catch(SQLException sqle){
+            bc.info("Update updateLoanBen nije uspio!!"); 
+            sqle.printStackTrace();
+            throw sqle;         
+        }
+    }
+    
+    public void updateLoanBenOkvContract(BigDecimal cus_acc_id, String cus_acc_no, String request_no, String contract_no) throws Exception{
+
+        try {
+            #sql[connCtx]{ UPDATE LOAN_BENEFICIARY 
+            set la_acc_id =:cus_acc_id , 
+            acc_no =  :cus_acc_no,
+            user_lock=current timestamp
+            where acc_no_old = :contract_no 
+            and la_acc_id is null
+            };
+
+        }catch(SQLException sqle){
+            bc.info("Update updateLoanBenOkvContract nije uspio!!"); 
+            sqle.printStackTrace();
+            throw sqle;         
+        }
+    }
+    
+    public void updateLoanBenGK(BigDecimal cus_acc_id, String cus_acc_no, String contract_no) throws Exception{
+
+        try {
+            #sql[connCtx]{ UPDATE LOAN_BENEFICIARY 
+            set la_acc_id =:cus_acc_id , 
+            acc_no =  :cus_acc_no,
+            user_lock=current timestamp
+            where acc_no_old = :contract_no 
+            and la_acc_id is null
+            };
+
+        }catch(SQLException sqle){
+            bc.info("Update updateLoanBenGK nije uspio!!"); 
+            sqle.printStackTrace();
+            throw sqle;         
+        }
+    }
+
+}

@@ -1,0 +1,182 @@
+package hr.vestigo.modules.collateral.jcics.co14;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.collateral.common.yoy0.*;
+
+/**  
+ * CO142 class insert data about colaterall  table Rev_Reg_Coef_Re
+ *  
+ */
+public class CO142 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co14/CO142.sqlj,v 1.3 2006/05/16 12:32:05 hrazst Exp $";
+    public DeclCO14 decl = null;
+	
+	public CO142 (DeclCO14 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+			 int broj = 0;	
+			 
+			 
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+            
+            //generator id-a za modul Collateral
+        	YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+			java.math.BigDecimal collaterall_id = id_generator.getNewId();
+		
+			java.sql.Date todaySQLDate = null;
+			YXYB0 yxyBobj  = new YXYB0(tc);
+			
+			//insert into event
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			todaySQLDate = new java.sql.Date(timeT);
+			
+			java.math.BigDecimal eve_id = null;
+			java.math.BigDecimal eve_typ_id =  new java.math.BigDecimal("1601471003.0");
+			
+			java.math.BigDecimal zeroNumber = new java.math.BigDecimal("0.00");
+
+			try {
+			    #sql [ctx] {SELECT COUNT(*) INTO :broj 
+			    			FROM REV_REG_COEF_RE 
+			    			WHERE 
+								 rev_re_code=:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCode) 
+							AND  rev_re_name=:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtName)
+			    	};			    	
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+			    	tc.debug ( "...broj: " + broj);
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+		    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO132.sqlj insert into coll_owners SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO132.sqlj insert into coll_owners SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO132.sqlj insert into coll_owners SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","err411a", null);
+            }
+            if(broj > 0){
+			    throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","errclt8", null);
+			}	
+            
+			try {
+			    #sql [ctx] {SELECT COUNT(*) INTO :broj 
+			    			FROM REV_REG_COEF_RE 
+			    			WHERE 
+								rev_re_place = :(decl.revregcoefredialoginsertm.REV_RE_PLACE)
+							AND	rev_re_county = :(decl.revregcoefredialoginsertm.REV_RE_COUNTY)
+                			AND rev_re_district = :(decl.revregcoefredialoginsertm.REV_RE_DISTRICT)
+			    			AND rev_re_resi_quar = :(decl.revregcoefredialoginsertm.REV_RE_RESI_QUAR)
+			    	};			    	
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+			    	tc.debug ( "...broj: " + broj);
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+		    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO132.sqlj insert into coll_owners SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO132.sqlj insert into coll_owners SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO132.sqlj insert into coll_owners SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","err411a", null);
+            }
+            if(broj > 0){
+			    throw new VestigoTMException(1, "Transaction CO132: Error inserting into coll_owners! ","errclt8", null);
+			}
+            
+			try{
+				java.util.HashMap event = new java.util.HashMap();
+				event.put("eve_typ_id", eve_typ_id);
+				event.put("event_date", todaySQLDate);
+				event.put("cmnt", "Insert into real_estate");
+				event.put("use_id",decl.revregcoefredialoginsertm.USE_OPEN_ID);
+				event.put("ext_event_code", null);
+				event.put("ext_event_num", null);
+				event.put("bank_sign", tc.getBankSign());
+				eve_id = yxyBobj.insertEventWithGeneratedId(event);
+			}catch(java.sql.SQLException e){
+				
+				
+				tc.debug (".......CO002.sqlj ..... Insert into event unsuccessful.");
+				tc.debug ( "......CO002.sqlj insert into event  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO002.sqlj insert into event  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO002.sqlj insert into event  SQL Message " + e.getMessage());
+				e.printStackTrace();
+				throw e;
+			}
+			
+			tc.debug("..........EVE_ID je    " + eve_id);
+			
+			
+			//java.math.BigDecimal coef=(java.math.BigDecimal) decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCoef;
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO142.sqlj collaterall_id " + collaterall_id);					
+			tc.debug ( "\n\n");
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCode " + decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCode);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtName " + decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtName);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.REV_RE_COUNTY" + decl.revregcoefredialoginsertm.REV_RE_COUNTY);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.REV_RE_PLACE " + decl.revregcoefredialoginsertm.REV_RE_PLACE);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.REV_RE_DISTRICT " + decl.revregcoefredialoginsertm.REV_RE_DISTRICT);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.REV_RE_RESI_QUAR " + decl.revregcoefredialoginsertm.REV_RE_RESI_QUAR);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCoef " + decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCoef);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtDateFrom " + decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtDateFrom);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtDateUntil " + decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtDateUntil);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtAct " + decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtAct);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtSpecStat " + decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtSpecStat);
+			tc.debug ( "......CO142.sqlj decl.revregcoefredialoginsertm.USE_OPEN_ID " + decl.revregcoefredialoginsertm.USE_OPEN_ID);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+			
+			
+			//INSERT INTO REV_REG_COEF_RE
+			try{	
+			    	#sql [ctx]{	INSERT INTO REV_REG_COEF_RE 
+			    					          	(rev_re_id,
+			    						  	 	rev_re_code,
+			    						 	 	rev_re_name,
+			    								rev_re_place,
+			    								rev_re_county,
+			    								rev_re_district,
+			    								rev_re_resi_quar,
+			    								rev_re_coef,
+			    								rev_date_from,
+			    								rev_date_unti,
+			    								rev_act_noact,
+			    								rev_spec_stat,
+			    								use_open_id,
+			    								use_id,
+												opening_ts,
+												user_lock,
+												eve_id,
+												bank_sign
+			    								) 
+			    			VALUES( :collaterall_id,
+                					:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCode),
+                					:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtName),
+                					:(decl.revregcoefredialoginsertm.REV_RE_PLACE),
+                					:(decl.revregcoefredialoginsertm.REV_RE_COUNTY),
+                					:(decl.revregcoefredialoginsertm.REV_RE_DISTRICT),
+			    					:(decl.revregcoefredialoginsertm.REV_RE_RESI_QUAR),
+			    					:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtCoef),
+			    					:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtDateFrom),
+			    					:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtDateUntil),
+			    					:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtAct),
+			    					:(decl.revregcoefredialoginsertm.RevRegCoefReDialog_txtSpecStat),
+			    					:(decl.revregcoefredialoginsertm.USE_OPEN_ID),
+									:(decl.revregcoefredialoginsertm.USE_OPEN_ID),
+			    					current timestamp,
+			    					current timestamp,
+			    					:(eve_id),
+			    					:(tc.getBankSign())
+			    					)
+         		        	};
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO142.sqlj insert into coll_owners SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO142.sqlj insert into coll_owners SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO142.sqlj insert into coll_owners SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO142: Error inserting coll_owners! ","err411a", null);
+			}
+		}//execute
+}	
+

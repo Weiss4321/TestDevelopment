@@ -1,0 +1,146 @@
+package hr.vestigo.modules.collateral.jcics.co27;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+
+
+
+
+#sql iterator CusaccExpCollIter ( String register_no,
+								  String cus_acc_no,
+								  String coll_num,
+								  Date cover_date,
+							      String code_num,
+								  BigDecimal exposure_balance,
+								  BigDecimal coll_fc_amount,
+								  BigDecimal exp_percent,
+								  BigDecimal coll_hf_prior_id,
+								  BigDecimal exp_col_id 
+								  );	
+
+
+
+public class CO271 extends SQLJScrollableRemoteTransaction{
+    
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co27/CO271.sqlj,v 1.8 2014/06/11 08:26:31 hrakis Exp $";
+	
+    public DeclCO27 decl = null;
+	
+
+	private CusaccExpCollIter iter1 = null; 
+	
+
+	 
+    public CO271(DeclCO27 decl){
+        this.decl = decl;
+    }
+
+    /**
+     *
+     */
+  
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        setLevel(decl.ActionListLevel);
+		setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+		
+			#sql [ctx] iter1 = {
+							SELECT	c.register_no as register_no,
+									a.cus_acc_no as cus_acc_no,
+									d.col_num as coll_num,
+									b.cover_date as cover_date,
+									e.code_num as code_num,
+									a.exposure_balance as exposure_balance,
+									b.coll_fc_amount as coll_fc_amount,
+									b.exp_percent,
+									b.coll_hf_prior_id as coll_hf_prior_id,
+									b.cus_acc_exp_col_id as exp_col_id
+							FROM	
+									cusacc_exposure a,
+									cusacc_exp_coll b,
+									col_proc f,
+									customer c,
+									coll_head d,
+									currency e
+							WHERE  	
+									a.cus_acc_id=b.cus_acc_id and
+									b.col_pro_id = f.col_pro_id and
+		                            b.cov_priority is not null and
+									f.value_date = (select MAX(g.value_date) from col_proc g where g.col_pro_id=b.col_pro_id) and
+									b.col_hea_id = :(decl.COL_HEA_ID) and
+									a.cus_id = c.cus_id and 
+									b.col_hea_id = d.col_hea_id and
+									a.exposure_cur_id = e.cur_id };
+		
+    }//b.user_lock=(select MAX(c.user_lock) from cusacc_exp_coll c where c.cus_acc_id=b.cus_acc_id) and
+ 
+    public boolean next() throws Exception {
+        return iter1.next();
+    }
+ 
+    public void close() {
+        if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+    }
+     
+    public void populateRowData() throws Exception {
+        Vector row = new Vector();
+		Vector hiddenRow = new Vector();
+		BigDecimal balance = new BigDecimal("0.00");
+		BigDecimal amount = new BigDecimal("0.00");
+		BigDecimal percent = new BigDecimal("0.00");
+		BigDecimal one_hundred = new BigDecimal("100.00");
+		
+		//atributi koji se prikazuju u listi
+		
+		row.add(iter1.register_no());
+		row.add(iter1.cus_acc_no());
+		row.add(iter1.coll_num());
+		row.add(iter1.cover_date());
+		row.add(iter1.code_num());		
+		row.add(iter1.exposure_balance());
+		row.add(iter1.coll_fc_amount());
+ 
+// izracunati postotak pokrivenosti 
+		
+		amount = iter1.coll_fc_amount();
+		balance = iter1.exposure_balance();
+		
+		percent = amount.multiply(one_hundred);
+		percent = percent.divide(balance, 2, BigDecimal.ROUND_HALF_UP);
+		
+		
+		row.add(iter1.exp_percent());
+		
+		row.add(iter1.coll_hf_prior_id());  
+		 
+		     
+		
+		 
+		//skriveni atributi
+		hiddenRow.add(iter1.exp_col_id());
+		
+		decl.tblCusaccExpColl.addRow(row,hiddenRow);
+
+    }
+    
+    
+    
+}
+
+
+
+

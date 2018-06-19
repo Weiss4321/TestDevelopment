@@ -1,0 +1,102 @@
+package hr.vestigo.modules.collateral.batch.bo04;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.util.HashMap;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+public class BO041{
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo04/BO041.sqlj,v 1.7 2007/08/16 09:34:10 hrazst Exp $";
+	
+	#sql iterator iteratorCollHead with (holdability = true)
+							(	
+								BigDecimal col_hea_id
+							);			
+	
+    private BatchContext batchContext;
+    private BigDecimal eve_id = null;
+    private ConnCtx ctx; //ostalo
+    private ConnCtx ctx1; //context za coll_head
+    
+    public BO041(BatchContext batchContext) {
+        this.batchContext = batchContext;
+        try {
+            this.ctx = batchContext.getContext();
+            this.ctx1 = new ConnCtx(batchContext.getNewConnection());
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    public void insertIntoEvent() throws Exception{
+        batchContext.debug("sqlj insertIntoEvent");		
+         
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(batchContext);
+		  	YXYD0 genId = new YXYD0(ctx);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	this.eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",this.eve_id);
+		  	event.put("eve_typ_id", new BigDecimal("1676496003.0"));
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za prihvat plasmana iz DWH-a (prebacivanje podataka iz cusacc_exp_dwh u cusacc_exposure)."); //TODO vidjeti sto staviti
+		  	event.put("use_id", batchContext.getUserID());
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", batchContext.getBankSign());
+		  	batchContext.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	
+		  	/* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+		  	 * i koji se nalazi u commonu yxyA. Radi se update: 
+		  	 *    UPDATE batch_log
+		  	 *    SET eve_id = :newEveId
+			 *    WHERE bat_log_id = :batLogId 
+		  	*/
+		  	batchContext.updateEveID(this.eve_id);		
+	  
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}  
+    
+    public BigDecimal getEveId(){
+    	return this.eve_id;
+    }    
+    
+    public iteratorCollHead fatchDataCollHead() throws SQLException{
+    	iteratorCollHead pomIterator=null;
+		
+    	#sql [ctx1] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		batchContext.debug("**************** SQLJ bo041 - fatchDataCollHead ****************");
+		try{
+					#sql [ctx1] pomIterator = {					
+							SELECT  a.col_hea_id									
+							FROM COLL_HEAD a				
+							INNER JOIN COLL_CATEGORY b ON (a.col_cat_id = b.col_cat_id 
+							AND a.collateral_status IN ('3') 
+							AND b.accounting_indic='1'
+							AND financial_flag IN ('0','X'))
+					};			
+		batchContext.debug( "**************** bo041.sqlj fatchDataCollHead uspjesno izvrsen ****************");
+    	} catch (SQLException sqle) {
+    		batchContext.debug ( "bo041.sqlj fatchDataCollHead SQL ErrorCode = " + sqle.getErrorCode());
+    		batchContext.debug ( "bo041.sqlj fatchDataCollHead SQL SQLState = " + sqle.getSQLState());
+    		batchContext.debug ( "bo041.sqlj fatchDataCollHead SQL Message = " + sqle.getMessage());
+    		throw sqle;
+    	}    	
+		return pomIterator;
+    } 
+        
+}

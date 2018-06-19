@@ -1,0 +1,492 @@
+package hr.vestigo.modules.collateral.batch.bo15;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+#sql  iterator IteratorCusaccBalance with(holdability = true)(
+		BigDecimal cusacc_bal_id,
+		BigDecimal cus_acc_id,
+		BigDecimal acc_num_id,
+		String account,
+		java.sql.Date balance_date
+	);
+ 
+#sql iterator IteratorColProcId (java.math.BigDecimal col_pro_id);
+
+
+public class BO151{
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo15/BO151.sqlj,v 1.6 2011/01/21 09:32:22 hramkr Exp $";
+	
+	
+	
+	public boolean debug=true;
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+	
+	private BigDecimal col_pro_id=null;
+//	private HashMap hardcode=null;
+	private BigDecimal col_cat_id=null;
+	private BigDecimal org_uni_id=null;
+//	private BigDecimal col_type_id=null;
+	private BigDecimal use_id=null;
+	private BigDecimal eve_id=null;
+//	private BigDecimal col_lis_typ_id=null;
+//	private BigDecimal hf_table_id=null;
+	private String bankName=null;
+//	private Map exchangeRate=null;
+	
+	private String bankSign=null;
+	private Date today=null;
+	
+	public BO151(BatchContext bc,BigDecimal org_uni_id, BigDecimal use_id) throws Exception{
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+//		this.hardcode=new HashMap();
+//		this.exchangeRate= new HashMap();
+		this.bankSign=bc.getBankSign();
+		
+		this.org_uni_id=org_uni_id;
+		this.use_id=use_id;
+		
+		today=new Date(System.currentTimeMillis());
+		eve_id=new BigDecimal("100000000000000");
+
+	}
+	
+	
+	/**
+	 * dohvaca id batch obrade. ako vec postoji vraca id, ako ne (nova obrada) kreira id
+	 * 
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal getColProId() throws Exception{
+		if(this.col_pro_id==null){
+			YOY00 yoy00=new YOY00(this.connCtx);
+			this.col_pro_id=yoy00.getNewId();
+		}
+		return this.col_pro_id;
+	}
+	/**
+	 * postavlja id obrade
+	 * @param col_pro_id
+	 */
+	public void setColProId(BigDecimal col_pro_id){
+		this.col_pro_id=col_pro_id;
+	}
+	/**
+	 * Insert u tablicu evenata
+	 * @param eve_typ_id tip dogadaja
+	 * @param org_uni_id id OJ-a
+	 * @throws Exception
+	 */
+	public void insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id) throws Exception{
+        bc.debug("sqlj insertIntoEvent");		
+         
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(bc);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	this.eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",this.eve_id);
+		  	event.put("eve_typ_id", eve_typ_id);
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za preuzimanje podataka o vozilima iz PKR modula."); 
+		  	event.put("use_id", this.use_id);
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", bc.getBankSign());
+		   	event.put("org_uni_id", org_uni_id); 
+		  	bc.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	
+		  	/* Metoda se nalazi u YXYA0.sqlj koji extenda abstract class BatchResource
+		  	 * i koji se nalazi u commonu yxyA. Radi se update: 
+		  	 *    UPDATE batch_log
+		  	 *    SET eve_id = :newEveId
+			 *    WHERE bat_log_id = :batLogId 
+		  	*/
+		  	bc.updateEveID(this.eve_id);		
+	  
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}
+	/**
+	 * Dohvat obrade unosa vozila
+	 * 
+	 * @param proc_type tip obrade- za vozila je "V"
+	 * @param status status=0 -> zapoceta obrada; status=1 ->uspjesno zavrsena obrada
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal selectColProc(String proc_type,String status) throws Exception{
+		BigDecimal result=null;
+		IteratorColProcId iter=null;
+		try{
+			#sql [connCtx]iter={
+				select 
+					col_pro_id 
+				from col_proc 
+					where 		
+						proc_status=:(status)
+						and proc_type=:(proc_type)
+		                and value_date = current date
+		        };
+			if(iter!=null){			
+				while(iter.next()){
+					result =  iter.col_pro_id();
+				    break;
+				}
+	        }
+		        
+		}catch(SQLException e){
+			bc.debug(".....BO151.sqlj selectColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO151.sqlj selectColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO151.sqlj selectColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		
+		}
+		return result;
+	}
+	/**
+	 * Dohvat neispravnih stanja
+	 * 
+	 * @return iterator s podacima
+	 * @throws Exception
+	 */ 
+	public IteratorCusaccBalance selectCusaccBalance(String account, boolean do_all) throws Exception{
+		IteratorCusaccBalance result= null;
+		BigDecimal lc_currency = new BigDecimal("63999");
+		if (do_all) { 
+		#sql [connCtx] result = {
+				select 
+						cusacc_bal_id,
+						cus_acc_id,
+						acc_num_id,
+						account,
+						balance_date
+				from 
+						cusacc_balance
+				where
+						account in ('99029','99019')
+				and 
+						ban_rel_type = '919'
+				and
+						amo_type ='428'
+				and
+						cur_id = :(lc_currency)
+				ORDER BY 2
+				WITH UR
+			};
+		} else {
+	        #sql [connCtx] result = {
+	                select 
+	                        cusacc_bal_id,
+	                        cus_acc_id,
+	                        acc_num_id,
+	                        account,
+	                        balance_date
+	                from 
+	                        cusacc_balance
+	                where
+		                    cus_acc_id = (select cus_acc_id from customer_account where cus_acc_no = :(account))
+		            and
+	                        account in ('99029','99019')
+	                and 
+	                        ban_rel_type = '919'
+	                and
+	                        amo_type ='428'
+	                and
+	                        cur_id = :(lc_currency)
+	                ORDER BY 2
+	                WITH UR
+	            };		     
+		}
+		return result;
+	}
+	
+	public BigDecimal selectAccountTurnoverDebit(BigDecimal acc_num_id, String account, Date balance_date) throws Exception{
+		BigDecimal result = null;
+
+		
+		#sql [connCtx] {
+			select 
+				sum(b.debit_amount)
+			into 
+				:(result)
+			from 
+				turn_customer a,
+				turnover b
+			where
+				a.acc_num_id = :(acc_num_id)
+			and
+				a.account = :(account)
+			and
+				a.tur_id = b.tur_id
+			and
+				b.value_date <= :(balance_date)
+			WITH UR
+			};
+		
+		return result;
+	}
+
+	public BigDecimal selectAccountTurnoverCredit(BigDecimal acc_num_id, String account, Date balance_date) throws Exception{
+		BigDecimal result = null;
+
+		
+		#sql [connCtx] {
+			select 
+				sum(b.credit_amount)
+			into 
+				:(result)
+			from 
+				turn_customer a,
+				turnover b
+			where
+				a.acc_num_id = :(acc_num_id)
+			and
+				a.account = :(account)
+			and
+				a.tur_id = b.tur_id
+			and
+				b.value_date <= :(balance_date)
+			WITH UR
+			};
+		
+		return result;
+	}	
+	
+	/**
+	 * insert u tablicu IN_DATA_DWH_ITEM
+	 * 
+	 * @param col_pro_id id batcha
+	 * @param input_id id ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param input_code kod ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param status status zapisa
+	 * @param output_id id unesenog sloga
+	 * @throws Exception
+	 */
+	public void insertInDataDwhItem(BigDecimal col_pro_id,BigDecimal input_id, String input_code, String status, BigDecimal output_id) throws Exception{
+		try{
+		
+		#sql [connCtx]{
+			insert into in_data_dwh_item (
+				col_pro_id,
+				input_id,
+				input_code,
+				status,
+				output_id
+			)VALUES (
+				:(col_pro_id),
+				:(input_id),
+				:(input_code),
+				:(status),
+				:(output_id)
+			)
+		};
+		}catch(SQLException e){
+			bc.debug(".....BO151.sqlj insertInDataDwhItem        Message  : " + e.getMessage());
+			bc.debug(".....BO151.sqlj insertInDataDwhItem      Error code : " + e.getErrorCode());
+			bc.debug(".....BO151.sqlj insertInDataDwhItem        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+	
+	/**
+	 * Unos sloga u COL_PROC tablicu. poziva se na pocetku obrade
+	 * 
+	 * @param map mapa s parametrima
+	 * @return timestamp upisa
+	 * @throws Exception
+	 */
+	public Timestamp insertColProc(Map map) throws Exception{
+        bc.debug("sqlj insertColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=new Timestamp(System.currentTimeMillis());
+    	bc.debug("\n col_pro_id: "+col_pro_id);
+    	bc.debug("\n proc_date: "+proc_date);
+    	bc.debug("\n value_date: "+value_date);
+    	bc.debug("\n proc_type: "+proc_type);
+    	bc.debug("\n proc_way: "+proc_way);
+    	bc.debug("\n proc_status: "+proc_status);
+    	bc.debug("\n col_number: "+col_number);
+    	bc.debug("\n org_uni_id: "+org_uni_id);
+    	bc.debug("\n use_id: "+use_id);
+    	bc.debug("\n user_lock: "+user_lock);
+    	
+        try{
+        	#sql [connCtx]{
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(proc_date),
+					:(value_date),
+					:(proc_type),
+					:(proc_way),
+					:(proc_status),
+					:(col_number),
+					current timestamp,
+					:(org_uni_id),
+					:(use_id),
+        			:(user_lock)
+					)
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO151.sqlj insertColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO151.sqlj insertColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO151.sqlj insertColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}  
+		return user_lock;
+	}
+	/**
+	 * Updata COL_PROC tablice
+	 * 
+	 * @param map mapa s parametrima
+	 * @return timestamp updata
+	 * @throws Exception
+	 */
+	public Timestamp updateColProc(Map map) throws Exception{
+        bc.debug("sqlj updateColProc");		
+        BigDecimal col_pro_id=getColProId();
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=(Timestamp) map.get("user_lock");
+    	
+        try{
+        	#sql [connCtx]{
+				UPDATE  col_proc SET
+					proc_date= :(proc_date),
+					value_date= :(value_date),
+					proc_type= :(proc_type),
+					proc_way= :(proc_way),
+					proc_status=:(proc_status),
+					col_number=:(col_number),
+					org_uni_id=:(org_uni_id),
+					use_id=:(use_id),
+					user_lock=current timestamp				
+				WHERE
+        			col_pro_id=:(col_pro_id)
+        			
+		        };
+			
+		}catch(SQLException e){
+			bc.debug(".....BO151.sqlj updateColProc        Message  : " + e.getMessage());
+			bc.debug(".....BO151.sqlj updateColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....BO151.sqlj updateColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		} 
+		return user_lock;
+	}
+	
+	public void updateCusaccBalance(BigDecimal cusacc_bal_id, BigDecimal cur_id, BigDecimal debit_total, BigDecimal credit_total) throws Exception{
+		BigDecimal balance = null;
+		balance = credit_total.subtract(debit_total);
+		 try{
+        	#sql [connCtx]{
+				UPDATE  cusacc_balance SET
+					cur_id= :(cur_id),
+		 			debit_total = :(debit_total),
+					credit_total = :(credit_total),
+					balance = :(balance)		
+				WHERE
+        			cusacc_bal_id = :(cusacc_bal_id)
+		        };			
+		}catch(SQLException e){
+			bc.debug(".....BO151.sqlj updateCollHfPrior        Message  : " + e.getMessage());
+			bc.debug(".....BO151.sqlj updateCollHfPrior      Error code : " + e.getErrorCode());
+			bc.debug(".....BO151.sqlj updateCollHfPrior        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		} 
+		
+	 
+	}
+   
+	/** 
+	* Dohvat broja obradenih slogova (bez onih koji nisu upisani zbog gresaka)
+	* @return broj obradenih slogova
+	* 
+	*/
+	public BigDecimal getRecordCount(){
+		BigDecimal result=null;
+		try{
+		    #sql [connCtx]{
+					select 
+						count(*) 
+					into 
+						:(result)
+					from 
+						in_data_dwh_item 
+					where 
+						col_pro_id=:(col_pro_id) and 
+						status<>'1' and 
+						status<>'6' and 
+						status<>'A' 
+			};							  
+		}catch(SQLException e){
+			bc.debug(".....BO151.sqlj getRecordCount        Message  : " + e.getMessage());
+			bc.debug(".....BO151.sqlj getRecordCount      Error code : " + e.getErrorCode());
+			bc.debug(".....BO151.sqlj getRecordCount        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			//throw(e);
+			return null;
+		}
+		return result;
+	}
+	
+	 
+	
+}

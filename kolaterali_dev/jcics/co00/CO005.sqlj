@@ -1,0 +1,679 @@
+package hr.vestigo.modules.collateral.jcics.co00;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//COLL_RESTATE
+//NEKRETNINA 	17.07.2006
+/**
+ * CO005 class selects all data from table COLL_RESTATE, COLL_HEAD
+ * into list screen and puts this data into tblColWorkList.
+ * 	
+ */
+
+
+#sql iterator Iter2 (
+		BigDecimal col_hea_id,
+		BigDecimal col_type_id,
+		String workflow_indic,
+		String collateral_status,
+		String col_num,
+		BigDecimal real_est_nm_cur_id,
+		String code_char,
+		BigDecimal real_est_nomi_valu,
+		String basic_data_status,
+		String mortgage_status,
+		String cover_indic,
+		String coll_data_status,
+		BigDecimal use_id,
+		String user_name,
+		BigDecimal col_cat_id,
+		String screen_name,
+		String code
+		);
+
+public class CO005 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co00/CO005.sqlj,v 1.5 2006/07/28 12:48:07 hrasia Exp $";
+	
+	public DeclCO00 decl = null;
+	
+	private Iter2 iter2 = null;
+	
+	public CO005 (DeclCO00 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+		String screen_entry_param = decl.redqbelismap.ScreenEntryParam;
+		String phase="";
+		String proc_status="";
+		Vector vec=new Vector();
+ 		
+		int i=0;
+		int j=screen_entry_param.indexOf(".");
+		int k=0;
+		tc.info("screen_entry_param : "+screen_entry_param);
+		while(j>0){
+			vec.add(k++, screen_entry_param.substring(i,j));
+			screen_entry_param=screen_entry_param.substring(j+1);
+			tc.debug("screen_entry_param : "+screen_entry_param);
+			j=screen_entry_param.indexOf(".");
+		}
+	
+		if(vec==null) throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+		if(vec.elementAt(0)!=null && !((String)vec.elementAt(0)).trim().equals("")) phase=(String)vec.elementAt(0);
+		else throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+		if(vec.elementAt(1)!=null && !((String)vec.elementAt(1)).trim().equals("")) proc_status=(String)vec.elementAt(1);
+		else throw new VestigoTMException(1, "params for screen entry function", "err985", null);
+
+		tc.info("phase : "+phase);
+		tc.info("proc_status : "+proc_status);
+
+		
+		setLevel(decl.redqbelismap.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx connCtx0 = tc.getContext();
+		
+		
+		//		
+		// 		
+		//		RealEstate_txtOwnerQbeRegNo					RealEstate_OwnerCUS_ID
+		//		RealEstate_txtCarrierQbeRegNo				RealEstate_CarrierCUS_ID
+		//		RealEstate_txtRealEstLandRegn    
+		//		RealEstate_txtQbeLandSub           
+		//		RealEstate_txtCadMuncCode					RealEstate_QBE_CADA_MUNC
+		//		RealEstate_txtCoown
+		//
+		//		 
+
+ 		
+ 		
+ 		
+ 		//	 		owner
+ 		//			carrier
+ 		//			REAL_EST_LAND_REGN	char(25)	no		Broj zemljisno-knjiznog uloska
+ 		//			REAL_EST_LAND_SUB	char(25)	yes		Broj zemljišno-knjižnog poduloška
+ 		//			REAL_EST_CADA_MUNC	decimal(16,0)	no	F(CADASTRE_MAP)	Katastarska opcina   cadastre muncipality
+ 		//			REAL_EST_LAND_PART	char(25)	no		Katastarska cestica
+ 		//			COOWN	varchar(25)	yes					Suvlasnicki dio
+
+		
+		
+//		
+//		 RealEstate_txtOwnerQbeRegNo
+//		 RealEstate_txtCarrierQbeRegNo
+//		 RealEstate_txtQbeLandSub
+//		 RealEstate_txtRealEstLandRegn
+//		 RealEstate_txtCoown
+//		 RealEstate_txtCadMuncCode
+
+		
+		 tc.info("decl.redqbelismap.RealEstate_txtOwnerQbeRegNo			" + decl.redqbelismap.RealEstate_txtOwnerQbeRegNo  );             											
+		 tc.info("decl.redqbelismap.RealEstate_txtCarrierQbeRegNo		" + decl.redqbelismap.RealEstate_txtCarrierQbeRegNo );    
+		 tc.info("decl.redqbelismap.RealEstate_txtQbeRealEstLandRegn   " + decl.redqbelismap.RealEstate_txtQbeRealEstLandRegn);
+		 tc.info("decl.redqbelismap.RealEstate_txtQbeLandSub        " + decl.redqbelismap.RealEstate_txtQbeLandSub);
+		 tc.info("decl.redqbelismap.RealEstate_txtCadMuncCode        " + decl.redqbelismap.RealEstate_txtCadMuncCode);
+		 
+		 
+		 
+		 tc.info("decl.redqbelismap.RealEstate_txtCoown             " + decl.redqbelismap.RealEstate_txtCoown  );        
+
+
+
+		
+		
+		
+		
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		 
+
+	 	
+	 	  String p_owner=null;
+			if(decl.redqbelismap.RealEstate_txtOwnerQbeRegNo != null && !"".equals(decl.redqbelismap.RealEstate_txtOwnerQbeRegNo))
+				p_owner = decl.redqbelismap.RealEstate_txtOwnerQbeRegNo.replace('*','%');
+			else
+				p_owner ="%";
+				
+			String p_carrier=null;
+			if(decl.redqbelismap.RealEstate_txtCarrierQbeRegNo != null && !"".equals(decl.redqbelismap.RealEstate_txtCarrierQbeRegNo))
+				p_carrier = decl.redqbelismap.RealEstate_txtCarrierQbeRegNo.replace('*','%');
+			else
+				p_carrier ="%";
+				
+			
+			String landRegnZKU=null;
+			if(decl.redqbelismap.RealEstate_txtQbeRealEstLandRegn != null && !"".equals(decl.redqbelismap.RealEstate_txtQbeRealEstLandRegn))
+				landRegnZKU = decl.redqbelismap.RealEstate_txtQbeRealEstLandRegn.replace('*','%');
+			else
+				landRegnZKU ="%";	
+			
+			String landSubPU=null;
+			if(decl.redqbelismap.RealEstate_txtQbeLandSub != null && !"".equals(decl.redqbelismap.RealEstate_txtQbeLandSub))
+				landSubPU = decl.redqbelismap.RealEstate_txtQbeLandSub.replace('*','%');
+			else
+				landSubPU ="%";		
+				
+				String cadMuncCode=null;
+			if(decl.redqbelismap.RealEstate_txtCadMuncCode != null && !"".equals(decl.redqbelismap.RealEstate_txtCadMuncCode))
+				cadMuncCode = decl.redqbelismap.RealEstate_txtCadMuncCode.replace('*','%');
+			else
+				cadMuncCode ="%";		
+				
+	 			String coown=null;
+			if(decl.redqbelismap.RealEstate_txtCoown != null && !"".equals(decl.redqbelismap.RealEstate_txtCoown))
+				coown = decl.redqbelismap.RealEstate_txtCoown.replace('*','%');
+			else
+				coown ="%";	
+	 	 
+		 
+			tc.info("p_owner " + p_owner);
+			tc.info("p_carrier " + p_carrier);
+			tc.info("landRegnZKU " + landRegnZKU);
+			tc.info("landSubPU " + landSubPU);
+			tc.info("cadMuncCode " + cadMuncCode);
+			tc.info("coown " + coown);
+			
+					
+		 
+		 
+  		if(proc_status!=null) {
+  			if (proc_status.trim().equals("4")){
+  				tc.info("tu sam .... proc_status : "+proc_status);
+// lista ponistenih, jedna za banku
+  				
+  				#sql [connCtx0] iter2 = {
+										SELECT
+ 												ch.col_hea_id,
+												ch.col_type_id,
+												ch.workflow_indic,
+  												ch.collateral_status,
+												ch.col_num,
+												ch.real_est_nm_cur_id,
+												cu.code_char,
+												ch.real_est_nomi_valu,
+												ch.basic_data_status,
+												ch.mortgage_status,
+												ch.cover_indic,
+  												ch.coll_data_status,
+												ch.use_id,
+												au.user_name,
+  												ch.col_cat_id,
+  												clc.screen_name,
+  												clc.code	
+											FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch,
+  												 
+  												 coll_restate cres,
+  												 coll_hf_prior chp,
+  												 coll_owner cown,
+  												 loan_beneficiary lobe,
+  												 political_map pomap,
+  											
+												currency cu 
+											
+												
+ 											WHERE
+  												ch.collateral_status = :(proc_status)
+ 											AND
+												ch.use_id = au.use_id
+ 											AND 
+  												ch.col_cat_id = clc.col_cat_id
+  											AND    ch.col_hea_id = cres.col_hea_id
+  											AND	   ch.col_hea_id = chp.hf_coll_head_id	
+  											AND    chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											AND    ch.col_hea_id = cown.col_hea_id	
+  											AND    cres.real_est_cada_munc = pomap.pol_map_id
+  											AND	   cown.register_no like :p_owner 
+  											AND    lobe.register_no like :p_carrier
+  											AND    cres.real_est_land_regn like :landRegnZKU 
+  											AND    cres.real_est_land_sub like  :landSubPU 
+  											AND    cres.coown like  :coown 
+  											AND    pomap.code like  :cadMuncCode
+  											AND ch.real_est_nm_cur_id = cu.cur_id
+ 											ORDER BY
+												ch.workflow_indic desc, ch.col_hea_id asc
+  				};
+//  			  lista ponistenih po org.jed. - treba doadati ? 			
+  	  			
+  	  			}else if (proc_status.trim().equals("0")) {
+//  	 referentska lista za unos, po referentu  			  
+  	 				tc.info("tu sam referentska lista.... proc_status : "+proc_status); 			
+  					tc.info("tu sam .... proc_status : "+decl.redqbelismap.use_id); 			
+  					tc.info("tu sam .... proc_status : "+decl.redqbelismap.org_uni_id); 			
+  				
+  
+  					#sql [connCtx0] iter2 = {
+  											SELECT
+  	 												ch.col_hea_id,
+  													ch.col_type_id,
+  													ch.workflow_indic,
+  													ch.collateral_status,
+  													ch.col_num,
+  													ch.real_est_nm_cur_id,
+  													cu.code_char,
+  													ch.real_est_nomi_valu,
+  													ch.basic_data_status,
+  													ch.mortgage_status,
+  													ch.cover_indic,
+  	 												ch.coll_data_status,
+  													ch.use_id,
+  													au.user_name,
+  	  											ch.col_cat_id,
+  	  											clc.screen_name,
+  	  											clc.code
+  												FROM coll_head ch  
+  												INNER JOIN app_user au ON ch.use_id = au.use_id
+  												INNER JOIN coll_category clc ON ch.col_cat_id = clc.col_cat_id
+  												INNER JOIN coll_restate cres ON  ch.col_hea_id = cres.col_hea_id
+  												INNER JOIN currency cu ON  ch.real_est_nm_cur_id = cu.cur_id
+  												LEFT OUTER JOIN coll_owner cown ON ch.col_hea_id = cown.col_hea_id	
+  												LEFT OUTER JOIN coll_hf_prior chp ON ch.col_hea_id = chp.hf_coll_head_id
+  												LEFT OUTER JOIN loan_beneficiary lobe ON chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											    LEFT OUTER JOIN political_map pomap ON cres.real_est_cada_munc = pomap.pol_map_id
+  											
+												WHERE ch.collateral_status = :(proc_status)
+  	  										AND ch.use_id = :(decl.redqbelismap.use_id)
+  	 											AND ch.org_uni_id = :(decl.redqbelismap.org_uni_id) 
+  	  									  AND	cown.register_no like :p_owner 
+  											  AND    lobe.register_no like :p_carrier
+  											  AND    cres.real_est_land_regn like :landRegnZKU 
+  											  AND    cres.real_est_land_sub like  :landSubPU 
+  											  AND    cres.coown like  :coown 
+  											  AND    pomap.code like  :cadMuncCode
+  												ORDER BY
+  													ch.workflow_indic desc, ch.col_hea_id asc
+  													
+  	  					};
+  	  			} else if (proc_status.trim().equals("1")) { 
+//  	 verifikacijska lista, po organizacijskoj jedinici  			  
+  	 				tc.info("tu sam .verifikacijska lista, po org.jedinici... proc_status : "+proc_status);  			  			 
+  	  					
+  	  							#sql [connCtx0] iter2 = {
+  	  													SELECT
+  	  			 												ch.col_hea_id,
+  	  															ch.col_type_id,
+  	  															ch.workflow_indic,
+  																ch.collateral_status,
+  	  															ch.col_num,
+  	  															ch.real_est_nm_cur_id,
+  	  															cu.code_char,
+  	  															ch.real_est_nomi_valu,
+  	  															ch.basic_data_status,
+  	  															ch.mortgage_status,
+  	  															ch.cover_indic,
+  	  			 												ch.coll_data_status,
+  	  															ch.use_id,
+  	  															au.user_name,
+  	  			  												ch.col_cat_id,
+  	  			  												clc.screen_name,
+  	  			  												clc.code
+  	  														FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch,
+  												 
+  												 coll_restate cres,
+  												 coll_hf_prior chp,
+  												 coll_owner cown,
+  												 loan_beneficiary lobe,
+  												 political_map pomap,
+  											
+												currency cu 
+  	  			 											WHERE
+  	  															ch.collateral_status = :(proc_status)
+  	  			 											AND
+  	  															ch.org_uni_id = :(decl.redqbelismap.org_uni_id) 
+  	  			  											AND
+  	  															ch.use_id = au.use_id
+  	  			   											AND 
+  	  			  												ch.col_cat_id = clc.col_cat_id
+  	 														AND    ch.col_hea_id = cres.col_hea_id
+  											AND	   ch.col_hea_id = chp.hf_coll_head_id	
+  											AND    chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											AND    ch.col_hea_id = cown.col_hea_id	
+  											AND    cres.real_est_cada_munc = pomap.pol_map_id
+  											AND	   cown.register_no like :p_owner 
+  											AND    lobe.register_no like :p_carrier
+  											AND    cres.real_est_land_regn like :landRegnZKU 
+  											AND    cres.real_est_land_sub like  :landSubPU 
+  											AND    cres.coown like  :coown 
+  											AND    pomap.code like  :cadMuncCode
+  	 										AND ch.real_est_nm_cur_id = cu.cur_id
+  	  			 											ORDER BY
+  	  															ch.workflow_indic desc, ch.col_hea_id asc
+  	  			  					};
+  	  			  				  			
+  	  		} else if (proc_status.trim().equals("5")) {
+//  	 referentska lista odbijenih  				
+  	 				tc.info("tu sam ref.lista odbijenih.... proc_status : "+proc_status);  				 
+  					#sql [connCtx0] iter2 = {
+  											SELECT
+  													ch.col_hea_id,
+  	  												ch.col_type_id,
+  													ch.workflow_indic,
+  													ch.collateral_status,
+  													ch.col_num,
+  													ch.real_est_nm_cur_id,
+  													cu.code_char,
+  													ch.real_est_nomi_valu,
+  													ch.basic_data_status,
+  													ch.mortgage_status,
+  													ch.cover_indic,
+  													ch.coll_data_status,
+  													ch.use_id,
+  													au.user_name,
+  													ch.col_cat_id,
+  													clc.screen_name,
+  													clc.code	
+  												FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch,
+  												 
+  												 coll_restate cres,
+  												 coll_hf_prior chp,
+  												 coll_owner cown,
+  												 loan_beneficiary lobe,
+  												 political_map pomap,
+  											
+												currency cu 
+  												WHERE
+  													ch.collateral_status = :(proc_status)
+  	  											AND
+  	  												ch.use_id = :(decl.redqbelismap.use_id)
+  	 											AND
+  													ch.org_uni_id = :(decl.redqbelismap.org_uni_id) 
+  	  											AND
+  													ch.use_id = au.use_id
+  	   											AND 
+  	  												ch.col_cat_id = clc.col_cat_id
+  	 											AND    ch.col_hea_id = cres.col_hea_id
+  											AND	   ch.col_hea_id = chp.hf_coll_head_id	
+  											AND    chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											AND    ch.col_hea_id = cown.col_hea_id	
+  											AND    cres.real_est_cada_munc = pomap.pol_map_id
+  											AND	   cown.register_no like :p_owner 
+  											AND    lobe.register_no like :p_carrier
+  											AND    cres.real_est_land_regn like :landRegnZKU 
+  											AND    cres.real_est_land_sub like  :landSubPU 
+  											AND    cres.coown like  :coown 
+  											AND    pomap.code like  :cadMuncCode
+  	 										AND ch.real_est_nm_cur_id = cu.cur_id
+  	 											ORDER BY
+  													ch.workflow_indic desc, ch.col_hea_id asc
+  	  						}; 		
+//  	 lista odbijenih po org. jed 
+//  	 lista odbijenih jedna za banku 	
+  	 		} else if (proc_status.trim().equals("D")) {
+  	 			proc_status = "5";
+//  	 		 lista odbijenih jedna za banku 					
+  	 		 				tc.info("tu sam lista odbijenih jedna za banku 	.... proc_status : "+proc_status);  				 
+  	 						#sql [connCtx0] iter2 = {
+  	 												SELECT
+  	 														ch.col_hea_id,
+  	 		  												ch.col_type_id,
+  	 														ch.workflow_indic,
+  															ch.collateral_status,
+  	 														ch.col_num,
+  	 														ch.real_est_nm_cur_id,
+  	 														cu.code_char,
+  	 														ch.real_est_nomi_valu,
+  	 														ch.basic_data_status,
+  	 														ch.mortgage_status,
+  	 														ch.cover_indic,
+  	 														ch.coll_data_status,
+  	 														ch.use_id,
+  	 														au.user_name,
+  	 														ch.col_cat_id,
+  	 														clc.screen_name,
+  	 														clc.code	
+  	 													FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch,
+  												 
+  												 coll_restate cres,
+  												 coll_hf_prior chp,
+  												 coll_owner cown,
+  												 loan_beneficiary lobe,
+  												 political_map pomap,
+  											
+												currency cu 
+  	 													WHERE
+  	 														ch.collateral_status = :(proc_status)
+  	 		  											AND
+  	 														ch.use_id = au.use_id
+  	 		   											AND 
+  	 		  												ch.col_cat_id = clc.col_cat_id
+  	 		 											AND    ch.col_hea_id = cres.col_hea_id
+  											AND	   ch.col_hea_id = chp.hf_coll_head_id	
+  											AND    chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											AND    ch.col_hea_id = cown.col_hea_id	
+  											AND    cres.real_est_cada_munc = pomap.pol_map_id
+  											AND	   cown.register_no like :p_owner 
+  											AND    lobe.register_no like :p_carrier
+  											AND    cres.real_est_land_regn like :landRegnZKU 
+  											AND    cres.real_est_land_sub like  :landSubPU 
+  											AND    cres.coown like  :coown 
+  											AND    pomap.code like  :cadMuncCode
+  	 		 								AND ch.real_est_nm_cur_id = cu.cur_id
+  	 		 											ORDER BY
+  	 														ch.workflow_indic desc, ch.col_hea_id asc
+  	 		  						}; 		 				
+  	  				
+  	 				
+  	 				
+  	  			} else if (proc_status.trim().equals("2")) {
+//  	 autorizacijska lista - jedna za banku  		
+  	 				tc.info("tu sam ..autorizacijska lista - jedna za banku .. proc_status : "+proc_status);  			  			 
+  						
+  							#sql [connCtx0] iter2 = {
+  													SELECT
+  			 												ch.col_hea_id,
+  															ch.col_type_id,
+  															ch.workflow_indic,
+  															ch.collateral_status,
+  															ch.col_num,
+  															ch.real_est_nm_cur_id,
+  															cu.code_char,
+  															ch.real_est_nomi_valu,
+  															ch.basic_data_status,
+  															ch.mortgage_status,
+  															ch.cover_indic,
+  			 												ch.coll_data_status,
+  															ch.use_id,
+  															au.user_name,
+  			  												ch.col_cat_id,
+  			  												clc.screen_name,
+  			  												clc.code
+  														FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch,
+  												 
+  												 coll_restate cres,
+  												 coll_hf_prior chp,
+  												 coll_owner cown,
+  												 loan_beneficiary lobe,
+  												 political_map pomap,
+  											
+												currency cu 
+  			 											WHERE
+  															ch.collateral_status = :(proc_status)
+  			  											AND
+  															ch.use_id = au.use_id
+  			   											AND 
+  			  												ch.col_cat_id = clc.col_cat_id
+  	 													AND    ch.col_hea_id = cres.col_hea_id
+  											AND	   ch.col_hea_id = chp.hf_coll_head_id	
+  											AND    chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											AND    ch.col_hea_id = cown.col_hea_id	
+  											AND    cres.real_est_cada_munc = pomap.pol_map_id
+  											AND	   cown.register_no like :p_owner 
+  											AND    lobe.register_no like :p_carrier
+  											AND    cres.real_est_land_regn like :landRegnZKU 
+  											AND    cres.real_est_land_sub like  :landSubPU 
+  											AND    cres.coown like  :coown 
+  											AND    pomap.code like  :cadMuncCode
+  	 										AND ch.real_est_nm_cur_id = cu.cur_id
+  			 											ORDER BY
+  															ch.workflow_indic desc, ch.col_hea_id asc  				
+  											};
+  	  			} else if (proc_status.trim().equals("3")) {
+//  	 arhivska lista - jedna za banku  		
+  	 				tc.info("tu sam .arhivska lista - jedna za banku... proc_status : "+proc_status);  			  			 
+  					
+  						#sql [connCtx0] iter2 = {
+  												SELECT
+  		 												ch.col_hea_id,
+  														ch.col_type_id,
+  														ch.workflow_indic,
+  														ch.collateral_status,
+  														ch.col_num,
+  														ch.real_est_nm_cur_id,
+  														cu.code_char,
+  														ch.real_est_nomi_valu,
+  														ch.basic_data_status,
+  														ch.mortgage_status,
+  														ch.cover_indic,
+  		 												ch.coll_data_status,
+  														ch.use_id,
+  														au.user_name,
+  		  												ch.col_cat_id,
+  		  												clc.screen_name,
+  		  												clc.code
+  													FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch,
+  												 
+  												 coll_restate cres,
+  												 coll_hf_prior chp,
+  												 coll_owner cown,
+  												 loan_beneficiary lobe,
+  												 political_map pomap,
+  											
+												currency cu 
+  		 											WHERE
+  														ch.collateral_status = :(proc_status)
+  		  											AND
+  														ch.use_id = au.use_id
+  		   											AND 
+  		  												ch.col_cat_id = clc.col_cat_id
+  	 										AND    ch.col_hea_id = cres.col_hea_id
+  											AND	   ch.col_hea_id = chp.hf_coll_head_id	
+  											AND    chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											AND    ch.col_hea_id = cown.col_hea_id	
+  											AND    cres.real_est_cada_munc = pomap.pol_map_id
+  											AND	   cown.register_no like :p_owner 
+  											AND    lobe.register_no like :p_carrier
+  											AND    cres.real_est_land_regn like :landRegnZKU 
+  											AND    cres.real_est_land_sub like  :landSubPU 
+  											AND    cres.coown like  :coown 
+  											AND    pomap.code like  :cadMuncCode
+  	 										AND ch.real_est_nm_cur_id = cu.cur_id
+  		 											ORDER BY
+  														ch.workflow_indic desc, ch.col_hea_id asc  				
+  										};  				
+  	  			} else if (proc_status.trim().equals("M")) {
+//  	 monitoring lista - jedna za banku, svi collaterali koji su u radu, status not in (3,4,5)  		
+  	 				tc.info("tu sam .monitoring lista - jedna za banku,... proc_status : "+proc_status);  			  			 
+  					
+  						#sql [connCtx0] iter2 = {
+  												SELECT
+  		 												ch.col_hea_id,
+  														ch.col_type_id,
+  														ch.workflow_indic,
+  														ch.collateral_status,
+  														ch.col_num,
+  														ch.real_est_nm_cur_id,
+  														cu.code_char,
+  														ch.real_est_nomi_valu,
+  														ch.basic_data_status,
+  														ch.mortgage_status,
+  														ch.cover_indic,
+  		 												ch.coll_data_status,
+  														ch.use_id,
+  														au.user_name,
+  		  												ch.col_cat_id,
+  		  												clc.screen_name,
+  		  												clc.code
+  													FROM app_user au ,
+ 												 coll_category clc,	
+												 coll_head ch,
+  												 
+  												 coll_restate cres,
+  												 coll_hf_prior chp,
+  												 coll_owner cown,
+  												 loan_beneficiary lobe,
+  												 political_map pomap,
+  											
+												currency cu 
+  		 											WHERE
+  														ch.collateral_status in ('0','1','2')
+  		  											AND
+  														ch.use_id = au.use_id
+  		   											AND 
+  		  												ch.col_cat_id = clc.col_cat_id
+  	 												AND    ch.col_hea_id = cres.col_hea_id
+  											AND	   ch.col_hea_id = chp.hf_coll_head_id	
+  											AND    chp.coll_hf_prior_id = lobe.coll_hf_prior_id 
+  											AND    ch.col_hea_id = cown.col_hea_id	
+  											AND    cres.real_est_cada_munc = pomap.pol_map_id
+  											AND	   cown.register_no like :p_owner 
+  											AND    lobe.register_no like :p_carrier
+  											AND    cres.real_est_land_regn like :landRegnZKU 
+  											AND    cres.real_est_land_sub like  :landSubPU 
+  											AND    cres.coown like  :coown 
+  											AND    pomap.code like  :cadMuncCode
+  	 										AND ch.real_est_nm_cur_id = cu.cur_id
+  		 											ORDER BY
+  														ch.workflow_indic desc, ch.col_hea_id asc  				
+  										};  				
+  	  			}
+  	  		}
+  		}
+  	 	
+  		public boolean next() throws Exception {
+  			return iter2.next();
+  		}
+  	    
+  		public void close() {
+  			if(iter2 != null) {
+  				try {
+  					iter2.close();
+  				} catch (Exception ignored) {}
+  			}
+  		}
+  	 
+  		
+  		public void populateRowData() throws Exception {
+  						
+  			Vector row=new Vector();
+  			
+  			row.add(iter2.workflow_indic());
+  			row.add(iter2.collateral_status());
+  			row.add(iter2.col_num());
+  			row.add(iter2.code_char());
+  			row.add(iter2.real_est_nomi_valu());
+  			row.add(iter2.basic_data_status()); 
+  			row.add(iter2.mortgage_status());
+  			row.add(iter2.cover_indic());
+  			row.add(iter2.coll_data_status());  
+  			row.add(iter2.user_name());
+  			
+  			Vector unique = new Vector();
+  			
+  			unique.add(iter2.col_hea_id());
+  			unique.add(iter2.col_type_id());
+  			unique.add(iter2.real_est_nm_cur_id());
+  			unique.add(iter2.use_id());
+  			unique.add(iter2.col_cat_id());
+  			unique.add(iter2.screen_name());
+  			unique.add(iter2.code());
+
+
+  			decl.tblColWorkList.addRow(row, unique);
+  			
+
+  				
+  		}
+  	}

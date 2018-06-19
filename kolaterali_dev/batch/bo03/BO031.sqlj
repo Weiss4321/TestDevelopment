@@ -1,0 +1,912 @@
+package hr.vestigo.modules.collateral.batch.bo03;
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyD.*;
+import hr.vestigo.modules.collateral.common.yoy0.*;
+
+
+public class BO031
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo03/BO031.sqlj,v 1.41 2017/12/06 14:51:11 hrakis Exp $";
+	
+    private BatchContext batchContext;
+    private ConnCtx ctx;
+    
+    
+    #sql iterator IteratorPlacement with (holdability = true) (
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        Date exposure_date
+    );
+    
+    #sql iterator IteratorPlacementDuplicates with (holdability = true) (
+        String cus_acc_no,
+        String contract_cur,
+        String status,
+        Timestamp create_ts
+    );    
+    
+	#sql iterator IteratorPlacementWithData with (holdability = true) (
+        BigDecimal cus_acc_id,
+        String code, 
+        String name, 
+        String module_code,
+        String cus_acc_no, 
+        String contract_no,  
+        String cus_acc_orig_st, 
+        String code_char, 
+        BigDecimal exposure_balance, 
+        Date exposure_date
+    );
+    
+    #sql iterator IteratorDefaultData with (holdability = true) (
+        BigDecimal cus_acc_exp_def_id,
+        BigDecimal cus_acc_id,
+        Date date_from,
+        Date date_until
+    );
+    
+    #sql iterator IteratorPlacementDefault with (holdability = true) (
+        BigDecimal cus_acc_id,
+        BigDecimal cus_id,
+        Date exposure_date, 
+        String default_status,
+        Date default_date
+    );
+    
+    #sql iterator IteratorCollateral with (holdability = true) (BigDecimal col_hea_id);
+     
+    
+    public BO031(BatchContext batchContext) throws Exception
+    {
+        this.batchContext = batchContext;
+        this.ctx = batchContext.getContext();
+    }
+
+  
+    /**
+     * Metoda dohvaæa dozvoljenu promjenu broja plasmana koji imaju izloženost 0 iskazanu u postotku.
+     */
+    public float selectAllowedZeroExposureChangePercentage() throws Exception
+    {
+        batchContext.startStopWatch("BO031.selectAllowedZeroExposureChangePercentage");
+       
+        try
+        {
+            String str = null;
+            #sql [ctx] {
+                SELECT sys_code_value 
+                INTO :(str)
+                FROM system_code_value
+                WHERE sys_cod_id = 'expo_percentage'
+                WITH UR
+            };
+            return Float.parseFloat(str);
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata postotka dozvoljene promjene broja plasmana koji imaju izlozenost 0!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO031.selectAllowedZeroExposureChangePercentage");            
+        }
+    }
+
+    
+    /**
+     * Metoda dohvaæa datum za koji su isporuèeni podaci i status preuzimanja podataka.
+     * @param obrada kod obrade koja preuzima podatke
+     * @return vektor koji u sebi ima:<br/>
+     * - na poziciji 0: status preuzimanja podataka (1-DWH isporuèio sve podatke, 0-Sirius preuzeo podatke)<br/>
+     * - na poziciji 1: datum za koji su podaci<br/>
+     */
+    public Vector selectInputDataStatusAndDate(String obrada) throws Exception
+    {
+        batchContext.startStopWatch("BO031.selectDwhBatchDateAndStatus");
+        
+        try
+        {
+            String status = null;
+            Date maxDate = null;
+            
+            #sql [ctx]{
+                SELECT status, MAX(datum)  
+                INTO :(status), :(maxDate)  
+                FROM dwh_status 
+                WHERE obrada = :(obrada)
+                GROUP BY status
+                WITH UR
+            };
+            
+            Vector vector = new Vector();
+            vector.add(status);
+            vector.add(maxDate);
+            return vector;
+        }
+        catch (SQLException ex)
+        {
+            if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                batchContext.error("Dogodila se nepredvidjena greska kod dohvata datuma i statusa DWH obrade!", ex);
+                throw ex;
+            }
+        }
+        finally 
+        {
+            batchContext.stopStopWatch("BO031.selectDwhBatchDateAndStatus");
+        }
+    }
+    
+    
+    /**
+     * Metoda ažurira status preuzimanja podataka za zadanu obradu. 
+     * @param datum datum za koji su podaci
+     * @param status status preuzimanja podataka
+     * @param obrada obrada koja preuzima podatke
+     */
+    public void updateDwhStatus(Date datum, String status, String obrada) throws Exception
+    {
+        batchContext.startStopWatch("BO031.updateDwhStatus");
+        
+        try
+        { 
+            #sql [ctx] {
+                UPDATE dwh_status 
+                SET status = :(status)
+                WHERE datum = :(datum)
+                AND obrada = :(obrada) 
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod azuriranja statusa preuzimanja podataka za obradu " + obrada, ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO031.updateDwhStatus");
+        }
+    }
+    
+    
+    
+    
+    /**
+     * Metoda dohvaæa ukupni broj plasmana u tablici iz koje se preuzimaju podaci za zadani indikator vrste izloženosti.
+     * @param exp_type_ind indikator vrste izloženosti (DVA - redovni podaci po datumu valute analitike, DGK - podaci po datumu valute glavne knjige)
+     */
+    public int selectNumberOfInputRecords(String exp_type_ind) throws Exception
+    {
+        batchContext.startStopWatch("BO031.selectNumberOfInputRecords");
+        
+        try
+        {
+            int cnt = 0;
+            #sql [ctx] {
+                SELECT COUNT(*)
+                INTO :(cnt)
+                FROM cusacc_exp_dwh
+                WHERE exp_type_ind = :(exp_type_ind)
+                WITH UR
+            };
+            return cnt;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata ukupnog broja plasmana u tablici CUSACC_EXP_DWH za indikator " + exp_type_ind + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO031.selectNumberOfInputRecords");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa plasmane koji imaju više od jednog zapisa u DWH tablici.
+     * @return iterator s podacima
+     */
+    /*public IteratorPlacementDuplicates selectDuplicates(String exp_type_ind) throws Exception
+    {
+        batchContext.startStopWatch("BO031.selectDuplicates");
+        
+        try
+        {
+            IteratorPlacementDuplicates iter = null;
+            #sql [ctx] iter = {
+                SELECT cus_acc_no, contract_cur, status, create_ts 
+                FROM cusacc_exp_dwh 
+                WHERE cus_acc_no IN (SELECT cus_acc_no FROM cusacc_exp_dwh GROUP BY cus_acc_no HAVING COUNT(*) > 1)
+                AND exp_type_ind = :(exp_type_ind)
+                ORDER BY cus_acc_no, create_ts 
+                WITH UR 
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata duplih plasmana u DWH tablici!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO031.selectDuplicates");
+        }
+    }*/
+    
+    
+    /*public void updateDuplicates(DuplicateData data, String exp_type_ind) throws Exception
+    {
+        batchContext.startStopWatch("BO031.updateDuplicates");
+        
+        try
+        {
+            #sql [ctx] {
+                UPDATE cusacc_exp_dwh
+                SET process_status = 'X'
+                WHERE cus_acc_no = :(data.cus_acc_no)
+                AND exp_type_ind = :(exp_type_ind)
+                AND (
+                    contract_cur <> :(data.contract_cur) OR
+                    status <> :(data.status) OR
+                    create_ts <> :(data.create_ts)
+                )
+            };
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod azuriranja duplikata u CUSACC_EXP_DWH!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO031.updateDuplicates");
+        }
+    }*/
+
+    
+    /**
+     * Metoda dohvaæa sve zapise iz evidencije promjene default statusa po partiji plasmana. 
+     */
+    public IteratorDefaultData selectDefaultData() throws Exception
+    {
+        try
+        {
+            IteratorDefaultData iter = null;
+            #sql [ctx] iter = {
+                SELECT cus_acc_exp_def_id, cus_acc_id, date_from, date_until
+                FROM cusacc_exp_def
+                WHERE cus_acc_id IS NOT NULL
+                WITH UR 
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata evidencije promjene default statusa po partiji plasmana!", ex);
+            throw ex;
+        }
+    }
+    
+    /**
+     * Metoda dohvaæa važeæe podatke o defaultu za sve plasmane. 
+     */
+    public IteratorPlacementDefault selectPlacementsWithDefaultData() throws Exception
+    {
+        try
+        {
+            IteratorPlacementDefault iter = null;
+            #sql [ctx] iter = {
+                SELECT cus_acc_id, cus_id, exposure_date, default_status, default_date
+                FROM cusacc_exposure
+                WITH UR 
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata vazecih podataka o defaultu za sve plasmane!", ex);
+            throw ex;
+        }
+    }
+    
+    public void insertCusaccExpDef(BigDecimal cus_id, BigDecimal cus_acc_id, String default_status, Date date_from, Date date_until) throws Exception
+    {
+        try
+        { 
+            YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+            BigDecimal coll_id = id_generator.getNewId();
+            
+            #sql [ctx]{ 
+                INSERT INTO CUSACC_EXP_DEF(CUS_ACC_EXP_DEF_ID, CUS_ID, CUS_ACC_ID, DEFAULT_STATUS, DATE_FROM, DATE_UNTIL, RECORDING_TIMESTAMP, USER_LOCK)
+                VALUES (:(coll_id), :(cus_id), :(cus_acc_id), :(default_status), :(date_from), :(date_until), CURRENT TIMESTAMP, CURRENT TIMESTAMP)
+            };
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod inserta u CUSACC_EXP_DEF!", ex);
+            throw ex;
+        }
+    }
+    
+    public void updateCusaccExpDef(BigDecimal cus_acc_exp_def_id, Date date_until) throws Exception
+    {
+        try
+        { 
+            //kod update-a se ne mijenja podatak default_status
+            #sql [ctx]{ UPDATE CUSACC_EXP_DEF SET DATE_UNTIL = :date_until, USER_LOCK = current timestamp WHERE CUS_ACC_EXP_DEF_ID = :cus_acc_exp_def_id };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod updatea CUSACC_EXP_DEF!", ex);
+            throw ex;
+        }
+    }
+
+    
+    /**
+     * Metoda dohvaæa podatke o aktivnim plasmanima koji imaju izloženost 0.
+     */
+    public IteratorPlacementWithData selectPlacementsWithZeroExposure() throws Exception
+    {
+        try
+        {
+            IteratorPlacementWithData iter = null;
+            #sql [ctx] iter = {
+                SELECT 
+                    a.cus_acc_id        AS cus_acc_id, 
+                    b.code              AS code, 
+                    b.name              AS name, 
+                    a.module_code       AS module_code, 
+                    a.cus_acc_no        AS cus_acc_no, 
+                    a.contract_no       AS contract_no, 
+                    a.cus_acc_orig_st   AS cus_acc_orig_st, 
+                    c.code_char         AS code_char, 
+                    a.exposure_balance  AS exposure_balance, 
+                    a.exposure_date     AS exposure_date
+                FROM cusacc_exposure a 
+                INNER JOIN customer b ON a.cus_id = b.cus_id 
+                INNER JOIN currency c ON a.exposure_cur_id = c.cur_id
+                WHERE a.exposure_balance = 0
+                AND a.cus_acc_status = 'A'
+                WITH UR
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata plasmana koji imaju izlozenost 0!", ex);
+            throw ex;
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa podatke o plasmanima koji su ušli u status WU.
+     */
+    public IteratorPlacement selectPlacementsEnteredWuStatus() throws Exception
+    {
+        try
+        {
+            IteratorPlacement iter = null;
+            #sql [ctx] iter = {
+                SELECT 
+                    e.cus_acc_id    AS cus_acc_id, 
+                    e.cus_acc_no    AS cus_acc_no,
+                    d.exposure_date AS exposure_date
+                FROM cusacc_exp_dwh d
+                INNER JOIN cusacc_exposure e ON d.cus_acc_no = e.cus_acc_no
+                WHERE e.cus_acc_orig_st <> 'WU'
+                AND d.status = 'WU'
+                WITH UR 
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata plasmana koji su usli u status WU!", ex);
+            throw ex;
+        }
+    }
+
+    
+    /**
+     * Metoda dohvaæa podatke o plasmanima koji su izašli iz statusa W i ušli u status A.
+     */
+    public IteratorPlacement selectPlacementsExitedWStatus() throws Exception
+    {
+        try
+        {
+            IteratorPlacement iter = null;
+            #sql [ctx] iter = {
+                SELECT 
+                    e.cus_acc_id    AS cus_acc_id,
+                    e.cus_acc_no    AS cus_acc_no, 
+                    d.exposure_date AS exposure_date
+                FROM cusacc_exp_dwh d
+                INNER JOIN cusacc_exposure e ON d.cus_acc_no = e.cus_acc_no
+                WHERE e.cus_acc_orig_st LIKE 'W%'
+                AND d.status = 'A'
+                WITH UR 
+            };
+            return iter;
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata plasmana koji su izasli iz statusa W i usli u status A!", ex);
+            throw ex;
+        }
+    }
+    
+    /**
+     * Metoda kreira cusaccexpdwh_temp tablicu
+     * @throws Exception
+     */
+    /*public void createTableCusaccExpDwh_temp() throws Exception
+    {
+        batchContext.startStopWatch("BO031.createTableCusaccExpDwh_temp");
+        StringBuffer buffer = new StringBuffer();
+        
+        buffer.append("\nCreate table cusaccexpdwh_temp as (\n");
+        buffer.append("  SELECT d.*\n");
+        buffer.append("        ,c1.cus_id AS cus_id\n");
+        buffer.append("        ,u1.org_uni_id AS org_uni_id\n");
+        buffer.append("        ,x1.cur_id AS contract_cur_id\n");
+        buffer.append("        ,x2.cur_id AS exposure_cur_id\n");
+        buffer.append("        ,d.contract_no AS contract_no_modified\n");
+        buffer.append("  FROM cusacc_exp_dwh d\n");
+        buffer.append("  INNER JOIN customer c1 ON d.cus_reg_no = c1.register_no\n");
+        buffer.append("  INNER JOIN organization_unit u1 ON d.oj_code = u1.code\n");
+        buffer.append("  INNER JOIN currency x1 ON d.contract_cur = x1.code_num\n");
+        buffer.append("  INNER JOIN currency x2 ON d.exposure_cur = x2.code_num\n");
+        buffer.append(") with no data");
+        
+        String sql = buffer.toString();
+        batchContext.debug("CREATE TABLE SQL:");
+        batchContext.debug(sql);
+        
+        Statement statement = null;
+        try
+        {
+            Connection connection = batchContext.getConnection();
+            statement = connection.createStatement();
+            statement.execute(sql);
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod kreiranja temp tablice createTableCusaccExpDwh_temp!", ex);
+            throw ex;
+        }
+        finally
+        {
+            if (statement != null) statement.close();
+            batchContext.stopStopWatch("BO031.createTableCusaccExpDwh_temp");
+        }        
+    }*/
+    
+    /**
+     * Metoda dropa cusaccexpdwh_temp tablicu
+     * @throws Exception
+     */
+    /*public void dropTableCusaccExpDwh_temp() throws Exception
+    {
+        batchContext.startStopWatch("BO031.dropTableCusaccExpDwh_temp");
+        StringBuffer buffer = new StringBuffer();
+        
+        buffer.append("\nDrop table cusaccexpdwh_temp");
+       
+        String sql = buffer.toString();
+        batchContext.debug("CREATE TABLE SQL:");
+        batchContext.debug(sql);
+        
+        Statement statement = null;
+        try
+        {
+            Connection connection = batchContext.getConnection();
+            statement = connection.createStatement();
+            statement.execute(sql);
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod kreiranja temp tablice dropTableCusaccExpDwh_temp!", ex);
+            throw ex;
+        }
+        finally
+        {
+            if (statement != null) statement.close();
+            batchContext.stopStopWatch("BO031.dropTableCusaccExpDwh_temp");
+        }        
+    }*/
+    
+    /**
+     * Metoda za punjenje createTableCusaccExpDwh_temp tablice
+     * @param tip DVA ili DGK
+     * @throws Exception
+     */
+    public void insertIntoTableCusaccExpDwh_temp(String tip, boolean isCredit) throws Exception
+    {
+        batchContext.startStopWatch("BO031.insertIntoTableCusaccExpDwh_temp#" + (isCredit ? "credit" : "noncredit"));
+        StringBuffer buffer = new StringBuffer();
+        
+        buffer.append("\nINSERT INTO cusaccexpdwh_temp\n");
+        buffer.append("  SELECT d.*\n");
+        buffer.append("        ,c1.cus_id AS cus_id\n");
+        buffer.append("        ,u1.org_uni_id AS org_uni_id\n");
+        buffer.append("        ,x1.cur_id AS contract_cur_id\n");
+        buffer.append("        ,x2.cur_id AS exposure_cur_id\n");
+        buffer.append("        ,d.contract_no AS contract_no_modified\n");
+        buffer.append("  FROM cusacc_exp_dwh d\n");
+        buffer.append("  JOIN customer c1 ON d.cus_reg_no = c1.register_no\n");
+        buffer.append("  JOIN organization_unit u1 ON d.oj_code = u1.code\n");
+        buffer.append("  JOIN currency x1 ON d.contract_cur = x1.code_num\n");
+        buffer.append("  JOIN currency x2 ON d.exposure_cur = x2.code_num\n");
+        buffer.append("  WHERE d.process_status = '0'\n");
+        buffer.append("  AND d.exp_type_ind = '" + tip + "'\n");
+        buffer.append("  AND d.module_code ");
+        if (isCredit) buffer.append("NOT");
+        buffer.append("  IN ('TRC','SDR')\n");
+        buffer.append("  AND NOT ((d.contract_no IS NULL OR LENGTH(TRIM(d.cus_acc_no))=0) AND d.module_code = 'LOC' AND d.cus_acc_no IS NOT NULL AND LENGTH(TRIM(d.cus_acc_no))=10 AND (d.cus_acc_no LIKE '800%' OR d.cus_acc_no LIKE '810%'))\n");
+        buffer.append("  UNION ALL\n");
+        buffer.append("  SELECT d.*\n");
+        buffer.append("        ,c1.cus_id AS cus_id\n");
+        buffer.append("        ,u1.org_uni_id AS org_uni_id\n");
+        buffer.append("        ,x1.cur_id AS contract_cur_id\n");
+        buffer.append("        ,x2.cur_id AS exposure_cur_id\n");
+        buffer.append("        ,x.contract_no AS contract_no_modified\n");
+        buffer.append("  FROM cusacc_exp_dwh d\n");
+        buffer.append("  JOIN customer c1 ON d.cus_reg_no = c1.register_no\n");
+        buffer.append("  JOIN organization_unit u1 ON d.oj_code = u1.code\n");
+        buffer.append("  JOIN currency x1 ON d.contract_cur = x1.code_num\n");
+        buffer.append("  JOIN currency x2 ON d.exposure_cur = x2.code_num\n");
+        buffer.append("  JOIN customer_account x ON (x.cus_acc_no = d.cus_acc_no AND x.bank_sign = 'RB')\n");
+        buffer.append("  WHERE d.process_status = '0'\n");
+        buffer.append("  AND d.exp_type_ind = '" + tip + "'\n");
+        buffer.append("  AND d.module_code ");
+        if (isCredit) buffer.append("NOT");
+        buffer.append("  IN ('TRC','SDR')\n");
+        buffer.append("  AND ((d.contract_no IS NULL OR LENGTH(TRIM(d.cus_acc_no))=0) AND d.module_code = 'LOC' AND d.cus_acc_no IS NOT NULL AND LENGTH(TRIM(d.cus_acc_no))=10 AND (d.cus_acc_no LIKE '800%' OR d.cus_acc_no LIKE '810%'))\n");
+        buffer.append("  WITH UR\n");
+        
+        String sql = buffer.toString();
+        batchContext.debug("INSERT DATA SQL:");
+        batchContext.debug(sql);
+        
+        Statement statement = null;
+        try
+        {
+            Connection connection = batchContext.getConnection();
+            statement = connection.createStatement();
+            statement.execute(sql);
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod punjenja temp tablice insertTableCusaccExpDwh_temp!", ex);
+            batchContext.error("SQL:\n" + sql, ex);
+            throw ex;
+        }
+        finally
+        {
+            if (statement != null) statement.close();
+            batchContext.stopStopWatch("BO031.insertIntoTableCusaccExpDwh_temp#" + (isCredit ? "credit" : "noncredit"));
+        }
+    }
+   
+    /**
+     * Metoda prebacuje podatke za datum valute analitike iz DWH tablice u tablicu CUSACC_EXPOSURE.
+     */
+    public void mergeDwhTableIntoCusaccExposure(boolean isCredit) throws Exception
+    {
+        batchContext.startStopWatch("BO031.mergeDwhTableIntoCusaccExposure#" + (isCredit ? "credit" : "noncredit"));
+        
+        StringBuffer buffer = new StringBuffer();
+        buffer.append("\nMERGE INTO cusacc_exposure a USING cusaccexpdwh_temp t ON a.cus_acc_no = t.cus_acc_no ");
+        if (!isCredit) buffer.append("AND a.contract_cur_id = t.contract_cur_id");
+        buffer.append("\n");
+        buffer.append("WHEN MATCHED THEN UPDATE SET\n");
+        buffer.append("  cus_id=t.cus_id,module_code=t.module_code,prod_code=t.prod_code,contract_no=t.contract_no_modified,org_uni_id=t.org_uni_id,cus_acc_status=COALESCE(t.status_dwh, 'A'),cus_acc_orig_st=t.status,\n");
+        buffer.append("  currency_type=t.cur_ind,contract_amount=t.contract_amount,contract_cur_id=t.contract_cur_id,approval_date=t.approval_date,due_date=t.due_date,exposure_cur_id=t.exposure_cur_id,exposure_balance=t.exposure_balance,\n");
+        buffer.append("  exposure_date=t.exposure_date,due_debt_bal=t.due_debt_bal,due_int_bal=t.due_int_bal,debt_balance=t.debt_balance,inv_balance=t.inv_balance,use_id=1,opening_ts=t.create_ts,user_lock=CURRENT TIMESTAMP,request_no=t.request_no,\n");
+        buffer.append("  due_fee_bal=t.due_fee_bal,accrual_int_bal=t.accrual_int_bal,exposure_bal_lcy=t.exposure_bal_lcy,exp_off_bal_lcy=t.exp_off_bal_lcy,provision_bal=t.provision_bal,purpose_type=t.purpose_type,b2asset_class=t.b2asset_class,\n");
+        buffer.append("  value_close_indic=t.value_close_indic,value_close_rate=t.value_close_rate,customer_indic=t.customer_indic,frame_cus_acc_no=t.frame_cus_acc_no,coll_ind=t.coll_ind,restr_ind=t.restr_ind,anex_br=t.anex_br,\n");
+        buffer.append("  irrevocable_ind=t.irrevocable_ind,ccf=t.ccf,exp_bal_susp_inc=t.exp_bal_susp_inc,default_status=t.default_status,default_date=t.default_date,susp_income=t.susp_income,usage_date=t.usage_date,repayment_type=t.repayment_type\n");
+        buffer.append("WHEN NOT MATCHED THEN INSERT (cus_acc_id,cus_id,ban_rel_typ_id,ban_pro_typ_id,module_code,prod_code,cus_acc_no,contract_no,org_uni_id,cus_acc_status,cus_acc_orig_st,currency_type,contract_amount,contract_cur_id,approval_date,\n");
+        buffer.append("  due_date,exposure_cur_id,exposure_balance,exposure_date,due_debt_bal,due_int_bal,debt_balance,inv_balance,use_id,opening_ts,user_lock,request_no,due_fee_bal,accrual_int_bal,exposure_bal_lcy,exp_off_bal_lcy,provision_bal,purpose_type,\n");
+        buffer.append("  b2asset_class,value_close_indic,value_close_rate,customer_indic,frame_cus_acc_no,coll_ind,restr_ind,anex_br,irrevocable_ind,ccf,exp_bal_susp_inc,default_status,default_date,susp_income,usage_date,repayment_type,wo_status\n");
+        buffer.append(") VALUES (\n");
+        buffer.append("  (NEXT VALUE FOR COLLATERAL_SEQ),\n");
+        buffer.append("  t.cus_id,NULL,NULL,t.module_code,t.prod_code,t.cus_acc_no,t.contract_no_modified,t.org_uni_id,COALESCE(t.status_dwh, 'A'),t.status,t.cur_ind,t.contract_amount,t.contract_cur_id,t.approval_date,\n");
+        buffer.append("  t.due_date,t.exposure_cur_id,t.exposure_balance,t.exposure_date,t.due_debt_bal,t.due_int_bal,t.debt_balance,t.inv_balance,1,t.create_ts,CURRENT TIMESTAMP,t.request_no,t.due_fee_bal,t.accrual_int_bal,t.exposure_bal_lcy,t.exp_off_bal_lcy,\n");
+        buffer.append("  t.provision_bal,t.purpose_type,t.b2asset_class,t.value_close_indic,t.value_close_rate,t.customer_indic,t.frame_cus_acc_no,t.coll_ind,t.restr_ind,t.anex_br,t.irrevocable_ind,t.ccf,t.exp_bal_susp_inc,t.default_status,t.default_date,\n");
+        buffer.append("  t.susp_income,t.usage_date,t.repayment_type,NULL\n");
+        buffer.append(")\n");
+        buffer.append("WITH UR\n");
+        
+        String sql = buffer.toString();
+        batchContext.debug("Merge SQL:");
+        batchContext.debug(sql);
+        
+        Statement statement = null;
+        try
+        {
+            Connection connection = batchContext.getConnection();
+            statement = connection.createStatement();
+            statement.execute(sql);
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod prebacivanja podataka za datum valute analitike iz DWH tablice u CUSACC_EXPOSURE!", ex);
+            batchContext.error("SQL:\n" + sql, ex);
+            throw ex;
+        }
+        finally
+        {
+            if (statement != null) statement.close();
+            batchContext.stopStopWatch("BO031.mergeDwhTableIntoCusaccExposure#" + (isCredit ? "credit" : "noncredit"));
+        }
+    }
+    
+    
+    /**
+     * Metoda prebacuje podatke za datum glavne knjige iz DWH tablice u tablicu CUSACC_EXPOSURE_NEW.
+     */
+    public void mergeDwhTableIntoCusaccExposureNew(boolean isCredit) throws Exception
+    {
+        batchContext.startStopWatch("BO031.mergeDwhTableIntoCusaccExposureNew#" + (isCredit ? "credit" : "noncredit"));
+
+        StringBuffer buffer = new StringBuffer();
+        buffer.append("MERGE INTO cusacc_exposure_NEW a USING cusaccexpdwh_temp t ON a.cus_acc_no = t.cus_acc_no ");
+        if (!isCredit) buffer.append("AND a.contract_cur_id = t.contract_cur_id");
+        buffer.append("\n");
+        buffer.append("WHEN MATCHED THEN UPDATE SET\n");
+        buffer.append("  cus_id=t.cus_id,module_code=t.module_code,prod_code=t.prod_code,contract_no=t.contract_no_modified,org_uni_id=t.org_uni_id,cus_acc_status=COALESCE(t.status_dwh, 'A'),cus_acc_orig_st=t.status,\n");
+        buffer.append("  currency_type=t.cur_ind,contract_amount=t.contract_amount,contract_cur_id=t.contract_cur_id,approval_date=t.approval_date,due_date=t.due_date,exposure_cur_id=t.exposure_cur_id,exposure_balance=t.exposure_balance,\n");
+        buffer.append("  exposure_date=t.exposure_date,due_debt_bal=t.due_debt_bal,due_int_bal=t.due_int_bal,debt_balance=t.debt_balance,inv_balance=t.inv_balance,use_id=1,opening_ts=t.create_ts,user_lock=CURRENT TIMESTAMP,request_no=t.request_no,\n");
+        buffer.append("  due_fee_bal=t.due_fee_bal,accrual_int_bal=t.accrual_int_bal,exposure_bal_lcy=t.exposure_bal_lcy,exp_off_bal_lcy=t.exp_off_bal_lcy,provision_bal=t.provision_bal,purpose_type=t.purpose_type,b2asset_class=t.b2asset_class,\n");
+        buffer.append("  value_close_indic=t.value_close_indic,value_close_rate=t.value_close_rate,customer_indic=t.customer_indic,frame_cus_acc_no=t.frame_cus_acc_no,coll_ind=t.coll_ind,restr_ind=t.restr_ind,anex_br=t.anex_br,\n");
+        buffer.append("  irrevocable_ind=t.irrevocable_ind,ccf=t.ccf,exp_bal_susp_inc=t.exp_bal_susp_inc,default_status=t.default_status,default_date=t.default_date,susp_income=t.susp_income,usage_date=t.usage_date,repayment_type=t.repayment_type\n");
+        buffer.append("WHEN NOT MATCHED THEN INSERT (cus_acc_id,cus_id,ban_rel_typ_id,ban_pro_typ_id,module_code,prod_code,cus_acc_no,contract_no,org_uni_id,cus_acc_status,cus_acc_orig_st,currency_type,contract_amount,contract_cur_id,approval_date,\n");
+        buffer.append("  due_date,exposure_cur_id,exposure_balance,exposure_date,due_debt_bal,due_int_bal,debt_balance,inv_balance,use_id,opening_ts,user_lock,request_no,due_fee_bal,accrual_int_bal,exposure_bal_lcy,exp_off_bal_lcy,provision_bal,purpose_type,\n");
+        buffer.append("  b2asset_class,value_close_indic,value_close_rate,customer_indic,frame_cus_acc_no,coll_ind,restr_ind,anex_br,exp_type_ind,irrevocable_ind,ccf,exp_bal_susp_inc,default_status,default_date,susp_income,usage_date,repayment_type,wo_status\n");
+        buffer.append(") VALUES (\n");
+        buffer.append("  (SELECT x.cus_acc_id FROM cusacc_exposure x WHERE x.cus_acc_no = t.cus_acc_no ");
+        if (!isCredit) buffer.append("AND x.contract_cur_id = t.contract_cur_id");
+        buffer.append("),\n");
+        buffer.append("  t.cus_id,NULL,NULL,t.module_code,t.prod_code,t.cus_acc_no,t.contract_no_modified,t.org_uni_id,COALESCE(t.status_dwh, 'A'),t.status,t.cur_ind,t.contract_amount,t.contract_cur_id,t.approval_date,\n");
+        buffer.append("  t.due_date,t.exposure_cur_id,t.exposure_balance,t.exposure_date,t.due_debt_bal,t.due_int_bal,t.debt_balance,t.inv_balance,1,t.create_ts,CURRENT TIMESTAMP,t.request_no,t.due_fee_bal,t.accrual_int_bal,t.exposure_bal_lcy,t.exp_off_bal_lcy,\n");
+        buffer.append("  t.provision_bal,t.purpose_type,t.b2asset_class,t.value_close_indic,t.value_close_rate,t.customer_indic,t.frame_cus_acc_no,t.coll_ind,t.restr_ind,t.anex_br,t.exp_type_ind,t.irrevocable_ind,t.ccf,t.exp_bal_susp_inc,t.default_status,t.default_date,\n");
+        buffer.append("  t.susp_income,t.usage_date,t.repayment_type,NULL\n");
+        buffer.append(")\n");
+        buffer.append("WITH UR\n");
+
+        String sql = buffer.toString();
+        batchContext.debug("Merge SQL:");
+        batchContext.debug(sql);
+        
+        Statement statement = null;
+        try
+        {
+            Connection connection = batchContext.getConnection();
+            statement = connection.createStatement();
+            statement.execute(sql);
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod prebacivanja podataka za datum glavne knjige iz DWH tablice u CUSACC_EXPOSURE_NEW!", ex);
+            batchContext.error("SQL:\n" + sql, ex);
+            throw ex;
+        }
+        finally
+        {
+            if (statement != null) statement.close();
+            batchContext.stopStopWatch("BO031.mergeDwhTableIntoCusaccExposureNew#" + (isCredit ? "credit" : "noncredit"));
+        }
+    }
+    
+    
+    /**
+     * Metoda popunjava podatke o stavljanju kolaterala na prodaju.
+     */
+    public void fillForSaleData(BO03Data bo03Data) throws Exception
+    {
+        batchContext.startStopWatch("BO031.fillForSaleData");
+        
+        batchContext.info("* -> WU: cus_acc_no=" + bo03Data.cus_acc_no + ", cus_acc_id=" + bo03Data.cus_acc_id);
+        
+        IteratorCollateral iter = null;
+        try
+        {
+            #sql [ctx] iter = {
+                SELECT DISTINCT d.col_hea_id AS col_hea_id 
+                FROM cusacc_exposure a
+                INNER JOIN loan_beneficiary b ON (a.cus_acc_id = b.la_acc_id OR a.cus_acc_no = b.acc_no OR a.request_no = b.request_no)
+                INNER JOIN coll_hf_prior c ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                INNER JOIN coll_head d ON c.hf_coll_head_id = d.col_hea_id
+                WHERE a.cus_acc_id = :(bo03Data.cus_acc_id)
+                AND b.status = 'A'
+                AND c.hf_status = 'A'
+                AND d.col_cat_id = 618223
+                AND d.collateral_status = '3'
+                AND (d.for_sale IS NULL OR d.for_sale <> 'D')
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata kolaterala povezanih na plasman " + bo03Data.cus_acc_no + "!", ex);
+            throw ex;
+        }
+        
+        BigDecimal col_hea_id = null;
+        while (iter.next())
+        {
+            col_hea_id = iter.col_hea_id();
+            try
+            {
+                #sql [ctx] { 
+                    UPDATE coll_head
+                    SET 
+                        for_sale = 'D',
+                        for_sale_date = :(bo03Data.exposure_date),
+                        chg_nom_val_proc_ts = CURRENT TIMESTAMP
+                    WHERE col_hea_id = :(col_hea_id)
+                };
+                batchContext.info("->for_sale=D, for_sale_date=" + bo03Data.exposure_date + " za col_hea_id="+col_hea_id);
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Dogodila se nepredvidjena greska kod postavljanja datuma stavljanja kolaterala na prodaju! col_hea_id=" + col_hea_id, ex);
+                throw ex;
+            }
+        }
+        
+        batchContext.stopStopWatch("BO031.fillForSaleData");
+    }
+    
+    
+    /**
+     * Metoda briše podatke o stavljanju kolaterala na prodaju.
+     */
+    public void clearForSaleData(BO03Data bo03Data) throws Exception
+    {
+        batchContext.startStopWatch("BO031.clearForSaleData");
+        
+        batchContext.info("W* -> A: cus_acc_no=" + bo03Data.cus_acc_no + ", cus_acc_id=" + bo03Data.cus_acc_id);
+        
+        IteratorCollateral iter = null;
+        try
+        {
+            #sql [ctx] iter = {
+                SELECT DISTINCT d.col_hea_id AS col_hea_id 
+                FROM cusacc_exposure a
+                INNER JOIN loan_beneficiary b ON (a.cus_acc_id = b.la_acc_id OR a.cus_acc_no = b.acc_no OR a.request_no = b.request_no)
+                INNER JOIN coll_hf_prior c ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                INNER JOIN coll_head d ON c.hf_coll_head_id = d.col_hea_id
+                WHERE a.cus_acc_id = :(bo03Data.cus_acc_id)
+                AND b.status = 'A'
+                AND c.hf_status = 'A'
+                AND d.collateral_status = '3'
+                AND d.for_sale = 'D'
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata kolaterala povezanih na plasman " + bo03Data.cus_acc_no + "!", ex);
+            throw ex;
+        }
+        
+        BigDecimal col_hea_id = null;
+        while (iter.next())
+        {
+            col_hea_id = iter.col_hea_id();
+            try
+            {
+                int cnt = -1;
+                #sql [ctx] { 
+                    SELECT COUNT(*)
+                    INTO :(cnt)
+                    FROM coll_hf_prior c
+                    INNER JOIN loan_beneficiary b ON b.coll_hf_prior_id = c.coll_hf_prior_id
+                    INNER JOIN cusacc_exposure a ON (a.cus_acc_id = b.la_acc_id OR a.cus_acc_no = b.acc_no OR a.request_no = b.request_no)
+                    WHERE c.hf_coll_head_id = :(col_hea_id)
+                    AND c.hf_status = 'A'
+                    AND b.status = 'A'
+                    AND (a.cus_acc_orig_st <> 'A' OR a.default_status = 'Y')
+                    WITH UR
+                };
+                batchContext.info("cnt="+cnt);
+                if (cnt == 0)
+                {
+                    #sql [ctx] { 
+                        UPDATE coll_head
+                        SET 
+                            for_sale = 'N',
+                            for_sale_date = NULL,
+                            chg_nom_val_proc_ts = CURRENT TIMESTAMP
+                        WHERE col_hea_id = :(col_hea_id)
+                    };
+                    batchContext.info("->for_sale=N, for_sale_date=NULL za col_hea_id="+col_hea_id);
+                }
+            }
+            catch(SQLException ex)
+            {
+                batchContext.error("Dogodila se nepredvidjena greska kod ponistenja datuma stavljanja kolaterala na prodaju! col_hea_id=" + col_hea_id, ex);
+                throw ex;
+            }
+        }
+        
+        batchContext.stopStopWatch("BO031.clearForSaleData");
+    }
+       
+    
+    /**
+     * Metoda briše sve podatke iz tablice iz koje se preuzimaju podaci.
+     */
+    public void truncateCusaccExpDwh() throws Exception
+    {
+        batchContext.startStopWatch("BO031.truncateCusaccExpDwh");
+        
+        try
+        {
+            batchContext.commitTransaction();
+            #sql [ctx] { TRUNCATE TABLE cusacc_exp_dwh IMMEDIATE };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod brisanja podataka iz tablice CUSACC_EXP_DWH", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO031.truncateCusaccExpDwh");
+        }
+    }
+    
+    /**
+     * Metoda briše sve podatke iz tablice cusaccexpdwh_temp
+     */
+    public void truncateCusaccExpDwh_temp() throws Exception
+    {
+        batchContext.startStopWatch("BO031.truncateCusaccExpDwh_temp");
+        
+        try
+        {
+            batchContext.commitTransaction();
+            #sql [ctx] { TRUNCATE TABLE cusaccexpdwh_temp IMMEDIATE };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod brisanja podataka iz tablice cusaccexpdwh_temp", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO031.truncateCusaccExpDwh_temp");
+        }
+    }
+    
+    
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) batchContext.error(message, ex); else batchContext.error(message, new String[]{});
+        batchContext.userLog("GRESKA: " + message);
+    }
+}

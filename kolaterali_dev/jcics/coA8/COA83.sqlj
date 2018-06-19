@@ -1,0 +1,67 @@
+package hr.vestigo.modules.collateral.jcics.coA8;
+
+import java.math.*;
+import java.util.HashMap;
+import java.util.Vector;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+public class COA83
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA8/COA83.sqlj,v 1.2 2011/07/28 14:19:56 hrakis Exp $";
+
+    private DeclCOA8 decl;
+
+    public COA83(DeclCOA8 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        BigDecimal cus_let_typ_id = null;
+        try
+        {
+            #sql [ctx] {
+                SELECT cus_let_typ_id
+                INTO :(cus_let_typ_id)
+                FROM ip_warning_notes
+                WHERE ins_war_not_id = :(decl.inspolwarningnoteslistwarntonotem.INS_WAR_NOT_ID)
+            };
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA83: Error selecting from IP_WARNING_NOTES!", "err411a", null, ex);
+        }
+        
+        if(!new BigDecimal(199999).equals(cus_let_typ_id))
+        {
+            HashMap map = new HashMap();
+            map.put("parameter", "Prebacivanje u obavijest moguæe je samo za 1.opomenu!");
+            throw new VestigoTMException(1, "Transaction COA83: Error checking warning note status!", "err10231", map);
+        }
+        
+        try
+        {
+            #sql [ctx] {
+                UPDATE ip_warning_notes
+                SET 
+                   cus_let_typ_id = 189999,
+                   wrn_status = '1',
+                   use_id = :(decl.inspolwarningnoteslistwarntonotem.use_id),
+                   user_lock = CURRENT TIMESTAMP
+                WHERE
+                   ins_war_not_id = :(decl.inspolwarningnoteslistwarntonotem.INS_WAR_NOT_ID) AND
+                   candidate_status IN ('K','N','A')
+            };
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA83: Error updating IP_WARNING_NOTES!", "err411a", null, ex);
+        }
+    }
+}

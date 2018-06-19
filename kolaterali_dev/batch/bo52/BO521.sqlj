@@ -1,0 +1,487 @@
+package hr.vestigo.modules.collateral.batch.bo52;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+
+public class BO521
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo52/BO521.sqlj,v 1.15 2012/01/18 14:50:59 hrakis Exp $";
+
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+
+    #sql iterator FrameIterator with(holdability = true) (
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        BigDecimal col_hea_id,
+        String col_num,
+        Integer acc_prior,
+        BigDecimal exp_fc_amount,
+        BigDecimal exp_cur_id,
+        BigDecimal exp_coll_amount
+    );
+
+    #sql iterator AccountIterator with(holdability = true) (
+        BigDecimal cus_acc_id,
+        String cus_acc_no, 
+        BigDecimal exposure_cur_id,
+        BigDecimal exposure_balance
+    );
+
+    #sql iterator ExchangeRateIterator with(holdability = true) (
+        BigDecimal cur_id,
+        BigDecimal midd_rate 
+    );
+
+
+    public BO521(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("2708555854"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Izracun pokrivenosti plasmana iz okvira");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("insertIntoEvent");
+            return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+
+    /**
+     * Metoda koja vraæa datum za koji se raèuna pokrivenost.
+     * @param exp_type_ind Flag koji govori da li su u tabeli redovni podaci o izloženosti, podaci za kraj mjeseca ili nešto drugo
+     * @return datum za koji se raèuna pokrivenost. Ako je došlo do greške, vraæa null.
+     */
+    public Date selectValueDate(String exp_type_ind) throws Exception
+    {
+        batchContext.startStopWatch("selectValueDate");
+        Date valueDate = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT MAX(exposure_date) 
+                INTO :(valueDate)
+                FROM cusacc_exposure_new
+                WHERE exp_type_ind = :(exp_type_ind)
+                AND exposure_balance > 0
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata datuma za koji se racuna pokrivenost!", ex);
+        }
+        batchContext.stopStopWatch("selectValueDate");
+        return valueDate;
+    }
+
+    /**
+     * Metoda koja dohvaæa ID obrade.
+     * Provjerava se da li je za zadani datum i vrstu obrade veæ puštena obrada. Ako obrada nije puštana, dodaje se novi zapis u COL_PROC i vraæa se njegov ID.
+     * Ako je obrada puštana i nije završila do kraja, vraæa se ID nedovršene obrade. Ako je obrada završila do kraja, ispisuje se greška i vraæa se null. 
+     * @param value_date Datum za koji se vrši izraèun pokrivenosti
+     * @param proc_type Vrsta obrade
+     * @return ID obrade. Vraæa null ako je došlo do greške ili obrada za zadani datum postoji i uredno je završena.
+     */
+    public BigDecimal selectColProId(Date value_date, String proc_type)
+    {
+        batchContext.startStopWatch("selectColProId");
+        BigDecimal col_pro_id = null;
+        String proc_status = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT col_pro_id, proc_status
+                INTO :(col_pro_id), :(proc_status)
+                FROM col_proc 
+                WHERE value_date = :(value_date)
+                AND proc_type = :(proc_type)
+            };
+            if("1".equals(proc_status))  // ako obrada za zadani datum postoji i uredno je završena, ispisuje se greška i prekida se daljnji tijek
+            {
+                batchContext.error("Za datum " + value_date + " obrada je pustena i uredno zavrsila!", new String[]{});
+                return null;
+            }
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() == 100)  // ako obrada za zadani datum ne postoji, unesi novi zapis o zapoèetoj obradi
+            {
+                return insertIntoColProc(value_date, proc_type);
+            }
+            else
+            {
+                batchContext.error("Greska kod dohvata ID obrade!", ex);
+            }
+        }
+        batchContext.stopStopWatch("selectColProId");
+        return col_pro_id;
+    }
+
+    /**
+     * Metoda koja dohvaæa ID referentne obrade (obrade koja je izaèunala pokrivenost okvira).
+     * @param value_date Datum izraèuna pokrivenosti
+     * @param ref_proc_type Identifikator vrste referentne obrade
+     * @return ID obrade. Ako je došlo do greške, vraæa null.
+     */
+    public BigDecimal selectRefColProId(Date value_date, String ref_proc_type)
+    {
+        batchContext.startStopWatch("selectRefColProId");
+        BigDecimal ref_col_pro_id = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT col_pro_id
+                INTO :(ref_col_pro_id)
+                FROM col_proc 
+                WHERE value_date = :(value_date)
+                AND proc_type = :(ref_proc_type)
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata ID referentne obrade!", ex);
+        }
+        batchContext.stopStopWatch("selectRefColProId");
+        return ref_col_pro_id;
+    }
+
+    /** 
+     * Metoda koja evidentira poèetak izvoðenja obrade ubacujuæi novi zapis u tablicu COL_PROC.
+     * @param value_date Datum za koji se vrši izraèun pokrivenosti
+     * @param proc_type Identifikator vrste obrade
+     * @return ID zapisa iz tablice COL_PROC. Ako je došlo do greške, vraæa null.
+     */
+    public BigDecimal insertIntoColProc(Date value_date, String proc_type)
+    {
+        BigDecimal col_pro_id = null;
+        try
+        {
+            YOY00 yoy00 = new YOY00(connCtx);
+            col_pro_id = yoy00.getNewId();
+
+            batchContext.beginTransaction();
+            #sql [connCtx] {
+                INSERT INTO col_proc (
+                    col_pro_id,
+                    proc_date,
+                    value_date,
+                    proc_type,
+                    proc_way,
+                    proc_status,
+                    col_number,
+                    org_uni_id,
+                    use_id,
+                    user_lock )
+                VALUES (
+                    :(col_pro_id),
+                    CURRENT DATE,
+                    :(value_date),
+                    :(proc_type),
+                    'A',
+                    '0',
+                    0,
+                    53253,
+                    1,
+                    CURRENT TIMESTAMP )
+            };
+            batchContext.commitTransaction();
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska kod evidentiranja pocetka izvodjenja obrade!", ex);
+            return null;
+        }
+        return col_pro_id;
+    }
+
+    /**
+     * Metoda koja dohvaæa teèajnu listu na zadani datum.
+     * @param value_date Datum teèajne liste
+     * @return hash mapa koja za kljuè ima ID valute, a za vrijednost odnos valuta/kuna (po srednjem teèaju). Ako je došlo do greške, vraæa null. 
+     */
+     public HashMap selectExchangeRate(Date value_date)
+     {
+         try
+         {
+             batchContext.startStopWatch("selectExchangeRate");
+             ExchangeRateIterator iter = null;
+             #sql [connCtx] iter = {
+                 SELECT cur_id, midd_rate
+                 FROM exchange_rate
+                 WHERE :(value_date) BETWEEN date_from AND date_until
+                 WITH UR
+             };
+             HashMap map = new HashMap();
+             while(iter.next()) map.put(iter.cur_id(), iter.midd_rate());
+             iter.close();
+             batchContext.stopStopWatch("selectExchangeRate");
+             return map;
+         }
+         catch(SQLException ex)
+         {
+             batchContext.error("Greska kod dohvata tecajne liste!", ex);
+             return null;
+         }
+     }
+
+    /**
+     * Metoda koja dohvaæa podatke o okvirima i njihovoj pokrivenosti kolateralima.
+     * @param ref_col_pro_id ID obrade za izraèun pokrivenosti (bo02)
+     * @param col_pro_id ID obrade za izraèun pokrivenosti okvirima (bo52). Ako je obrada veæ procesirala neke okvire, oni neæe biti ukljuèeni u vraæeni skup podataka.
+     * @param value_date Datum za koji se vrši izraèun pokrivenosti
+     * @param exp_type_ind Flag koji govori da li su u tabeli redovni podaci o izloženosti, podaci za kraj mjeseca ili nešto drugo
+     * @return Iterator s podacima. Ako je došlo do greške, vraæa null.
+     */
+    public FrameIterator selectFrames(BigDecimal ref_col_pro_id, BigDecimal col_pro_id, Date value_date, String exp_type_ind)
+    {
+        batchContext.startStopWatch("selectFrames");
+        FrameIterator iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT 
+                    ce.cus_acc_id           AS cus_acc_id,
+                    ce.cus_acc_no           AS cus_acc_no,
+                    ch.col_hea_id           AS col_hea_id,
+                    ch.col_num              AS col_num,
+                    INTEGER(ct.acc_prior)   AS acc_prior,
+                    cxc.exp_fc_amount       AS exp_fc_amount,
+                    cxc.exp_cur_id          AS exp_cur_id,
+                    cxc.exp_coll_amount     AS exp_coll_amount
+                FROM cusacc_exposure_new ce
+                    INNER JOIN cusacc_exp_coll cxc      ON ce.cus_acc_id = cxc.cus_acc_id
+                    LEFT OUTER JOIN coll_head ch        ON cxc.col_hea_id = ch.col_hea_id
+                    LEFT OUTER JOIN collateral_type ct  ON ch.col_type_id = ct.coll_type_id
+                WHERE ce.module_code = 'OKV'
+                  AND ce.cus_acc_status = 'A'
+                  AND ce.exposure_date = :(value_date)
+                  AND ce.exp_type_ind = :(exp_type_ind)
+                  AND ce.cus_acc_no NOT IN (SELECT input_code FROM in_data_dwh_item WHERE col_pro_id = :(col_pro_id))
+                  AND cxc.col_pro_id = :(ref_col_pro_id)
+                ORDER BY ce.cus_acc_id
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata okvira i kolaterala koji ih pokrivaju!", ex);
+        }
+        batchContext.stopStopWatch("selectFrames");
+        return iter;
+    }
+
+    /**
+     * Metoda koja dohvaæa podatke o svim plasmanima iz okvira.
+     * @param frame Objekt s podacima o okviru
+     * @param value_date Datum za koji se vrši izraèun pokrivenosti
+     * @param exp_type_ind Flag koji govori da li su u tabeli redovni podaci o izloženosti, podaci za kraj mjeseca ili nešto drugo
+     * @return Iterator s podacima. Ako je došlo do greške, vraæa null.
+     */
+    public AccountIterator selectAccounts(FrameData frame, Date value_date, String exp_type_ind)
+    {
+        batchContext.startStopWatch("selectAccounts");
+        AccountIterator iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT 
+                    cus_acc_id,
+                    cus_acc_no,
+                    exposure_cur_id,
+                    exposure_balance
+                FROM cusacc_exposure_new
+                WHERE frame_cus_acc_no = :(frame.cus_acc_no)
+                  AND cus_acc_status = 'A'
+                  AND exposure_date = :(value_date)
+                  AND exp_type_ind = :(exp_type_ind)
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvata svih plasmana iz okvira!", ex);
+        }
+        batchContext.stopStopWatch("selectAccounts");
+        return iter;
+    }
+
+    /**
+     * Metoda koja upisuje podatke o pokrivenosti odreðenog plasmana iz okvira kolateralom.
+     * @param col_pro_id ID obrade
+     * @param ref_col_pro_id ID referentne obrade za izraèun pokrivenosti
+     * @param frame Okvir
+     * @param account Plasman iz okvira
+     * @param collateral Kolateral
+     * @param coverageAmountHRK Iznos koji pokriva plasman (u kunama)
+     * @param exchangeRate teèajna lista
+     * @return ID novostvorenog zapisa. Ako je došlo do greške, vraæa null.
+     */
+    public BigDecimal insertIntoFrameAccountCov(BigDecimal col_pro_id, BigDecimal ref_col_pro_id, FrameData frame, AccountData account, CollateralData collateral, BigDecimal coverageAmountHRK, HashMap exchangeRate)
+    {
+        batchContext.startStopWatch("insertIntoFrameAccountCov");
+        BigDecimal fra_acc_cov_id = null;
+        try
+        {
+            BigDecimal coverageAmountFrame = coverageAmountHRK.divide((BigDecimal)exchangeRate.get(collateral.coverageCurrency), 2, RoundingMode.HALF_UP);
+            BigDecimal coverageAmountAccount = coverageAmountHRK.divide((BigDecimal)exchangeRate.get(account.exposureCurrency), 2, RoundingMode.HALF_UP);
+            BigDecimal percent = new BigDecimal("0.00");
+            if(account.exposureAmountHRK.compareTo(BigDecimal.ZERO) > 0) percent = coverageAmountHRK.divide(account.exposureAmountHRK, 10, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+
+            YOY00 yoy00 = new YOY00(connCtx);
+            fra_acc_cov_id = yoy00.getNewId();
+
+            #sql [connCtx] {
+                INSERT INTO frame_account_cov (
+                    fra_acc_cov_id,
+                    ref_col_pro_id,
+                    col_pro_id,
+                    frame_cus_acc_id,
+                    cus_acc_id,
+                    frame_cur_id,
+                    frame_cov_amount,
+                    frm_cov_amount_kn,
+                    acc_cur_id,
+                    acc_amount,
+                    acc_amount_kn,
+                    acc_cov_amount,
+                    acc_cov_amount_kn,
+                    acc_cov_amount_fr,
+                    exp_percent,
+                    user_lock,
+                    col_hea_id )
+                VALUES (
+                    :(fra_acc_cov_id),
+                    :(ref_col_pro_id),
+                    :(col_pro_id),
+                    :(frame.cus_acc_id),
+                    :(account.cus_acc_id),
+                    :(collateral.coverageCurrency),
+                    :(collateral.coverageAmount),
+                    :(collateral.coverageAmountHRK),
+                    :(account.exposureCurrency),
+                    :(account.exposureAmount),
+                    :(account.exposureAmountHRK),
+                    :(coverageAmountAccount),
+                    :(coverageAmountHRK),
+                    :(coverageAmountFrame),
+                    :(percent),
+                    CURRENT TIMESTAMP,
+                    :(collateral.col_hea_id)
+                )
+            };
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska kod zapisivanja pokrivenosti plasmana iz okvira!", ex);
+            return null;
+        }
+        batchContext.stopStopWatch("insertIntoFrameAccountCov");
+        return fra_acc_cov_id;
+    }
+
+    /**
+     * Metoda koja ubacuje zapis o izvršenom izraèunu pokrivenosti odreðenog plasmana iz okvira u tablicu IN_DATA_DWH_ITEM.
+     * @param col_pro_id ID obrade
+     * @param input_id Veza na ulaznu tablicu
+     * @param input_code Veza na ulaznu tablicu
+     * @param output_id Veza na odredišnu tablicu
+     * @return Da li je metoda uspješno završila
+     */
+    public boolean insertIntoInDataDwhItem(BigDecimal col_pro_id, BigDecimal input_id, String input_code, BigDecimal output_id)
+    {
+        batchContext.startStopWatch("insertIntoInDataDwhItem");
+        try
+        {
+            #sql [connCtx] {
+                INSERT INTO in_data_dwh_item (
+                    col_pro_id,
+                    input_id,
+                    input_code,
+                    status,
+                    output_id )
+                VALUES (
+                    :(col_pro_id),
+                    :(input_id),
+                    :(input_code),
+                    '0',
+                    :(output_id) )
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod ubacivanja zapisa u tablicu IN_DATA_DWH_ITEM!", ex);
+            return false;
+        }
+        batchContext.stopStopWatch("insertIntoInDataDwhItem");
+        return true;
+    }
+
+    /**
+     * Metoda koja evidentira završetak izvoðenja obrade u tablicu COL_PROC.
+     * @param col_pro_id ID obrade
+     * @return Da li je metoda uspješno završila
+     */
+    public boolean updateColProc(BigDecimal col_pro_id)
+    {
+        batchContext.startStopWatch("updateColProc");
+        try
+        {
+            batchContext.beginTransaction();
+            #sql [connCtx] {
+                UPDATE col_proc
+                SET col_number = (SELECT COUNT(*) FROM in_data_dwh_item WHERE col_pro_id = :(col_pro_id)),
+                    proc_ts = CURRENT TIMESTAMP,
+                    proc_status = '1',
+                    user_lock = CURRENT TIMESTAMP
+                WHERE col_pro_id = :(col_pro_id)
+            };
+            batchContext.commitTransaction();
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod evidentiranja zavrsetka izvodjenja obrade!", ex);
+            return false;
+        }
+        batchContext.stopStopWatch("updateColProc");
+        return true;
+    }
+}

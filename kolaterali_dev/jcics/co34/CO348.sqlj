@@ -1,0 +1,86 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+
+import java.sql.Timestamp;
+import java.util.Vector;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy9.YOY90;
+// transakcija provjerava da li hipoteka koja se deaktivira je zadnja hipoteka
+import hr.vestigo.modules.collateral.common.yoyE.YOYE1;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+public class CO348 extends RemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co34/CO348.sqlj,v 1.1 2014/06/17 12:23:38 hrazst Exp $";
+	
+	private DeclCO34 d = null;
+	
+	public CO348(DeclCO34 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+        
+        ConnCtx ctx = tc.getContext();
+        int countMortgage = 0;
+        String AGREEMENT = null;
+        BigDecimal HF_REC_LOP_ID = null;
+        BigDecimal COL_HEA_ID = null;
+        BigDecimal FRA_AGR_ID = null;
+        YOY62 SQLHelper=new YOY62(tc); 
+        
+        BigDecimal rba_hf = new BigDecimal("1602772003.00");
+        
+        #sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        
+        tc.debug ( "......poceo CO348 " +d.kolmortagedeactcount.col_hf_prior_id + "____");
+
+        // Milka, 14.10.2008 - provjeriti da li je na hipoteku vezan koji aktivni plasman, ako je, ne moze se deaktivirati - izbaceno 27.11.2008
+        // dozvoljeno deaktivirati hipoteku iako je na nju vezan aktivni plasman  
+        // dohvat podataka koji su potrebni da se vidi da li se hipoteka moze deaktivirati
+        try {
+            #sql [ctx] {SELECT  AGREEMENT, HF_REC_LOP_ID, HF_COLL_HEAD_ID, FRA_AGR_ID
+                        INTO    :(AGREEMENT), :(HF_REC_LOP_ID), :(COL_HEA_ID), :(FRA_AGR_ID)
+                        FROM    COLL_HF_PRIOR
+                        WHERE coll_hf_prior_id = :(d.kolmortagedeactcount.col_hf_prior_id)    
+                    };                                                                      
+        } catch(SQLException e){
+            if (e.getErrorCode()!=100) throw e;
+            else
+                throw new VestigoTMException(1, "Transaction CO348: Hipoteka obrisana ili mijenjana ","errclt7", null);                 
+        }         
+        //HF_REC_LOP_ID     
+        tc.debug ( "......DOHVACENA HIPOTEKA " + HF_REC_LOP_ID + "__" +  AGREEMENT + "__SPRAZUM: " + FRA_AGR_ID);
+        
+        if (HF_REC_LOP_ID.compareTo(rba_hf) == 0) {
+            // hipoteka je u korist RBA     
+            //  provjeriti da li je dio okvirnog sporazuma
+            if (AGREEMENT != null && AGREEMENT.equalsIgnoreCase("D")) {
+                // da li je hipoteka zadnja hipoteka vezana na verificirani ugovor-ako je ne moze ju se deaktivirati               
+                // treba najprije deaktivirati ugovor 
+                countMortgage=SQLHelper.getNumberOfMortageByAgreement(ctx, FRA_AGR_ID);                                        
+                tc.debug("1. Num_of_RBA hipoteka vezanih za sporazum: " + countMortgage);     
+                if (countMortgage == 1) {
+                    throw new VestigoTMException(1, "Transaction CO348: Veza hipoteka - ugovor! ","colErr027", null);   
+                }  
+            } else {
+                // nije dio sporazuma - moze se deaktivirati      
+            }    
+        }              
+        int num_mort=0;            
+        num_mort=SQLHelper.getNumberOfActiveMortageExceptThis(ctx, COL_HEA_ID, d.kolmortagedeactcount.col_hf_prior_id);
+        tc.debug("DOHVATIO num_mort hipoteka vezanih za kolateral: " + num_mort);            
+        d.kolmortagedeactcount.MORTAGE_NUMBER=num_mort;
+	}
+}  
+ 
+

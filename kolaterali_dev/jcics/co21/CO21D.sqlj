@@ -1,0 +1,83 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+ 
+public class CO21D extends RemoteTransaction {
+    // akcija kolateral seli na listu kolaterala u vlasništvu banke
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO21D.sqlj,v 1.2 2016/07/07 11:46:16 hrazst Exp $";
+       
+    private DeclCO21 d = null;
+    private TransactionContext mtc=null;
+    
+    public CO21D(DeclCO21 d) {
+        this.d = d;
+    }  
+    
+    public void execute(TransactionContext tc) throws Exception {       
+        Date CURR_DATE = null;
+        Timestamp CREATE_DATE_TIME = null;
+        
+        ConnCtx ctx = tc.getContext();
+        mtc=tc;     
+       
+        #sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+        
+        #sql[ctx] { 
+            SELECT current date, current timestamp 
+            INTO :(CURR_DATE), :(CREATE_DATE_TIME)
+            FROM sysibm.sysdummy1 
+        };
+        
+        YOY60 YOY60=new YOY60(tc);
+        
+        CollListQData plq = new CollListQData();   
+  
+        plq.col_hea_id=d.collownerbankmapping.col_hea_id;   
+        plq.status="1";
+        plq.income_time = CREATE_DATE_TIME;
+        plq.use_id=d.collownerbankmapping.use_id;   
+        plq.release_time = CREATE_DATE_TIME;
+        plq.cmnt="";
+        plq.action_type="VLASNI\u0160TVO BANKE";     
+        plq.org_uni_id = d.collownerbankmapping.org_uni_id;
+        // saljem ga sa liste neaktivnih - 709223
+        plq.source_list = "709223";
+        plq.status_source_list = "1"; 
+        // na listu kolaterala u vlasništvu banke listu - 712223 
+        plq.target_list = "712223";  
+        plq.status_target_list = "0";
+        
+        debug("plq data=" + plq.toString());
+        
+        YOY60.update_insert_CollListQ(plq); 
+         
+        //napraviti update statusa  
+        #sql[ctx]{
+            UPDATE COLL_HEAD
+            SET collateral_status = '7', 
+                user_lock = :(CREATE_DATE_TIME),
+                use_id = :(d.collownerbankmapping.use_id),
+                org_uni_id = :(d.collownerbankmapping.org_uni_id)
+                WHERE col_hea_id = :(d.collownerbankmapping.col_hea_id)
+        };  
+    } 
+    
+    private void debug(String s){
+        mtc.debug("---CO21D -> " + s);
+    } 
+}
+
+

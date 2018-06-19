@@ -1,0 +1,586 @@
+package hr.vestigo.modules.collateral.common.yoy4;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+import hr.vestigo.modules.collateral.common.yoy6.CurrencyData;
+import hr.vestigo.modules.collateral.common.yoy6.GCTCData;
+import hr.vestigo.modules.collateral.common.yoy6.UserData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoy6.YOY64;
+
+import java.sql.*;
+ 
+
+public class YOY42 {
+ 
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy4/YOY42.sqlj,v 1.25 2017/06/01 12:03:38 hrazst Exp $";
+
+	private ConnCtx ctx=null;
+	private RemoteContext rc=null;
+	private CollHeadSelectData chds=null;
+	Date date=null;
+
+	public YOY42(RemoteContext rc, CollHeadSelectData chds) throws Exception {
+		this.ctx = rc.getContext();
+		this.rc=rc;
+		this.chds=chds;
+	} 
+	 
+	public void selectFromCollHead() throws Exception{
+		rc.debug("SELECT FROM COLL_HEAD");
+		rc.debug("chds.COL_HEA_ID : "+chds.COL_HEA_ID);
+		try{ 
+				#sql [ctx]{
+                SELECT
+                        col_hea_id,
+                        col_type_id,
+                        col_num,
+                        col_desc,
+                        real_est_euse_id,
+                        real_est_estn_valu,
+                        real_est_estn_date,
+                        real_est_datn_from,
+                        real_est_datn_unti,
+                        real_est_nomi_desc,
+                        real_est_nomi_valu,
+                        real_est_nomi_date,
+                        real_est_liqu_valu,
+                        real_est_liqu_date,
+                        real_est_bptc_valu,
+                        real_est_bptc_date,
+                        real_est_nm_cur_id,
+                        cus_id,
+                        coll_cus_id,
+                        date_to_lop,
+                        date_rec_lop,
+                        rec_lop,
+                        com_doc,
+                        missing_doc,
+                        date_to_doc,
+                        date_rec_doc,
+                        reva_coef,  
+                        reva_date,
+                        reva_date_am,
+                        reva_bvalue,
+                        reva_bdate,
+                        reva_bdate_am,
+                        amort_age,
+                        amort_per_cal_id,
+                        amort_val_cal,
+                        nepo_value,
+                        nepo_date,  
+                        nepo_per_cal,
+                        third_right,
+                        third_right_cur_id,
+                        third_right_nom,
+                        third_right_date,   
+                        hfs_value,
+                        hfs_value_date,
+                        hfs_value_last_one,
+                        hfs_date_last_one,
+                        weigh_value,
+                        weigh_date,
+                        weigh_bvalue,
+                        weigh_bdate,
+                        sum_limit_val,
+                        sum_limit_dat,
+                        sum_part_val,
+                        sum_part_dat,
+                        avail_value,
+                        avail_per_cal,
+                        avail_date,
+                        inspol_ind,
+                        col_place,
+                        col_county,
+                        col_district,
+                        col_resi_quar,
+                        coll_mvp_ponder,
+                        coll_hnb_ponder,    
+                        coll_rzb_ponder,        
+                        real_est_date_from,
+                        real_est_date_unti,
+                        real_est_add_data,
+                        real_est_status,
+                        real_est_spec_stat,
+                        use_open_id,
+                        use_id,
+                        opening_ts,
+                        user_lock,
+                        eve_id,
+                        eligibility,
+                        acum_buy_value,
+                        origin_org_uni_id,
+                        org_uni_id,
+                        use_id_ver,
+                        use_id_aut,
+                        verification_ts,
+                        autorization_ts,
+                        mortgage_status,
+                        collateral_status,
+                        workflow_indic,
+                        cover_indic,
+                        ver_send_ts,
+                        basic_data_status,
+                        coll_data_status,
+                        col_cat_id,
+                        use_id_ver_snd,
+                        financial_flag,
+                        rba_eligibility,
+                        law_eligibility,
+                        rba_elig_dsc,
+                        number,
+                        b1_eligibility,
+                        b2_irb_elig,
+                        nd_eligibility,
+                        crm_hnb,
+                        used_in_recovery,
+                        kind_of_recovery,
+                        full_amount,
+                        full_amount_cur_id,
+                        recovery_amount,
+                        recovery_cur_id,
+                        recovery_comment,
+                        recovery_date,
+                        recovery_rate,
+                        b2_irb_insag_elig,
+                        b2_hnb_insag_elig,
+                        use_id_co,
+                        chg_nom_val_proc_ts,
+                        real_est_nom_type,
+                        prec_exec_est,
+                        correct_value,
+                        respect_deadline,
+                        prof_to_rba,
+                        prof_to_client,
+                        col_eco_life,
+                        real_est_estn_int,
+                        est_type,
+                        met_est_1,
+                        met_est_2,
+                        coll_risk,
+                        non_ins_reason,
+                        ins_cov_coll,
+                        recovery_proc_stat,
+                        gctc_id,
+                        endorsement_type_id,
+                        object_type_id,
+                        property_type_id,
+		                contract_type,
+                        realization_amount,
+                        realization_cur_id,
+                        realization_date,
+                        realization_kind,
+                        realization_cost,
+		                part_of_complex,
+                        realization_cost_cur_id, 
+                        for_sale,
+                        for_sale_date,
+		                takeover_from_bank
+                INTO 
+						:(chds.COL_HEA_ID),    													                                                
+						:(chds.COL_TYPE_ID),  
+						:(chds.Coll_txtCode), 
+						:(chds.Coll_txtDesc),  
+						:(chds.REAL_EST_EUSE_ID),                     		
+						:(chds.Coll_txtEstnValu),                   
+						:(chds.Coll_txtEstnDate),                   
+						:(chds.Coll_txtDatnFrom),                   
+						:(chds.Coll_txtDatnUnti),                   
+						:(chds.Coll_txtNomiDesc), 
+						:(chds.Coll_txtNomiValu),                   		
+						:(chds.Coll_txtNomiDate), 
+						:(chds.Coll_txtLiquValu),                   		
+						:(chds.Coll_txtLiquDate),                   		
+						:(chds.Coll_txtBptcValu),                   		
+						:(chds.Coll_txtBptcDate), 
+						:(chds.REAL_EST_NM_CUR_ID), 
+						:(chds.CUS_ID),   
+						:(chds.COLL_CUS_ID),   
+						:(chds.Coll_txtDateToLop),   
+						:(chds.Coll_txtDateRecLop), 
+						:(chds.Coll_txtRecLop), 
+						:(chds.Coll_txtComDoc),                              		                                      
+						:(chds.Coll_txtMissingDoc),                          		                                      
+						:(chds.Coll_txtDateToDoc),                           		                                      
+						:(chds.Coll_txtDateRecDoc), 
+						:(chds.Coll_txtRevaCoefMan),                        		                                   
+						:(chds.Coll_txtRevaDate),                            		                                           
+						:(chds.Coll_txtRevaDateAM),                         		                                         
+						:(chds.Coll_txtRevaBValue),                          		                                          
+						:(chds.Coll_txtRevaBDate),                           		
+						:(chds.Coll_txtRevaBDateAM),                        	     
+						:(chds.Coll_txtAmortAge),                            	    
+						:(chds.AMORT_PER_CAL_ID),                        	                            
+						:(chds.Coll_txtAmortValCal),  
+						:(chds.Coll_txtNepoValue),                           	                            
+						:(chds.Coll_txtNepoDate),                             	                            
+						:(chds.Coll_txtNepoPerCal), 
+						:(chds.Coll_txtThirdRight),                          	                            
+						:(chds.THIRD_RIGHT_CUR_ID),                   	                            
+						:(chds.Coll_txtThirdRightInNom),                      		                                         
+						:(chds.Coll_txtThirdRightDate),                    	                                                        		                                         
+						:(chds.Coll_txtHfsValue),                           	                                                        		                                         
+						:(chds.Coll_txtHfsValueDate),                         		                                         
+						:(chds.Coll_txtHfsValueLastOne),                      		                                         
+						:(chds.Coll_txtHfsDateLastOne),     
+						:(chds.Coll_txtAcouValue),                            		                                         
+						:(chds.Coll_txtAcouDate),                          
+						:(chds.Coll_txtAcouBValue),                        
+						:(chds.Coll_txtAcouBDate),  
+						:(chds.Coll_txtSumLimitVal),                                                     
+						:(chds.Coll_txtSumLimitDat),                                                       
+						:(chds.Coll_txtSumPartVal),                                                          
+						:(chds.Coll_txtSumPartDat), 
+						:(chds.Coll_txtAvailValue),                                                       
+						:(chds.Coll_txtAvailPerCal),                                                       
+						:(chds.Coll_txtAvailDate),  
+						:(chds.INSPOL_IND),  
+						:(chds.COL_PLACE), 
+						:(chds.COL_COUNTY), 
+						:(chds.COL_DISTRICT), 
+						:(chds.COL_RESI_QUAR), 
+						:(chds.Coll_txtCollMvpPonder), 
+						:(chds.Coll_txtCollHnbPonder), 
+						:(chds.Coll_txtCollRzbPonder), 
+						:(chds.Coll_txtDateFrom),                   	                         
+						:(chds.Coll_txtDateUnti),                   	 
+						:(chds.Coll_txtAddData),  
+						:(chds.STATUS),                      		                          
+						:(chds.SPEC_STATUS),  
+						:(chds.USE_OPEN_ID),
+						:(chds.USE_ID),
+						:(chds.Coll_txtOpeningTs),
+						:(chds.USER_LOCK),
+						:(chds.EVE_ID),
+						:(chds.Coll_txtEligibility),
+						:(chds.Coll_txtAcumBuyValue),
+						:(chds.ORIGIN_ORG_UNI_ID),
+						:(chds.ORG_UNI_ID),
+						:(chds.USE_ID_VER),
+						:(chds.USE_ID_AUT),
+						:(chds.VERIFICATION_TS),
+						:(chds.AUTORIZATION_TS),
+						:(chds.MORTGAGE_STATUS),
+						:(chds.COLLATERAL_STATUS),
+						:(chds.WORKFLOW_INDIC),
+						:(chds.COVER_INDIC),
+						:(chds.VER_SEND_TS),
+						:(chds.BASIC_DATA_STATUS), 
+						:(chds.COLL_DATA_STATUS),
+						:(chds.COL_CAT_ID),
+						:(chds.USE_ID_VER_SND),
+						:(chds.FINANCIAL_FLAG),
+						:(chds.ColRba_txtEligibility),
+						:(chds.KolLow_txtEligibility),
+						:(chds.Kol_txtRbaEligDsc),
+						:(chds.Coll_txtNumOf),
+						:(chds.Coll_txtB1Eligibility),
+						:(chds.Coll_txtB2IRBEligibility),
+			            :(chds.Coll_txtNDEligibility),
+			            :(chds.Kol_txtCRMHnb),
+			            :(chds.used_in_recovery),
+                        :(chds.kind_of_recovery),
+                        :(chds.full_amount),
+                        :(chds.full_amount_cur_id),
+                        :(chds.recovery_amount),
+                        :(chds.recovery_cur_id),
+                        :(chds.recovery_comment),
+                        :(chds.recovery_date),
+                        :(chds.recovery_rate),
+                        :(chds.b2_irb_insag_elig),
+                        :(chds.b2_hnb_insag_elig),
+                        :(chds.use_id_co),
+                        :(chds.chg_nom_val_proc_ts),
+                        :(chds.real_est_nom_type),
+                        :(chds.prec_exec_est),
+                        :(chds.correct_value),
+                        :(chds.respect_deadline),
+                        :(chds.prof_to_rba),
+                        :(chds.prof_to_client),
+                        :(chds.col_eco_life),
+                        :(chds.real_est_estn_int),
+                        :(chds.est_type),
+                        :(chds.met_est_1),
+                        :(chds.met_est_2),
+                        :(chds.coll_risk), 
+                        :(chds.non_ins_reason),
+                        :(chds.ins_cov_coll),
+                        :(chds.recovery_proc_stat),
+                        :(chds.gctc_id),
+                        :(chds.endorsement_type_id),
+                        :(chds.object_type_id),
+                        :(chds.property_type_id),
+		                :(chds.contract_type),
+		                :(chds.realization_amount),
+                        :(chds.realization_cur_id),
+                        :(chds.realization_date),
+                        :(chds.realization_kind),
+                        :(chds.realization_cost),
+                        :(chds.part_of_complex),
+                        :(chds.realization_cost_cur_id), 
+                        :(chds.for_sale),
+                        :(chds.for_sale_date), 
+		                :(chds.takeover_from_bank)
+					FROM COLL_HEAD
+					WHERE col_hea_id = :(chds.COL_HEA_ID)                     		                   
+				}; 
+    	}catch(java.sql.SQLException se){
+    			rc.debug ( "......YOY42.sqlj select from coll_head SQL ErrorCode " + se.getErrorCode());
+    			rc.debug ( "......YOY42.sqlj select from coll_head SQL SQLState " + se.getSQLState());
+    			rc.debug ( "......YOY42.sqlj select from coll_head SQL Message " + se.getMessage());
+    			throw new VestigoTMException(1, "Transaction YOY42: Error select coll_head! ","err411a", null);
+    	} 
+		chds.Coll_txtUserLock = chds.USER_LOCK;
+		getOtherHeadData();	
+        YOY64 yoy64=new YOY64(rc);
+        GCTCData data=yoy64.getGCTCDataByTypeId(chds.gctc_id, chds.object_type_id, chds.property_type_id, chds.endorsement_type_id);
+ 
+        chds.gctc_code = data.gctc_code;
+        chds.gctc_desc = data.gctc_desc;
+        chds.object_type_code = data.object_type_code;
+        chds.object_type_desc = data.object_type_desc;
+        chds.property_type_code = data.property_type_code;
+        chds.property_type_desc = data.property_type_desc;
+        chds.endorsement_type_code = data.endorsement_type_code;
+        chds.endorsement_type_desc = data.endorsement_type_desc;
+        
+        debug(chds.toString());
+	}
+
+	private void getOtherHeadData() throws Exception {
+		YOY63 SQLhelper = new YOY63(rc);
+		// dohvat iz tabele COLLATERAL_TYPE
+		try{    
+			if (chds.COL_TYPE_ID != null){
+	             
+				#sql [ctx] {SELECT coll_type_code, coll_type_name
+	             			INTO :(chds.Coll_txtCollTypeCode), :(chds.Coll_txtCollTypeName)
+	             			FROM COLLATERAL_TYPE 
+	     	       			WHERE coll_type_id = :(chds.COL_TYPE_ID)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 		
+	    
+	    // dohvat iz tabele CUSTOMER
+		try{    
+		if (chds.REAL_EST_EUSE_ID != null){	             
+			    #sql [ctx] {SELECT register_no, name, tax_number
+	             			INTO :(chds.Coll_txtEUseIdLogin), :(chds.Coll_txtEUseIdName), :(chds.Coll_txtEUseIdLoginOIB)
+	             			FROM CUSTOMER 
+	     	       			WHERE cus_id = :(chds.REAL_EST_EUSE_ID)}; 
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 		
+
+		try{    
+			if (chds.CUS_ID != null){
+		             
+				#sql [ctx] {SELECT register_no, name
+	             			INTO :(chds.Coll_txtCarrierRegisterNo), :(chds.Coll_txtCarrierName)
+	             			FROM CUSTOMER 
+	     	       			WHERE cus_id = :(chds.CUS_ID)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }	 				 
+		 
+		try{    
+			if (chds.COLL_CUS_ID != null){
+		             
+				#sql [ctx] {SELECT register_no, name
+	             			INTO :(chds.Coll_txtOwnerRegisterNo), :(chds.Coll_txtOwnerName)
+	             			FROM CUSTOMER 
+	     	       			WHERE cus_id = :(chds.COLL_CUS_ID)};
+	    	}
+	    }catch(SQLException e){
+	    	if (e.getErrorCode()!=100) throw e;
+	    }
+	    
+	    //  dohvat iz tabele CURRENCY	
+        CurrencyData curData=null;
+		if (chds.REAL_EST_NM_CUR_ID != null){ 
+	        curData=SQLhelper.getCurrencyData(chds.REAL_EST_NM_CUR_ID);
+	        chds.Coll_txtEstnCurr=curData.code_char;			    
+  		}
+        chds.Coll_txtNmValCurr = chds.Coll_txtEstnCurr;
+
+		if (chds.THIRD_RIGHT_CUR_ID != null){ 
+	         curData=SQLhelper.getCurrencyData(chds.THIRD_RIGHT_CUR_ID);
+	         chds.Coll_txtThirdRightCurCodeChar=curData.code_char;
+		}        
+        if (chds.full_amount_cur_id != null){ 
+            curData=SQLhelper.getCurrencyData(chds.full_amount_cur_id);
+            chds.full_amount_cur_codeChar=curData.code_char;
+        } 
+        if (chds.recovery_cur_id != null){ 
+            curData=SQLhelper.getCurrencyData(chds.recovery_cur_id);
+            chds.recovery_cur_codeChar=curData.code_char;
+        } 
+        if (chds.realization_cur_id != null){ 
+            curData=SQLhelper.getCurrencyData(chds.realization_cur_id);
+            chds.realization_cur_char=curData.code_char;
+        }
+        
+        if (chds.realization_cost_cur_id != null){ 
+            curData=SQLhelper.getCurrencyData(chds.realization_cost_cur_id);
+            chds.realization_cost_cur_code_char=curData.code_char;
+        } 
+        
+        // dohvat iz SYSTEM_CODE_VALUE
+        try{ 
+			if (chds.AMORT_PER_CAL_ID != null) {         	   	 
+				#sql [ctx] {
+                    SELECT sys_code_value
+                        INTO :(chds.Coll_txtAmortPerCal)
+                        FROM system_code_value
+                        WHERE sys_cod_val_id = :(chds.AMORT_PER_CAL_ID)  };  
+			}	
+       	}catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }
+       	
+       	//B2 prihvatljivost
+    	if (chds.Coll_txtEligibility != null && !chds.Coll_txtEligibility.trim().equals("")) {
+            debug("Coll_txtEligibility " + chds.Coll_txtEligibility);
+            chds.Coll_txtEligDesc = SQLhelper.getSystemCodeDescription("clt_eligib", chds.Coll_txtEligibility);                      
+            debug("chds.Coll_txtEligDesc " + chds.Coll_txtEligDesc); 
+    	}	
+    	//ND prihvatljivost 
+        if (chds.Coll_txtNDEligibility != null && !chds.Coll_txtNDEligibility.trim().equals("")) {  
+            debug("Coll_txtNDEligibility " + chds.Coll_txtNDEligibility);
+            chds.Coll_txtNDEligDesc = SQLhelper.getSystemCodeDescription("clt_eligib", chds.Coll_txtNDEligibility);                      
+            debug("chds.Coll_txtEligDesc " + chds.Coll_txtNDEligDesc); 
+        }
+        //RBA prihvatljivost
+        
+		if (chds.ColRba_txtEligibility != null && !chds.ColRba_txtEligibility.trim().equals("")) { 
+            debug("ColRba_txtEligibility " + chds.ColRba_txtEligibility);
+            chds.ColRba_txtEligDesc = SQLhelper.getSystemCodeDescription("clt_rba_eligib", chds.ColRba_txtEligibility);                      
+            debug("chds.ColRba_txtEligDesc " + chds.ColRba_txtEligDesc); 
+		}	
+	    
+		//misljenje pravne sluzbe  
+		if (chds.KolLow_txtEligibility != null && !chds.KolLow_txtEligibility.trim().equals("")) {  
+            debug("KolLow_txtEligibility " + chds.KolLow_txtEligibility);
+            chds.KolLow_txtEligDesc = SQLhelper.getSystemCodeDescription("clt_eligib", chds.KolLow_txtEligibility);                      
+            debug("chds.Coll_txtEligDesc " + chds.KolLow_txtEligDesc);
+		}
+       	
+		//B1 prihvatljivost 
+		if (chds.Coll_txtB1Eligibility != null && !chds.Coll_txtB1Eligibility.trim().equals("")) { 
+            debug("Coll_txtB1Eligibility " + chds.Coll_txtB1Eligibility);
+            chds.Coll_txtB1EligDesc = SQLhelper.getSystemCodeDescription("clt_eligib", chds.Coll_txtB1Eligibility);                      
+            debug("chds.Coll_txtB1EligDesc " + chds.Coll_txtB1EligDesc);			
+		}
+		
+		//B2 IRB prihvatljivost 
+		if (chds.Coll_txtB2IRBEligibility != null && !chds.Coll_txtB2IRBEligibility.trim().equals("")) { 
+            debug("Coll_txtB2IRBEligibility " + chds.Coll_txtB2IRBEligibility);
+            chds.Coll_txtB2IRBEligDesc = SQLhelper.getSystemCodeDescription("clt_eligib", chds.Coll_txtB2IRBEligibility);                      
+            debug("chds.Coll_txtB2IRBEligDesc " + chds.Coll_txtB2IRBEligDesc);    
+		}
+		
+		if (chds.BASIC_DATA_STATUS != null && !chds.BASIC_DATA_STATUS.trim().equals("")) {
+            debug("BASIC_DATA_STATUS " + chds.BASIC_DATA_STATUS);
+            chds.Coll_txtBasicDataSt = SQLhelper.getSystemCodeDescription("collateral_code", chds.BASIC_DATA_STATUS);                      
+            debug("chds.Coll_txtBasicDataSt " + chds.Coll_txtBasicDataSt);    		
+    	}	
+	        
+    	if (chds.COLL_DATA_STATUS != null && !chds.COLL_DATA_STATUS.trim().equals("")) {
+            debug("COLL_DATA_STATUS " + chds.COLL_DATA_STATUS);
+            chds.Coll_txtCollDataSt = SQLhelper.getSystemCodeDescription("collateral_code", chds.COLL_DATA_STATUS);                      
+            debug("chds.Coll_txtCollDataSt " + chds.Coll_txtCollDataSt);  
+    	} 
+
+    	if (chds.COVER_INDIC != null && !chds.COVER_INDIC.trim().equals("")) { 
+            debug("COVER_INDIC " + chds.COVER_INDIC);
+            chds.Coll_txtCoverIndic = SQLhelper.getSystemCodeDescription("collateral_code", chds.COVER_INDIC);                      
+            debug("chds.Coll_txtCoverIndic " + chds.Coll_txtCoverIndic);      
+    	}		  
+
+        if (chds.MORTGAGE_STATUS != null && !chds.MORTGAGE_STATUS.trim().equals("")) {
+            debug("MORTGAGE_STATUS " + chds.MORTGAGE_STATUS);
+            chds.Coll_txtMortgageSt = SQLhelper.getSystemCodeDescription("collateral_code", chds.MORTGAGE_STATUS);                      
+            debug("chds.Coll_txtMortgageSt " + chds.Coll_txtMortgageSt); 
+        } 
+
+    	if (chds.FINANCIAL_FLAG != null && !chds.FINANCIAL_FLAG.trim().equals("")) { 
+            debug("FINANCIAL_FLAG " + chds.FINANCIAL_FLAG);
+            chds.Coll_txtFinFlag = SQLhelper.getSystemCodeDescription("financial_flag", chds.FINANCIAL_FLAG);                      
+            debug("chds.Coll_txtFinFlag " + chds.Coll_txtFinFlag); 
+    	}
+    	
+        if(chds.real_est_nom_type != null && !chds.real_est_nom_type.trim().equals("")){
+            debug("real_est_nom_type " + chds.real_est_nom_type);
+            chds.real_est_nom_type_desc = SQLhelper.getSystemCodeDescription("coll_RealEstNomTyp", chds.real_est_nom_type);                      
+            debug("chds.real_est_nom_type_desc " + chds.real_est_nom_type_desc);                            
+        }
+        if(chds.kind_of_recovery != null && !chds.kind_of_recovery.trim().equals("")){
+            debug("kind_of_recovery " + chds.kind_of_recovery);
+            chds.kind_of_recovery_desc = SQLhelper.getSystemCodeDescription("kind_of_recovery", chds.kind_of_recovery);                      
+            debug("chds.kind_of_recovery_desc " + chds.kind_of_recovery_desc);                            
+        }  
+        if(chds.est_type != null && !chds.est_type.trim().equals("")){
+            debug("est_type " + chds.est_type);
+            chds.est_type_desc = SQLhelper.getSystemCodeDescription("est_type", chds.est_type);                      
+            debug("chds.est_type_desc " + chds.est_type_desc);                            
+        } 
+        UserData userData=null;
+        userData=SQLhelper.getUserData(chds.USE_OPEN_ID);
+        chds.Coll_txtUseOpenIdLogin=userData.login;
+        chds.Coll_txtUseOpenIdName=userData.user_name;
+
+
+        if (chds.USE_ID != null){ 
+            userData=SQLhelper.getUserData(chds.USE_ID);
+            chds.Coll_txtUseIdLogin=userData.login;
+            chds.Coll_txtUseIdName=userData.user_name;
+        }                        
+
+        if (chds.USE_ID_VER_SND != null){
+            userData=SQLhelper.getUserData(chds.USE_ID_VER_SND);
+            chds.C_txtUseIdSndVerLogin=userData.login;
+            chds.C_txtUseIdSndVerName=userData.user_name;
+        }  
+
+        if (chds.USE_ID_VER != null){
+            userData=SQLhelper.getUserData(chds.USE_ID_VER);
+            chds.C_txtUseIdVerLogin=userData.login;
+            chds.C_txtUseIdVerName=userData.user_name;
+        }
+
+        if (chds.USE_ID_AUT != null){   
+            userData=SQLhelper.getUserData(chds.USE_ID_AUT);
+            chds.C_txtUseIdAutLogin=userData.login;
+            chds.C_txtUseIdAutName=userData.user_name;
+        }
+        
+        if (chds.use_id_co!= null){   
+            userData=SQLhelper.getUserData(chds.use_id_co);
+            chds.use_id_co_code=userData.login;
+            chds.use_id_co_name=userData.user_name;
+        }
+    	
+        //TODO: ovo bi trebalo obrisati kada se svi kolaterali nadograde... jer se sada Kol_txtPonderMVP dohvaca u jednoj globalnoj funkciji
+        // dohvatiti ponder ako postoji
+        try{ 
+ 			#sql [ctx] {
+                SELECT ponder_value
+                INTO :(chds.Kol_txtPonderMVP)
+                FROM coll_ponder
+                WHERE col_hea_id = :(chds.COL_HEA_ID) 
+        		AND status = 'A' AND ponder_type='MVP'
+                WITH UR
+            }; 
+        }catch(SQLException e){
+        	if (e.getErrorCode()!=100) throw e;
+        }  
+	}	
+	
+    private void debug(String s){
+        rc.debug("---YOY42 -> " + s);
+    } 
+} 
+

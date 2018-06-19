@@ -1,0 +1,163 @@
+package hr.vestigo.modules.collateral.jcics.co28;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.util.Vector;
+
+import hr.vestigo.framework.util.CharUtil;
+
+ 
+#sql iterator Iter21 (java.math.BigDecimal cus_acc_id,
+					 String cus_acc_no,
+					 java.math.BigDecimal ban_pro_typ_id,
+					 String name,
+					 java.math.BigDecimal acc_cur_id,
+					 String code_char,
+                     String cus_acc_status);
+
+
+
+
+   
+
+public class CO282 extends RemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co28/CO282.sqlj,v 1.3 2012/05/30 08:42:23 hramkr Exp $";
+	private DeclCO28 d = null;
+   	
+	private String ind;
+	   	
+	public CO282(DeclCO28 d) {
+			this.d = d;
+		}
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx connCtx0 = tc.getContext();
+		Iter21 iter2 = null;		
+       	BigDecimal cus_id = null;
+		#sql[connCtx0] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+// broj partije
+
+		if (d.cusaccaccountrobilookupmap.cus_acc_no!= null) {
+			if (d.cusaccaccountrobilookupmap.cus_acc_no.equals("")) {
+				d.cusaccaccountrobilookupmap.cus_acc_no = null;
+			}else{
+				d.cusaccaccountrobilookupmap.cus_acc_no = d.cusaccaccountrobilookupmap.cus_acc_no.replace('*','%');
+			}
+		} 
+		
+// 		37718005 - loro racuni banaka
+//		37719005 - nostro racuni banaka
+		
+		if (d.cusaccaccountrobilookupmap.frame_cus_acc_no != null) {
+		    d.cusaccaccountrobilookupmap.frame_cus_acc_no = d.cusaccaccountrobilookupmap.frame_cus_acc_no.trim();
+            try
+            
+            {
+                #sql [connCtx0] {
+                SELECT b.cus_id 
+                INTO :(cus_id)
+                FROM  bank a, customer b
+                WHERE a.swift_address = :(d.cusaccaccountrobilookupmap.frame_cus_acc_no)
+                AND
+                      a.ban_id = b.cus_id
+                AND
+                      b.status = '0'
+                }; 
+            }   
+            catch (SQLException ex)
+            { 
+                if (tc.getSQLExHandler().isEmptyRowset(ex)) {
+                    throw new VestigoTMException(1, "Transaction CO282: No more data! ","wrn090", null);
+                }   
+            }		
+		}
+		        
+	
+
+			if (d.cusaccaccountrobilookupmap.cus_acc_no == null || d.cusaccaccountrobilookupmap.cus_acc_no.trim().equals("")) {				
+									#sql [connCtx0] iter2 =	{ SELECT 
+											cuexp.cus_acc_id as cus_acc_id, 
+											cuexp.cus_acc_no as cus_acc_no, 
+											cuexp.ban_rel_typ_id as ban_pro_typ_id, 
+			                                cuexp.cus_acc_status as cus_acc_status,
+											bpt.ban_rel_type_name as name, 
+											cuexp.acc_cur_id as acc_cur_id,
+											cur.code_char as code_char
+										FROM 	customer_account cuexp 
+							LEFT OUTER JOIN		currency cur
+										ON		cuexp.acc_cur_id = cur.cur_id,
+												bank_relation_type bpt
+										WHERE cuexp.cus_id = :(cus_id) AND
+			                                  cuexp.ban_rel_typ_id = bpt.ban_rel_typ_id AND
+											  bpt.ban_rel_typ_id in (37718005,37719005) 
+											 
+									};				
+
+			} else if (d.cusaccaccountrobilookupmap.cus_acc_no != null && !d.cusaccaccountrobilookupmap.cus_acc_no.trim().equals("")) {
+								#sql [connCtx0] iter2 =	{ SELECT 
+                                            cuexp.cus_acc_id as cus_acc_id, 
+                                            cuexp.cus_acc_no as cus_acc_no, 
+                                            cuexp.ban_rel_typ_id as ban_pro_typ_id, 
+			                                cuexp.cus_acc_status as cus_acc_status,
+                                            bpt.ban_rel_type_name as name, 
+                                            cuexp.acc_cur_id as acc_cur_id,
+                                            cur.code_char as code_char
+                                        FROM    customer_account cuexp 
+                            LEFT OUTER JOIN     currency cur
+                                        ON      cuexp.acc_cur_id = cur.cur_id,
+                                                bank_relation_type bpt
+                                        WHERE cuexp.cus_id = :(cus_id) AND 
+			                                  cuexp.ban_rel_typ_id = bpt.ban_rel_typ_id AND
+                                              bpt.ban_rel_typ_id in (37718005,37719005) AND
+			                                  cuexp.cus_acc_no like :(d.cusaccaccountrobilookupmap.cus_acc_no) 
+				};								
+			}
+		
+		int number_of_rows=10;//tc.LOOKUP_FETCH_SIZE;
+		int level=d.cusaccaccountrobilookupmap.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+		int count=0;
+		int count_returned=0;
+		while (iter2.next()){
+			if(start<=count && start+number_of_rows>count){
+
+				Vector row=new Vector();
+				Vector unique = new Vector();
+				
+				
+				row.add(iter2.cus_acc_no());						
+				row.add(iter2.name());
+				row.add(iter2.code_char());
+				row.add(iter2.cus_acc_status());
+				
+				unique.add(iter2.cus_acc_id());	
+				unique.add(iter2.ban_pro_typ_id());
+				unique.add(iter2.acc_cur_id()); 
+				
+				d.cusaccaccountrobilookupmap.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			} 
+			count++;  
+		}
+	
+		if(count_returned==0){
+			throw new VestigoTMException(1, "Transaction CO282: No more data! ","wrn090", null);
+		} 
+		
+		if(iter2 != null) iter2.close();    
+				
+			
+	} 
+}
+
+
+
+

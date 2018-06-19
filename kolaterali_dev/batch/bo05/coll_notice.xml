@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report>
+	<Row>
+	</Row>
+	<Row>
+		<Data><Text>Redni broj</Text></Data>
+		<Data><Text>Org. jedinica kod</Text></Data>
+		<Data><Text>Org. jedinica naziv</Text></Data>
+		<Data><Text>Omega ID</Text></Data>
+		<Data><Text>Naziv komitenta</Text></Data>
+		<Data><Text>Adresa</Text></Data>
+		<Data><Text>Poštanski broj i mjesto</Text></Data>
+		<Data><Text>Broj zahtjeva</Text></Data>
+		<Data><Text>Partija</Text></Data>
+		<Data><Text>Kolateral-polica osiguranja</Text></Data>
+		<Data><Text>Kolateral osiguran policom</Text></Data>
+		<Data><Text>Broj police</Text></Data>
+		<Data><Text>Polica vrijedi do</Text></Data>
+		<Data><Text>Premija plaćena do</Text></Data>
+		<Data><Text>Akumulirana/otkupna vrijednost</Text></Data>
+		<Data><Text>Valuta</Text></Data>
+		<Data><Text>Status police</Text></Data>
+	</Row>
+	<Detail>
+		<Row>
+			<Data><Field Name="ser_number"/></Data>
+			<Data><Field Name="org_unit_code"/></Data>
+			<Data><Field Name="org_unit_name"/></Data>
+			<Data><Field Name="register_no"/></Data>
+			<Data><Field Name="name"/></Data>
+			<Data><Field Name="adress"/></Data>
+			<Data><Field Name="adress_part2"/></Data>
+			<Data><Field Name="request_number"/></Data>
+			<Data><Field Name="party_number"/></Data>
+			<Data><Field Name="coll_code_1"/></Data>
+			<Data><Field Name="coll_code_2"/></Data>
+			<Data><Field Name="policy_number"/></Data>
+			<Data><Field Name="expiry_date"/></Data>
+			<Data><Field Name="prem_payed_until"/></Data>
+			<Data><Field Name="value_acc_or_surren"/></Data>
+			<Data><Field Name="currency"/></Data>
+			<Data><Field Name="policy_state"/></Data>
+		</Row>
+	</Detail>
+	<Row>
+	</Row>
+</Report>	

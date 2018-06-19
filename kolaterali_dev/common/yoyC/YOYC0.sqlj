@@ -1,0 +1,632 @@
+package hr.vestigo.modules.collateral.common.yoyC;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.interfaces.CommonCollateralMethods;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.coreapp.common.yxyG.YXYG0;
+
+public class YOYC0 implements CommonCollateralMethods {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyC/YOYC0.sqlj,v 1.4 2010/03/10 08:37:36 hraamh Exp $";
+	
+	private RemoteContext context=null;
+	private ConnCtx connCtx;
+
+	/**
+	*
+	* Dohvat broja obradenih slogova (bez onih koji nisu upisani zbog gresaka)
+	* @return broj obradenih slogova
+	*/
+	public BigDecimal getRecordCount(BigDecimal col_pro_id){
+		BigDecimal result=null;
+		try{
+		    #sql [connCtx]{
+					select 
+						count(*) 
+					into 
+						:(result)
+					from 
+						in_data_dwh_item 
+					where 
+						col_pro_id=:(col_pro_id) and 
+						status<>'1'
+			};							  
+		}catch(SQLException e){
+			context.debug(".....CommonCollateralMethods getRecordCount        Message  : " + e.getMessage());
+			context.debug(".....CommonCollateralMethods getRecordCount      Error code : " + e.getErrorCode());
+			context.debug(".....CommonCollateralMethods getRecordCount        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			//throw(e);
+			return null;
+		}
+		return result;
+	}
+	
+	/**
+	 * Insert u tablicu evenata. Koristiti samo u batch obradama!
+	 * @param eve_typ_id tip dogadaja
+	 * @param org_uni_id id OJ-a
+	 * @param use_id user
+	 * @throws Exception
+	 */
+	public BigDecimal insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id, BigDecimal use_id) throws Exception{
+		if (!context.getClass().getName().equals("hr.vestigo.framework.remote.batch.BatchContext")){
+			//nije pozvano iz batcha-> vraca null
+			return null;
+		}
+		try{
+			
+			YXYB0 eve1 = new YXYB0(context);
+		  	YXYD0 genId = new YXYD0(context);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	BigDecimal eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",eve_id);
+		  	event.put("eve_typ_id", eve_typ_id);
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za preuzimanje podataka o vozilima iz PKR modula."); 
+		  	event.put("use_id", use_id);
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", context.getBankSign());
+		   	event.put("org_uni_id", org_uni_id); 
+		   	context.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		   	((BatchContext)context).updateEveID(eve_id);		
+		  	return eve_id;
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}
+
+	/**
+	 * Zapis pocetka obrade u COL_PROC tablicu. U ulaznoj mapi su potrebni podaci:
+	 * <table border=1>
+	 * <tr><th>Kljuc 			</th><th> Vrsta 			</th><th> Opis	</th></tr>     
+	 * <tr><td>col_pro_id: </td><td> BigDecimal 	</td><td> Id kolateral obrade </td></tr>
+	 * <tr><td>proc_date:  </td><td> Date 				</td><td> datum obrade</td></tr>
+	 * <tr><td>value_date: </td><td> Date 				</td><td> datum valute</td></tr>
+	 * <tr><td>proc_type:  </td><td> String 			</td><td> tip obrade</td></tr>
+	 * <tr><td>proc_way:   </td><td> String 			</td><td> nacin pokretanj A- automatski, R-rucno</td></tr>
+	 * <tr><td>proc_status:</td><td> String 			</td><td> 0-zapoceto, 1 - zavrseno</td></tr>
+	 * <tr><td>col_number: </td><td> BigDecimal 	</td><td> broj obradenih slogova</td></tr>
+	 * <tr><td>org_uni_id: </td><td> BigDecimal 	</td><td> org_uni_id</td></tr>
+	 * <tr><td>use_id:     </td><td> BigDecimal 	</td><td> use_id</td></tr>
+	 * <tr><td>user_lock:  </td><td> Timestamp 	</td><td> user_lock</td></tr>  
+	 * </table>
+	 * 
+	 * @param map mapa s podacima
+	 * @return timestamp od userlocka
+	 * @throws Exception
+	 */
+	public Timestamp insertColProc(Map map) throws Exception{
+        context.debug("sqlj insertColProc");		
+        BigDecimal col_pro_id=(BigDecimal) map.get("col_pro_id");
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	//Timestamp proc_ts=(Timestamp) map.get("proc_ts");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=new Timestamp(System.currentTimeMillis());
+    	context.debug("\n col_pro_id: "+col_pro_id);
+    	context.debug("\n proc_date: "+proc_date);
+    	context.debug("\n value_date: "+value_date);
+    	context.debug("\n proc_type: "+proc_type);
+    	context.debug("\n proc_way: "+proc_way);
+    	context.debug("\n proc_status: "+proc_status);
+    	context.debug("\n col_number: "+col_number);
+    	context.debug("\n org_uni_id: "+org_uni_id);
+    	context.debug("\n use_id: "+use_id);
+    	context.debug("\n user_lock: "+user_lock);
+    	
+        try{
+        	#sql [connCtx]{
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					proc_ts,
+					org_uni_id,
+					use_id,
+					user_lock
+					)
+				VALUES
+				(
+					:(col_pro_id),
+					:(proc_date),
+					:(value_date),
+					:(proc_type),
+					:(proc_way),
+					:(proc_status),
+					:(col_number),
+					current timestamp,
+					:(org_uni_id),
+					:(use_id),
+        			:(user_lock)
+					)
+		        };
+			
+		}catch(SQLException e){
+			context.debug(".....CommonCollateralMethods insertColProc        Message  : " + e.getMessage());
+			context.debug(".....CommonCollateralMethods insertColProc      Error code : " + e.getErrorCode());
+			context.debug(".....CommonCollateralMethods insertColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}  
+		return user_lock;
+	}
+	
+	/**
+	 * Update zapisa o kolateral obradi. U ulaznoj mapi su potrebni podaci:
+	 * <table border=1>
+	 * <tr><th>Kljuc 			</th><th> Vrsta 			</th><th> Opis	</th></tr>     
+	 * <tr><td>col_pro_id: </td><td> BigDecimal 	</td><td> Id kolateral obrade </td></tr>
+	 * <tr><td>proc_date:  </td><td> Date 				</td><td> datum obrade</td></tr>
+	 * <tr><td>value_date: </td><td> Date 				</td><td> datum valute</td></tr>
+	 * <tr><td>proc_type:  </td><td> String 			</td><td> tip obrade</td></tr>
+	 * <tr><td>proc_way:   </td><td> String 			</td><td> nacin pokretanj A- automatski, R-rucno</td></tr>
+	 * <tr><td>proc_status:</td><td> String 			</td><td> 0-zapoceto, 1 - zavrseno</td></tr>
+	 * <tr><td>col_number: </td><td> BigDecimal 	</td><td> broj obradenih slogova</td></tr>
+	 * <tr><td>org_uni_id: </td><td> BigDecimal 	</td><td> org_uni_id</td></tr>
+	 * <tr><td>use_id:     </td><td> BigDecimal 	</td><td> use_id</td></tr>
+	 * <tr><td>user_lock:  </td><td> Timestamp 	</td><td> user_lock</td></tr>  
+	 * </table>
+	 * 
+	 * @param map mapa s podacima
+	 * @return timestamp od userlocka
+	 * @throws Exception
+	 */
+	public Timestamp updateColProc(Map map) throws Exception{
+        context.debug("CommonCollateralMethods updateColProc");		
+        BigDecimal col_pro_id=(BigDecimal)map.get("col_pro_id");
+    	Date proc_date=(Date) map.get("proc_date");
+    	Date value_date=(Date) map.get("value_date");
+    	String proc_type= (String)map.get("proc_type");
+    	String proc_way= (String)map.get("proc_way");
+    	String proc_status= (String)map.get("proc_status");
+    	BigDecimal col_number=(BigDecimal) map.get("col_number");
+    	BigDecimal org_uni_id= (BigDecimal) map.get("org_uni_id");
+    	BigDecimal use_id= (BigDecimal)map.get("use_id");
+    	Timestamp user_lock=(Timestamp) map.get("user_lock");
+	
+        try{
+        	#sql [connCtx]{
+				UPDATE  col_proc SET
+					proc_date= :(proc_date),
+					value_date= :(value_date),
+					proc_type= :(proc_type),
+					proc_way= :(proc_way),
+					proc_status=:(proc_status),
+					col_number=:(col_number),
+					org_uni_id=:(org_uni_id),
+					use_id=:(use_id),
+					user_lock=current timestamp
+					
+				WHERE
+        			col_pro_id=:(col_pro_id)
+        			
+		        };
+			
+		}catch(SQLException e){
+			context.debug(".....CommonCollateralMethods updateColProc        Message  : " + e.getMessage());
+			context.debug(".....CommonCollateralMethods updateColProc      Error code : " + e.getErrorCode());
+			context.debug(".....CommonCollateralMethods updateColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		} 
+		return user_lock;
+	}
+
+	/**
+	 * insert u tablicu IN_DATA_DWH_ITEM
+	 * 
+	 * @param col_pro_id id batcha
+	 * @param input_id id ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param input_code kod ulaznog sloga iz ulazne DWH tabele (null Y)
+	 * @param status status zapisa
+	 * @param output_id id unesenog sloga
+	 * @throws Exception
+	 */
+	public void insertInDataDwhItem(BigDecimal col_pro_id,BigDecimal input_id, String input_code, String status, BigDecimal output_id) throws Exception{
+		try{
+		
+		#sql [connCtx]{
+			insert into in_data_dwh_item (
+				col_pro_id,
+				input_id,
+				input_code,
+				status,
+				output_id
+			)VALUES (
+				:(col_pro_id),
+				:(input_id),
+				:(input_code),
+				:(status),
+				:(output_id)
+			)
+		};
+		}catch(SQLException e){
+			context.debug(".....CommonCollateralMethods insertInDataDwhItem        Message  : " + e.getMessage());
+			context.debug(".....CommonCollateralMethods insertInDataDwhItem      Error code : " + e.getErrorCode());
+			context.debug(".....CommonCollateralMethods insertInDataDwhItem        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+	
+	/**
+	 * Dohvat zapisa o obradi u kolateral modulu
+	 * 
+	 * @param value_date datum valute 
+	 * @param proc_type tip obrade
+	 * @param status 0-zapoceta obrada, 1-zavrsena obrada
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal selectColProc(Date value_date,String proc_type,String status) throws Exception{
+		BigDecimal result=null;
+		try{
+			#sql [connCtx]{
+				select 
+					col_pro_id 
+				into
+					:(result)
+				from col_proc 
+					where 
+						value_date=:(value_date)		
+						and proc_status=:(status)
+						and proc_type=:(proc_type)
+		        };		        
+		}catch(SQLException e){
+            if(e.getErrorCode()!=100){
+    			context.debug(".....CommonCollateralMethods selectColProc        Message  : " + e.getMessage());
+    			context.debug(".....CommonCollateralMethods selectColProc      Error code : " + e.getErrorCode());
+    			context.debug(".....CommonCollateralMethods selectColProc        SQLState : " + e.getSQLState());
+    			e.printStackTrace();
+                throw e;
+            }
+		}
+		return result;
+	}
+
+	/**
+	 * Dohvat ID za danu kraticu valute
+	 * 
+	 * @param currencyCode kratica valute
+	 * @return id valute
+	 */
+	public BigDecimal selectCurrencyIdWithCodeChar(String codeChar) throws Exception{
+		BigDecimal currencyId = null;
+		try{
+		    #sql [connCtx]{
+					select currency.cur_id 
+		    		into :(currencyId)	
+		    		from currency 
+		    		where code_char=:(codeChar)
+			};							  
+		}catch(SQLException e){
+			context.debug(".....CommonCollateralMethods selectCurrencyIdWithCodeChar        Message  : " + e.getMessage());
+			context.debug(".....CommonCollateralMethods selectCurrencyIdWithCodeChar      Error code : " + e.getErrorCode());
+			context.debug(".....CommonCollateralMethods selectCurrencyIdWithCodeChar        SQLState : " + e.getSQLState());
+			//currencyId=null;
+			throw(e);
+		}
+		return currencyId;	    
+	}
+
+	/**
+	 * Dohvat ID za dani kod valute
+	 * 
+	 * @param currencyCode kod valute
+	 * @return id valute
+	 */
+	public BigDecimal selectCurrencyIdWithCodeNum(String currencyCode) throws Exception{
+		BigDecimal currencyId = null;
+		try{
+		    #sql [connCtx]{
+					select currency.cur_id 
+		    		into :(currencyId)	
+		    		from currency 
+		    		where code_num=:(currencyCode)
+			};							  
+		}catch(SQLException e){
+			context.debug(".....CommonCollateralMethods selectCurrencyIdWithCodeNum        Message  : " + e.getMessage());
+			context.debug(".....CommonCollateralMethods selectCurrencyIdWithCodeNum      Error code : " + e.getErrorCode());
+			context.debug(".....CommonCollateralMethods selectCurrencyIdWithCodeNum        SQLState : " + e.getSQLState());
+			//currencyId=null;
+			throw(e);
+		}
+		return currencyId;	    
+	}
+
+	/**
+	 * vraca Id za danu sifru racuna
+	*
+	*@param acc_no sifra racuna
+	*@return id racuna
+	*@throws
+	*/
+	public BigDecimal selectCusAccId(String acc_no) throws Exception{
+		
+		BigDecimal cusAccId = null;
+		try{
+		    #sql [connCtx]{
+					select 
+						cus_acc_id
+					into
+						:(cusAccId)
+					from 
+						cusacc_exposure 
+					where 
+						cus_acc_no =:(acc_no)
+			};							  
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				cusAccId = null;
+			}else{
+				context.debug(".....CommonCollateralMethods selectCusAccId        Message  : " + e.getMessage());
+				context.debug(".....CommonCollateralMethods selectCusAccId      Error code : " + e.getErrorCode());
+				context.debug(".....CommonCollateralMethods selectCusAccId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}		
+		}
+		return cusAccId;
+	}
+	
+	/**
+	 * vraca cus_acc_no za dani cus_acc_id
+	*
+	*@param cus_acc_id id racuna
+	*@return cus_acc_no; null ako nema podatka
+	*@throws iznimka u slucaju iznimke 
+	*/
+	public String selectCusAccNo(BigDecimal cus_acc_id) throws Exception{
+		
+		String result = null;
+		try{
+		    #sql [connCtx]{
+					select 
+						cus_acc_no
+					into
+						:(result)
+					from 
+						cusacc_exposure 
+					where 
+						cus_acc_id =:(cus_acc_id)
+			};							  
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				result = null;
+			}else{
+				context.debug(".....CommonCollateralMethods selectCusAccNo        Message  : " + e.getMessage());
+				context.debug(".....CommonCollateralMethods selectCusAccNo      Error code : " + e.getErrorCode());
+				context.debug(".....CommonCollateralMethods selectCusAccNo        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}		
+		}
+		return result;
+	}
+
+	/**
+	*Dohvat srednjeg tecaja za dani datum i id valute
+	*
+	*@param cur_id id valute
+	*@param date datum valute
+	*@return srednji tecaj
+	*@throws
+	*/
+	public BigDecimal selectMiddRate(BigDecimal cur_id, Date date, String bankSign) throws Exception{
+		BigDecimal rate=null;
+		try{
+			#sql[connCtx]{
+				SELECT midd_rate 
+				INTO :(rate)
+				FROM exchange_rate 
+				WHERE :(date) BETWEEN date_from AND date_until 
+				AND cur_id =:(cur_id)
+				AND BANK_SIGN=:(bankSign)
+			};
+			return rate;
+		}catch(SQLException e){
+			context.debug(".....CommonCollateralMethods selectMiddRate        Message  : " + e.getMessage());
+			context.debug(".....CommonCollateralMethods selectMiddRate      Error code : " + e.getErrorCode());
+			context.debug(".....CommonCollateralMethods selectMiddRate        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			throw(e);
+		}
+	}
+
+	/**
+	* Postavljanje konteksta
+	* 
+	* @param context kontekst
+	*/
+	public void setContext(RemoteContext context) throws Exception {
+		this.context=context;
+		this.connCtx=context.getContext();
+	}
+	
+	/**
+	 * Dohvat sifre tipa kolaterala preko id-a
+	 * 
+	 * @param col_type_id id tipa kolaterala
+	 * @return šifra tipa kolaterala
+	 * @throws Exception
+	 */
+	public String selectCollTypeCodeById(BigDecimal col_type_id)  throws Exception{
+		String result=null;
+		try{
+			#sql[connCtx]{
+				select coll_type_code 
+				into :(result)
+				from collateral_type 
+				where coll_type_id = :(col_type_id)
+			};
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				result = null;
+			}else{
+				context.debug(".....CommonCollateralMethods selectCollTypeCodeById        Message  : " + e.getMessage());
+				context.debug(".....CommonCollateralMethods selectCollTypeCodeById      Error code : " + e.getErrorCode());
+				context.debug(".....CommonCollateralMethods selectCollTypeCodeById        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}		
+		}		
+		return result;
+	}
+	
+	/**
+	 * 
+	 * Generiranje broja kolaterala
+	 * 
+	 * @param recipe recept za kolateral
+	 * @param date datum (najcesce danasnji)
+	 * @param prefix prefiks na koji se lijepi generirani broj; za prazno staviti null
+	 * @param sufix sufiks koji ide na kraj; za prazno staviti null
+	 * @return broj kolaterala
+	 * @throws Exception
+	 */
+	public String getCollNum(String recipe, Date date,String prefix, String sufix) throws Exception{
+		String result="";
+		try{
+			YXYG0 yxyg0= new YXYG0(context);
+			String s=yxyg0.getSequence(recipe,date);
+			if(prefix!=null){
+				result=prefix+s;
+			}
+			if(sufix!=null){
+				result+=sufix;
+			}
+			return result;
+		}catch(Exception e){
+			context.debug(".....CommonCollateralMethods getCollNum        Message  : " + e.getMessage());
+			e.printStackTrace();
+			throw(e);	
+		}					
+	}
+	
+	/**
+	 * Vraca cus_id za dani register_no i oznaku banke
+	 * 
+	 * @param register_no register_no
+	 * @param bank_sign oznaka banke
+	 * @return id komitenta; null  ako nema podatka
+	 * @throws
+	 */
+	public BigDecimal selectCustomerId(String register_no,String bank_sign) throws Exception{
+		
+		BigDecimal result = null;
+		try{
+		    #sql [connCtx]{
+					SELECT cus_id 
+		    		INTO :(result)	
+		    		FROM customer WHERE 
+		    		register_no =:(register_no) and
+					bank_sign=:(bank_sign)
+			};				
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				result = null;
+			}else{
+				context.debug(".....CommonCollateralMethods selectCustomerId        Message  : " + e.getMessage());
+				context.debug(".....CommonCollateralMethods selectCustomerId      Error code : " + e.getErrorCode());
+				context.debug(".....CommonCollateralMethods selectCustomerId        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Vraca register_no iz tablice customer za dani cus_id i oznaku banke
+	 * 
+	 * @param cus_id id komitenta
+	 * @param bank_sign oznaka banke
+	 * @return register_no komitenta; null  ako nema podatka
+	 * @throws
+	 */
+	public String selectCusRegNo(BigDecimal cus_id,String bank_sign) throws Exception{
+		
+		String result = null;
+		try{
+		    #sql [connCtx]{
+					SELECT register_no 
+		    		INTO :(result)	
+		    		FROM customer WHERE 
+		    		cus_id =:(cus_id) and
+					bank_sign=:(bank_sign)
+			};	
+			
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				result = null;
+			}else{
+				context.debug(".....CommonCollateralMethods selectCusRegNo        Message  : " + e.getMessage());
+				context.debug(".....CommonCollateralMethods selectCusRegNo      Error code : " + e.getErrorCode());
+				context.debug(".....CommonCollateralMethods selectCusRegNo        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Vraca request_no iz tablice cusacc_exposure za dani cus_acc_id
+	 * 
+	 * @param cus_acc_id id racuna
+	 * @return request_no racuna; null  ako nema podatka
+	 * @throws
+	 */
+	public String selectRequestNoFromCusaccExposure(BigDecimal cus_acc_id) throws Exception{
+		
+		String result = null;
+		try{
+		    #sql [connCtx]{
+					select request_no 
+					into :(result)
+					from cusacc_exposure 
+					where cus_acc_id =  :(cus_acc_id)
+			};	
+			
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				result = null;
+			}else{
+				context.debug(".....CommonCollateralMethods selectRequestNoFromCusaccExposure        Message  : " + e.getMessage());
+				context.debug(".....CommonCollateralMethods selectRequestNoFromCusaccExposure      Error code : " + e.getErrorCode());
+				context.debug(".....CommonCollateralMethods selectRequestNoFromCusaccExposure        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}
+		}
+		return result;
+	}
+
+}

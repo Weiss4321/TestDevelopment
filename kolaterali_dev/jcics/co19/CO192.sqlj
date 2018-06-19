@@ -1,0 +1,119 @@
+package hr.vestigo.modules.collateral.jcics.co19;
+
+import java.math.BigDecimal;
+import hr.vestigo.framework.remote.transaction.*;	
+
+import hr.vestigo.modules.collateral.common.yoy0.*;
+/**
+ * CO192 class insert data  into table INSU_POLICY_TYPE 
+ *  
+ */
+public class CO192 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co19/CO192.sqlj,v 1.4 2015/01/13 08:26:43 hrajkl Exp $";
+    public DeclCO19 decl = null;
+	
+	public CO192 (DeclCO19 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+		//		generator id-a za modul Collateral
+    	YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();
+		
+//		dali postoji isti zapis
+		int num = 0;
+		String tmpCode = (decl.insupolicytypeinsertm.InsuPolicyTypeDialog_txtIntPolTypeCode);
+		try {
+			#sql [ctx] {SELECT COUNT(*) INTO :num 
+		    			FROM 
+							INSU_POLICY_TYPE 
+		    			WHERE 
+							INT_POL_TYPE_CODE=: tmpCode
+		    	};			    	
+		    	tc.debug ( " \n\n");
+		    	tc.debug ( "...broj postojecih zapisa: " + num);
+		    	tc.debug ( " \n\n");
+	    } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......CO192.sqlj insert into INSU_POLICY_TYPE SQL ErrorCode " + sqle.getErrorCode());
+			tc.debug ( "......CO192.sqlj insert into INSU_POLICY_TYPE SQL SQLState " + sqle.getSQLState());
+			tc.debug ( "......CO192.sqlj insert into INSU_POLICY_TYPE SQL Message " + sqle.getMessage());
+			throw new VestigoTMException(1, "Transaction CO192: Error inserting into INSU_POLICY_TYPE! ","err411a", null);
+        }
+	    
+	    if(num > 0){// ako vec postoji zapis sa istim INT_POL_TYPE_CODE
+		    throw new VestigoTMException(1, "Transaction CO192: Error inserting into INSU_POLICY_TYPE! ","errclt8", null);
+		}
+		
+		
+		java.math.BigDecimal eve_id =  new java.math.BigDecimal("1600666003");
+		java.sql.Date date_from = decl.insupolicytypeinsertm.InsuPolicyTypeDialog_txtDateFrom;
+		java.sql.Date date_until = decl.insupolicytypeinsertm.InsuPolicyTypeDialog_txtDateUntil;
+		String code = decl.insupolicytypeinsertm.InsuPolicyTypeDialog_txtIntPolTypeCode;
+		String name = decl.insupolicytypeinsertm.InsuPolicyTypeDialog_txtIntPolTypeName;
+		//puca zbog predugog stringa  decl.insupolicytypeinsertm.InsuPolicyTypeDialog_txtDateFrom
+		
+		tc.debug ( "\n\n\n\n");
+		tc.debug ("INT_GROUP1:   "+ decl.insupolicytypeinsertm.INT_GROUP1);
+		tc.debug ("STATUS:   "+ decl.insupolicytypeinsertm.STATUS);
+		tc.debug ( "\n\n\n\n");
+		
+//		INSERT INTO INSU_POLICY_TYPE
+		try{	
+	    	#sql [ctx]{  insert into INSU_POLICY_TYPE 
+				(INT_POL_TYPE_ID, 
+				INT_POL_TYPE_CODE,
+				INT_POL_TYPE_NAME,
+				INT_POL_COMPANY_ID,
+				INT_POL_SH_SIGN,
+				INT_GROUP1,
+				INT_GROUP2,
+				INT_GROUP3,
+				INT_GROUP4,
+				INT_POL_DATE_FROM,
+				INT_POL_DATE_UNTIL,
+				INT_POL_ACT_NOACT,
+				INT_POL_SPEC_STAT,
+				USE_OPEN_ID,
+				USE_ID,
+				OPENING_TS,
+				USER_LOCK,
+				EVE_ID,
+				BANK_SIGN)
+				values 
+				(:collaterall_id, 
+				:code, 
+				:name,
+				:(decl.insupolicytypeinsertm.INT_POL_COMPANY_ID),
+				:(decl.insupolicytypeinsertm.InsuPolicyTypeDialog_txtICCode),
+				:(decl.insupolicytypeinsertm.INT_GROUP1),
+				:(decl.insupolicytypeinsertm.INT_GROUP2),
+				:(decl.insupolicytypeinsertm.INT_GROUP3),
+				:(decl.insupolicytypeinsertm.INT_GROUP4),
+				:date_from,
+				:date_until,
+				:(decl.insupolicytypeinsertm.STATUS),
+				:(decl.insupolicytypeinsertm.INT_POL_SPEC_STAT),
+				:(decl.insupolicytypeinsertm.use_id),
+				:(decl.insupolicytypeinsertm.use_id),
+				current timestamp,
+				current timestamp,
+				:eve_id,
+				'RB'
+			)
+     	};
+		
+		}catch(java.sql.SQLException se){
+					tc.debug ( "......CO192.sqlj insert into INSU_POLICY_TYPE SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO192.sqlj insert into INSU_POLICY_TYPE SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO192.sqlj insert into INSU_POLICY_TYPE SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO192: Error inserting INSU_POLICY_TYPE! ","err411a", null);
+			}
+	}
+}	
+			

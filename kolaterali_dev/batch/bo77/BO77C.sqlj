@@ -1,0 +1,388 @@
+package hr.vestigo.modules.collateral.batch.bo77;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.ExcelUtils;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+
+
+/**
+ * Klasa za kreiranje izvještaja 3.2 Rating Down-Up
+ * @author hrakis
+ */
+public class BO77C
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo77/BO77C.sqlj,v 1.4 2014/06/11 08:51:29 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private Date value_date;
+    private Date week_before_date;
+
+    private YOYM0 mapping_3_2_1;
+    private YOYM0 mapping_3_2_2;
+    private YOYM0 mapping_gctc;
+
+    private Workbook workbook;
+    private ExcelStyleData styles;
+    private Sheet sheet1, sheet2;
+    private int rowIndex1 = 0, rowIndex2 = 0;
+    
+    
+    /**
+     * Konstruktor klase.
+     * @param batchContext Kontekst u kojem se izvršava obrada
+     * @param value_date Datum valute (datum za koji se radi izvještaj)
+     * @param week_before_date Datum prije 7 dana
+     */
+    public BO77C(BatchContext batchContext, Date value_date, Date week_before_date) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+        this.value_date = value_date;
+        this.week_before_date = week_before_date;
+
+        // mapiranja
+        this.mapping_3_2_1 = new YOYM0(bc, "3.2.1", value_date);    // kolaterali koji ulaze u izvještaj 3.2 - 1.sheet 
+        this.mapping_3_2_2 = new YOYM0(bc, "3.2.2", value_date);    // kolaterali koji ulaze u izvještaj 3.2 - 2.sheet
+        this.mapping_gctc = new YOYM0(bc, "gctc", value_date);      // GCTC kodovi
+
+        // kreiraj workbook
+        this.workbook = new SXSSFWorkbook(100);
+        this.styles = ExcelStyleData.createStyles(workbook);
+
+        // kreiraj sheetove
+        this.sheet1 = workbook.createSheet("Rating Securities");
+        this.sheet2 = workbook.createSheet("Rating Guarantees");
+        ExcelUtils.setColumnWidths(sheet1, new int[] { 85, 285, 75, 150, 75, 75, 75, 75, 75, 200, 75, 75, 180, 160, 200, 90, 100, 110, 70, 110, 65, 90 });
+        ExcelUtils.setColumnWidths(sheet2, new int[] { 85, 285, 75, 85, 250, 75, 75, 180, 160, 200, 90, 100, 110, 70, 110, 65, 90 });
+
+        // kreiraj naslove izvještaja
+        Row row = sheet1.createRow(rowIndex1);
+        ExcelUtils.createCell(row, 0, "3.2", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "RATING DOWN - UP", styles.titleStyle);
+        rowIndex1 += 4;
+        
+        row = sheet2.createRow(rowIndex2);
+        ExcelUtils.createCell(row, 0, "3.2", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "RATING DOWN - UP", styles.titleStyle);
+        rowIndex2 += 4;
+
+        // kreiraj headere izvještaja
+        row = sheet1.createRow(rowIndex1);
+        ExcelUtils.createCell(row, 0, "Customer ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 1, "Customer Name", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 2, "Customer Rating", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 3, "ISIN", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 4, "Debt Security Name", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 5, "Debt Security Long Rating Before", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 6, "Debt Security Long Rating Actual", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 7, "Debt Security Short Rating Before", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 8, "Debt Security Short Rating Actual", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 9, "Issuer Name", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 10, "Issuer Rating Before", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 11, "Issuer Rating Actual", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 12, "Relationship manager", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 13, "Collateral ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 14, "Collateral type", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 15, "Last evaluation", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 16, "Latest evaluator", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 17, "NCV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 18, "Actual discont", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 19, "WCV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 20, "Eligibility", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 21, "Expiry date", styles.headingWrapAllBordersStyle);
+        rowIndex1++;
+        
+        row = sheet2.createRow(rowIndex2);
+        ExcelUtils.createCell(row, 0, "Customer ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 1, "Customer Name", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 2, "Customer Rating", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 3, "Guarantor ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 4, "Guarantor Name", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 5, "Guarantor Rating Before", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 6, "Guarantor Rating Actual", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 7, "Relationship manager", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 8, "Collateral ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 9, "Collateral type", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 10, "Last evaluation", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 11, "Latest evaluator", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 12, "NGV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 13, "Actual discont", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 14, "WGV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 15, "Eligibility", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 16, "Expiry date", styles.headingWrapAllBordersStyle);
+        rowIndex2++;
+    }
+
+    
+    /**
+     * Metoda koja provjerava ulazi li zadani kolateral u izvještaj i stvara redak u izlaznoj datoteci za njega (ako on u isti ulazi).
+     * @param collateral Objekt s podacima o kolateralu
+     * @param date Datum za koji vrijede dani podaci
+     */
+    public void processCollateral(CollateralData collateral, Date date) throws Exception
+    {
+        // ako datum nije jednak datumu valute, preskoèi ovaj kolateral
+        if (date.compareTo(value_date) != 0) return;
+        
+        // mapiraj kolateral na pripadajuæi tip
+        GcmTypeData type = mapping_gctc.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        if (type == null)
+        {
+            bc.warning("...Greska u parametrizaciji - nije definiran GCTC kod. Kolateral ne ulazi u izvjestaj 3.2.");
+            return;
+        }
+        
+        // provjeri da li su postojali podaci prije 7 dana
+        if (collateral.week_before_collateral == null)
+        {
+            bc.debug("...Za kolateral nema podataka od prije 7 dana. Kolateral ne ulazi u izvjestaj 3.2.");
+            return;
+        }
+        
+        // provjeri da li kolateral ulazi u izvještaj 3.2 - 1.sheet
+        if (mapping_3_2_1.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id) != null)
+        {
+            // dohvati dodatne podatke o vrijednosnom papiru
+            this.selectVrpData(date, collateral);
+            
+            // dohvati dodatne podatke o vrijednosnom papiru koji su vrijedili prije tjedan dana
+            this.selectVrpData(week_before_date, collateral.week_before_collateral);
+            
+            // provjeri da li se promijenio barem jedan rating
+            if (!stringsEqual(collateral.debtSecurityLongRating, collateral.week_before_collateral.debtSecurityLongRating) || !stringsEqual(collateral.debtSecurityShortRating, collateral.week_before_collateral.debtSecurityShortRating) || !stringsEqual(collateral.issuerRating, collateral.week_before_collateral.issuerRating))
+            {
+                // upisivanje podatka u izvještaj 3.2 - 1.sheet
+                Row row = sheet1.createRow(rowIndex1);
+                ExcelUtils.createCell(row, 0, collateral.placement_owner_register_no, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 1, collateral.placement_owner_name, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 2, collateral.placement_owner_rating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 3, collateral.isin, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 4, "", styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 5, collateral.week_before_collateral.debtSecurityLongRating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 6, collateral.debtSecurityLongRating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 7, collateral.week_before_collateral.debtSecurityShortRating, styles.normalAllBordersStyle);                
+                ExcelUtils.createCell(row, 8, collateral.debtSecurityShortRating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 9, collateral.issuerName, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 10, collateral.week_before_collateral.issuerRating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 11, collateral.issuerRating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 12, collateral.relationship_manag_name, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 13, collateral.col_num, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 14, type.name, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 15, collateral.last_evaluation, styles.normalDateAllBordersStyle);
+                ExcelUtils.createCell(row, 16, collateral.latest_evaluator, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 17, collateral.ncv, styles.normalNumericAllBordersStyle);
+                ExcelUtils.createCell(row, 18, collateral.actual_discont, styles.normalNumericAllBordersStyle);
+                ExcelUtils.createCell(row, 19, collateral.wcv, styles.normalNumericAllBordersStyle);
+                ExcelUtils.createCell(row, 20, collateral.b2_irb_eligibility, styles.normalCenterAllBordersStyle);
+                ExcelUtils.createCell(row, 21, collateral.coll_exp_date, styles.normalDateAllBordersStyle);
+                rowIndex1++;
+                bc.debug("...Kolateral zapisan u izvjestaj 3.2. - 1.sheet.");                
+            }
+            else
+            {
+                bc.debug("...Ratinzi kolaterala i izdavatelja se nisu promijenili. Kolateral ne ulazi u izvjestaj 3.2. - 1.sheet.");
+            }
+        }
+        else
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 3.2. - 1.sheet.");
+        }
+        
+
+        // provjeri da li kolateral ulazi u izvještaj 3.2 - 2.sheet
+        if (mapping_3_2_2.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id) != null)
+        {
+            // dohvati dodatne podatke o vrijednosnom papiru
+            this.selectGuaranteeData(date, collateral);
+            
+            // dohvati dodatne podatke o vrijednosnom papiru koji su vrijedili prije tjedan dana
+            this.selectGuaranteeData(week_before_date, collateral.week_before_collateral);
+            
+            // provjeri da li se promijenio rating izdavatelja
+            if (!stringsEqual(collateral.issuerRating, collateral.week_before_collateral.issuerRating))
+            {
+                // upisivanje podatka u izvještaj 3.2 - 2.sheet
+                Row row = sheet2.createRow(rowIndex2);
+                ExcelUtils.createCell(row, 0, collateral.placement_owner_register_no, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 1, collateral.placement_owner_name, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 2, collateral.placement_owner_rating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 3, collateral.issuerRegisterNo, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 4, collateral.issuerName, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 5, collateral.week_before_collateral.issuerRating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 6, collateral.issuerRating, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 7, collateral.relationship_manag_name, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 8, collateral.col_num, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 9, type.name, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 10, collateral.last_evaluation, styles.normalDateAllBordersStyle);
+                ExcelUtils.createCell(row, 11, collateral.latest_evaluator, styles.normalAllBordersStyle);
+                ExcelUtils.createCell(row, 12, collateral.ncv, styles.normalNumericAllBordersStyle);
+                ExcelUtils.createCell(row, 13, collateral.actual_discont, styles.normalNumericAllBordersStyle);
+                ExcelUtils.createCell(row, 14, collateral.wcv, styles.normalNumericAllBordersStyle);
+                ExcelUtils.createCell(row, 15, collateral.b2_irb_eligibility, styles.normalCenterAllBordersStyle);
+                ExcelUtils.createCell(row, 16, collateral.coll_exp_date, styles.normalDateAllBordersStyle);
+                rowIndex2++;
+                bc.debug("...Kolateral zapisan u izvjestaj 3.2. - 2.sheet.");                
+            }
+            else
+            {
+                bc.debug("...Rating izdavatelja se nije promijenio. Kolateral ne ulazi u izvjestaj 3.2. - 2.sheet.");
+            }
+        }
+        else
+        {
+            bc.debug("...Kolateral ne ulazi u izvjestaj 3.2. - 2.sheet.");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa dodatne podatke o vrijednosnom papiru.
+     * @param value_date Datum za koji vrijede podaci
+     * @param collateral Objekt s podacima o kolateralu
+     */
+    public void selectVrpData(Date value_date, CollateralData collateral) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectVrpData");
+            #sql [connCtx] {
+                SELECT
+                    c.isin,
+                    d.register_no,
+                    d.name,
+                    r1.score,
+                    r2.score,
+                    r3.score
+                INTO
+                    :(collateral.isin),
+                    :(collateral.issuerRegisterNo),
+                    :(collateral.issuerName),
+                    :(collateral.issuerRating),
+                    :(collateral.debtSecurityLongRating),
+                    :(collateral.debtSecurityShortRating)
+                FROM coll_vrp b
+                INNER JOIN coll_in2 c ON b.col_in2_id = c.col_in2_id
+                LEFT OUTER JOIN customer d ON c.iss_cus_id = d.cus_id 
+                LEFT OUTER JOIN customer_rating r1 ON (d.cus_id = r1.cus_id AND r1.rat_typ_id = 1354776003 AND :(value_date) BETWEEN r1.date_from AND r1.date_until)
+                LEFT OUTER JOIN coll_in2_rating r2 ON (c.col_in2_id = r2.col_in2_id AND r2.rat_typ_id = 660835251 AND :(value_date) BETWEEN r2.date_from AND r2.date_to)
+                LEFT OUTER JOIN coll_in2_rating r3 ON (c.col_in2_id = r3.col_in2_id AND r3.rat_typ_id = 660836251 AND :(value_date) BETWEEN r3.date_from AND r3.date_to) 
+                WHERE b.col_hea_id = :(collateral.col_hea_id)
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o vrijednosnom papiru! (VALUE_DATE=" + value_date + ",COLLATERAL.COL_HEA_ID=" + collateral.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectVrpData");
+        }
+    }
+    
+    
+    
+    /**
+     * Metoda koja dohvaæa dodatne podatke o garanciji.
+     * @param value_date Datum za koji vrijede podaci
+     * @param collateral Objekt s podacima o kolateralu
+     */
+    public void selectGuaranteeData(Date value_date, CollateralData collateral) throws SQLException
+    {
+        try
+        {
+            bc.startStopWatch("selectGuaranteeData");
+            #sql [connCtx] {
+                SELECT
+                    d.register_no,
+                    d.name,
+                    r1.score
+                INTO
+                    :(collateral.issuerRegisterNo),
+                    :(collateral.issuerName),
+                    :(collateral.issuerRating)
+                FROM coll_guarantee b
+                LEFT OUTER JOIN customer d ON b.guar_issuer_id = d.cus_id 
+                LEFT OUTER JOIN customer_rating r1 ON (d.cus_id = r1.cus_id AND r1.rat_typ_id = 1354776003 AND :(value_date) BETWEEN r1.date_from AND r1.date_until)
+                WHERE b.col_hea_id = :(collateral.col_hea_id)
+                ORDER BY r1.date_until DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o garanciji! (VALUE_DATE=" + value_date + ",COLLATERAL.COL_HEA_ID=" + collateral.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("selectGuaranteeData");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja usporeðuje dva stringa uzimajuæi u obzir null vrijednosti.
+     * @param s1 Prvi string
+     * @param s2 Drugi string
+     * @return da li su dva stringa jednaka
+     */
+    private boolean stringsEqual(String s1, String s2)
+    {
+        return (s1 == null && s2 == null) || (s1 != null && s1.equals(s2));
+    }
+    
+    
+    /**
+     * Metoda koja sprema kreirani izvještaj. 
+     */
+    public void createReport() throws Exception
+    {
+        // spremi izvještaj
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
+        String fileName = bc.getOutDir() + "/" + "Rating_Down_Up" + "_" + dateFormat.format(value_date) + ".xlsx";
+        FileOutputStream fileOut = new FileOutputStream(fileName);
+        workbook.write(fileOut);
+        fileOut.close();
+        dispose();
+
+        // kreiraj marker datoteku
+        new File(fileName + ".marker").createNewFile();
+        
+        bc.info("Uspjesno kreiran izvjestaj 3.2.");
+    }
+    
+    
+    /**
+     * Metoda koja briše privremene datoteke koje se stvaraju za vrijeme kreiranja izvještaja.
+     */
+    public void dispose()
+    {
+        if (workbook instanceof SXSSFWorkbook) ((SXSSFWorkbook)workbook).dispose();
+    }
+}

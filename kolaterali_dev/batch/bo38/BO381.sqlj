@@ -1,0 +1,1066 @@
+package hr.vestigo.modules.collateral.batch.bo38;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.coreapp.common.yxyG.YXYG0;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy9.YOY90;
+import hr.vestigo.modules.rba.util.DecimalUtils;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Vector;
+
+
+public class BO381
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo38/BO381.sqlj,v 1.6 2009/04/23 11:52:21 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    private ConnCtx connCtx2;
+    private BigDecimal eve_id;
+    
+    #sql iterator ColProcIterator with (holdability = true) (BigDecimal col_pro_id, String proc_status);
+    #sql iterator StockIterator with (holdability = true) 
+    	(Integer rbr,
+    	String coll_type_code,
+		String isin,
+		String stop_sell_ind,
+		BigDecimal stop_sell_period,
+		String currency_clause,
+		String rba_eligibility,
+		BigDecimal num_of_sec,
+		String owner_reg_no,
+		BigDecimal hf_amount,
+		String hf_currency,
+		String hf_type,
+		String hf_inst,
+		Date hf_from,
+		Date hf_until,
+		Date hf_date_reciv,
+		String loan_reg_no,
+		String cus_acc_no,
+		String veh_con_num,
+    	BigDecimal cur_id_ref,
+		BigDecimal mid_rate_ref);
+    
+
+    public BO381(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+            this.connCtx2 = new ConnCtx(batchContext.getNewConnection());
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	/**
+	 * Metoda ubacuje zapis u EVENT tablicu.
+	 * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+	 */
+    public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("2780546003"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Uèitavanje podataka za dionice i udjele u fondovima");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+	
+	/**
+	 * Metoda koja provjerava da li u tabeli COL_PROC za ovu vrstu obrade i current date postoji slog.
+	 * @return Vektor s atributima col_pro_id i proc_status ukoliko je metoda uspješno završila, inaèe null.
+	 */
+	public Vector selectColProId()
+	{
+		Vector vect = new Vector();
+		ColProcIterator iter = null;
+		try
+		{
+			#sql [connCtx2] iter = {
+				SELECT col_pro_id, proc_status 
+				FROM col_proc 
+				WHERE proc_type = 'R01' AND value_date = current date
+			};
+			if(iter.next())
+			{
+				vect.add(iter.col_pro_id());
+				vect.add(iter.proc_status());
+			}
+			else
+			{
+				vect.add(null);
+				vect.add(null);
+			}
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod provjere da li je obrada vec pustena za danasnji datum!", ex);
+			return null;
+		}
+		return vect;
+	}
+
+	
+	/** 
+	 * Metoda koja evidentira poèetak izvoðenja obrade ubacujuæi novi zapis u tablicu COL_PROC.
+	 * @return Primarni kljuè zapisa iz tablice COL_PROC
+	 */
+	public BigDecimal insertIntoColProc()
+	{
+		BigDecimal col_pro_id = null;
+		try
+		{
+			YOY00 yoy00 = new YOY00(connCtx);
+			col_pro_id = yoy00.getNewId();
+
+			batchContext.beginTransaction();
+			#sql [connCtx] {
+				INSERT INTO col_proc (
+					col_pro_id,
+					proc_date,
+					value_date,
+					proc_type,
+					proc_way,
+					proc_status,
+					col_number,
+					org_uni_id,
+					use_id,
+					user_lock )
+				VALUES (
+					:col_pro_id,
+					current date,
+					current date,
+					'R01',
+					'A',
+					'0',
+					0,
+					53253,
+					1,
+					current timestamp )
+			};
+			batchContext.commitTransaction();
+		}
+		catch(Exception ex)
+		{
+			batchContext.error("Greska kod ubacivanja zapisa u tablicu COL_PROC!", ex);
+			return null;
+		}
+		return col_pro_id;
+	}
+
+	
+	/**
+	 * Metoda koja dohvaæa skup podataka koji ulaze u obradu.
+	 * U obradu ulaze svi podaci iz ulazne tabele DIONICA. 
+	 * Ako je obrada veæ puštana, iskljuèuju se one dionice obraðene prethodnim puštanjem.
+	 * @param obradaVecPustana Oznaka da li je obrada veæ puštana prije ali nije završila do kraja (1) ili je ovo prvi put da se pušta (0)
+	 * @param col_pro_id ID obrade
+	 * @return Iterator. Ako je došlo do greške, vaæa null.
+	 */
+	public StockIterator selectStocks(int obradaVecPustana, BigDecimal col_pro_id)
+	{
+		StockIterator iter = null;
+		try
+		{
+			#sql [connCtx2] iter = {
+				SELECT
+					a.rbr				AS rbr,
+					a.coll_type_code	AS coll_type_code,
+					a.isin				AS isin,
+					a.stop_sell_ind		AS stop_sell_ind,
+					a.stop_sell_period	AS stop_sell_period,
+					a.currency_clause	AS currency_clause,
+					a.eligubility		AS rba_eligibility,
+					a.num_of_sec		AS num_of_sec,
+					a.owner_reg_no		AS owner_reg_no, 
+					a.hf_amount			AS hf_amount,
+					a.hf_currency		AS hf_currency,
+					a.hf_type			AS hf_type,
+					a.hf_inst			AS hf_inst,
+					a.hf_from			AS hf_from,
+					a.hf_until			AS hf_until,
+					a.hf_date_reciv		AS hf_date_reciv,
+					a.loan_reg_no		AS loan_reg_no,
+					a.cus_acc_no		AS cus_acc_no,
+					a.veh_con_num		AS veh_con_num,
+					b.cur_id			AS cur_id_ref,
+					c.midd_rate			AS mid_rate_ref
+				FROM 
+					dionica a,
+					currency b,
+					exchange_rate c
+				WHERE
+					a.hf_currency = b.code_char AND
+					b.cur_id = c.cur_id AND
+					c.date_from <= current date AND
+					c.date_until >= current date AND
+					( (:obradaVecPustana=0) OR
+				  	  (:obradaVecPustana=1 AND a.rbr NOT IN (SELECT c.input_id FROM in_data_dwh_item c WHERE c.col_pro_id = :(col_pro_id)))
+					)
+				WITH UR
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja dionica!", ex);
+		}
+		return iter;
+	}
+
+	
+	/**
+	 * Metoda koja dohvaæa dodatne podatke o dionici i sprema ih u zadani objekt.
+	 * @param stock Objekt s podacima o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean selectAdditionalStockInfo(StockData stock)
+	{
+	    try
+	    {
+	        #sql [connCtx2] {
+	            SELECT 
+	    			a.col_in2_id 	AS col_in2_id, 
+	    			a.nom_cur_id 	AS nom_cur_id,
+	    			a.nom_amount 	AS one_nom_amo,
+	    			a.sto_mar_id 	AS sto_mar_id,
+	    			b.price 		AS price,
+	    			b.date_from		AS price_date,
+	    			c.midd_rate 	AS mid_rate
+	    		INTO
+	    			:(stock.col_in2_id),
+	    			:(stock.nom_cur_id),
+	    			:(stock.one_nom_amo),
+	    			:(stock.sto_mar_id),
+	    			:(stock.price),
+	    			:(stock.price_date),
+	    			:(stock.mid_rate)
+	    		FROM
+	    			coll_in2 a,
+	    			coll_in2_price b,
+	    			exchange_rate c
+	    		WHERE 
+	    			a.isin = :(stock.isin) AND
+	    			a.col_in2_id = b.col_in2_id AND
+	    			b.date_from <= current date AND
+	    			b.date_to >= current date AND
+	    			a.nom_cur_id = c.cur_id AND
+	    			c.date_from <= current date AND
+	    			c.date_until >= current date
+	    		WITH UR
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Za ISIN " + stock.isin + " nema podataka u tablicama COLL_IN2 i COLL_IN2_PRICE.";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+
+	/**
+	 * Metoda koja dohvaæa podatke o vlasniku kolaterala i sprema ih u zadani objekt.
+	 * @param stock Objekt s podacima o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean selectCollOwner(StockData stock)
+	{
+	    try
+	    {
+	        #sql [connCtx2] {
+	    		SELECT 
+	    			cus_id	AS owner_cus_id,
+	    			code 	AS owner_code,
+	    			name	AS owner_name
+	    		INTO
+	    			:(stock.owner_cus_id),
+	    			:(stock.owner_code),
+	    			:(stock.owner_name)
+	    		FROM customer
+	    		WHERE register_no = :(stock.owner_reg_no)
+	    		WITH UR
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Za vlasnika kolaterala " + stock.owner_reg_no + " nema podataka u tablici CUSTOMER.";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja dohvaæa podatke o vlasniku plasmana i sprema ih u zadani objekt.
+	 * @param stock Objekt s podacima o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean selectLoanOwner(StockData stock)
+	{
+	    try
+	    {
+	        #sql [connCtx2] {
+	    		SELECT 
+	    			cus_id 	AS loan_cus_id,
+	    			name 	AS loan_name
+	    		INTO
+	    			:(stock.loan_cus_id),
+	    			:(stock.loan_name)
+	    		FROM customer
+	    		WHERE register_no = :(stock.loan_reg_no)
+	    		WITH UR
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Za vlasnika plasmana " + stock.loan_reg_no + " nema podataka u tablici CUSTOMER.";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja dohvaæa podatke o plasmanu i sprema ih u zadani objekt.
+	 * @param stock Objekt s podacima o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean selectCusAccExposure(StockData stock)
+	{
+	    try
+	    {
+	        #sql [connCtx2] {
+	    		SELECT
+	    			cus_acc_id AS cus_acc_id,
+	    			request_no AS request_no
+	    		INTO
+	    			:(stock.cus_acc_id),
+	    			:(stock.request_no)
+	    		FROM cusacc_exposure
+	    		WHERE cus_acc_no = :(stock.cus_acc_no)
+	    		WITH UR
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Za plasman " + stock.cus_acc_no + " nema podataka u tablici CUSACC_EXPOSURE.";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+
+	
+
+	/**
+	 * Metoda koja puni tabelu COLL_HEAD na temelju zadane dionice.
+	 * @param stock Objekt koji sadrži podatke o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertCollHead(StockData stock)
+	{
+	    try
+	    {
+	    	stock.col_hea_id = new YOY00(connCtx).getNewId();
+	    	BigDecimal amount = DecimalUtils.scale(stock.num_of_sec.multiply(stock.price),2);
+	    	stock.col_num = generateColNum(stock);
+	    	if(stock.col_num == null) return false;
+	    	#sql [connCtx] {
+	    		INSERT INTO coll_head (
+	    			col_hea_id,
+	    			col_type_id,
+	    			col_num,
+	    			real_est_nomi_valu,
+	    			real_est_nomi_date,
+	    			real_est_nm_cur_id,
+	    			cus_id,
+	    			coll_cus_id,
+	    			rec_lop,
+	    			nepo_value,
+	    			nepo_date,
+	    			hfs_value,
+	    			hfs_value_date,
+	    			hfs_value_last_one,
+	    			hfs_date_last_one,
+	    			coll_mvp_ponder,
+	    			coll_hnb_ponder,
+	    			coll_rzb_ponder,
+	    			real_est_date_from,
+	    			real_est_date_unti,
+	    			real_est_status,
+	    			real_est_spec_stat,
+	    			use_open_id,
+	    			use_id,
+	    			opening_ts,
+	    			user_lock,
+	    			eve_id,
+	    			bank_sign,
+	    			eligibility,
+	    			origin_org_uni_id,
+	    			org_uni_id,
+	    			use_id_ver,
+	    			use_id_aut,
+	    			verification_ts,
+	    			autorization_ts,
+	    			mortgage_status,
+	    			collateral_status,
+	    			workflow_indic,
+	    			cover_indic,
+	    			ver_send_ts,
+	    			basic_data_status,
+	    			coll_data_status,
+	    			col_cat_id,
+	    			use_id_ver_snd,
+	    			financial_flag,
+	    			rba_eligibility,
+	    			law_eligibility,
+	    			b1_eligibility,
+	    			b2_irb_elig
+	    		)
+	    		VALUES (
+	    			:(stock.col_hea_id),
+	    			:(stock.coll_type_id),
+	    			:(stock.col_num),
+	    			:(amount),
+	    			:(stock.price_date),
+	    			:(stock.nom_cur_id),
+	    			:(stock.loan_cus_id),
+	    			:(stock.owner_cus_id),
+	    			'D',
+	    			:(amount),
+	    			:(stock.price_date),
+	    			:(stock.hf_amount),
+	    			current date,
+	    			:(stock.hf_amount),
+	    			:(stock.hf_until),
+	    			0,
+	    			0,
+	    			0,
+	    			current date,
+	    			'9999-12-31',
+	    			'A',
+	    			'00',
+	    			1,
+	    			1,
+	    			current timestamp,
+	    			current timestamp,
+	    			:(eve_id),
+	    			'RB',
+	    			'D',
+	    			53253,
+	    			53253,
+	    			1,
+	    			1,
+	    			current timestamp,
+	    			current timestamp,
+	    			'2',
+	    			'3',
+	    			'0',
+	    			'2',
+	    			current timestamp,
+	    			'3',
+	    			'2',
+	    			:(stock.col_cat_id),
+	    			1,
+	    			'1',
+	    			:(stock.rba_eligibility),
+	    			'D',
+	    			'N',
+	    			'D'
+	    		)
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Greska kod ubacivanja zapisa u tablicu COLL_HEAD!";
+			batchContext.warning(stock.error);
+            batchContext.info("insertCollHead errorCode=" + ex.getErrorCode());
+            batchContext.info("insertCollHead SQLstate=" + ex.getSQLState());
+            ex.printStackTrace();
+			return false;
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska kod generiranja primarnog kljuca za tablicu COLL_HEAD!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+
+	/**
+	* Metoda koja generira broj kolaterala (COL_NUM).
+	* @return generirani broj kolaterala
+	*/
+	private String generateColNum(StockData stock)
+	{
+		String result = null;
+		try
+		{
+			Date today = new Date(System.currentTimeMillis());
+			String year = (""+today.getYear()).substring(1);
+			YXYG0 yxyg0 = new YXYG0(batchContext);
+			String s = yxyg0.getSequence("CLT_SE", today);
+			if(s == null) throw new Exception("YXYG0.getSequence vraca null!");
+			result = stock.coll_type_code + year + s;
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska pri generiranju broja kolaterala (COL_NUM)!";
+			batchContext.warning(stock.error);
+		}
+		return result;
+	}
+		
+	
+	/**
+	 * Metoda koja puni tabelu COLL_VRP na temelju zadane dionice.
+	 * @param stock Objekt koji sadrži podatke o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertCollVrp(StockData stock)
+	{
+	    try
+	    {
+	    	stock.col_vrp_id = new YOY00(connCtx).getNewId();
+	    	BigDecimal one_nom_amo_kn = stock.one_nom_amo.multiply(stock.mid_rate);
+	    	BigDecimal one_mar_amo_kn = stock.price.multiply(stock.mid_rate);
+	    	BigDecimal nominal_amount = stock.num_of_sec.multiply(stock.one_nom_amo);
+	    	BigDecimal market_amount = stock.num_of_sec.multiply(stock.price);
+	    	BigDecimal nominal_amount_kn = stock.num_of_sec.multiply(one_nom_amo_kn);
+	    	BigDecimal market_amount_kn = stock.num_of_sec.multiply(one_mar_amo_kn);
+	    	one_nom_amo_kn = DecimalUtils.scale(one_nom_amo_kn, 2);
+	    	one_mar_amo_kn = DecimalUtils.scale(one_mar_amo_kn, 2);
+	    	nominal_amount = DecimalUtils.scale(nominal_amount, 2);
+	    	market_amount = DecimalUtils.scale(market_amount, 2);
+	    	nominal_amount_kn = DecimalUtils.scale(nominal_amount_kn, 2);
+	    	market_amount_kn = DecimalUtils.scale(market_amount_kn, 2);
+	        #sql [connCtx] {
+	    		INSERT INTO coll_vrp (
+	    			col_vrp_id,
+	    			col_hea_id,
+	    			col_in2_id,
+	    			nom_cur_id,
+	    			one_nom_amo,
+	    			one_nom_amo_kn,
+	    			one_mar_amo,
+	    			one_mar_amo_kn,
+	    			one_mar_amo_per,
+	    			num_of_sec,
+	    			nominal_amount,
+	    			market_amount,
+	    			nominal_amount_kn,
+	    			market_amount_kn,
+	    			stop_sell_ind,
+	    			stop_sell_period,
+	    			sto_mar_id,
+	    			price_date,
+	    			currency_clause,
+	    			iss_cus_id,
+	    			tem_kap_per
+	    		)
+	    		VALUES (
+	    			:(stock.col_vrp_id),
+	    			:(stock.col_hea_id),
+	    			:(stock.col_in2_id),
+	    			:(stock.nom_cur_id),
+	    			:(stock.one_nom_amo),
+	    			:(one_nom_amo_kn),
+	    			:(stock.price),
+	    			:(one_mar_amo_kn),
+	    			null,
+	    			:(stock.num_of_sec),
+	    			:(nominal_amount),
+	    			:(market_amount),
+	    			:(nominal_amount_kn),
+	    			:(market_amount_kn),
+	    			:(stock.stop_sell_ind),
+	    			:(stock.stop_sell_period),
+	    			:(stock.sto_mar_id),
+	    			:(stock.price_date),
+	    			:(stock.currency_clause),
+	    			null,
+	    			null
+	    		)
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Greska kod ubacivanja zapisa u tablicu COLL_VRP!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska kod generiranja primarnog kljuca za tablicu COLL_VRP!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja puni tabelu COLL_OWNER na temelju zadane dionice.
+	 * @param stock Objekt koji sadrži podatke o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertCollOwner(StockData stock)
+	{
+	    try
+	    {
+	    	stock.coll_own_id = new YOY00(connCtx).getNewId();
+	        #sql [connCtx] {
+	    		INSERT INTO coll_owner (
+	    			coll_own_id,
+	    			register_no,
+	    			cus_id,
+	    			code,
+	    			ser_num,
+	    			part_id,
+	    			col_hea_id,
+	    			date_from,
+	    			date_until,
+	    			use_open_id,
+	    			use_id,
+	    			opening_ts,
+	    			user_lock,
+	    			part_id2,
+	    			own_num
+	    		)
+	    		VALUES (
+	    			:(stock.coll_own_id),
+	    			:(stock.owner_reg_no),
+	    			:(stock.owner_cus_id),
+	    			:(stock.owner_code),
+	    			1,
+	    			'1',
+	    			:(stock.col_hea_id),
+	    			current date,
+	    			'9999-12-31',
+	    			1,
+	    			1,
+	    			current timestamp,
+	    			current timestamp,
+	    			'1',
+	    			1
+	    		)
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Greska kod ubacivanja zapisa u tablicu COLL_OWNER!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska kod generiranja primarnog kljuca za tablicu COLL_OWNER!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja puni tabelu COLL_HF_PRIOR na temelju zadane dionice.
+	 * @param stock Objekt koji sadrži podatke o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertCollHfPrior(StockData stock)
+	{
+	    try
+	    {
+	    	stock.coll_hf_prior_id = new YOY00(connCtx).getNewId();
+	        BigDecimal hf_amount = DecimalUtils.scale(stock.hf_amount.multiply(stock.mid_rate_ref.divide(stock.mid_rate,BigDecimal.ROUND_HALF_EVEN)),2);
+	        String veh_con_num = stock.is_stock ? stock.veh_con_num : null;
+	        BigDecimal reg_ins = stock.is_stock ? new BigDecimal("2309063003") : null;
+	        Date con_date = stock.is_stock ? stock.hf_date_reciv : null;
+	    	#sql [connCtx] {
+	    		INSERT INTO coll_hf_prior (
+	    			coll_hf_prior_id,
+	    			hf_table_id,
+	    			hf_ref_id,
+	    			hf_coll_head_id,
+	    			hf_own_cus_id,
+	    			hf_register_no,
+	    			hf_own_code,
+	    			hf_own_fname,
+	    			hf_own_lname,
+	    			hf_hfc_id,
+	    			hf_priority,
+	    			hf_date_reciv,
+	    			hf_rec_lop_id,
+	    			hf_amount,
+	    			hf_cur_id,
+	    			amount_ref,
+	    			cur_id_ref,
+	    			exc_rat_ref,
+	    			exc_rat_ref_date,
+	    			hf_draw_amo,
+	    			hf_avail_amo,
+	    			hf_draw_amo_ref,
+	    			avail_amo_ref,
+	    			hf_avail_dat,
+	    			draw_bamo,
+	    			draw_bamo_ref,
+	    			avail_bamo_ref,
+	    			hf_date_hfc_from,
+	    			hf_date_hfc_until,
+	    			hf_status,
+	    			hf_spec_stat,
+	    			hf_date_from,
+	    			hf_date_until,
+	    			use_open_id,
+	    			use_id,
+	    			opening_ts,
+	    			user_lock,
+	    			eve_id,
+	    			bank_sign,
+	    			how_cover,
+	    			is_part_agreem,
+	    			rem_re_nomi_valu,
+	    			rec_lop,
+	    			date_rec_lop,
+	    			veh_con_num,
+	    			agreement,
+	    			reg_ins,
+	    			con_date
+	    		)
+	    		VALUES (
+	    			:(stock.coll_hf_prior_id),
+	    			1604184003,
+	    			:(stock.col_vrp_id),
+	    			:(stock.col_hea_id),
+	    			8218251,
+	    			'910000',
+	    			'00901717',
+	    			null,
+	    			(SELECT name FROM customer WHERE cus_id = 8218251),
+	    			1635771003,
+	    			'01',
+	    			:(stock.hf_date_reciv),
+	    			1602772003,
+	        		:(hf_amount),
+	        		:(stock.nom_cur_id),
+	        		:(stock.hf_amount),
+	        		:(stock.cur_id_ref),
+	        		:(stock.mid_rate_ref),
+	        		current date,
+	        		0,
+	        		:(stock.hf_amount),
+	        		0,
+	        		:(stock.hf_amount),
+	        		current date,
+	        		0,
+	        		0,
+	        		:(stock.hf_amount),
+	        		:(stock.hf_from),
+	        		:(stock.hf_until),
+	        		'A',
+	        		'00',
+	        		current date,
+	        		'9999-12-31',
+	        		1,
+	        		1,
+	        		current timestamp,
+	        		current timestamp,
+	        		:(eve_id),
+	        		'RB',
+	        		1629486003,
+	        		'N',
+	        		:(stock.hf_amount),
+	        		'D',
+	        		:(stock.hf_date_reciv),
+	        		:(veh_con_num),
+	        		'N',
+	        		:(reg_ins),
+	        		:(con_date)
+	    		)
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Greska kod ubacivanja zapisa u tablicu COLL_HF_PRIOR!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		catch(ArithmeticException ex)
+		{
+			stock.error = "Greska pri racunanju vrijednosti atributa HF_AMOUNT!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska kod generiranja primarnog kljuca za tablicu COLL_HF_PRIOR!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja puni tabelu LOAN_BENEFICIARY na temelju zadane dionice.
+	 * @param stock Objekt koji sadrži podatke o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertLoanBeneficiary(StockData stock)
+	{
+	    try
+	    {
+	    	stock.loan_ben_id = new YOY00(connCtx).getNewId();
+	        #sql [connCtx] {
+	    		INSERT INTO loan_beneficiary (
+	    			loan_ben_id,
+	    			register_no,
+	    			cus_id,
+	    			acc_no,
+	    			la_acc_id,
+	    			coll_hf_prior_id,
+	    			col_hea_id,
+	    			ser_num,
+	    			date_from,
+	    			date_until,
+	    			status,
+	    			spec_status,
+	    			use_open_id,
+	    			use_id,
+	    			opening_ts,
+	    			user_lock,
+	    			request_no
+	    		)
+	    		VALUES (
+	    			:(stock.loan_ben_id),
+	    			:(stock.loan_reg_no),
+	    			:(stock.loan_cus_id),
+	    			:(stock.cus_acc_no),
+	    			:(stock.cus_acc_id),
+	    			:(stock.coll_hf_prior_id),
+	    			null,
+	    			1,
+	    			current date,
+	    			'9999-12-31',
+	    			'A',
+	    			'00',
+	    			1,
+	    			1,
+	    			current timestamp,
+	    			current timestamp,
+	    			:(stock.request_no)
+	    		)
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Greska kod ubacivanja zapisa u tablicu LOAN_BENEFICIARY!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska kod generiranja primarnog kljuca za tablicu LOAN_BENEFICIARY!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;		
+	}
+	
+
+	/**
+	 * Metoda koja puni tabelu COLL_LIST_Q na temelju zadane dionice.
+	 * @param stock Objekt koji sadrži podatke o dionici.
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertCollListQ(StockData stock)
+	{
+	    try
+	    {
+	    	stock.col_lis_q_id = new YOY00(connCtx).getNewId();
+	        #sql [connCtx] {
+	    		INSERT INTO coll_list_q (
+	    			col_lis_q_id,
+	    			col_lis_typ_id,
+	    			col_hea_id,
+	    			status,
+	    			income_time,
+	    			bank_sign,
+	    			action_type
+	    		)
+	    		VALUES (
+	    			:(stock.col_lis_q_id),
+	        		700223,
+	        		:(stock.col_hea_id),
+	        		'0',
+	        		current timestamp,
+	        		'RB',
+	        		'PREUZETO IZ PKR'
+	    		)
+	        };
+	    }
+		catch(SQLException ex)
+		{
+			stock.error = "Greska kod ubacivanja zapisa u tablicu COLL_LIST_Q!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska kod generiranja primarnog kljuca za tablicu COLL_LIST_Q!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja ubacuje zapis o obradi odreðene dionice u tablicu IN_DATA_DWH_ITEM.
+	 * @param col_pro_id ID obrade
+	 * @param stock Objekt koji sadrži podatke o dionici
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean insertIntoInDataDwhItem(BigDecimal col_pro_id, StockData stock)
+	{
+		try
+		{
+			String string_promjene = stock.isin.trim() + " " + stock.owner_reg_no.trim();
+			#sql [connCtx] {
+				INSERT INTO in_data_dwh_item (
+					col_pro_id,
+					input_id,
+					input_code,
+					status,
+					output_id )
+				VALUES (
+					:col_pro_id,
+					:(stock.rbr),
+					:string_promjene,
+					'0',
+					:(stock.col_hea_id) )
+			};
+		}
+		catch(SQLException ex)
+		{
+			stock.error = "Greska kod ubacivanja zapisa u tablicu IN_DATA_DWH_ITEM!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+
+
+	/**
+	 * Metoda koja knjiži kolateral. Koristi se common YOY90.
+	 * @param stock Objekt koji sadrži podatke o dionici
+	 * @return Da li je metoda uspješno završila
+	 */
+	public boolean collPosting(StockData stock)
+	{
+		try
+		{
+			new YOY90(batchContext).CollPosting(stock.col_hea_id, false);
+		}
+		catch(Exception ex)
+		{
+			stock.error = "Greska kod knjizenja kolaterala!";
+			batchContext.warning(stock.error);
+			return false;
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Metoda koja u tablicu COL_PROC zapisuje broj obraðenih slogova u obradi. 
+	 * @param col_pro_id ID obrade
+	 * @return Da li je metoda uspješno završila
+	 */	
+	public boolean updateColProc(BigDecimal col_pro_id)
+	{
+		try
+		{
+			batchContext.beginTransaction();
+			#sql [connCtx] {
+				UPDATE col_proc
+				SET	col_number = (SELECT COUNT(*) FROM in_data_dwh_item WHERE col_pro_id =:(col_pro_id)),
+					proc_ts = current timestamp,
+					proc_status = '1'
+				WHERE col_pro_id = :(col_pro_id)
+			};
+			batchContext.commitTransaction();
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod spremanja broja obraðenih slogova u tablicu COL_PROC!", ex);
+			return false;
+		}
+		return true;
+	}
+
+	
+	/**
+	 * Metoda koja dohvaæa mail adrese na koje se šalje izvješæe. 
+	 * @return String s mail adresama. Ako je došlo do greške, vraæa null.
+	 */		
+	public String selectMailAddresses()
+	{
+	    try
+	    {
+	        String address = null;
+	        #sql [connCtx2] {
+	            SELECT dest_mail_address 
+	            INTO :address
+	            FROM report_def 
+	            WHERE rpt_code = 'csv178'
+	        };
+	        if(address == null) batchContext.error("Nije definirana e-mail adresa na koju se salje izvjesce (REPORT_DEF.DEST_MAIL_ADDRESS=NULL)!", new String[]{""});
+	        return address;   
+	    }
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvata mail liste!", ex);
+			return null;
+		}
+	}
+}

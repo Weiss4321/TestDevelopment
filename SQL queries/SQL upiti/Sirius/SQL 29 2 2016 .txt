@@ -1,0 +1,1250 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+		select * from cusacc_external;
+
+		select * from customer_account where cus_acc_no = '1105154417'
+
+		select * from cusacc_external where cus_id = 125554205551;
+
+		select * from customer where cus_id = 125554205551 
+
+		select * from customer_subtype;
+
+		select * from customer_type;
+
+		1026594144
+
+		 select * from batch_log where bat_def_id = 1026594144 order by recording_time desc;
+
+		 select * from batch_log where bat_def_id = 1026594144;
+
+		 select * from batch_def where bat_def_id = 1026594144; --  bnC2: Brojaci nedozvoljenih negativnih dugovanja
+
+  select * from counter_list;
+
+   select * from customer_account where cus_acc_id = 291924127522; -- račun iz RBA
+
+   select * from customer_account where cus_acc_no =  '1103587406';
+
+    select * from counter_list where cus_acc_id = 11284162522;  -- nema podataka u counter listi.
+
+    select * from customer_account where cus_acc_no =  '1106015545';
+
+      select * from counter_list where cus_acc_id = 11284162522;  -- nema podataka u counter listi.
+
+      select * from counter_list where cus_acc_id = 11336899522 order by user_lock desc;  
+
+
+
+       SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   c.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date,
+                   c.cus_id,
+                   org.code
+           FROM
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '22.02.2016')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.cus_acc_id = 11336899522 
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+                AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <= '23.02.2016'
+                AND ( 
+                        ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '22.02.2016') )
+                            OR 
+                        ( ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '22.12.2015'  ) )
+                    )
+                AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= '5'  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+               
+
+        UNION ALL
+
+          SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date,
+                   c.cus_id,
+                   org.code
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date =   '22.02.2016')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.cus_acc_id = 11336899522
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '23.02.2016'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '22.02.2016') )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '23.12.2015') ) ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= '5' )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1'
+
+                 select * from banpro_param;
+
+
+                     select * from batch_log where bat_def_id = 4491261704 order by recording_time desc;
+
+				select * from batch_def where bat_def_id = 4491261704 ; -- bfO5: Dnevnik knjizenja obrada
+
+				select * from batch_def where bat_def_id =7644296704; -- bnF6 : Univerzalna obrada za periodicke naknade
+
+				select * from batch_def where bat_def_id = 7695529704; -- bfZC: Knjiženje kamate po transakcijskim računima
+
+				select * from batch_def where bat_def_id = 7695529704; -- bfZC: Knjiženje kamate po transakcijskim računima
+
+				select * from batch_def where bat_def_name like 'bn64%'; -- 1692801003 -- bn64: Storno proknjižene periodičke naknade
+
+				select use_id, user_name,login, gro_id, date_from, date_until, cus_id from app_user where use_id = 1072503; -- MIHAELA ŠTAJER            
+
+				select * from due_Term_table;
+
+
+                 SELECT  t.account,  t.register_no,  cus.name,  c.code_num,  tcu.cus_acc_id,  t.process_date,  t.value_date,  t.domicil,  t.org_uni_id,  t.fc_credit_amount,  t.fc_debit_amount,  t.credit_amount,  t.debit_amount,  t.accounting_date,  t.tur_typ_id,  t.turnover_desc,  tcu.statement_no,  t.event_reference,  t.turnover_reference,  t.cur_id,  t.tur_id,  t.gl_flag,  t.eve_id  
+                 FROM turnover t  INNER JOIN currency c ON t.cur_id = c.cur_id  
+                 LEFT OUTER JOIN turn_customer tcu ON t.tur_id = tcu.tur_id  
+                 LEFT OUTER JOIN customer cus ON t.cus_id = cus.cus_id  
+                 WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM turnover tur  INNER JOIN event ev ON tur.eve_id = ev.eve_id  
+                 LEFT OUTER JOIN turn_customer turc ON tur.tur_id = turc.tur_id  
+                 WHERE  tur.process_date 
+                 BETWEEN '2016-02-17' 
+                 AND '2016-02-17' 
+                 AND  tur.module_name = 'RET' AND  ev.eve_typ_id IN ( 
+                 SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )  
+                 AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+                 ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+
+
+                 
+			  SELECT count(*)
+                 FROM turnover t  INNER JOIN currency c ON t.cur_id = c.cur_id  
+                 LEFT OUTER JOIN turn_customer tcu ON t.tur_id = tcu.tur_id  
+                 LEFT OUTER JOIN customer cus ON t.cus_id = cus.cus_id  
+                 WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM turnover tur  INNER JOIN event ev ON tur.eve_id = ev.eve_id  
+                 LEFT OUTER JOIN turn_customer turc ON tur.tur_id = turc.tur_id  
+                 WHERE  tur.process_date 
+                 BETWEEN '2016-02-17' 
+                 AND '2016-02-17' 
+                 AND  tur.module_name = 'RET' AND  ev.eve_typ_id IN ( 
+                 SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )  
+                 AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )   WITH UR;
+
+                 
+             
+
+                    SELECT count(*)
+                 FROM turnover t  INNER JOIN currency c ON t.cur_id = c.cur_id  
+                 LEFT OUTER JOIN turn_customer tcu ON t.tur_id = tcu.tur_id  
+                 LEFT OUTER JOIN customer cus ON t.cus_id = cus.cus_id  
+                 WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM turnover tur  INNER JOIN event ev ON tur.eve_id = ev.eve_id  
+                 LEFT OUTER JOIN turn_customer turc ON tur.tur_id = turc.tur_id  
+                 WHERE  tur.process_date 
+                 BETWEEN '2016-02-17' 
+                 AND '2016-02-17' 
+                 AND  tur.module_name = 'RET' AND  ev.eve_typ_id IN ( 
+                 SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )  
+                 AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+                 ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+
+
+                 ----
+
+                 SELECT   count(*)
+                 FROM SIP.turnover t  INNER JOIN SIP.currency c ON t.cur_id = c.cur_id  LEFT OUTER JOIN SIP.turn_customer tcu ON t.tur_id = tcu.tur_id  
+                 LEFT OUTER JOIN SIP.customer cus ON t.cus_id = cus.cus_id  WHERE  
+                 t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIP.turnover tur  INNER JOIN SIP.event ev ON tur.eve_id = ev.eve_id  
+                 LEFT OUTER JOIN SIP.turn_customer turc ON tur.tur_id = turc.tur_id  
+                 WHERE  tur.process_date BETWEEN '2016-02-15' AND '2016-02-15' AND  tur.module_name = 'RET' AND  tur.value_date BETWEEN '2016-01-31' AND '2016-01-31'
+                 AND  ev.eve_typ_id IN ( SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 7695529704 )   AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )   with ur;
+
+                 select * from customer_account where cus_acc_id = 864785522; --1100191302
+
+
+                 
+			select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 		select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 		update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 921648326;
+
+ 		update CUST_BILL_EXCH set paid_amount = null, collected_amount = null where cus_bil_exc_id = 497881326;
+
+		commit;
+
+
+		1100191302
+
+
+		SELECT  SUM(tabl.balance) balance,  SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount-tabl.ann_outgoing_trx) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance 
+		FROM  EXCHANGE_RATE er,(SELECT  ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba   
+		WHERE   ba.cus_acc_id =  864785522
+		AND   ba.cus_id = 5753251 
+		AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx  FROM   cusacc_balance_last cb  
+		WHERE   cb.cus_acc_id = 864785522   
+		AND cb.cus_id = 5753251  
+		AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       
+		currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   
+		AND  '26.02.2016'  
+		BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc with ur
+
+         ----------------------    YFYM.getCusAccBalanceForHard():   
+
+
+           		SELECT balance
+                    
+                    FROM cusacc_balance_last  
+                    WHERE  cus_acc_id  = 864785522
+                    AND cur_id  =63999  
+                    AND amo_type = 'F20'
+                    AND pro_typ_id = 31598005
+
+
+                    	SELECT *
+                    
+                    FROM cusacc_balance_last  
+                    WHERE 
+                    cur_id  =63999  
+                    AND amo_type = 'F20'
+                    AND pro_typ_id = 31598005
+
+                    select * from customer_account where cus_acc_id  = 864785522;
+
+                ---
+
+                select * from amount_type where amo_type = 'F20'; -- NAKNADA ZA DOMAĆI PLATNI PROMET
+				
+				
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+		    
+    SET CURRENT_SCHEMA = 'SIDEV'
+
+
+		
+				         SELECT
+                co.overdraft_no, 
+                co.cus_ove_id,
+                ot.ove_typ_id,
+                ot.ove_typ_code,
+                co.overdraft_status, 
+                co.closing_date, 
+                co.opening_date, 
+                co.maturity_date, 
+                co.available_amount, 
+                co.contract_amount, 
+                ot.fix_auto_indic,
+                co.cur_id,
+                co.cus_acc_id           
+          
+            FROM 
+                cusacc_overdraft co, overdraft_type ot, contract c
+            WHERE 
+                
+              
+               c.eve_id = co.eve_id
+               AND c.con_typ_id = 1099
+               AND c.contract_status = 'A'
+               AND co.overdraft_status IN ( 'A','V','R','I' )
+               AND co.ove_typ_id = ot.ove_typ_id
+                FETCH FIRST 1 ROWS ONLY
+
+
+                select * from batch_log where bat_def_id = 344447327 order by recording_time desc;
+
+                update batch_log set exec_status = 'D' where bat_log_id = 727434327;
+
+                commit;
+
+                  select * from batch_log where bat_def_id = 332214327 order by recording_time desc;
+
+                update batch_log set exec_status = 'D' where bat_log_id = 727314327;
+
+                commit;
+
+		---------------------------------------------------------------------------
+
+		select * from customer_account where cus_acc_no = '1135000650'; -- podravka
+
+			
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 52635326 AND ba.cus_id = 417352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 52635326 AND cb.cus_id = 417352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.02.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+				-- originalna verzija SQL-a
+               SELECT dozvoljeni_racuni.cus_acc_id, dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.avail_balance, stanja.domestic_balance, valuta.code_num, stanja.buy_rate_fc FROM (SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id, ca.opening_date   FROM  customer_account ca, banpro_param bp   
+                WHERE  ca.cus_id = 417352 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, 
+                (SELECT SUM(tabl.balance) balance , SUM(tabl.overdraft_amount) overdraft_amount,  SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance,  tabl.cus_acc_id,  tabl.cur_id,  er.buy_rate_fc,  er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er, 
+                (SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  
+                ba.cus_id = 417352  AND ba.bank_sign = 'RB'  UNION ALL  SELECT   cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx  FROM  cusacc_balance_last cb WHERE  
+                cb.cus_id = 417352   AND cb.cus_acc_report = '1'  AND cb.avail_balance_flag = '1'  AND cb.bank_sign = 'RB') tabl WHERE  er.cur_id = tabl.cur_id  
+                AND '18.02.2016' between er.date_from and er.date_until  GROUP BY  tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc  )stanja,  currency valuta  
+                WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id   ORDER BY  CASE   WHEN stanja.cur_id = 63999 THEN 1   WHEN stanja.cur_id != 63999 THEN 2  END,  CASE             
+                WHEN dozvoljeni_racuni.ban_pro_typ_id = 6561936704      THEN 2             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790661005       THEN 3             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790663005       THEN 4             WHEN dozvoljeni_racuni.ban_pro_typ_id = 795983005        THEN 5             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790665005       THEN 6             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790662005        THEN 7             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790664005       THEN 8             WHEN dozvoljeni_racuni.ban_pro_typ_id= 795984005       THEN 9         END,    CASE  
+                WHEN dozvoljeni_racuni.cus_acc_no = '1135000633' THEN 1  WHEN dozvoljeni_racuni.cus_acc_no != '1135000633' THEN 2  END, valuta.code_char with ur 
+
+
+				select * from currency where cur_id = 53999; -- dolari
+
+                -- ispravak SQL-a
+		     SELECT dozvoljeni_racuni.cus_acc_id, dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.avail_balance, stanja.domestic_balance, valuta.code_num, stanja.buy_rate_fc FROM (SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id, ca.opening_date   FROM  customer_account ca, banpro_param bp   
+                WHERE  ca.cus_id = 417352 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, 
+                (SELECT SUM(tabl.balance) balance , 
+                SUM(tabl.overdraft_amount) overdraft_amount,  
+                SUM(tabl.reserved_amount) reserved_amount, 
+                SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount-tabl.ann_outgoing_trx) avail_balance, 
+                tabl.cus_acc_id,  tabl.cur_id,  er.buy_rate_fc,  er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er, 
+                (SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  
+                ba.cus_id = 417352  AND ba.bank_sign = 'RB'                
+                UNION ALL  SELECT   cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx  FROM  cusacc_balance_last cb WHERE  
+                cb.cus_id = 417352   AND cb.cus_acc_report = '1'  AND cb.avail_balance_flag = '1'  AND cb.bank_sign = 'RB') tabl WHERE  er.cur_id = tabl.cur_id  
+                AND '18.02.2016' between er.date_from and er.date_until  GROUP BY  tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc  )stanja,  currency valuta               
+                WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id   ORDER BY  CASE   WHEN stanja.cur_id = 63999 THEN 1   WHEN stanja.cur_id != 63999 THEN 2  END,  CASE             
+                WHEN dozvoljeni_racuni.ban_pro_typ_id = 6561936704      THEN 2             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790661005       THEN 3             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790663005       THEN 4             WHEN dozvoljeni_racuni.ban_pro_typ_id = 795983005        THEN 5             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790665005       THEN 6             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790662005        THEN 7             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790664005       THEN 8             WHEN dozvoljeni_racuni.ban_pro_typ_id= 795984005       THEN 9         END,    CASE  
+                WHEN dozvoljeni_racuni.cus_acc_no = '1135000633' THEN 1  WHEN dozvoljeni_racuni.cus_acc_no != '1135000633' THEN 2  END, valuta.code_char with ur 
+
+
+			select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 		select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 		update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 921648326;
+
+ 		update CUST_BILL_EXCH set paid_amount = null, collected_amount = null where cus_bil_exc_id = 497881326;
+
+		commit;
+                
+		select * from customer_account where cus_acc_no = '1135007119'; -- nova firma
+
+		update customer_account set cus_acc_status = 'A' where cus_acc_id = 921203326;
+
+		commit;
+
+		select * from customer_account;
+		
+          SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+		 ba.cus_acc_id = 921203326 AND ba.cus_id = 148221330 AND ba.bank_sign = 'RB' 
+ 		UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ 		WHERE cb.cus_acc_id = 921203326 AND cb.cus_id = 148221330 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ 		AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.02.2016' 
+ 		BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+ 		select * from customer_account where cus_acc_no = '1135006038' 
+
+ 		select * from customer where cus_id = 148221330;
+
+ 		select * from cusacc_external;
+
+
+ 		select * from vat_report_head  where VAT_REP_HEA_ID = 1793350335;
+
+
+
+ 		 select 
+                    distinct vrh.VAT_REP_HEA_ID,
+                    vrh.REGISTER_NO,
+                    vrh.NAME,
+                    ca.CUS_ACC_NO,
+                    cus.TAX_NUMBER,
+                    vrh.FIS_VAT_INV_NO,
+                    vrh.FISCAL_ACC_FLAG,
+                    vrh.VAT_INVOICE_NO,
+                    (case when (vri.deb_cur_id is null or vrh.cus_let_typ_id is null or vrh.cus_let_typ_id in 41999) then 'HRK' else cur.CODE_CHAR end ) code_char,
+                    vrh.TOTAL_AMOUNT,
+                    vrh.VAT_INVOICE_DATE
+              
+                FROM VAT_REPORT_HEAD vrh left outer join Customer cus on vrh.cus_id=cus.cus_id
+                                         left outer join customer_account ca on vrh.cus_acc_id=ca.cus_acc_id
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1793350335
+
+
+                select * from vat_report_item where VAT_REP_HEA_ID = 1793350335;
+
+                select * from vat_report_head where VAT_REP_HEA_ID = 1793350335;
+
+                
+       		select 
+                    vri.VAT_REP_ITE_ID,
+                    vrh.REGISTER_NO,
+                    dtt.turnover_reference,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_user else btc.ban_tar_user_code END) AS BAN_TAR_USER_CODE,
+                    vrh.VAT_INVOICE_NO,
+                    cur.code_char,
+                    vri.DEB_AMOUNT,
+                    vrh.RECORDING_TIME,
+                    vrh.VAT_INVOICE_DATE,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_dsc else btc.ban_tar_cod_dsc END) AS ban_tar_cod_dsc,
+                    tt.name,
+                    ca.contract_no
+                FROM VAT_REPORT_HEAD vrh 
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                          left outer join DUE_TERM_TABLE dtt on vri.VAT_REP_ITE_ID = dtt.VAT_REP_ITE_ID
+                          left outer join BANK_TARIFF_CODE btc on vri.BAN_TAR_CODE = btc.BAN_TAR_CODE
+                          left outer join INTER_BAN_TAR_CODE ibtc on vri.BAN_TAR_CODE = ibtc.INT_BAN_TAR_CODE AND ibtc.int_ban_tar_code IN ('2','3')
+                          left outer join TURNOVER_TYPE tt on vri.TUR_TYP_ID = tt.TUR_TYP_ID
+                          left outer join customer_account ca on dtt.CUS_ACC_ID = ca.CUS_ACC_ID
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1793350335
+                order by vrh.RECORDING_TIME desc
+
+                  select 
+                    vri.VAT_REP_ITE_ID,
+                    vrh.REGISTER_NO,
+                    dtt.turnover_reference,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_user else btc.ban_tar_user_code END) AS BAN_TAR_USER_CODE,
+                    vrh.VAT_INVOICE_NO,
+                    cur.code_char,
+                    vri.DEB_AMOUNT,
+                    vri.CRED_AMOUNT,
+                    vrh.RECORDING_TIME,
+                    vrh.VAT_INVOICE_DATE,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_dsc else btc.ban_tar_cod_dsc END) AS ban_tar_cod_dsc,
+                    tt.name,
+                    ca.contract_no
+                FROM VAT_REPORT_HEAD vrh 
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                          left outer join DUE_TERM_TABLE dtt on vri.VAT_REP_ITE_ID = dtt.VAT_REP_ITE_ID
+                          left outer join BANK_TARIFF_CODE btc on vri.BAN_TAR_CODE = btc.BAN_TAR_CODE
+                          left outer join INTER_BAN_TAR_CODE ibtc on vri.BAN_TAR_CODE = ibtc.INT_BAN_TAR_CODE AND ibtc.int_ban_tar_code IN ('2','3')
+                          left outer join TURNOVER_TYPE tt on vri.TUR_TYP_ID = tt.TUR_TYP_ID
+                          left outer join customer_account ca on dtt.CUS_ACC_ID = ca.CUS_ACC_ID
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1791317335
+                order by vrh.RECORDING_TIME desc
+
+
+                   select 
+                    vri.VAT_REP_ITE_ID,
+                    vrh.REGISTER_NO,
+                    dtt.turnover_reference,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_user else btc.ban_tar_user_code END) AS BAN_TAR_USER_CODE,
+                    vrh.VAT_INVOICE_NO,
+                    cur.code_char,
+                    cur2.code_char as code_char2,
+                    vri.DEB_AMOUNT,
+                    vri.CRED_AMOUNT,
+                    vrh.RECORDING_TIME,
+                    vrh.VAT_INVOICE_DATE,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_dsc else btc.ban_tar_cod_dsc END) AS ban_tar_cod_dsc,
+                    tt.name,
+                    ca.contract_no
+                FROM VAT_REPORT_HEAD vrh 
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                          left outer join currency cur2 on vri.CRED_CUR_ID = cur2.cur_id
+                          left outer join DUE_TERM_TABLE dtt on vri.VAT_REP_ITE_ID = dtt.VAT_REP_ITE_ID
+                          left outer join BANK_TARIFF_CODE btc on vri.BAN_TAR_CODE = btc.BAN_TAR_CODE
+                          left outer join INTER_BAN_TAR_CODE ibtc on vri.BAN_TAR_CODE = ibtc.INT_BAN_TAR_CODE AND ibtc.int_ban_tar_code IN ('2','3')
+                          left outer join TURNOVER_TYPE tt on vri.TUR_TYP_ID = tt.TUR_TYP_ID
+                          left outer join customer_account ca on dtt.CUS_ACC_ID = ca.CUS_ACC_ID
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1791317335
+                order by vrh.RECORDING_TIME desc
+
+
+			select * from vat_report_item where VAT_REP_ITE_ID = 1775225335;
+
+			select * from vat_report_head where VAT_REP_hea_ID = 1791317335;
+
+			select * from vat_report_head where VAT_REP_hea_ID =1794653335;
+
+			select * from vat_report_item where VAT_REP_hea_ID =1794653335;
+
+			
+                select * from vat_report_head where cus_let_typ_id = 74999 order by recording_time desc;
+
+                select * from CUST_LETT_TYPE where cus_let_typ_id = 74999;
+
+
+                select * from batch_def where bat_def_id = 4491261704; -- bfO5: Dnevnik knjizenja obrada
+
+                 select * from batch_def where bat_def_id = 1692801003;
+
+                 select * from batch_log where bat_def_id = 4491261704 order by recording_time desc;
+
+                 update batch_log set exec_status = 'D' where bat_log_id = 730201327;
+
+                 commit;
+
+                 select user_name, login, use_id, cus_id, date_from, date_until from app_user where use_id = 1672535003;
+
+
+                 SELECT  t.account,  t.register_no,  cus.name,  c.code_num,  tcu.cus_acc_id,  t.process_date,  t.value_date,  t.domicil,  t.org_uni_id,  t.fc_credit_amount,  t.fc_debit_amount,  t.credit_amount,  t.debit_amount,  t.accounting_date,  t.tur_typ_id,  t.turnover_desc,  tcu.statement_no,  t.event_reference,  t.turnover_reference,  t.cur_id,  t.tur_id,  t.gl_flag,  t.eve_id  
+                 FROM SIDEV.turnover t  INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  
+                 LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id  
+                 LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id  
+                 WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  
+                 LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  
+                 WHERE  tur.process_date 
+                 BETWEEN '2015-01-06' 
+                 AND '2015-10-06' 
+                 AND  tur.module_name = 'PAY' AND  ev.eve_typ_id IN ( 
+                 SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )  
+                 AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+                 ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+                
+
+			 select * from pro_typ_group;
+
+                select * from cust_lett_type;	
+
+                customer
+
+               -- insert into CUST_LETT_TYPE values (NEXT VALUE FOR FINANCIAL_SEQ,  956407335, 3999,'2007-01-01','9999-12-31','RB', current_timestamp);
+
+
+			select * from batch_def where bat_def_id = 4491261704 ; -- bfO5: Dnevnik knjizenja obrada
+
+			 select * from batch_log where bat_def_id = 4491261704 order by recording_time desc;
+
+
+			 select * from CUST_SIGNATURE;
+
+			 ---------------------------
+
+			SELECT  t.account,  t.register_no,  cus.name,  c.code_num,  tcu.cus_acc_id,  t.process_date,  t.value_date,  t.domicil,  t.org_uni_id,  t.fc_credit_amount,  t.fc_debit_amount,  t.credit_amount,  t.debit_amount,  t.accounting_date,  t.tur_typ_id,  t.turnover_desc,  tcu.statement_no,  t.event_reference,  t.turnover_reference,  t.cur_id,  t.tur_id,  t.gl_flag,  t.eve_id  FROM SIDEV.turnover t  INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id  LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id  WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  
+			WHERE  tur.process_date 
+			BETWEEN '2015-01-06' AND '2015-10-06' 
+			AND  tur.module_name = 'PAY' AND  ev.eve_typ_id IN ( SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )   
+			AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR;
+
+
+ 			select * from params_dictionary;
+
+ 				select * from PARAM_APPLICATION
+			
+
+
+                   SELECT cur_id
+          
+            FROM proc_member
+            WHERE pro_mem_id = 'RB'
+            WITH UR
+
+
+            -- doraditi Sql ZA dohvat podataka :
+
+
+            SELECT  t.account,  
+            t.register_no,  
+            cus.name,  
+            c.code_num,  
+            tcu.cus_acc_id,  
+            t.process_date,  
+            t.value_date,  
+            t.domicil,  
+            t.org_uni_id,  
+            t.fc_credit_amount,  
+            t.fc_debit_amount,  
+            t.credit_amount,  
+            t.debit_amount,  
+            t.accounting_date,  
+            t.tur_typ_id,  
+            t.turnover_desc,  
+            tcu.statement_no,  
+            t.event_reference,  
+            t.turnover_reference,  
+            t.cur_id,  
+            t.tur_id,  
+            t.gl_flag,  
+            t.eve_id  
+            FROM SIDEV.turnover t  
+            INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  
+            LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id 
+            LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id 
+            WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  WHERE  tur.process_date BETWEEN '2015-10-06' AND '2015-10-06' AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+            ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+
+            
+
+                select * from amount_type where amo_type = 'F20'; -- 	
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+SET CURRENT_SCHEMA = 'SITP'
+
+
+
+				
+			select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 		select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 		update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 486615656;
+
+ 		update CUST_BILL_EXCH set paid_amount = null, collected_amount = null where cus_bil_exc_id = 497881326;
+
+		commit;
+
+		
+
+		select * from customer_account where cus_acc_no = '1135017751'; 
+
+
+		
+          SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+		 ba.cus_acc_id = 484589656 AND ba.cus_id = 416054660 AND ba.bank_sign = 'RB' 
+ 		UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ 		WHERE cb.cus_acc_id = 484589656 AND cb.cus_id = 416054660 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ 		AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '24.02.2016' 
+ 		BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+
+ 		--------------------------------------------------------------------
+
+
+			SELECT  t.account,  t.register_no,  cus.name,  c.code_num,  tcu.cus_acc_id,  t.process_date,  t.value_date,  t.domicil,  t.org_uni_id,  t.fc_credit_amount,  t.fc_debit_amount,  t.credit_amount,  t.debit_amount,  t.accounting_date,  t.tur_typ_id,  t.turnover_desc,  tcu.statement_no,  t.event_reference,  t.turnover_reference,  t.cur_id,  t.tur_id,  t.gl_flag,  t.eve_id  
+                 FROM SIDEV.turnover t  INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  
+                 LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id  
+                 LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id  
+                 WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  
+                 LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  
+                 WHERE  tur.process_date 
+                 BETWEEN '2015-01-06' 
+                 AND '2015-10-06' 
+                 AND  tur.module_name = 'PAY' AND  ev.eve_typ_id IN ( 
+                 SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )  
+                 AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+                 ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+
+
+
+ -------------------------------------------------------------------
+
+			
+ 
+ 		
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	
+SET CURRENT_SCHEMA = 'SIP'
+
+select * from legal_entity;
+
+
+			SELECT
+                 count(*)
+           FROM
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '22.02.2016')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+               
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+               -- AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <= '23.02.2016'
+                 AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= '5'  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+
+
+
+                AND ( 
+                        ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '22.02.2016') )
+                            OR 
+                        ( ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '22.12.2015'  ) )
+                    )
+
+
+
+                      SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date,
+                   c.cus_id,
+                   org.code
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date =   '22.02.2016')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+              
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '23.02.2016'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '22.02.2016') )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '23.12.2015') ) ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= '5' )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1'
+
+                select * from banpro_param;
+				
+				
+				
+				
+				-------------------- SIDEV
+				
+				    
+    SET CURRENT_SCHEMA = 'SIDEV'
+
+
+		
+				         SELECT
+                co.overdraft_no, 
+                co.cus_ove_id,
+                ot.ove_typ_id,
+                ot.ove_typ_code,
+                co.overdraft_status, 
+                co.closing_date, 
+                co.opening_date, 
+                co.maturity_date, 
+                co.available_amount, 
+                co.contract_amount, 
+                ot.fix_auto_indic,
+                co.cur_id,
+                co.cus_acc_id           
+          
+            FROM 
+                cusacc_overdraft co, overdraft_type ot, contract c
+            WHERE 
+                
+              
+               c.eve_id = co.eve_id
+               AND c.con_typ_id = 1099
+               AND c.contract_status = 'A'
+               AND co.overdraft_status IN ( 'A','V','R','I' )
+               AND co.ove_typ_id = ot.ove_typ_id
+                FETCH FIRST 1 ROWS ONLY
+
+
+                select * from batch_log where bat_def_id = 344447327 order by recording_time desc;
+
+                update batch_log set exec_status = 'D' where bat_log_id = 727434327;
+
+                commit;
+
+                  select * from batch_log where bat_def_id = 332214327 order by recording_time desc;
+
+                update batch_log set exec_status = 'D' where bat_log_id = 727314327;
+
+                commit;
+
+		---------------------------------------------------------------------------
+
+		select * from customer_account where cus_acc_no = '1135000650'; -- podravka
+
+			
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 52635326 AND ba.cus_id = 417352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 52635326 AND cb.cus_id = 417352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.02.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+				-- originalna verzija SQL-a
+               SELECT dozvoljeni_racuni.cus_acc_id, dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.avail_balance, stanja.domestic_balance, valuta.code_num, stanja.buy_rate_fc FROM (SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id, ca.opening_date   FROM  customer_account ca, banpro_param bp   
+                WHERE  ca.cus_id = 417352 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, 
+                (SELECT SUM(tabl.balance) balance , SUM(tabl.overdraft_amount) overdraft_amount,  SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance,  tabl.cus_acc_id,  tabl.cur_id,  er.buy_rate_fc,  er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er, 
+                (SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  
+                ba.cus_id = 417352  AND ba.bank_sign = 'RB'  UNION ALL  SELECT   cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx  FROM  cusacc_balance_last cb WHERE  
+                cb.cus_id = 417352   AND cb.cus_acc_report = '1'  AND cb.avail_balance_flag = '1'  AND cb.bank_sign = 'RB') tabl WHERE  er.cur_id = tabl.cur_id  
+                AND '18.02.2016' between er.date_from and er.date_until  GROUP BY  tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc  )stanja,  currency valuta  
+                WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id   ORDER BY  CASE   WHEN stanja.cur_id = 63999 THEN 1   WHEN stanja.cur_id != 63999 THEN 2  END,  CASE             
+                WHEN dozvoljeni_racuni.ban_pro_typ_id = 6561936704      THEN 2             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790661005       THEN 3             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790663005       THEN 4             WHEN dozvoljeni_racuni.ban_pro_typ_id = 795983005        THEN 5             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790665005       THEN 6             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790662005        THEN 7             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790664005       THEN 8             WHEN dozvoljeni_racuni.ban_pro_typ_id= 795984005       THEN 9         END,    CASE  
+                WHEN dozvoljeni_racuni.cus_acc_no = '1135000633' THEN 1  WHEN dozvoljeni_racuni.cus_acc_no != '1135000633' THEN 2  END, valuta.code_char with ur 
+
+
+				select * from currency where cur_id = 53999; -- dolari
+
+                -- ispravak SQL-a
+		     SELECT dozvoljeni_racuni.cus_acc_id, dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.avail_balance, stanja.domestic_balance, valuta.code_num, stanja.buy_rate_fc FROM (SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id, ca.opening_date   FROM  customer_account ca, banpro_param bp   
+                WHERE  ca.cus_id = 417352 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, 
+                (SELECT SUM(tabl.balance) balance , 
+                SUM(tabl.overdraft_amount) overdraft_amount,  
+                SUM(tabl.reserved_amount) reserved_amount, 
+                SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount-tabl.ann_outgoing_trx) avail_balance, 
+                tabl.cus_acc_id,  tabl.cur_id,  er.buy_rate_fc,  er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er, 
+                (SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  
+                ba.cus_id = 417352  AND ba.bank_sign = 'RB'                
+                UNION ALL  SELECT   cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx  FROM  cusacc_balance_last cb WHERE  
+                cb.cus_id = 417352   AND cb.cus_acc_report = '1'  AND cb.avail_balance_flag = '1'  AND cb.bank_sign = 'RB') tabl WHERE  er.cur_id = tabl.cur_id  
+                AND '18.02.2016' between er.date_from and er.date_until  GROUP BY  tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc  )stanja,  currency valuta               
+                WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id   ORDER BY  CASE   WHEN stanja.cur_id = 63999 THEN 1   WHEN stanja.cur_id != 63999 THEN 2  END,  CASE             
+                WHEN dozvoljeni_racuni.ban_pro_typ_id = 6561936704      THEN 2             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790661005       THEN 3             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790663005       THEN 4             WHEN dozvoljeni_racuni.ban_pro_typ_id = 795983005        THEN 5             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790665005       THEN 6             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790662005        THEN 7             WHEN dozvoljeni_racuni.ban_pro_typ_id = 790664005       THEN 8             WHEN dozvoljeni_racuni.ban_pro_typ_id= 795984005       THEN 9         END,    CASE  
+                WHEN dozvoljeni_racuni.cus_acc_no = '1135000633' THEN 1  WHEN dozvoljeni_racuni.cus_acc_no != '1135000633' THEN 2  END, valuta.code_char with ur 
+
+
+			select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 		select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 		update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 921648326;
+
+ 		update CUST_BILL_EXCH set paid_amount = null, collected_amount = null where cus_bil_exc_id = 497881326;
+
+		commit;
+                
+		select * from customer_account where cus_acc_no = '1135007119'; -- nova firma
+
+		update customer_account set cus_acc_status = 'A' where cus_acc_id = 921203326;
+
+		commit;
+
+		select * from customer_account;
+		
+          SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+		 ba.cus_acc_id = 921203326 AND ba.cus_id = 148221330 AND ba.bank_sign = 'RB' 
+ 		UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ 		WHERE cb.cus_acc_id = 921203326 AND cb.cus_id = 148221330 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ 		AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.02.2016' 
+ 		BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+ 		select * from customer_account where cus_acc_no = '1135006038' 
+
+ 		select * from customer where cus_id = 148221330;
+
+ 		select * from cusacc_external;
+
+
+ 		select * from vat_report_head  where VAT_REP_HEA_ID = 1793350335;
+
+
+
+ 		 select 
+                    distinct vrh.VAT_REP_HEA_ID,
+                    vrh.REGISTER_NO,
+                    vrh.NAME,
+                    ca.CUS_ACC_NO,
+                    cus.TAX_NUMBER,
+                    vrh.FIS_VAT_INV_NO,
+                    vrh.FISCAL_ACC_FLAG,
+                    vrh.VAT_INVOICE_NO,
+                    (case when (vri.deb_cur_id is null or vrh.cus_let_typ_id is null or vrh.cus_let_typ_id in 41999) then 'HRK' else cur.CODE_CHAR end ) code_char,
+                    vrh.TOTAL_AMOUNT,
+                    vrh.VAT_INVOICE_DATE
+              
+                FROM VAT_REPORT_HEAD vrh left outer join Customer cus on vrh.cus_id=cus.cus_id
+                                         left outer join customer_account ca on vrh.cus_acc_id=ca.cus_acc_id
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1793350335
+
+
+                select * from vat_report_item where VAT_REP_HEA_ID = 1793350335;
+
+                select * from vat_report_head where VAT_REP_HEA_ID = 1793350335;
+
+                
+       		select 
+                    vri.VAT_REP_ITE_ID,
+                    vrh.REGISTER_NO,
+                    dtt.turnover_reference,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_user else btc.ban_tar_user_code END) AS BAN_TAR_USER_CODE,
+                    vrh.VAT_INVOICE_NO,
+                    cur.code_char,
+                    vri.DEB_AMOUNT,
+                    vrh.RECORDING_TIME,
+                    vrh.VAT_INVOICE_DATE,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_dsc else btc.ban_tar_cod_dsc END) AS ban_tar_cod_dsc,
+                    tt.name,
+                    ca.contract_no
+                FROM VAT_REPORT_HEAD vrh 
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                          left outer join DUE_TERM_TABLE dtt on vri.VAT_REP_ITE_ID = dtt.VAT_REP_ITE_ID
+                          left outer join BANK_TARIFF_CODE btc on vri.BAN_TAR_CODE = btc.BAN_TAR_CODE
+                          left outer join INTER_BAN_TAR_CODE ibtc on vri.BAN_TAR_CODE = ibtc.INT_BAN_TAR_CODE AND ibtc.int_ban_tar_code IN ('2','3')
+                          left outer join TURNOVER_TYPE tt on vri.TUR_TYP_ID = tt.TUR_TYP_ID
+                          left outer join customer_account ca on dtt.CUS_ACC_ID = ca.CUS_ACC_ID
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1793350335
+                order by vrh.RECORDING_TIME desc
+
+                  select 
+                    vri.VAT_REP_ITE_ID,
+                    vrh.REGISTER_NO,
+                    dtt.turnover_reference,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_user else btc.ban_tar_user_code END) AS BAN_TAR_USER_CODE,
+                    vrh.VAT_INVOICE_NO,
+                    cur.code_char,
+                    vri.DEB_AMOUNT,
+                    vri.CRED_AMOUNT,
+                    vrh.RECORDING_TIME,
+                    vrh.VAT_INVOICE_DATE,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_dsc else btc.ban_tar_cod_dsc END) AS ban_tar_cod_dsc,
+                    tt.name,
+                    ca.contract_no
+                FROM VAT_REPORT_HEAD vrh 
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                          left outer join DUE_TERM_TABLE dtt on vri.VAT_REP_ITE_ID = dtt.VAT_REP_ITE_ID
+                          left outer join BANK_TARIFF_CODE btc on vri.BAN_TAR_CODE = btc.BAN_TAR_CODE
+                          left outer join INTER_BAN_TAR_CODE ibtc on vri.BAN_TAR_CODE = ibtc.INT_BAN_TAR_CODE AND ibtc.int_ban_tar_code IN ('2','3')
+                          left outer join TURNOVER_TYPE tt on vri.TUR_TYP_ID = tt.TUR_TYP_ID
+                          left outer join customer_account ca on dtt.CUS_ACC_ID = ca.CUS_ACC_ID
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1791317335
+                order by vrh.RECORDING_TIME desc
+
+
+                   select 
+                    vri.VAT_REP_ITE_ID,
+                    vrh.REGISTER_NO,
+                    dtt.turnover_reference,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_user else btc.ban_tar_user_code END) AS BAN_TAR_USER_CODE,
+                    vrh.VAT_INVOICE_NO,
+                    cur.code_char,
+                    cur2.code_char as code_char2,
+                    vri.DEB_AMOUNT,
+                    vri.CRED_AMOUNT,
+                    vrh.RECORDING_TIME,
+                    vrh.VAT_INVOICE_DATE,
+                    (case when btc.ban_tar_code IN ('2','3') then ibtc.int_ban_tar_dsc else btc.ban_tar_cod_dsc END) AS ban_tar_cod_dsc,
+                    tt.name,
+                    ca.contract_no
+                FROM VAT_REPORT_HEAD vrh 
+                          ,VAT_REPORT_ITEM vri
+                          left outer join currency cur on vri.DEB_CUR_ID = cur.cur_id
+                          left outer join currency cur2 on vri.CRED_CUR_ID = cur2.cur_id
+                          left outer join DUE_TERM_TABLE dtt on vri.VAT_REP_ITE_ID = dtt.VAT_REP_ITE_ID
+                          left outer join BANK_TARIFF_CODE btc on vri.BAN_TAR_CODE = btc.BAN_TAR_CODE
+                          left outer join INTER_BAN_TAR_CODE ibtc on vri.BAN_TAR_CODE = ibtc.INT_BAN_TAR_CODE AND ibtc.int_ban_tar_code IN ('2','3')
+                          left outer join TURNOVER_TYPE tt on vri.TUR_TYP_ID = tt.TUR_TYP_ID
+                          left outer join customer_account ca on dtt.CUS_ACC_ID = ca.CUS_ACC_ID
+                WHERE
+                    (vrh.MODULE_NAME = 'PAY' OR vrh.MODULE_NAME = 'FLT')
+                AND vrh.VAT_REP_HEA_ID = vri.VAT_REP_HEA_ID
+                AND vrh.VAT_REP_HEA_ID = 1791317335
+                order by vrh.RECORDING_TIME desc
+
+
+			select * from vat_report_item where VAT_REP_ITE_ID = 1775225335;
+
+			select * from vat_report_head where VAT_REP_hea_ID = 1791317335;
+
+			select * from vat_report_head where VAT_REP_hea_ID =1794653335;
+
+			select * from vat_report_item where VAT_REP_hea_ID =1794653335;
+
+			
+                select * from vat_report_head where cus_let_typ_id = 74999 order by recording_time desc;
+
+                select * from CUST_LETT_TYPE where cus_let_typ_id = 74999;
+
+
+                select * from batch_def where bat_def_id = 4491261704; -- bfO5: Dnevnik knjizenja obrada
+
+                 select * from batch_def where bat_def_id = 1692801003;
+
+                 select * from batch_log where bat_def_id = 4491261704 order by recording_time desc;
+
+                 update batch_log set exec_status = 'D' where bat_log_id = 730201327;
+
+                 commit;
+
+                 select user_name, login, use_id, cus_id, date_from, date_until from app_user where use_id = 1672535003;
+
+
+                 SELECT  t.account,  t.register_no,  cus.name,  c.code_num,  tcu.cus_acc_id,  t.process_date,  t.value_date,  t.domicil,  t.org_uni_id,  t.fc_credit_amount,  t.fc_debit_amount,  t.credit_amount,  t.debit_amount,  t.accounting_date,  t.tur_typ_id,  t.turnover_desc,  tcu.statement_no,  t.event_reference,  t.turnover_reference,  t.cur_id,  t.tur_id,  t.gl_flag,  t.eve_id  
+                 FROM SIDEV.turnover t  INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  
+                 LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id  
+                 LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id  
+                 WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  
+                 LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  
+                 WHERE  tur.process_date 
+                 BETWEEN '2015-01-06' 
+                 AND '2015-10-06' 
+                 AND  tur.module_name = 'PAY' AND  ev.eve_typ_id IN ( 
+                 SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )  
+                 AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+                 ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+                
+
+			 select * from pro_typ_group;
+
+                select * from cust_lett_type;	
+
+                customer
+
+               -- insert into CUST_LETT_TYPE values (NEXT VALUE FOR FINANCIAL_SEQ,  956407335, 3999,'2007-01-01','9999-12-31','RB', current_timestamp);
+
+
+			select * from batch_def where bat_def_id = 4491261704 ; -- bfO5: Dnevnik knjizenja obrada
+
+			 select * from batch_log where bat_def_id = 4491261704 order by recording_time desc;
+
+
+			 select * from CUST_SIGNATURE;
+
+			 ---------------------------
+
+			SELECT  t.account,  t.register_no,  cus.name,  c.code_num,  tcu.cus_acc_id,  t.process_date,  t.value_date,  t.domicil,  t.org_uni_id,  t.fc_credit_amount,  t.fc_debit_amount,  t.credit_amount,  t.debit_amount,  t.accounting_date,  t.tur_typ_id,  t.turnover_desc,  tcu.statement_no,  t.event_reference,  t.turnover_reference,  t.cur_id,  t.tur_id,  t.gl_flag,  t.eve_id  FROM SIDEV.turnover t  INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id  LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id  WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  
+			WHERE  tur.process_date 
+			BETWEEN '2015-01-06' AND '2015-10-06' 
+			AND  tur.module_name = 'PAY' AND  ev.eve_typ_id IN ( SELECT DISTINCT eve_typ_id FROM batch_eve_typ WHERE bat_def_id = 1692801003 )   
+			AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR;
+
+
+ 			select * from params_dictionary;
+
+ 				select * from PARAM_APPLICATION
+			
+
+
+                   SELECT cur_id
+          
+            FROM proc_member
+            WHERE pro_mem_id = 'RB'
+            WITH UR
+
+
+            -- doraditi Sql ZA dohvat podataka :
+
+
+          SELECT 
+            t.account,  
+            t.register_no,  
+            cus.name,  
+            c.code_num,
+            ca.cus_acc_no, 
+            ca.old_cus_acc_no, 
+            tcu.cus_acc_id,  
+            t.process_date,  
+            t.value_date,  
+            t.domicil,  
+            t.org_uni_id,  
+            t.fc_credit_amount,  
+            t.fc_debit_amount,  
+            t.credit_amount,  
+            t.debit_amount,  
+            t.accounting_date,  
+            t.tur_typ_id,  
+            t.turnover_desc,  
+            tcu.statement_no,  
+            t.event_reference,  
+            t.turnover_reference,  
+            t.cur_id,  
+            t.tur_id,  
+            t.gl_flag,  
+            t.eve_id,
+            scv.sys_code_desc 
+            FROM SIDEV.turnover t  
+            INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  
+            LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id 
+            LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id 
+            LEFT OUTER JOIN SIDEV.customer_account ca ON tcu.cus_acc_id = ca.cus_acc_id
+            LEFT OUTER JOIN SIDEV.system_code_value scv ON (scv.sys_cod_id = 'gl_flag' AND scv.sys_code_value=t.gl_flag)
+            WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  WHERE  tur.process_date BETWEEN '2015-10-06' AND '2015-10-06' AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+            ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+
+
+            ---------
+
+        
+
+            
+
+                select * from amount_type where amo_type = 'F20'; -- 	
+
+
+
+                SELECT  t.account,  t.register_no,  cus.name,  c.code_num,  ca.cus_acc_no,  ca.old_cus_acc_no,  tcu.cus_acc_id,  t.process_date,  t.value_date,  t.domicil,  t.org_uni_id,  t.fc_credit_amount,  t.fc_debit_amount,  t.credit_amount,  t.debit_amount,  t.accounting_date,  t.tur_typ_id,  t.turnover_desc,  tcu.statement_no,  t.event_reference,  t.turnover_reference,  t.cur_id,  t.tur_id,  t.gl_flag,  t.eve_id  scv.sys_code_desc 
+                FROM SIDEV.turnover t  INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id  LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id  LEFT OUTER JOIN SIDEV.system_code_value scv ON (scv.sys_cod_id = 'gl_flag' AND scv.sys_code_value=t.gl_flag)  WHERE  t.eve_id IN (  SELECT  distinct tur.eve_id  FROM SIDEV.turnover tur  INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  WHERE  tur.process_date BETWEEN '2015-10-06' AND '2015-10-06' AND  tur.gl_flag IN ('0', '1', '2', '4')   AND  tur.bank_sign = 'RB' )  
+                ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR
+
+			---------------------------
+
+			select * from organization_unit with ur;
+
+			select * from turnover;
+
+
+		SELECT  
+			t.account,  
+			t.register_no,  			
+			c.code_num,  
+			ca.cus_acc_no,  
+			ca.old_cus_acc_no,  
+			tcu.cus_acc_id,  
+			t.process_date,  
+			t.value_date,  
+			t.domicil,  
+			t.org_uni_id, 
+			t.fc_credit_amount, 
+			t.fc_debit_amount,  
+			t.credit_amount,  
+			t.debit_amount,  
+			t.accounting_date,  
+			t.tur_typ_id,  
+			t.turnover_desc,  
+			tcu.statement_no,  
+			t.event_reference, 
+			t.turnover_reference, 
+			t.cur_id,  
+			t.tur_id,  
+			t.gl_flag,  
+			t.eve_id,  
+			scv.sys_code_desc 
+			FROM SIDEV.turnover t ,
+			SIDEV.organization_unit ou1
+			
+			INNER JOIN SIDEV.currency c ON t.cur_id = c.cur_id  
+			LEFT OUTER JOIN SIDEV.turn_customer tcu ON t.tur_id = tcu.tur_id  
+			LEFT OUTER JOIN SIDEV.customer cus ON t.cus_id = cus.cus_id  
+			LEFT OUTER JOIN SIDEV.customer_account ca ON tcu.cus_acc_id = ca.cus_acc_id
+			LEFT OUTER JOIN SIDEV.system_code_value scv ON (scv.sys_cod_id = 'gl_flag' AND scv.sys_code_value=t.gl_flag)  
+			WHERE  t.eve_id IN (  
+						SELECT  distinct tur.eve_id  
+						FROM SIDEV.turnover tur  
+						INNER JOIN SIDEV.event ev ON tur.eve_id = ev.eve_id  
+						LEFT OUTER JOIN SIDEV.turn_customer turc ON tur.tur_id = turc.tur_id  
+						WHERE  tur.process_date 
+						BETWEEN '2015-10-06' AND '2015-10-06' 
+						AND  tur.gl_flag IN ('0', '1', '2', '4')   
+						AND  tur.bank_sign = 'RB' ) 
+		   AND t.domicil = ou1.org_uni_id				 
+		ORDER BY  t.process_date DESC, t.value_date DESC, t.turnover_reference ASC, tcu.cus_acc_no ASC, t.account, cus.name, c.code_num  WITH UR;
+
+
+               
+                
+
+
+ 		
+				
+				
+				
+                

@@ -1,0 +1,91 @@
+package hr.vestigo.modules.collateral.jcics.coA4;
+
+import java.sql.*;
+import hr.vestigo.framework.remote.transaction.*;
+//import hr.vestigo.modules.dealing.util.DateVerifications;
+
+public class COA41 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA4/COA41.sqlj,v 1.3 2012/02/14 08:52:02 hramkr Exp $";
+    
+    private DeclCOA4 decl;
+    
+    #sql iterator DatesIterator(
+        Date load_date
+    );
+       
+    public COA41(DeclCOA4 decl)
+    {
+        this.decl = decl;
+    }
+    
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        DatesIterator iter = null;
+        String archiveDateStr = null;
+        Date archiveDate = null;
+        
+// provjera da li je datum manji od datuma arhive
+        
+        try
+        {
+            #sql [ctx] {
+                SELECT sys_code_value 
+                INTO :(archiveDateStr)
+                FROM  system_code_value
+                WHERE sys_cod_id ='coll_archive_date'
+            }; 
+        } 
+        catch (SQLException ex)
+        { 
+            if (tc.getSQLExHandler().isEmptyRowset(ex)) {
+                archiveDate = null;
+            }   
+        }
+
+        archiveDate = Date.valueOf(archiveDateStr);
+        
+        if (decl.CollTypeReport_txtDate.before(archiveDate)) {
+            decl.IndikatorArhive = "Y";
+            try
+            {
+                #sql [ctx] iter = {
+                SELECT load_date
+                FROM coll_head_d_a 
+                WHERE load_date = :(decl.CollTypeReport_txtDate)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+                
+                if(iter.next()) decl.BrojZapisa = new Integer(1); else decl.BrojZapisa = new Integer(0);
+            }
+            catch (SQLException ex)
+            {
+                decl.BrojZapisa = new Integer(0);
+                throw new VestigoTMException(1, "Transaction COA41: Error with SELECT! ","err411a", null);
+            }            
+        } else {
+            decl.IndikatorArhive = "N";  
+            try
+            {
+                #sql [ctx] iter = {
+                SELECT load_date
+                FROM coll_head_d
+                WHERE load_date_from <= :(decl.CollTypeReport_txtDate)
+                and 
+                      load_date_until >=  :(decl.CollTypeReport_txtDate)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+                
+                if(iter.next()) decl.BrojZapisa = new Integer(1); else decl.BrojZapisa = new Integer(0);
+            }
+            catch (SQLException ex)
+            {
+                decl.BrojZapisa = new Integer(0);
+                throw new VestigoTMException(1, "Transaction COA41: Error with SELECT! ","err411a", null);
+            }
+        }
+    }  
+}

@@ -1,0 +1,68 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+import java.sql.Timestamp;
+import hr.vestigo.modules.collateral.common.yoy6.*;
+
+// deaktiviranje kolaterala
+
+public class CO344 extends RemoteTransaction {
+
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co34/CO344.sqlj,v 1.10 2018/02/21 15:31:16 hraskd Exp $";
+	
+	private DeclCO34 d = null;
+	private Timestamp CREATE_DATE_TIME = null;	
+	private TransactionContext mtc=null;
+	
+	public CO344(DeclCO34 d) {
+		this.d = d;
+	} 
+  
+	public void execute(TransactionContext tc) throws Exception {
+		mtc=tc;
+		ConnCtx ctx = tc.getContext();
+		YOY62 yoy62 = new YOY62(tc);
+ 
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+		
+		debug("COL_HEA_ID=" +d.kolateraldeact.col_hea_id);
+		
+		#sql[ctx] { 
+			SELECT current timestamp 
+			INTO :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};	
+		
+		BigDecimal col_hf_prior_id=yoy62.getLastActiveMortageId(ctx, d.kolateraldeact.col_hea_id);
+		debug("col_hf_prior_id="+col_hf_prior_id);
+		
+		//ako je dohvacen col_hf_prior_id to znaci da treba deaktivirati hipoteku prije kolaterala
+		if(col_hf_prior_id!=null){
+	        yoy62.deactivateMortageFirstPart(ctx, col_hf_prior_id, CREATE_DATE_TIME);
+		    debug("Deaktivirao hipoteku prvi dio.");
+		}
+
+		yoy62.deactivateCollateral(ctx, d.kolateraldeact.col_hea_id, d.kolateraldeact.use_id, d.kolateraldeact.org_uni_id, CREATE_DATE_TIME);
+		debug("Deaktivirao kolateral.");
+		
+		if(col_hf_prior_id!=null){
+            yoy62.deactivateMortageSecondPart(ctx, col_hf_prior_id, CREATE_DATE_TIME, d.kolateraldeact.use_id);
+            debug("Deaktivirao hipoteku drugi dio.");
+        }  
+	}
+	
+    private void debug(String s){
+        mtc.debug("---CO344 -> " + s);
+    } 
+	
+}  
+ 
+

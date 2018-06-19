@@ -1,0 +1,2067 @@
+package hr.vestigo.modules.collateral.jcics.co15;
+
+ 
+
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.GCTCData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY64;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+
+/**
+ * CO154 class update data into table COLL_BILL_EXCH , COLL_HEAD i COLL_BOE_DEBTOR
+ *  	
+ */
+
+public class CO154 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co15/CO154.sqlj,v 1.33 2015/04/10 08:51:28 hrazst Exp $";
+	
+	public DeclCO15 decl = null;
+	
+	  
+	hr.vestigo.modules.collateral.common.yoy0.YOY00 id_generator = null;
+	
+	private String financial_flag = "X";
+	public CO154 (DeclCO15 decl) {
+		this.decl = decl;
+	}
+
+	CollHeadInsertData chdarhiva = new CollHeadInsertData();		
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};			
+//	najprije provjeriti da li postoji u bazi mjenica s istom slovnom oznakom i serijski ako su iste upisane
+		String serOz  = decl.collboeupdatemapping.CollBoeDialog_txtSerLet;
+		String serNum = decl.collboeupdatemapping.CollBoeDialog_txtSerNo;
+			
+		if (serOz != null && !(serOz.trim().equals("")) && serNum != null && (!serNum.trim().equals(""))) { 
+					
+			int broj = 0;		
+			
+			try {
+					#sql [ctx] {SELECT COUNT(*)
+							INTO :broj 
+			    			FROM coll_bill_exch a, coll_head b
+			    			WHERE 
+								a.ser_let=:(decl.collboeupdatemapping.CollBoeDialog_txtSerLet)
+							AND 
+								a.ser_no = :(decl.collboeupdatemapping.CollBoeDialog_txtSerNo)
+							AND
+								a.boe_id <> :(decl.collboeupdatemapping.CollBoeDialog_BOE_ID)
+							AND
+								a.col_hea_id = b.col_hea_id
+							AND
+								b.collateral_status <> '4'
+  
+			    	};	    	
+		    	tc.debug ( "...broj: " + broj);
+			} catch (java.sql.SQLException  sqle) {
+				tc.debug ( "......CO154.sqlj select from COLL_BILL_EXCH SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO154.sqlj select from COLL_BILL_EXCH SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO154.sqlj select from COLL_BILL_EXCH SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO154: Error update COLL_BILL_EXCH! ","err411a", null);
+			}
+				
+			if(broj > 0){
+				throw new VestigoTMException(1, "Transaction CO154: Error update COLL_BILL_EXCH! ","colErr024", null);
+			}		
+			
+		}
+			
+			
+		id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+			
+		String coll_data_statusCoh = null;	
+		String basic_data_statusCoh = null;
+		String mortgage_statusCoh = null;
+		String cover_indicCoh = null; 
+		String codeUnused = null;   	//	Ivan 28.09.2006  Milki treba code jer u commonu gleda o cemu je rijec je li nekretnina ili cash ili ....
+											//  Ivan 28.09.2006  Meni ne treba jer ovo je insert samo za nekretninu
+	
+
+		String ver_indUnused = null;	//  Ivan 28.09.2006  Milka ga dohvaca ali ga dalje ne koristi
+
+		String aut_ind  = null;			//	Ivan 28.09.2006  Ide li predmet na autorizaciju 
+											//  Ivan 28.09.2006  0 - ne ide
+											//	Ivan 28.09.2006  1 - ide
+			
+			
+		int coverIndicNo = 0;
+			
+		
+		try{ 
+				#sql[ctx] { 
+					SELECT current timestamp 
+					INTO :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					FROM sysibm.sysdummy1
+				};	
+				
+
+		} catch(java.sql.SQLException e){
+			tc.debug (".......CO154.sqlj ..... Select from  sysibm.sysdummy1 unsuccessful.");
+			tc.debug ( "......CO154.sqlj Select from  sysibm.sysdummy1  SQL ErrorCode " + e.getErrorCode());
+			tc.debug ( "......CO154.sqlj Select from  sysibm.sysdummy1  SQL SQLState " + e.getSQLState());
+			tc.debug ( "......CO154.sqlj Select from  sysibm.sysdummy1 event  SQL Message " + e.getMessage());
+			e.printStackTrace();
+			throw e;
+			
+		}
+			
+			
+ 			////NOVO 02.10.2006
+ 			
+			//
+			//Dohvat statusa prema collateral type
+			//			    Hipoteka:				CollBoeDialog_MortgageStatus 	
+			//			    Povezanost:				CollBoeDialog_CoverIndic             
+			//			    Podaci coll.off.:		CollBoeDialog_CollDataStatus     
+
+		try {
+				#sql [ctx]{
+					SELECT  d.coll_data_status,	
+							d.basic_data_status,
+							d.mortgage_status,
+							d.cover_indic, 
+							a.mortgage_flag,
+							a.cover_flag,
+							a.coll_data_flag,
+							
+							b.code,
+							b.accounting_indic,
+							c.ver_ind,
+							c.aut_ind
+					INTO	:coll_data_statusCoh,
+							:basic_data_statusCoh,
+							:mortgage_statusCoh,
+							:cover_indicCoh,
+							:(decl.collboeupdatemapping.CollBoeDialog_MortgageStatus),
+							:(decl.collboeupdatemapping.CollBoeDialog_CoverIndic),
+							:(decl.collboeupdatemapping.CollBoeDialog_CollDataStatus),
+							
+							:codeUnused,
+							:financial_flag,
+							:ver_indUnused,
+							:aut_ind
+					FROM	coll_head d, collateral_type a, coll_category b, coll_category_prm c
+					WHERE	d.col_hea_id = :(decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID)
+					AND
+							d.col_type_id = a.coll_type_id
+					AND
+							a.coll_type_id = :(decl.collboeupdatemapping.CollBoeDialog_COL_TYPE_ID)
+					AND	
+							a.col_cat_id = b.col_cat_id 
+					AND
+							b.col_cat_id = c.col_cat_id 
+					AND
+							c.org_uni_id = :(decl.collboeupdatemapping.CollBoeDialog_ORG_UNI_ID)
+				};
+		
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO154.sqlj select from collateral_type SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj select from collateral_type SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj select from collateral_type SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO154.sqlj: Error select from collateral_type! ","err411a", null);
+
+		}			
+		tc.debug ( ".........POSLIJE           " );
+		tc.debug ( ".........BASIC_DATA_STATUS)" + decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus);
+		tc.debug ( ".........MORTGAGE_STATUS)  " + decl.collboeupdatemapping.CollBoeDialog_MortgageStatus);
+		tc.debug ( ".........COVER_INDIC)      " + decl.collboeupdatemapping.CollBoeDialog_CoverIndic);
+		tc.debug ( ".........COLL_DATA_STATUS) " + decl.collboeupdatemapping.CollBoeDialog_CollDataStatus);
+			
+		
+		//BASIC_DATA_STATUS
+		//status unesenosti osnovnih podataka
+		//0 - u unosu
+		//1 - uneseni
+		//2 - verificirani 
+		//3 - autorizirani
+		
+		
+		//MORTGAGE_STATUS
+		//status hipoteke:
+		//	X - nije unesena ili se ne unosi
+		//	0 - u unosu
+		//	1 - unesena (ceka verifikaciju)
+		//	2 - verificirana
+		
+		
+		//COVER_INDIC
+		//0 - nije povezan ni sa jednim plasmanom u smislu pokrica izlozenosti
+		//1- povezan sa barem jednim plasmanom u smislu pokriæa izlozenosti
+		//2 - verificirano povezivanje
+
+		
+		//COLL_DATA_STATUS
+		//status unesenosti podataka koje unosi collateral officer
+		//X - ne unosi se
+		//0 - u unosu
+		//1 - uneseni
+		//3 - autorizirani 
+
+		
+		
+		if (aut_ind.equalsIgnoreCase("1")) {
+			
+//	provjera kod inserta, status podataka coll. off. stavlja se na 0
+//  i provjeravaju se samo osnovni podaci			
+			
+// nije prvi unos, trebam provjeriti da li su upisani podaci coll off (to znaci da se predmet vratio sa autorizacije)
+			if ((coll_data_statusCoh).equalsIgnoreCase("0")) {
+// predmet jos nije bio na autorizaciji: trebam provjeriti samo osnovne podatke					
+
+					// provjera da li su upisani svi osnovni podaci 
+						// ostali, samo podaci sa ekrana
+				if ((basic_data_statusCoh).equalsIgnoreCase("0"))						
+					decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus = "1";
+				else 
+					decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus = basic_data_statusCoh;						
+					
+				tc.debug ( "....basic_data_status......." + decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus);	
+					
+// predmet je kod coll.off i treba promijeniti status podataka coll.off.
+// samo ako je status osnovnih podataka na 2 (znaci da su VERIFICIRANI i da je predmet kod coll.off.					
+				if ((basic_data_statusCoh).equalsIgnoreCase("2"))
+					decl.collboeupdatemapping.CollBoeDialog_CollDataStatus = "1";					
+					
+			} else if ((coll_data_statusCoh).equalsIgnoreCase("1")) {
+// predmet se vratio s autorizacije: trebam provjeriti i sve ostale podatke
+// mijenjam statuse na 1 samo ako su 0					
+//					chkAllData();
+					
+//					 status podataka coll.off. se ne mijenja					
+				decl.collboeupdatemapping.CollBoeDialog_CollDataStatus = coll_data_statusCoh;						
+					// provjera da li su upisani svi osnovni podaci 
+						// ostali, samo podaci sa ekrana
+				if ((basic_data_statusCoh).equalsIgnoreCase("0"))						
+					decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus = "1";		
+				else 
+					decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus = basic_data_statusCoh;						
+					
+				tc.debug ( "....basic_data_status......." + decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus);		
+					
+					// provjera da li su upisani podaci collateral officera, pretpostavka je da jesu
+					
+// status podataka koje upisuje col.off. mijenja se autorizacijom a ne ovdje 					
+/*					if ((decl.collboeupdatemapping.CollBoeDialog_CollDataStatus).equalsIgnoreCase("X")) {
+						decl.collboeupdatemapping.CollBoeDialog_CollDataStatus = "X";
+					} else 
+						decl.collboeupdatemapping.CollBoeDialog_CollDataStatus = "1";			*/
+					
+					
+					// provjeriti hipoteku, treba biti upisana barem jedna hipoteka u korist RBA
+					
+				if ((decl.collboeupdatemapping.CollBoeDialog_MortgageStatus).equalsIgnoreCase("X")) {
+					decl.collboeupdatemapping.CollBoeDialog_MortgageStatus = "X";
+				} else {
+					decl.collboeupdatemapping.CollBoeDialog_MortgageStatus = "0";
+						
+
+						
+						
+				}
+				tc.debug ( "....mortgage_status......." + decl.collboeupdatemapping.CollBoeDialog_MortgageStatus);				
+		 			
+					
+					// provjeriti pokrice
+					
+				if ((decl.collboeupdatemapping.CollBoeDialog_CoverIndic).equalsIgnoreCase("X")) {
+					decl.collboeupdatemapping.CollBoeDialog_CoverIndic = "X";
+				} else {
+					decl.collboeupdatemapping.CollBoeDialog_CoverIndic = "0";
+											
+				tc.debug ( "....TU SAM....ZADU ..provjera pokrica"); 		
+				coverIndicNo = 0;
+				try{			
+					#sql [ctx] { SELECT count(*) INTO :(coverIndicNo) FROM
+								loan_beneficiary WHERE col_hea_id = :(decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID)
+								AND status = 'A' AND date_from <= current date AND
+								date_until = '9999-12-31' };
+				}catch(java.sql.SQLException sqle){
+								
+				}   
+				if(coverIndicNo > 0){
+					if ((cover_indicCoh).equalsIgnoreCase("0"))
+						decl.collboeupdatemapping.CollBoeDialog_CoverIndic= "1";	
+					else 
+						decl.collboeupdatemapping.CollBoeDialog_CoverIndic = cover_indicCoh;		
+								
+						tc.debug ( "cover_indic...ZADU...." + decl.collboeupdatemapping.CollBoeDialog_CoverIndic+coverIndicNo);
+					}
+				}
+					
+				tc.debug ( "cover_indic....." + decl.collboeupdatemapping.CollBoeDialog_CoverIndic);					
+					
+					
+			} else if ((coll_data_statusCoh).equalsIgnoreCase("2")) { 
+// ako je status podata coll.of. 2
+//	 predmet se vratio s autorizacije: trebam provjeriti i sve ostale podatke
+//	 mijenjam statuse na 1 samo ako su 0					
+
+// status podataka coll.off. se ne mijenja					
+				decl.collboeupdatemapping.CollBoeDialog_CollDataStatus = coll_data_statusCoh;							
+				
+// provjera da li su upisani svi osnovni podaci
+					
+						// ostali, samo podaci sa ekrana
+				if ((basic_data_statusCoh).equalsIgnoreCase("0"))						
+					decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus = "1";		
+				else 
+					decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus = basic_data_statusCoh;						
+					
+				tc.debug ( "....basic_data_status......." + decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus);		
+					
+					//				 status podataka koje upisuje col.off. mijenja se autorizacijom a ne ovdje 					
+					
+					// provjeriti hipoteku, treba biti upisana barem jedna hipoteka u korist RBA
+					
+				if ((decl.collboeupdatemapping.CollBoeDialog_MortgageStatus).equalsIgnoreCase("X")) {
+					decl.collboeupdatemapping.CollBoeDialog_MortgageStatus = "X";
+				} else {
+					decl.collboeupdatemapping.CollBoeDialog_MortgageStatus = "0";
+				}
+				tc.debug ( "....mortgage_status......." + decl.collboeupdatemapping.CollBoeDialog_MortgageStatus);				
+					
+					// provjeriti pokrice
+					
+				if ((decl.collboeupdatemapping.CollBoeDialog_CoverIndic).equalsIgnoreCase("X")) {
+					decl.collboeupdatemapping.CollBoeDialog_CoverIndic = "X";
+				} else {
+					decl.collboeupdatemapping.CollBoeDialog_CoverIndic = "0";
+					tc.debug ( "....TU SAM....ZADU ..provjera pokrica"); 		
+							
+					try{			
+								#sql [ctx] { SELECT count(*) INTO :(coverIndicNo) FROM
+								loan_beneficiary WHERE col_hea_id = :(decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID)
+								AND status = 'A' AND date_from <= current date AND
+								date_until = '9999-12-31' };
+					}catch(java.sql.SQLException sqle){
+								
+					}
+					if(coverIndicNo > 0){
+						if ((cover_indicCoh).equalsIgnoreCase("0"))
+							decl.collboeupdatemapping.CollBoeDialog_CoverIndic= "1";	
+						else 
+							decl.collboeupdatemapping.CollBoeDialog_CoverIndic = cover_indicCoh;		
+								
+						tc.debug ( "cover_indic...ZADU...." + decl.collboeupdatemapping.CollBoeDialog_CoverIndic+coverIndicNo);
+					}
+						 
+				}
+					
+				tc.debug ( "cover_indic....." + decl.collboeupdatemapping.CollBoeDialog_CoverIndic);					
+			} 
+		}
+		if (aut_ind.equalsIgnoreCase("0")) {
+
+			decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus = "1";
+			
+			if ((decl.collboeupdatemapping.CollBoeDialog_CollDataStatus).equalsIgnoreCase("X")) {
+				decl.collboeupdatemapping.CollBoeDialog_CollDataStatus = "X";
+			} else 
+				decl.collboeupdatemapping.CollBoeDialog_CollDataStatus = "1";	
+			// provjeriti hipoteku, treba biti upisana barem jedna hipoteka u korist RBA
+			if ((decl.collboeupdatemapping.CollBoeDialog_MortgageStatus).equalsIgnoreCase("X")) {
+				decl.collboeupdatemapping.CollBoeDialog_MortgageStatus = "X";
+			} else {
+				decl.collboeupdatemapping.CollBoeDialog_MortgageStatus = "0";
+			}
+			
+			if ((decl.collboeupdatemapping.CollBoeDialog_CoverIndic).equalsIgnoreCase("X")) {
+				decl.collboeupdatemapping.CollBoeDialog_CoverIndic = "X";
+			} else {
+				decl.collboeupdatemapping.CollBoeDialog_CoverIndic = "0";
+				
+				coverIndicNo = 0;
+			
+				tc.debug ( "....TU SAM....MJE ..provjera pokrica"); 		
+					
+				try{			
+						#sql [ctx] { SELECT count(*) INTO :(coverIndicNo) FROM
+						loan_beneficiary WHERE col_hea_id = :(decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID)
+						AND status = 'A' AND date_from <= current date AND
+						date_until = '9999-12-31' };
+				}catch(java.sql.SQLException sqle){
+						
+				}
+				if(coverIndicNo > 0){
+					decl.collboeupdatemapping.CollBoeDialog_CoverIndic = "1";	
+					tc.debug ( "cover_indic...MJEN...." + decl.collboeupdatemapping.CollBoeDialog_CoverIndic + " " + coverIndicNo);
+				}
+			}
+		}
+		
+		//		SYS_COD_VAL_ID	SYS_COD_ID			SYS_CODE_VALUE	SYS_CODE_DESC	ENG_SYS_CODE_DESC	DEFAULT_FLAG	USER_LOCK
+		//		1620129003		clt_role_boe      	TRASAT			TRASAT			DRAWEE					0	2006-05-12 09:38:56.966701
+		//		1620130003		clt_role_boe      	TRASANT			TRASANT			DRAWER					0	2006-05-12 09:39:13.811216
+		//		1635463003		clt_role_boe      	INDOS1			INDOSANT 1		INDOSANT 1				0	2006-08-07 11:59:01.274243
+		//		1635464003		clt_role_boe      	INDOS2			INDOSANT 2		INDOSANT 2				0	2006-08-07 11:59:22.962041
+		//		1635465003		clt_role_boe      	INDOS3			INDOSANT 3		INDOSANT 3				0	2006-08-07 11:59:40.334119
+		//		1635466003		clt_role_boe      	INDOS4			INDOSANT 4		INDOSANT 4				0	2006-08-07 11:59:58.967893
+		
+		
+//		 AVALISTI 
+//		SYS_COD_VAL_ID	SYS_COD_ID	SYS_CODE_VALUE
+//		1636798003	clt_role_boe      	AVAL1
+//		1636799003	clt_role_boe      	AVAL2
+//		1636800003	clt_role_boe      	AVAL3
+//		1636801003	clt_role_boe      	AVAL4		
+		
+		boolean existInd1 = false;
+		boolean existInd2 = false;
+		boolean existInd3 = false;
+		boolean existInd4 = false;	
+		
+		int numInd1 = 0;
+		int numInd2 = 0;
+		int numInd3 = 0;
+		int numInd4 = 0;
+		
+		boolean existAval1 = false;
+		boolean existAval2 = false;
+		boolean existAval3 = false;
+		boolean existAval4 = false;	
+		
+		int numAval1 = 0;
+		int numAval2 = 0;
+		int numAval3 = 0;
+		int numAval4 = 0;		
+		
+		  
+		
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numInd1
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1635463003  };
+
+		}catch(java.sql.SQLException se){
+						
+		}
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numInd2
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1635464003  };
+
+		}catch(java.sql.SQLException se){
+						
+		}
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numInd3
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1635465003  };
+
+		}catch(java.sql.SQLException se){
+						
+		}
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numInd4
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1635466003  };
+
+		}catch(java.sql.SQLException se){
+						
+		}
+		tc.debug ( ".........numInd1           "  + numInd1);		
+		tc.debug ( ".........numInd2           "  + numInd2);			
+		tc.debug ( ".........numInd3           "  + numInd3);			
+		tc.debug ( ".........numInd4           "  + numInd4);
+			
+		if( numInd1 > 0){
+			existInd1 = true;
+		}
+		if( numInd2 > 0){
+			existInd2 = true;
+		}
+		if( numInd3 > 0){
+			existInd3 = true;
+		}
+		if( numInd4 > 0){
+			existInd4 = true;
+		}
+			
+// avalisti			
+//			SYS_COD_VAL_ID	SYS_COD_ID	SYS_CODE_VALUE
+//			1636798003	clt_role_boe      	AVAL1
+//			1636799003	clt_role_boe      	AVAL2
+//			1636800003	clt_role_boe      	AVAL3
+//			1636801003	clt_role_boe      	AVAL4	
+
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numAval1
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1636798003  };
+				 	
+		}catch(java.sql.SQLException se){
+						
+		}
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numAval2
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1636799003  };
+
+		}catch(java.sql.SQLException se){
+						
+		}
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numAval3
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1636800003  };
+
+		}catch(java.sql.SQLException se){
+						
+		}
+		try{ 
+			    #sql [ctx]{
+				
+					SELECT count(*) 
+					INTO :numAval4
+					FROM coll_boe_debtor
+					WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND   role_boe_id = 1636801003  };
+
+		}catch(java.sql.SQLException se){
+						
+		}		
+			
+		tc.debug ( ".........numAval1          "  + numAval1);		
+		tc.debug ( ".........numAval2           "  + numAval2);			
+		tc.debug ( ".........numAval3           "  + numAval3);			
+		tc.debug ( ".........numAval4           "  + numAval4);
+			
+		if( numAval1 > 0){
+			existAval1 = true;
+		}
+		if( numAval2 > 0){
+			existAval2 = true;
+		}
+		if( numAval3 > 0){
+			existAval3 = true;
+		}
+		if( numAval4 > 0){
+			existAval4 = true;
+		}		
+// avalisti		
+			
+		updateCollBillExch(ctx,tc);
+		updateCollBoeDebtorTrasaNt(ctx,tc);
+		updateCollBoeDebtorTrasat(ctx,tc);
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd1 != null && existInd1){
+			updateCollBoeDebtorInd1(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd1 != null && !existInd1){
+			insertCollBoeDebtorInd1(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd1 == null && existInd1){
+			deleteCollBoeDebtorInd1(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd2 != null){
+			updateCollBoeDebtorInd2(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd2 != null && !existInd2){
+			insertCollBoeDebtorInd2(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd2 == null && existInd2){
+			deleteCollBoeDebtorInd2(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd3 != null){
+			updateCollBoeDebtorInd3(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd3 != null && !existInd3){
+			insertCollBoeDebtorInd3(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd3 == null && existInd3){
+			deleteCollBoeDebtorInd3(ctx,tc);
+		}
+			//////////////////////////////
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd4 != null){
+			updateCollBoeDebtorInd4(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd4 != null && !existInd4){
+			insertCollBoeDebtorInd4(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd4 == null && existInd4){
+			deleteCollBoeDebtorInd4(ctx,tc);
+		}
+			
+
+//avalisti
+			
+		if(decl.collboeupdatemapping.cus_id_aval1 != null && existAval1){
+			updateCollBoeDebtorAval1(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.cus_id_aval1 != null && !existAval1){
+			insertCollBoeDebtorAval1(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.cus_id_aval1 == null && existAval1){
+			deleteCollBoeDebtorAval1(ctx,tc);
+		}			
+			
+			
+		if(decl.collboeupdatemapping.cus_id_aval2 != null){
+			updateCollBoeDebtorAval2(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.cus_id_aval2 != null && !existAval2){
+			insertCollBoeDebtorAval2(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.cus_id_aval2 == null && existAval2){
+			deleteCollBoeDebtorAval2(ctx,tc);
+		}			
+			
+			
+		if(decl.collboeupdatemapping.cus_id_aval3 != null){
+			updateCollBoeDebtorAval3(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.cus_id_aval3 != null && !existAval3){
+			insertCollBoeDebtorAval3(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.cus_id_aval3 == null && existAval3){
+			deleteCollBoeDebtorAval3(ctx,tc);
+		}			
+			
+			
+		if(decl.collboeupdatemapping.cus_id_aval4 != null){
+			updateCollBoeDebtorAval4(ctx,tc);
+		}
+		if(decl.collboeupdatemapping.cus_id_aval4 != null && !existAval4){
+			insertCollBoeDebtorAval4(ctx,tc);
+		}
+			
+		if(decl.collboeupdatemapping.cus_id_aval4 == null && existAval4){
+			deleteCollBoeDebtorAval4(ctx,tc);
+		}			
+			
+			
+		updateCollHead(ctx,tc,exCtx);
+		decl.collboeupdatemapping.CollBoeDialog_txtUserLock = decl.collboeupdatemapping.CollBoeDialog_USER_LOCK;
+
+// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);            
+
+        yoyg0.azurirajPrihvatljivosti();
+        decl.collboeupdatemapping.Coll_txtNDEligibility = yoyg0.getNDPrihvatljivost();
+        decl.collboeupdatemapping.CollBoeDialog_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collboeupdatemapping.Coll_txtB1Eligibility1 = yoyg0.getHNBPrihvatljivost();
+        decl.collboeupdatemapping.Coll_txtB2IRBEligibility1 = yoyg0.getB2IRBPrihvatljivost();    
+        
+//ND prihvatljivost
+            
+      try{  
+                
+            if (decl.collboeupdatemapping.Coll_txtNDEligibility != null) {  
+
+                #sql [ctx] {
+                    SELECT sys_code_desc
+                        INTO :(decl.collboeupdatemapping.Coll_txtNDEligDesc)
+                        FROM system_code_value
+                        WHERE sys_cod_id     = 'clt_eligib' and 
+                              sys_code_value = :(decl.collboeupdatemapping.Coll_txtNDEligibility)  };  
+            }   
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }                                       
+// B2 prihvatljivost 
+        try{ 
+               
+            if (decl.collboeupdatemapping.CollBoeDialog_txtEligibility != null) {  
+
+                #sql [ctx] {
+                    SELECT sys_code_desc
+                        INTO :(decl.collboeupdatemapping.CollBoeDialog_txtEligDesc)
+                        FROM system_code_value
+                        WHERE sys_cod_id     = 'clt_eligib' and 
+                              sys_code_value = :(decl.collboeupdatemapping.CollBoeDialog_txtEligibility)  };  
+            }   
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }   
+// HNB prihvatljivost 
+        try{ 
+             
+            if (decl.collboeupdatemapping.Coll_txtB1Eligibility1 != null) {  
+
+                #sql [ctx] {
+                    SELECT sys_code_desc
+                        INTO :(decl.collboeupdatemapping.Coll_txtB1EligDesc1)
+                        FROM system_code_value
+                        WHERE sys_cod_id     = 'clt_eligib' and 
+                              sys_code_value = :(decl.collboeupdatemapping.Coll_txtB1Eligibility1)  };  
+            }   
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }                 
+         
+        //B2 IRB prihvatljivost 
+        try{ 
+             
+            if (decl.collboeupdatemapping.Coll_txtB2IRBEligibility1 != null) {  
+
+                #sql [ctx] {
+                    SELECT sys_code_desc
+                        INTO :(decl.collboeupdatemapping.Coll_txtB2IRBEligDesc1)
+                        FROM system_code_value
+                        WHERE sys_cod_id     = 'clt_eligib' and 
+                              sys_code_value = :(decl.collboeupdatemapping.Coll_txtB2IRBEligibility1)  };  
+            }   
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }
+        
+        BigDecimal colCatId = decl.collboeupdatemapping.CollBoeDialog_COL_CAT_ID;
+        BigDecimal colTypId = decl.collboeupdatemapping.CollBoeDialog_COL_TYPE_ID;
+        BigDecimal colSubTypId = null;
+        BigDecimal colGroId = null;
+        
+        YOY64 yoy64=new YOY64(tc);
+        GCTCData data=yoy64.getGCTCData(colCatId, colTypId, colSubTypId, colGroId);
+        
+        decl.collboeupdatemapping.Coll_txtCollateralGCTCCode = data.gctc_code;
+        decl.collboeupdatemapping.Coll_txtCollateralGCTCDesc = data.gctc_desc;
+        decl.collboeupdatemapping.Coll_txtObjectTypeGCTCCode = data.object_type_code;
+        decl.collboeupdatemapping.Coll_txtObjectTypeGCTCDesc = data.object_type_desc;
+        decl.collboeupdatemapping.Coll_txtPropertyTypeGCTCCode = data.property_type_code;
+        decl.collboeupdatemapping.Coll_txtPropertyTypeGCTCDesc = data.property_type_desc;
+        decl.collboeupdatemapping.Coll_txtEndorsementTypeGCTCCode = data.endorsement_type_code;
+        decl.collboeupdatemapping.Coll_txtEndorsementTypeGCTCDesc = data.endorsement_type_desc;
+        
+        CalculationData cData = (new YOY63(tc)).getAllCalculationData(decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);               
+
+        decl.collboeupdatemapping.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+        decl.collboeupdatemapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+        decl.collboeupdatemapping.Coll_txtRealPonderAmount = cData.real_ponder; 
+        
+	}//execute
+			
+	public void updateCollBillExch(ConnCtx argCtx,TransactionContext tc){
+		//UPDATE coll_bill_exch			
+		
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update coll_bill_exch ");
+			tc.debug ( "......CO154.sqlj Poceo update coll_bill_exch " + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update coll_bill_exch " + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+
+			
+			#sql [argCtx]{
+				UPDATE coll_bill_exch
+				SET boe_type_id          = :(decl.collboeupdatemapping.CollBoeDialog_BOE_TYPE_ID),      
+					isu_place_id         = :(decl.collboeupdatemapping.CollBoeDialog_ISU_PLACE_ID),     
+					issue_date           = :(decl.collboeupdatemapping.CollBoeDialog_txtIssueDate),     
+					payee_reg_no         = :(decl.collboeupdatemapping.CollBoeDialog_txtRegNoP),        
+					payee_cus_id         = :(decl.collboeupdatemapping.CollBoeDialog_P_CUS_ID),         
+					payee_add_id         = :(decl.collboeupdatemapping.CollBoeDialog_PAYEE_ADD_ID),     
+					payee_accno          = :(decl.collboeupdatemapping.CollBoeDialog_txtPayeeAccno),			
+					payee_code           = :(decl.collboeupdatemapping.CollBoeDialog_txtCodeP),         
+					payee_name           = :(decl.collboeupdatemapping.CollBoeDialog_txtNamePayee),     
+					amount               = :(decl.collboeupdatemapping.CollBoeDialog_txtAmount),        
+					cur_id               = :(decl.collboeupdatemapping.CollBoeDialog_CUR_ID	),			   
+					add_data1            = :(decl.collboeupdatemapping.CollBoeDialog_txtAddData ),      
+					add_data2            = :(decl.collboeupdatemapping.CollBoeDialog_txtAddData1 ),     
+					pay_place_id         = :(decl.collboeupdatemapping.CollBoeDialog_PAY_PLACE_ID ),    
+					payment              = :(decl.collboeupdatemapping.CollBoeDialog_txtPayment),       
+					payment_clause       = :(decl.collboeupdatemapping.CollBoeDialog_txtPaymentClause), 
+					maturity_clause      = :(decl.collboeupdatemapping.CollBoeDialog_txtMaturityClause),
+					maturity_date        = :(decl.collboeupdatemapping.CollBoeDialog_txtMaturityDate),  
+					protest_clause       = :(decl.collboeupdatemapping.CollBoeDialog_txtProtestClause), 
+					fee_clause           = :(decl.collboeupdatemapping.CollBoeDialog_txtFeeClause),     
+					indosa_clause        = :(decl.collboeupdatemapping.CollBoeDialog_txtIndosaClause),  
+					number_boe           = :(decl.collboeupdatemapping.CollBoeDialog_txtNumberBoe),     
+					number_clause        = :(decl.collboeupdatemapping.CollBoeDialog_txtNumberClause),  
+					report_clause        = :(decl.collboeupdatemapping.CollBoeDialog_txtReportClause),  
+					cure_clause          = :(decl.collboeupdatemapping.CollBoeDialog_txtCureClause)   ,
+					ser_let  			 = :(decl.collboeupdatemapping.CollBoeDialog_txtSerLet),  
+					ser_no 				 = :(decl.collboeupdatemapping.CollBoeDialog_txtSerNo),
+					aval				 = :(decl.collboeupdatemapping.Kol_txtAval)
+                                               
+					WHERE col_hea_id 	 = :( decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID) 	 
+					
+						
+						};
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "......CO154.sqlj update coll_bill_exch ERROR");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						
+						tc.debug ( "......CO154.sqlj update coll_bill_exch SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_bill_exch SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_bill_exch SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_bill_exch! ","err411a", null);
+
+			}
+			
+			tc.debug ( "\n");
+			tc.debug ( "......CO154.sqlj Zavrsio uspjesno update coll_bill_exch ERROR");
+			tc.debug ( "\n");
+
+
+		
+		
+	}//updateCollBillExch
+	
+	
+	
+	public void updateCollBoeDebtorTrasaNt(ConnCtx argCtx,TransactionContext tc){
+		//UPDATE COLL_BOE_DEBTOR		
+		//TRASANT		1620130003
+		//TRASANT
+		//CollBoeDebtorT
+		java.math.BigDecimal trasaNtRoleBoeId = new java.math.BigDecimal ( "1620130003.0");	
+		
+//		code_deb          = :(decl.collboeupdatemapping.CollBoeDialog_txtCodeT), 
+//		name_deb		 = :(decl.collboeupdatemapping.CollBoeDialog_txtNameT), 
+		
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasaNt");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasaNt CollBoeDialog_USER_LOCK " + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasaNt CollBoeDialog_COL_HEA_ID " + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasaNt CollBoeDialog_BOE_ID " + decl.collboeupdatemapping.CollBoeDialog_BOE_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasaNt CollBoeDialog_txtRegNoT " + decl.collboeupdatemapping.CollBoeDialog_txtRegNoT);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasaNt CollBoeDialog_txtNameT " + decl.collboeupdatemapping.CollBoeDialog_txtNameT);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET register_no      = :(decl.collboeupdatemapping.CollBoeDialog_txtRegNoT),           
+						coll_cus_id       = :(decl.collboeupdatemapping.CollBoeDialog_COLL_CUS_ID),       
+						
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) 
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :trasaNtRoleBoeId  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasaNt ERROR");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasaNt SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasaNt SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasaNt SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor trasaNt! ","err411a", null);
+
+			}
+			
+			tc.debug ( "\n");
+			tc.debug ( "......CO154.sqlj ZAVRSIO TRASANT update COLL_BOE_DEBTOR");
+			tc.debug ( "\n");
+	}//updateCollBoeDebtorTrasaNt
+	
+	public void updateCollBoeDebtorTrasat(ConnCtx argCtx,TransactionContext tc){
+		//UPDATE COLL_BOE_DEBTOR		
+		//TRASAT		1620129003
+		//TRASAT
+		//CollBoeDebtorTR
+		java.math.BigDecimal trasatRoleBoeId = new java.math.BigDecimal ( "1620129003.0");	
+		
+//		name_deb          = :(decl.collboeupdatemapping.CollBoeDialog_txtNameTR),
+//		code_deb          = :(decl.collboeupdatemapping.CollBoeDialog_txtCodeTR),    
+		
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasat");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasat" + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasat" + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasat CollBoeDialog_BOE_ID " + decl.collboeupdatemapping.CollBoeDialog_BOE_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasat CollBoeDialog_txtRegNoTR " + decl.collboeupdatemapping.CollBoeDialog_txtRegNoTR);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR trasat CollBoeDialog_txtNameTR " + decl.collboeupdatemapping.CollBoeDialog_txtNameTR);
+			
+			
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.CollBoeDialog_txtRegNoTR),           
+						coll_cus_id       = :(decl.collboeupdatemapping.CollBoeDialog_TR_CUS_ID), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :trasatRoleBoeId  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasat ERROR");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasat SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasat SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor trasat SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor trasat! ","err411a", null);
+
+			}
+
+		
+			tc.debug ( "\n");
+			tc.debug ( "......CO154.sqlj ZAVRSIO TRASAT update COLL_BOE_DEBTOR");
+			tc.debug ( "\n");
+		
+	}//updateCollBoeDebtorTrasat
+	
+	
+	
+	public void updateCollHead(ConnCtx argCtx,TransactionContext tc,sqlj.runtime.ExecutionContext argExCtx){
+		//		UPDATE coll_head	
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update coll_head ");
+			tc.debug ( "......CO154.sqlj Poceo update coll_head " + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update coll_head " + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+
+			  
+			#sql [argCtx,argExCtx]{
+				UPDATE coll_head
+				SET   													                    
+						 	col_desc  			  = :(decl.collboeupdatemapping.CollBoeDialog_txtColDesc),							      							                                                                                        
+							real_est_nomi_valu    = :(decl.collboeupdatemapping.CollBoeDialog_txtAmount),                  							                                                                                        
+							real_est_nomi_date    = :(decl.collboeupdatemapping.CollBoeDialog_txtIssueDate),                  							                                                                                           
+							real_est_nm_cur_id    = :(decl.collboeupdatemapping.CollBoeDialog_CUR_ID),    
+							cus_id 				  = :(decl.collboeupdatemapping.CUS_ID),      							                                                                                          
+							real_est_date_from    = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),                   							                                                                                         
+							real_est_date_unti    = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),   
+               				real_est_spec_stat    = :(decl.collboeupdatemapping.CollBoeDialog_SpecStatus),			                                                                                            
+							use_id                = :(decl.collboeupdatemapping.CollBoeDialog_USE_ID),                   							                                                                                                                                                 
+							user_lock             = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),                   							                                                                                        
+							org_uni_id            = :(decl.collboeupdatemapping.CollBoeDialog_ORG_UNI_ID),                     							                                                                                                                                                        
+							basic_data_status     = :(decl.collboeupdatemapping.CollBoeDialog_BasicDataStatus),                 							                                                                                                                                                         
+							mortgage_status 	  = :(decl.collboeupdatemapping.CollBoeDialog_MortgageStatus),                    							                                                                                                                                                                
+							cover_indic           = :(decl.collboeupdatemapping.CollBoeDialog_CoverIndic),         							                                                                                                    
+							coll_data_status      = :(decl.collboeupdatemapping.CollBoeDialog_CollDataStatus),
+						 	rba_eligibility		  =	:(decl.collboeupdatemapping.ColBoeRba_txtEligibility),
+						 	law_eligibility		  =	:(decl.collboeupdatemapping.ColBoeLow_txtEligibility),
+							rba_elig_dsc		  = :(decl.collboeupdatemapping.Kol_txtRbaEligDsc1),
+							number				  =	:(decl.collboeupdatemapping.Coll_txtNumOf),
+			                crm_hnb               = :(decl.collboeupdatemapping.Kol_txtCRMHnbBoe),
+                            b2_irb_insag_elig     = :(decl.collboeupdatemapping.Coll_txtB2IRB),
+                            b2_hnb_insag_elig     = :(decl.collboeupdatemapping.Coll_txtB2HNB),
+                            contract_type         = :(decl.collboeupdatemapping.Coll_txtContractTypeCode)
+					WHERE col_hea_id 			  = :( decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID)
+			    };
+			}catch(java.sql.SQLException se){
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO154.sqlj update coll_head ERROR");
+				tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+				tc.debug ( "......CO154.sqlj update coll_head SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO154.sqlj update coll_head SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO154.sqlj update coll_head SQL Message " + se.getMessage());
+				throw new VestigoTMException(1, "Transaction CO154: Error updating coll_head! ","err411a", null);
+			}
+			
+			if (argExCtx.getUpdateCount() == 0) {
+				throw new VestigoTMException(1, "Cannot change, user_lock!", "errclt7", null);
+			}
+			
+	}//updateCollHead
+
+	
+	public void updateCollBoeDebtorInd1(ConnCtx argCtx,TransactionContext tc){
+		java.math.BigDecimal indosantId1 = new java.math.BigDecimal ( "1635463003.0");
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1" + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1" + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1 CollBoeDialog_BOE_ID " + decl.collboeupdatemapping.CollBoeDialog_BOE_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1 decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd1 " + decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd1);		
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd1),           
+						coll_cus_id       = :(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd1), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :indosantId1  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant1 ERROR");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant1 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant1 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant1 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor indosant1! ","err411a", null);
+			}
+			tc.debug ( "\n");
+			tc.debug ( "......CO154.sqlj ZAVRSIO indosant1 update COLL_BOE_DEBTOR");
+			tc.debug ( "\n");
+	}//updateCollBoeDebtorInd1
+
+	public void updateCollBoeDebtorInd2(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		
+		java.math.BigDecimal indosantId2 = new java.math.BigDecimal ( "1635464003.0");
+		
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1" + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1" + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1 CollBoeDialog_BOE_ID " + decl.collboeupdatemapping.CollBoeDialog_BOE_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant1 decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd2 " + decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd2);
+			
+			
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd2),           
+						coll_cus_id       = :(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd2), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :indosantId2  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant2 ERROR");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant2 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant2 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant2 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor indosant2! ","err411a", null);
+
+			}
+
+		
+			tc.debug ( "\n");
+			tc.debug ( "......CO154.sqlj ZAVRSIO indosant2 update COLL_BOE_DEBTOR");
+			tc.debug ( "\n");
+		
+	}//updateCollBoeDebtorInd2
+
+	public void updateCollBoeDebtorInd3(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		
+		java.math.BigDecimal indosantId3 = new java.math.BigDecimal ( "1635465003.0");
+		
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant3");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant3" + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant3" + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant3 CollBoeDialog_BOE_ID " + decl.collboeupdatemapping.CollBoeDialog_BOE_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant3 decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd3 " + decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd3);
+			
+			
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd3),           
+						coll_cus_id       = :(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd3), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :indosantId3  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant3 ERROR");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant3 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant3 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant3 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor indosant3! ","err411a", null);
+
+			}
+
+		
+			tc.debug ( "\n");
+			tc.debug ( "......CO154.sqlj ZAVRSIO indosant3 update COLL_BOE_DEBTOR");
+			tc.debug ( "\n");
+		
+	}//updateCollBoeDebtorInd3
+
+	public void updateCollBoeDebtorInd4(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		
+		java.math.BigDecimal indosantId4 = new java.math.BigDecimal ( "1635466003.0");
+		
+		try{	
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant4");
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant4" + decl.collboeupdatemapping.CollBoeDialog_USER_LOCK);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant4" + decl.collboeupdatemapping.CollBoeDialog_COL_HEA_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant4 CollBoeDialog_BOE_ID " + decl.collboeupdatemapping.CollBoeDialog_BOE_ID);
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR indosant4 decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd4 " + decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd4);
+			
+			
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd4),           
+						coll_cus_id       = :(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd4), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :indosantId4 };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant4 ERROR");
+						tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+						
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant4 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant4 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor indosant4 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor indosant4! ","err411a", null);
+
+			}
+
+		 
+			tc.debug ( "\n");
+			tc.debug ( "......CO154.sqlj ZAVRSIO indosant4 update COLL_BOE_DEBTOR");
+			tc.debug ( "\n");
+			
+		
+	}//updateCollBoeDebtorInd4
+
+
+	public void insertCollBoeDebtorInd1(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//INDOSANT 1		1635463003
+		java.math.BigDecimal indosantId1 = new java.math.BigDecimal ( "1635463003.0");
+		java.math.BigDecimal boeDebIdInd1 = null;
+		try{
+			boeDebIdInd1  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Indosant 1
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor INDOSANT 1! ","err411a", null);		
+		}
+		
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdInd1,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd1),
+								:(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd1	),
+								null,  
+								null,  
+								null,  
+								null,  
+								:indosantId1,
+								:( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 1 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 1 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 1 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor INDOSANT 1! ","err411a", null);
+	
+		}
+	
+	}//insertCollBoeDebtorInd1
+	public void insertCollBoeDebtorInd2(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//INDOSANT 2		1635464003
+		java.math.BigDecimal indosantId2 = new java.math.BigDecimal ( "1635464003.0");
+		
+		java.math.BigDecimal boeDebIdInd2 = null;
+		try{
+			boeDebIdInd2  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Indosant 1
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor INDOSANT 2! ","err411a", null);
+			
+		
+		}
+		
+		
+		
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdInd2,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd2),
+								:(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd2	),
+								null,  
+								null,  
+								null,  
+								null,  
+								:indosantId2,
+								:( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 2 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 2 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 2 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor INDOSANT 2! ","err411a", null);
+		}
+	
+	}//insertCollBoeDebtorInd2
+	
+	public void insertCollBoeDebtorInd3(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//INDOSANT 3		1635465003
+		java.math.BigDecimal indosantId3 = new java.math.BigDecimal ( "1635465003.0");
+		java.math.BigDecimal boeDebIdInd3 = null;
+		try{
+			boeDebIdInd3  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Indosant 1
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor INDOSANT 3! ","err411a", null);
+		}
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdInd3,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd3),
+								:(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd3	),
+								null,  
+								null,  
+								null,  
+								null,  
+								:indosantId3,
+								:( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 3 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 3 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 3 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor INDOSANT 3! ","err411a", null);
+	
+		}
+	
+	}//insertCollBoeDebtorInd3
+	
+	public void insertCollBoeDebtorInd4(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//INDOSANT 4		1635466003
+		java.math.BigDecimal indosantId4 = new java.math.BigDecimal ( "1635466003.0");
+		java.math.BigDecimal boeDebIdInd4 = null;
+		try{
+			boeDebIdInd4  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Indosant 1
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor INDOSANT 4! ","err411a", null);
+			
+		
+		}
+
+		
+		
+		
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdInd4,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd4),
+								:(decl.collboeupdatemapping.CollBoeDialog_CUS_IDInd4),
+								null,  
+								null,  
+								null,  
+								null,  
+								:indosantId4,
+								:( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:( decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 4 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 4 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor INDOSANT 4 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor INDOSANT 4! ","err411a", null);
+	
+		}
+	
+	}//insertCollBoeDebtorInd4
+	
+
+	public void deleteCollBoeDebtorInd1(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1635463003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 1 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 1 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 1 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor INDOSANT 1! ","err411a", null);
+				
+				}
+		
+		
+		
+	}//deleteCollBoeDebtorInd1
+
+	public void deleteCollBoeDebtorInd2(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1635464003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 2 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 2 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 2 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor INDOSANT 2! ","err411a", null);
+				
+				}
+		
+		
+		
+	}//deleteCollBoeDebtorInd2
+	public void deleteCollBoeDebtorInd3(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1635465003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 3 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 3 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 3 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor INDOSANT 3! ","err411a", null);
+				
+				}
+		
+		
+		
+	}//deleteCollBoeDebtorInd3
+	public void deleteCollBoeDebtorInd4(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1635466003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 4 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 4 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor INDOSANT 4 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor INDOSANT 4! ","err411a", null);
+				
+				}
+		
+		
+		
+	}//deleteCollBoeDebtorInd4
+	
+	
+// avalisti
+	
+	
+	public void updateCollBoeDebtorAval1(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		java.math.BigDecimal avalistId1 = new java.math.BigDecimal ( "1636798003.0");
+ 
+		
+		try{	
+
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR avalisti1 decl.collboeupdatemapping.KolBD_txtRegNoAval2 " + decl.collboeupdatemapping.KolBD_txtRegNoAval1);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.KolBD_txtRegNoAval1),           
+						coll_cus_id       = :(decl.collboeupdatemapping.cus_id_aval1), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :avalistId1  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalisti1 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalisti1 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalisti1 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor avalisti1! ","err411a", null);
+
+			}
+			tc.debug ( "......CO154.sqlj ZAVRSIO avalisti1 update COLL_BOE_DEBTOR");
+
+		
+	}//updateCollBoeDebtorAval1
+	
+
+	public void updateCollBoeDebtorAval2(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		java.math.BigDecimal avalistId2 = new java.math.BigDecimal ( "1636799003.0");
+ 
+		
+		try{	
+
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR avalist2 decl.collboeupdatemapping.KolBD_txtRegNoAval2 " + decl.collboeupdatemapping.KolBD_txtRegNoAval2);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.KolBD_txtRegNoAval2),           
+						coll_cus_id       = :(decl.collboeupdatemapping.cus_id_aval2), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :avalistId2  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist2 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist2 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist2 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor avalist2! ","err411a", null);
+
+			}
+			tc.debug ( "......CO154.sqlj ZAVRSIO avalist2 update COLL_BOE_DEBTOR");
+
+		
+	}//updateCollBoeDebtorAval2
+	
+	
+	public void updateCollBoeDebtorAval3(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		java.math.BigDecimal avalistId3 = new java.math.BigDecimal ( "1636800003.0");
+ 
+		
+		try{	
+
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR avalist3 decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd3 " + decl.collboeupdatemapping.KolBD_txtRegNoAval3);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.KolBD_txtRegNoAval3),           
+						coll_cus_id       = :(decl.collboeupdatemapping.cus_id_aval3), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :avalistId3  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist3 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist3 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist3 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor avalist3! ","err411a", null);
+
+			}
+			tc.debug ( "......CO154.sqlj ZAVRSIO avalist3 update COLL_BOE_DEBTOR");
+
+		
+	}//updateCollBoeDebtorAval3
+	
+	
+	
+	public void updateCollBoeDebtorAval4(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		java.math.BigDecimal avalistId4 = new java.math.BigDecimal ( "1636801003.0");
+ 
+		
+		try{	
+
+			tc.debug ( "......CO154.sqlj Poceo update COLL_BOE_DEBTOR avalist4 decl.collboeupdatemapping.CollBoeDialog_txtRegNoInd4 " + decl.collboeupdatemapping.KolBD_txtRegNoAval4);
+			
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			
+				#sql [argCtx]{
+					UPDATE coll_boe_debtor
+					SET  register_no      = :(decl.collboeupdatemapping.KolBD_txtRegNoAval4),           
+						coll_cus_id       = :(decl.collboeupdatemapping.cus_id_aval4), 
+						       
+						date_from         = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),        
+						date_until        = :(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),       
+						use_id            = :( decl.collboeupdatemapping.CollBoeDialog_USE_ID),        
+						user_lock         = :(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK)
+					WHERE             									                                   
+							boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+				 	AND 	role_boe_id = :avalistId4  };
+
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist4 SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist4 SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO154.sqlj update coll_boe_debtor avalist4 SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO154: Error updating coll_boe_debtor avalist4! ","err411a", null);
+
+			}
+			tc.debug ( "......CO154.sqlj ZAVRSIO avalist4 update COLL_BOE_DEBTOR");
+
+		
+	}//updateCollBoeDebtorAval4
+
+	
+	
+	public void insertCollBoeDebtorAval1(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//avalist 1		1636798003
+		java.math.BigDecimal avalistId1 = new java.math.BigDecimal ( "1636798003.0");
+		java.math.BigDecimal boeDebIdAval1 = null;
+		try{
+			boeDebIdAval1  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Avalist1 
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor Avalist1! ","err411a", null);
+			
+		
+		}
+		
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdAval1,
+								:(decl.collboeupdatemapping.KolBD_txtRegNoAval1),
+								:(decl.collboeupdatemapping.cus_id_aval1),
+								null,  
+								null,  
+								null,  
+								null,  
+								:avalistId1,
+								:(decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist1 1 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist1 1 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist1 1 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor Avalist1 1! ","err411a", null);
+	
+		}
+	
+	}//insertCollBoeDebtorAval1
+	
+	
+	public void insertCollBoeDebtorAval2(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//avalist2		1636799003
+		java.math.BigDecimal avalistId2 = new java.math.BigDecimal ( "1636799003.0");
+		java.math.BigDecimal boeDebIdAval2 = null;
+		try{
+			boeDebIdAval2  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Avalist2 
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor Avalist2! ","err411a", null);
+			
+		
+		}
+		
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdAval2,
+								:(decl.collboeupdatemapping.KolBD_txtRegNoAval2),
+								:(decl.collboeupdatemapping.cus_id_aval2),
+								null,  
+								null,  
+								null,  
+								null,  
+								:avalistId2,
+								:(decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist2 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist2 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist2 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor Avalist2! ","err411a", null);
+	
+		}
+	
+	}//insertCollBoeDebtorAval2
+	
+	
+	public void insertCollBoeDebtorAval3(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//avalist 3		1636800003
+		java.math.BigDecimal avalistId3 = new java.math.BigDecimal ( "1636800003.0");
+		java.math.BigDecimal boeDebIdAval3 = null;
+		try{
+			boeDebIdAval3  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Avalist3 
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor Avalist3! ","err411a", null);
+			
+		
+		}
+		
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdAval3,
+								:(decl.collboeupdatemapping.KolBD_txtRegNoAval3),
+								:(decl.collboeupdatemapping.cus_id_aval3),
+								null,  
+								null,  
+								null,  
+								null,  
+								:avalistId3,
+								:(decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist3 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist3 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist3 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor Avalist3! ","err411a", null);
+	
+		}
+	
+	}//insertCollBoeDebtorAval3
+	
+	
+	
+	public void insertCollBoeDebtorAval4(ConnCtx argCtx,TransactionContext tc){
+		
+		
+		//avalist 4		1636801003
+		java.math.BigDecimal avalistId4 = new java.math.BigDecimal ( "1636801003.0");
+		java.math.BigDecimal boeDebIdAval4 = null;
+		try{
+			boeDebIdAval4  = id_generator.getNewId();	    //KLJUC COLL_BOE_DEBTOR - Avalist4
+		}catch(Exception e){
+			throw new VestigoTMException(1, "Transaction CO154: Error inserting coll_boe_debtor Avalist4! ","err411a", null);
+			
+		
+		}
+		
+		try{	
+			
+				#sql [argCtx]{
+					INSERT INTO coll_boe_debtor
+						(			
+						 	boe_deb_id,				
+							register_no,      
+							coll_cus_id,      
+							code_deb,
+							name_deb,
+							fname_deb,
+							sname_deb,
+							role_boe_id,      
+							boe_id,           
+							date_from,        
+							date_until,       
+							use_open_id,      
+							use_id,           
+							opening_ts,       
+							user_lock )
+
+					VALUES( 	:boeDebIdAval4,
+								:(decl.collboeupdatemapping.KolBD_txtRegNoAval4),
+								:(decl.collboeupdatemapping.cus_id_aval4),
+								null,  
+								null,  
+								null,  
+								null,  
+								:avalistId4,
+								:(decl.collboeupdatemapping.CollBoeDialog_BOE_ID) ,
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_FROM),
+								:(decl.collboeupdatemapping.CollBoeDialog_txtDATE_UNTIL),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_OPEN_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USE_ID),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK),
+								:(decl.collboeupdatemapping.CollBoeDialog_USER_LOCK) )   
+	                                   	       
+					};
+	
+
+		}catch(java.sql.SQLException se){
+	
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist4 SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist4 SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO154.sqlj insert into coll_boe_debtor Avalist4 SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO152: Error inserting coll_boe_debtor Avalist4! ","err411a", null);
+	
+		}
+	
+	}//insertCollBoeDebtorAval4
+	
+	
+	public void deleteCollBoeDebtorAval1(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1636798003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 1 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 1 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 1 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor AVALIST 1! ","err411a", null);
+				
+				}
+		
+		
+		
+	}//deleteCollBoeDebtorAval1
+	
+	public void deleteCollBoeDebtorAval2(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1636799003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 2 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 2 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 2 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor AVALIST 2! ","err411a", null);
+				
+				}
+	}//deleteCollBoeDebtorAval2
+	
+	
+	public void deleteCollBoeDebtorAval3(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1636800003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 3 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 3 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 3 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor AVALIST 3! ","err411a", null);
+				
+				}
+		
+	}//deleteCollBoeDebtorAval3
+	
+	
+	public void deleteCollBoeDebtorAval4(ConnCtx argCtx,TransactionContext tc){
+		
+		try{ 
+				    #sql [argCtx]{
+					
+						DELETE FROM  coll_boe_debtor
+						WHERE boe_id = :( decl.collboeupdatemapping.CollBoeDialog_BOE_ID) 
+					 	AND   role_boe_id = 1636801003  };
+
+				}catch(java.sql.SQLException se){
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 4 SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 4 SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO154.sqlj delete from coll_boe_debtor AVALIST 4 SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO152: Error deleting coll_boe_debtor AVALIST 4! ","err411a", null);
+				
+				}
+		 
+		
+		
+	}//deleteCollBoeDebtorAval4
+	 
+}	
+			

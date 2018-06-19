@@ -1,0 +1,360 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+  
+ 
+public class CO066 extends RemoteTransaction {
+ 	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO066.sqlj,v 1.27 2017/12/21 14:04:04 hrazst Exp $";
+	private DeclCO06 decl = null;
+	private YOY63 SQLhelper = null;
+	
+	public CO066(DeclCO06 decl) { 
+		this.decl = decl;
+	} 
+	  
+	CollHeadSelectData chs = new CollHeadSelectData();
+	
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......COL_HEA_ID " + decl.cachdepselectmapping.COL_HEA_ID);
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data(); 
+        SQLhelper = new YOY63(tc);
+        
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		// select iz COLL_HEAD		
+		YOY42 headSel = new YOY42(tc, chs); 
+		chs.COL_HEA_ID = decl.cachdepselectmapping.COL_HEA_ID;	 	
+		headSel.selectFromCollHead();		
+		tc.debug ( "......PUNIM DECL  ");		
+		// punjenje decla iz objekta chs		
+		fillDeclFromCHSObj();				
+		tc.debug(chs.toString());
+		
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);            
+        
+		tc.debug ( "......COL_HEA_ID " + decl.cachdepselectmapping.Coll_txtCode);
+		
+		try{
+
+			#sql [ctx] {SELECT 
+							col_cas_id , 
+							col_hea_id , 
+							cde_cus_id ,  
+							cde_reg_no ,
+							cde_swift_add ,
+							cde_bank , 
+							cde_dep_from ,
+							cde_dep_unti ,
+							cde_amount ,
+							cde_cur_id ,
+							cde_period ,
+							cde_prolong ,
+							cde_account ,
+		                    cde_dep_unti_final ,
+		                    status,
+		                    cde_successive
+				INTO
+							:(decl.cachdepselectmapping.COL_SEC_ID),    													                                                
+							:(decl.cachdepselectmapping.COL_HEA_ID),
+ 							:(decl.cachdepselectmapping.cde_cus_id),
+							:(decl.cachdepselectmapping.Coll_txtCdeRegNo), 	
+							:(decl.cachdepselectmapping.Coll_txtCdeSwiftAdd),                   
+							:(decl.cachdepselectmapping.Coll_txtCdeBank), 
+							:(decl.cachdepselectmapping.Coll_txtCdeDepFrom),
+							:(decl.cachdepselectmapping.Coll_txtCdeDepUnti),
+							:(decl.cachdepselectmapping.Coll_txtCdeAmount) ,
+							:(decl.cachdepselectmapping.cd_cur_id) ,
+							:(decl.cachdepselectmapping.Coll_txtCdePeriod) ,
+							:(decl.cachdepselectmapping.Coll_txtCdeProlong) ,
+							:(decl.cachdepselectmapping.Coll_txtDepAcc),
+		                    :(decl.cachdepselectmapping.Coll_txtCashDepDateUntilFinal),
+		                    :(decl.cachdepselectmapping.Coll_txtAccNoStatus),
+		                    :(decl.cachdepselectmapping.Coll_txtSuccessive)
+				FROM coll_cashdep
+				WHERE COL_HEA_ID = :(decl.cachdepselectmapping.COL_HEA_ID) };		
+	 
+		}catch(SQLException se){
+			tc.debug ( "......CO066.sqlj select from coll_cashdep SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO066.sqlj select from coll_cashdep SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO066.sqlj select from coll_cashdep SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO066: Error selecting coll_cashdep ","err411a", null);
+		}
+		tc.debug ( "......AMOUNT " + decl.cachdepselectmapping.Coll_txtCdeAmount);
+		tc.debug ( "......AMOUNT " + decl.cachdepselectmapping.Coll_txtCdeProlong);		
+		
+//		  dohvat iz tabele CURRENCY	       
+		 
+			try{ 
+				if (decl.cachdepselectmapping.cd_cur_id != null){ 
+					#sql [ctx] {
+	                    SELECT code_char
+	                        INTO :(decl.cachdepselectmapping.Coll_txtCdeCurr)
+	                        FROM currency
+	                        WHERE cur_id = :(decl.cachdepselectmapping.cd_cur_id)};
+	      		}
+	        }catch(SQLException e){
+                if (tc.getSQLExHandler().isEmptyRowset(e)) {
+                } else {
+                    throw e;
+                }
+		    }	
+            
+	        CalculationData cData = SQLhelper.getAllCalculationData(decl.cachdepselectmapping.COL_HEA_ID);               
+	        
+	        decl.cachdepselectmapping.Kol_txtPonderMVP = cData.MVP_ponder;
+	        decl.cachdepselectmapping.Coll_txtWcaAmountDate = cData.wcov_date;
+	        decl.cachdepselectmapping.Coll_txtWcaAmount = cData.wcov_amount;
+	        decl.cachdepselectmapping.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+	        decl.cachdepselectmapping.Coll_txtUsedWCAAmount = cData.wca_amount;
+	        
+	        decl.cachdepselectmapping.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+	        decl.cachdepselectmapping.Coll_txtRealPonderAmount=cData.real_ponder; 	        
+	        
+            kolData.colHeaId = decl.cachdepselectmapping.COL_HEA_ID;
+            kolData.colCurId = decl.cachdepselectmapping.REAL_EST_NM_CUR_ID;
+            kolData.nominalAmount = decl.cachdepselectmapping.Coll_txtNomiValu;
+            
+            kolData.colCatId = decl.cachdepselectmapping.COL_CAT_ID;
+            kolData.colTypId = decl.cachdepselectmapping.COL_TYPE_ID;
+            kolData.colSubTypId = null;
+            kolData.addRequest = "N";
+            
+//            kolData.ponder = decl.cachdepselectmapping.Coll_txtCollMvpPonder;
+
+            yoye0.getNoPonderAndPonderRestAmount(kolData);
+//          yoye0.getPonderAndRestAmount(kolData);
+          
+          decl.cachdepselectmapping.Coll_txtAcouValue = kolData.ponderAmount;
+          decl.cachdepselectmapping.Coll_txtAcouDate = todaySQLDate;
+
+//          decl.cachdepselectmapping.Coll_txtAvailDate = todaySQLDate;
+          decl.cachdepselectmapping.Coll_txtSumPartVal = kolData.exposureAmount;
+          decl.cachdepselectmapping.Coll_txtSumPartDat = kolData.exposureDate;   
+          
+          decl.cachdepselectmapping.Coll_txtCollMvpPonderMin = kolData.minPonder;
+          decl.cachdepselectmapping.Coll_txtCollMvpPonder = kolData.dflPonder;
+          decl.cachdepselectmapping.Coll_txtCollMvpPonderMax = kolData.maxPonder;
+          
+          decl.cachdepselectmapping.Coll_txtAvailValue = kolData.restAmount;
+          decl.cachdepselectmapping.Coll_txtAvailDate = kolData.coverDate;
+          
+          decl.cachdepselectmapping.Coll_txtAvailPonValue = kolData.restPonAmount;
+          decl.cachdepselectmapping.Coll_txtNDAvailDate = kolData.NDCoverDate;
+          
+
+          //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja
+
+          try{ 
+              #sql [ctx] {
+                      SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+                      INTO
+                      :(decl.cachdepselectmapping.Coll_txtCoConfirm),
+                      :(decl.cachdepselectmapping.Coll_txtCoConfirmUserId),
+                      :(decl.cachdepselectmapping.Coll_txtCoConfirmUserName),
+                      :(decl.cachdepselectmapping.Coll_txtCoConfirmTime)
+                      FROM co_chg_history as a, app_user as app
+                      WHERE 
+                             a.col_hea_id = :(decl.cachdepselectmapping.COL_HEA_ID)
+                      and    a.co_use_id=app.use_id
+                      and
+                              a.co_ind='D'
+                      and
+                              a.co_chg_ts is null
+                      and co_chg_use_id is null
+                      FETCH FIRST ROWS ONLY
+                     };  
+                  
+          }catch(SQLException e){
+              if (tc.getSQLExHandler().isEmptyRowset(e)) {
+              } else {
+                  throw e;
+              }
+          } 
+            
+	}
+	
+	private void fillDeclFromCHSObj () {
+		
+		decl.cachdepselectmapping.COL_HEA_ID = chs.COL_HEA_ID;    													                                                
+		decl.cachdepselectmapping.COL_TYPE_ID = chs.COL_TYPE_ID;  
+		decl.cachdepselectmapping.Coll_txtCode = chs.Coll_txtCode; 
+		decl.cachdepselectmapping.Coll_txtDesc = chs.Coll_txtDesc;  
+		decl.cachdepselectmapping.REAL_EST_EUSE_ID = chs.REAL_EST_EUSE_ID;
+		decl.cachdepselectmapping.Coll_txtEstnValu = chs.Coll_txtEstnValu;                   
+		decl.cachdepselectmapping.Coll_txtEstnDate = chs.Coll_txtEstnDate;                   
+		decl.cachdepselectmapping.Coll_txtDatnFrom = chs.Coll_txtDatnFrom;                   
+		decl.cachdepselectmapping.Coll_txtDatnUnti = chs.Coll_txtDatnUnti;                   
+		decl.cachdepselectmapping.Coll_txtNomiDesc = chs.Coll_txtNomiDesc; 
+		decl.cachdepselectmapping.Coll_txtNomiValu = chs.Coll_txtNomiValu;                   		
+		decl.cachdepselectmapping.Coll_txtNomiDate = chs.Coll_txtNomiDate; 
+		decl.cachdepselectmapping.Coll_txtLiquValu = chs.Coll_txtLiquValu;                  		
+		decl.cachdepselectmapping.Coll_txtLiquDate = chs.Coll_txtLiquDate;                   		
+		decl.cachdepselectmapping.Coll_txtBptcValu = chs.Coll_txtBptcValu;                   		
+		decl.cachdepselectmapping.Coll_txtBptcDate = chs.Coll_txtBptcDate; 
+		decl.cachdepselectmapping.REAL_EST_NM_CUR_ID = chs.REAL_EST_NM_CUR_ID; 
+		decl.cachdepselectmapping.CUS_ID = chs.CUS_ID;   
+		decl.cachdepselectmapping.COLL_CUS_ID = chs.COLL_CUS_ID;   
+		decl.cachdepselectmapping.Coll_txtDateToLop = chs.Coll_txtDateToLop;   
+		decl.cachdepselectmapping.Coll_txtDateRecLop = chs.Coll_txtDateRecLop; 
+		decl.cachdepselectmapping.Coll_txtRecLop = chs.Coll_txtRecLop; 
+		decl.cachdepselectmapping.Coll_txtComDoc = chs.Coll_txtComDoc;                              		                                      
+		decl.cachdepselectmapping.Coll_txtMissingDoc = chs.Coll_txtMissingDoc;                          		                                      
+		decl.cachdepselectmapping.Coll_txtDateToDoc = chs.Coll_txtDateToDoc;                          		                                      
+		decl.cachdepselectmapping.Coll_txtDateRecDoc = chs.Coll_txtDateRecDoc;                    		                                    
+		decl.cachdepselectmapping.Coll_txtRevaCoefMan = chs.Coll_txtRevaCoefMan;                        		                                                           		                                         
+		decl.cachdepselectmapping.Coll_txtRevaDate = chs.Coll_txtRevaDate;                            		                                           
+		decl.cachdepselectmapping.Coll_txtRevaDateAM = chs.Coll_txtRevaDateAM;                         		                                         
+		decl.cachdepselectmapping.Coll_txtRevaBValue = chs.Coll_txtRevaBValue;                          		                                          
+		decl.cachdepselectmapping.Coll_txtRevaBDate = chs.Coll_txtRevaBDate;                           		
+		decl.cachdepselectmapping.Coll_txtRevaBDateAM = chs.Coll_txtRevaBDateAM;                       	     
+		decl.cachdepselectmapping.Coll_txtAmortAge = chs.Coll_txtAmortAge;                            	    
+		decl.cachdepselectmapping.AMORT_PER_CAL_ID = chs.AMORT_PER_CAL_ID;                        	                            
+		decl.cachdepselectmapping.Coll_txtAmortValCal = chs.Coll_txtAmortValCal;
+		decl.cachdepselectmapping.Coll_txtNepoValue = chs.Coll_txtNepoValue;                           	                            
+		decl.cachdepselectmapping.Coll_txtNepoDate = chs.Coll_txtNepoDate;                            	                            
+		decl.cachdepselectmapping.Coll_txtNepoPerCal = chs.Coll_txtNepoPerCal; 
+		decl.cachdepselectmapping.Coll_txtThirdRight = chs.Coll_txtThirdRight;                          	                            
+		decl.cachdepselectmapping.THIRD_RIGHT_CUR_ID = chs.THIRD_RIGHT_CUR_ID;                   	                            
+		decl.cachdepselectmapping.Coll_txtThirdRightInNom = chs.Coll_txtThirdRightInNom;                      		                                         
+		decl.cachdepselectmapping.Coll_txtThirdRightDate = chs.Coll_txtThirdRightDate;                    	                                                        		                                         
+		decl.cachdepselectmapping.Coll_txtHfsValue = chs.Coll_txtHfsValue;                           	                                                        		                                         
+		decl.cachdepselectmapping.Coll_txtHfsValueDate = chs.Coll_txtHfsValueDate;                         		                                         
+		decl.cachdepselectmapping.Coll_txtHfsValueLastOne = chs.Coll_txtHfsValueLastOne;                      		                                         
+		decl.cachdepselectmapping.Coll_txtHfsDateLastOne = chs.Coll_txtHfsDateLastOne;     
+		decl.cachdepselectmapping.Coll_txtAcouValue = chs.Coll_txtAcouValue;                    
+		decl.cachdepselectmapping.Coll_txtAcouDate = chs.Coll_txtAcouDate;                          
+		decl.cachdepselectmapping.Coll_txtAcouBValue = chs.Coll_txtAcouBValue;                        
+		decl.cachdepselectmapping.Coll_txtAcouBDate = chs.Coll_txtAcouBDate;  
+		decl.cachdepselectmapping.Coll_txtSumLimitVal = chs.Coll_txtSumLimitVal;                                                     
+		decl.cachdepselectmapping.Coll_txtSumLimitDat = chs.Coll_txtSumLimitDat;                                                       
+		decl.cachdepselectmapping.Coll_txtSumPartVal = chs.Coll_txtSumPartVal;                                                         
+		decl.cachdepselectmapping.Coll_txtSumPartDat = chs.Coll_txtSumPartDat;
+		decl.cachdepselectmapping.Coll_txtAvailValue = chs.Coll_txtAvailValue;                                                       
+		decl.cachdepselectmapping.Coll_txtAvailPerCal = chs.Coll_txtAvailPerCal;                                                       
+		decl.cachdepselectmapping.Coll_txtAvailDate = chs.Coll_txtAvailDate;  
+		decl.cachdepselectmapping.INSPOL_IND = chs.INSPOL_IND;  
+		decl.cachdepselectmapping.COL_PLACE = chs.COL_PLACE; 
+		decl.cachdepselectmapping.COL_COUNTY = chs.COL_COUNTY; 
+		decl.cachdepselectmapping.COL_DISTRICT = chs.COL_DISTRICT; 
+		decl.cachdepselectmapping.COL_RESI_QUAR = chs.COL_RESI_QUAR; 
+		decl.cachdepselectmapping.Coll_txtCollMvpPonder = chs.Coll_txtCollMvpPonder;
+		decl.cachdepselectmapping.Coll_txtCollHnbPonder = chs.Coll_txtCollHnbPonder; 
+		decl.cachdepselectmapping.Coll_txtCollRzbPonder = chs.Coll_txtCollRzbPonder;
+		decl.cachdepselectmapping.Coll_txtDateFrom = chs.Coll_txtDateFrom;                   	                         
+		decl.cachdepselectmapping.Coll_txtDateUnti = chs.Coll_txtDateUnti;                   	 
+		decl.cachdepselectmapping.Coll_txtAddData = chs.Coll_txtAddData;  
+		decl.cachdepselectmapping.STATUS = chs.STATUS;                      		                          
+		decl.cachdepselectmapping.SPEC_STATUS = chs.SPEC_STATUS;  
+		decl.cachdepselectmapping.USE_OPEN_ID = chs.USE_OPEN_ID;
+		decl.cachdepselectmapping.USE_ID = chs.USE_ID;
+		decl.cachdepselectmapping.Coll_txtOpeningTs = chs.Coll_txtOpeningTs;
+		decl.cachdepselectmapping.Coll_txtUserLock = chs.Coll_txtUserLock; 				
+		decl.cachdepselectmapping.Coll_txtEUseIdLogin = chs.Coll_txtEUseIdLogin;
+		decl.cachdepselectmapping.Coll_txtEUseIdName = chs.Coll_txtEUseIdName;
+		decl.cachdepselectmapping.Coll_txtEstnCurr = chs.Coll_txtEstnCurr;
+		decl.cachdepselectmapping.Coll_txtCarrierRegisterNo = chs.Coll_txtCarrierRegisterNo;
+		decl.cachdepselectmapping.Coll_txtCarrierName = chs.Coll_txtCarrierName;
+		decl.cachdepselectmapping.Coll_txtOwnerRegisterNo = chs.Coll_txtOwnerRegisterNo;
+		decl.cachdepselectmapping.Coll_txtOwnerName = chs.Coll_txtOwnerName;
+		decl.cachdepselectmapping.Coll_txtThirdRightCurCodeChar = chs.Coll_txtThirdRightCurCodeChar;	
+		decl.cachdepselectmapping.Coll_txtUseOpenIdLogin = chs.Coll_txtUseOpenIdLogin;
+		decl.cachdepselectmapping.Coll_txtUseOpenIdName = chs.Coll_txtUseOpenIdName;
+		decl.cachdepselectmapping.Coll_txtUseIdLogin = chs.Coll_txtUseIdLogin;
+		decl.cachdepselectmapping.Coll_txtUseIdName = chs.Coll_txtUseIdName; 					
+		decl.cachdepselectmapping.Coll_txtAmortPerCal = chs.Coll_txtAmortPerCal;
+		decl.cachdepselectmapping.Coll_txtCollTypeCode = chs.Coll_txtCollTypeCode;
+		decl.cachdepselectmapping.Coll_txtCollTypeName  = chs.Coll_txtCollTypeName; 
+		decl.cachdepselectmapping.USER_LOCK = chs.USER_LOCK;
+		decl.cachdepselectmapping.Coll_txtNmValCurr = chs.Coll_txtNmValCurr;
+		decl.cachdepselectmapping.Coll_txtEligibility = chs.Coll_txtEligibility;
+		decl.cachdepselectmapping.Coll_txtEligDesc = chs.Coll_txtEligDesc;
+		decl.cachdepselectmapping.Coll_txtAcumBuyValue = chs.Coll_txtAcumBuyValue;
+		decl.cachdepselectmapping.ORIGIN_ORG_UNI_ID = chs.ORIGIN_ORG_UNI_ID;
+		decl.cachdepselectmapping.ORG_UNI_ID = chs.ORG_UNI_ID;
+		decl.cachdepselectmapping.USE_ID_VER = chs.USE_ID_VER;
+		decl.cachdepselectmapping.USE_ID_AUT = chs.USE_ID_AUT;
+		decl.cachdepselectmapping.VERIFICATION_TS = chs.VERIFICATION_TS;
+		decl.cachdepselectmapping.AUTORIZATION_TS = chs.AUTORIZATION_TS;
+		decl.cachdepselectmapping.MORTGAGE_STATUS = chs.MORTGAGE_STATUS;
+		decl.cachdepselectmapping.COLLATERAL_STATUS = chs.COLLATERAL_STATUS;
+		decl.cachdepselectmapping.WORKFLOW_INDIC = chs.WORKFLOW_INDIC;
+		decl.cachdepselectmapping.COVER_INDIC = chs.COVER_INDIC;
+		decl.cachdepselectmapping.VER_SEND_TS = chs.VER_SEND_TS;
+		decl.cachdepselectmapping.BASIC_DATA_STATUS = chs.BASIC_DATA_STATUS;
+		decl.cachdepselectmapping.COLL_DATA_STATUS = chs.COLL_DATA_STATUS;
+		decl.cachdepselectmapping.COL_CAT_ID = chs.COL_CAT_ID;
+		decl.cachdepselectmapping.USE_ID_VER_SND = chs.USE_ID_VER_SND;
+		decl.cachdepselectmapping.C_FINANCIAL_FLAG = chs.FINANCIAL_FLAG;
+		decl.cachdepselectmapping.C_txtUseIdSndVerLogin = chs.C_txtUseIdSndVerLogin;
+		decl.cachdepselectmapping.C_txtUseIdSndVerName = chs.C_txtUseIdSndVerName;
+		decl.cachdepselectmapping.C_txtUseIdVerLogin = chs.C_txtUseIdVerLogin;
+		decl.cachdepselectmapping.C_txtUseIdVerName = chs.C_txtUseIdVerName;
+		decl.cachdepselectmapping.C_txtUseIdAutLogin = chs.C_txtUseIdAutLogin;
+		decl.cachdepselectmapping.C_txtUseIdAutName = chs.C_txtUseIdAutName;
+		decl.cachdepselectmapping.Coll_txtBasicDataSt = chs.Coll_txtBasicDataSt;
+		decl.cachdepselectmapping.Coll_txtCollDataSt = chs.Coll_txtCollDataSt;
+		decl.cachdepselectmapping.Coll_txtCoverIndic = chs.Coll_txtCoverIndic;
+		decl.cachdepselectmapping.Coll_txtFinFlag = chs.Coll_txtFinFlag;
+		decl.cachdepselectmapping.Coll_txtMortgageSt = chs.Coll_txtMortgageSt;
+		decl.cachdepselectmapping.ColRba_txtEligibility = chs.ColRba_txtEligibility;
+		decl.cachdepselectmapping.ColRba_txtEligDesc = chs.ColRba_txtEligDesc;
+		decl.cachdepselectmapping.KolLow_txtEligibility = chs.KolLow_txtEligibility;
+		decl.cachdepselectmapping.KolLow_txtEligDesc = chs.KolLow_txtEligDesc;
+		decl.cachdepselectmapping.Kol_txtRbaEligDsc = chs.Kol_txtRbaEligDsc; 
+		decl.cachdepselectmapping.Coll_txtB1Eligibility = chs.Coll_txtB1Eligibility;
+		decl.cachdepselectmapping.Coll_txtB1EligDesc = chs.Coll_txtB1EligDesc;
+		decl.cachdepselectmapping.Coll_txtB2IRBEligibility = chs.Coll_txtB2IRBEligibility;
+		decl.cachdepselectmapping.Coll_txtB2IRBEligDesc = chs.Coll_txtB2IRBEligDesc;
+		decl.cachdepselectmapping.Kol_txtPonderMVP = chs.Kol_txtPonderMVP;
+		decl.cachdepselectmapping.Kol_txtCRMHnb=chs.Kol_txtCRMHnb;
+		decl.cachdepselectmapping.Coll_txtNDEligibility=chs.Coll_txtNDEligibility;
+        decl.cachdepselectmapping.Coll_txtNDEligDesc=chs.Coll_txtNDEligDesc;
+        
+        decl.cachdepselectmapping.Coll_txtTypeTVCode= chs.real_est_nom_type; 
+        decl.cachdepselectmapping.Coll_txtTypeTV= chs.real_est_nom_type_desc; 
+        decl.cachdepselectmapping.USE_ID_CO= chs.use_id_co;
+        decl.cachdepselectmapping.Coll_txtCollOfficer= chs.use_id_co_name;
+        decl.cachdepselectmapping.Coll_txtContractTypeCode= chs.contract_type; 
+        decl.cachdepselectmapping.Coll_txtContractTypeDesc= chs.contract_type_desc;
+        decl.cachdepselectmapping.Coll_txtOriginallDepo= chs.Coll_txtEstnValu; 
+        decl.cachdepselectmapping.Coll_txtOriginallDepoCur= chs.Coll_txtEstnCurr; 
+        decl.cachdepselectmapping.Coll_txtProccessing= "";
+        decl.cachdepselectmapping.Coll_txtProccessingTimestamp= null;
+        
+        decl.cachdepselectmapping.Coll_txtRealPonderAmount= null; 
+        decl.cachdepselectmapping.Coll_txtWcaOrigCurrencyCode= null;  
+        decl.cachdepselectmapping.Coll_txtUsedWCAAmount= null; 
+
+        decl.cachdepselectmapping.Coll_txtCollateralGCTCCode= chs.gctc_code; 
+        decl.cachdepselectmapping.Coll_txtCollateralGCTCDesc= chs.gctc_desc; 
+        decl.cachdepselectmapping.Coll_txtEndorsementTypeGCTCCode= chs.endorsement_type_code;
+        decl.cachdepselectmapping.Coll_txtEndorsementTypeGCTCDesc= chs.endorsement_type_desc;
+        decl.cachdepselectmapping.Coll_txtObjectTypeGCTCCode= chs.object_type_code; 
+        decl.cachdepselectmapping.Coll_txtObjectTypeGCTCDesc= chs.object_type_desc; 
+        decl.cachdepselectmapping.Coll_txtPropertyTypeGCTCCode= chs.property_type_code; 
+        decl.cachdepselectmapping.Coll_txtPropertyTypeGCTCDesc= chs.property_type_desc; 
+        decl.cachdepselectmapping.Coll_txtB2ValueLLAmount= null;
+        decl.cachdepselectmapping.Coll_txtB2ValueLLCurCode= null; 
+        decl.cachdepselectmapping.Coll_txtB2ValueGLAmount= null;
+        decl.cachdepselectmapping.Coll_txtB2ValueGLCurCode= null; 
+        
+        decl.cachdepselectmapping.Coll_txtProccessing="";
+        decl.cachdepselectmapping.Coll_txtProccessingTimestamp=chs.chg_nom_val_proc_ts; 
+	}	 	
+		
+	 
+} 
+  

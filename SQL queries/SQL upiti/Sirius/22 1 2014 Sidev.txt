@@ -1,0 +1,67 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+
+	SELECT  
+        		org_uni_id,
+        		wor_pla_id
+        	FROM 
+        		working_place  
+
+
+        		    		    		
+        	WHERE 
+        			wor_pla_id = 1413735003
+
+
+
+	SELECT  
+        		*
+        	FROM 
+        		working_place  
+
+
+
+
+        		select * from event_type where name like '%bx36%';  -- 
+
+	select * from param_eve_typ where eve_typ_id = 1731667003;	-- 
+        			
+
+select * from param_eve_typ;
+
+
+select * from param_eve_typ where eve_typ_id = 40873223;
+
+select * from params_dictionary where par_dic_id  = 142307003 and eve_typ_id = 40873223;
+
+
+
+
+				SELECT 
+		        		*
+		        	FROM 
+		        		report_def 
+		        		WHERE RPT_CODE like '%csv99%';
+
+
+
+				SELECT 
+		        		*
+		        	FROM 
+		        		report_def 
+
+
+		SELECT  
+        		parameter_value 
+        	FROM
+        		param_report_def 
+        	WHERE 
+        			rep_def_id = 1730949003 
+        		AND par_dic_id = 1695168003 
+        		AND bank_sign = 'RB';
+
+
+
+
+

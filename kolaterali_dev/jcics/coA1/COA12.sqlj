@@ -1,0 +1,259 @@
+package hr.vestigo.modules.collateral.jcics.coA1;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.framework.util.CharUtil;
+import hr.vestigo.framework.util.scramble.Scramble;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+
+import java.math.BigDecimal;
+import java.util.Vector;
+
+#sql iterator Iter21 (
+        BigDecimal ic_id,
+        String ic_register_no,
+        String ic_name,
+        String ic_code,
+        String tax_number,
+        BigDecimal cus_id
+    );
+
+
+public class COA12 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA1/COA12.sqlj,v 1.2 2014/11/12 14:13:48 hrazst Exp $";
+    private DeclCOA1 d = null;
+
+    public COA12(DeclCOA1 d) {
+        this.d = d;
+    }  
+    
+       
+    public void execute (TransactionContext tc) throws Exception {
+        
+
+        if(d.insucompanyselectmapp.insu_company_name==null)
+            d.insucompanyselectmapp.insu_company_name="";
+        if(d.insucompanyselectmapp.insu_company_register_no==null)
+            d.insucompanyselectmapp.insu_company_register_no="";
+
+        if(CharUtil.isAsteriskWrong(d.insucompanyselectmapp.insu_company_register_no)){
+            throw new VestigoTMException(1, "Transaction coA12: Wrong data! ","wrn367", null);
+        }
+
+  
+        ConnCtx connCtx0 = tc.getContext();
+
+        Iter21 iter21=null;
+        #sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+
+
+        String name = d.insucompanyselectmapp.insu_company_name;
+        String nameP = "%";
+        if (name!=null && !(name.equals(""))){
+            nameP = ((new Scramble()).doScramble(name,"L"));
+            nameP =nameP.replace('*','%');
+            nameP =nameP.replace('?','_');
+        }
+        
+        //string koji pamti orginal vrijednost s decl-a..
+        String reg_id_control=d.insucompanyselectmapp.insu_company_register_no;
+        
+        if (d.insucompanyselectmapp.insu_company_register_no!=null){
+            if (d.insucompanyselectmapp.insu_company_register_no.length()!=10 && !CharUtil.hasAsterisk(d.insucompanyselectmapp.insu_company_register_no)){
+                d.insucompanyselectmapp.insu_company_register_no=CharUtil.rPad(d.insucompanyselectmapp.insu_company_register_no,10);
+            } 
+            d.insucompanyselectmapp.insu_company_register_no =d.insucompanyselectmapp.insu_company_register_no.replace('*','%');
+        } else d.insucompanyselectmapp.insu_company_register_no ="%";
+        
+        if (d.insucompanyselectmapp.insu_company_register_no.equals("")) d.insucompanyselectmapp.insu_company_register_no ="%";
+
+        tc.debug("***register_no="+d.insucompanyselectmapp.insu_company_register_no);
+        tc.debug("***name="+nameP);
+        
+
+        //1. 0 0 - bez LIKE
+        if(CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_name) && CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_register_no)) {
+
+            tc.debug("[1. 0 0 - bez LIKE] ");
+            #sql [connCtx0] iter21 = {
+                    SELECT
+                            icom.ic_id as ic_id,
+                            icom.ic_code as ic_code, 
+                            cust.register_no as ic_register_no, 
+                            cust.name as ic_name, 
+                            cust.tax_number as tax_number,
+                            cust.cus_id as cus_id 
+                    FROM insu_company icom, customer cust
+                    WHERE 
+                            icom.ic_cus_id = cust.cus_id 
+                    AND
+                            (current date BETWEEN icom.ic_from AND icom.ic_until) 
+                    AND     icom.ic_status = 'A' 
+                    ORDER BY 4    
+            };
+                
+              
+        //2+.  0 1 - register_no
+        } else if (CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_name) && !CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_register_no)) {
+            //kontrola na register_no da li je potreban like ili ne
+            if(CharUtil.hasAsterisk(reg_id_control)){
+                tc.debug("[2. 0 1 - sa LIKE] ");                
+// sa like              
+                #sql [connCtx0] iter21 = {
+                        SELECT
+                                icom.ic_id as ic_id,
+                                icom.ic_code as ic_code, 
+                                cust.register_no as ic_register_no, 
+                                cust.name as ic_name, 
+                                cust.tax_number as tax_number,
+                                cust.cus_id as cus_id 
+                        FROM insu_company icom, customer cust
+                        WHERE 
+                                icom.ic_cus_id = cust.cus_id
+                        AND
+                                cust.register_no like :(d.insucompanyselectmapp.insu_company_register_no)
+                        AND
+                                (current date BETWEEN icom.ic_from AND icom.ic_until) 
+                        AND     
+                                icom.ic_status = 'A' 
+                        ORDER BY 4    
+                };
+            } else{
+                tc.debug("[2. 0 1 - bez LIKE] ");                   
+// bez like         
+                #sql [connCtx0] iter21 = {
+                        SELECT
+                                icom.ic_id as ic_id,
+                                icom.ic_code as ic_code, 
+                                cust.register_no as ic_register_no, 
+                                cust.name as ic_name, 
+                                cust.tax_number as tax_number,
+                                cust.cus_id as cus_id 
+                        FROM insu_company icom, customer cust
+                        WHERE 
+                                icom.ic_cus_id = cust.cus_id
+                        AND
+                                cust.register_no = :(reg_id_control)
+                        AND
+                                (current date BETWEEN icom.ic_from AND icom.ic_until) 
+                        AND     
+                                icom.ic_status = 'A' 
+                        ORDER BY 4    
+                };
+            }
+        //3+.  1 1 - name, register_no
+        } else if (!CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_name) && !CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_register_no)) {
+            //kontrola na register_no da li je potreban like ili ne
+            if(CharUtil.hasAsterisk(reg_id_control)){
+                tc.debug("[3. 1 1 - sa LIKE] ");                        
+// sa like 
+                #sql [connCtx0] iter21 = {
+                        SELECT
+                                icom.ic_id as ic_id,
+                                icom.ic_code as ic_code, 
+                                cust.register_no as ic_register_no, 
+                                cust.name as ic_name, 
+                                cust.tax_number as tax_number,
+                                cust.cus_id as cus_id 
+                        FROM insu_company icom, customer cust
+                        WHERE 
+                                icom.ic_cus_id = cust.cus_id
+                        AND
+                                cust.register_no like :(d.insucompanyselectmapp.insu_company_register_no)
+                        AND
+                                cust.name_sc like :(nameP)
+                        AND
+                                (current date BETWEEN icom.ic_from AND icom.ic_until) 
+                        AND     
+                                icom.ic_status = 'A' 
+                        ORDER BY 4    
+                };
+                         
+            } else{
+                tc.debug("[3. 0 1 - bez LIKE] ");                   
+// bez like 
+                #sql [connCtx0] iter21 = {
+                        SELECT
+                                icom.ic_id as ic_id,
+                                icom.ic_code as ic_code, 
+                                cust.register_no as ic_register_no, 
+                                cust.name as ic_name, 
+                                cust.tax_number as tax_number,
+                                cust.cus_id as cus_id 
+                        FROM insu_company icom, customer cust
+                        WHERE 
+                                icom.ic_cus_id = cust.cus_id
+                        AND
+                                cust.register_no = :(reg_id_control)
+                        AND
+                                cust.name_sc like :(nameP)
+                        AND
+                                (current date BETWEEN icom.ic_from AND icom.ic_until) 
+                        AND     
+                                icom.ic_status = 'A' 
+                        ORDER BY 4    
+                };
+            }
+        //4. 0 1 0 - name
+        } else if (!CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_name) && CharUtil.isWholeAsterisk(d.insucompanyselectmapp.insu_company_register_no)) {
+
+            tc.debug("[4. 1 0 - sa LIKE] ");
+            #sql [connCtx0] iter21 = {
+                    SELECT
+                            icom.ic_id as ic_id,
+                            icom.ic_code as ic_code, 
+                            cust.register_no as ic_register_no, 
+                            cust.name as ic_name, 
+                            cust.tax_number as tax_number,
+                            cust.cus_id as cus_id 
+                    FROM insu_company icom, customer cust
+                    WHERE 
+                            icom.ic_cus_id = cust.cus_id
+                    AND
+                            cust.name_sc like :(nameP)
+                    AND
+                           (current date BETWEEN icom.ic_from AND icom.ic_until) 
+                    AND     
+                           icom.ic_status = 'A' 
+                    ORDER BY 4    
+            };          
+        }  
+                        
+                
+
+        tc.debug ("*** Zavrseni svi IF-ovi! ***");
+        int number_of_rows=TransactionContext.LOOKUP_FETCH_SIZE;
+        int level=d.insucompanyselectmapp.LookUpLevel.intValue();
+        int start=number_of_rows*level;
+
+        int count=0;
+        int count_returned=0;
+        YOY63 sqlHelper= new YOY63(tc);
+        while (iter21.next()){
+            if(start<=count && start+number_of_rows>count){
+                Vector row=new Vector();
+                Vector unique = new Vector();
+
+                row.add(iter21.ic_register_no());
+                row.add(iter21.tax_number());
+                row.add(iter21.ic_name());
+                unique.add(iter21.ic_id());
+                unique.add(iter21.ic_code());
+                unique.add(sqlHelper.getInsuranceCompanyInternalRating(iter21.cus_id()));
+                
+                d.insucompanyselectmapp.LookUpTableData.addRow(row,unique);
+                count_returned++;
+            }else if(count>=(start+number_of_rows)) {
+                break;
+            }
+            count++;
+        }
+        if(count_returned==0){
+            throw new VestigoTMException(1, "Transaction coA012: No more data! ","wrn090", null);
+        }
+        if(iter21 != null) iter21.close();
+    }
+}
+ 

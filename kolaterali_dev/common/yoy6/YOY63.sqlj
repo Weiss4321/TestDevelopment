@@ -1,0 +1,551 @@
+package hr.vestigo.modules.collateral.common.yoy6;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
+
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.rba.util.DateUtils;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+public class YOY63 {
+    
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy6/YOY63.sqlj,v 1.11 2015/11/26 08:27:29 hrazst Exp $";
+	RemoteContext rc = null;
+	ConnCtx ctx = null;	
+	
+	#sql iterator InsuPolicyIter (
+            BigDecimal ip_id,
+            String ip_code,
+            BigDecimal ip_secu_val, 
+            BigDecimal ip_cur_id 
+    );
+
+   #sql iterator HipoIter (
+	        BigDecimal amount_ref,
+	        BigDecimal cur_id_ref, 
+	        BigDecimal hf_own_cus_id
+	);
+	
+	private final BigDecimal eur_cur_id = new BigDecimal("64999");
+	private final BigDecimal hrk_cur_id = new BigDecimal("63999");
+	
+	public YOY63(RemoteContext rc) throws Exception {
+	    this.rc=rc;
+	    this.ctx=rc.getContext();
+	}
+	
+    /**Metoda dohvaca vrijednosti iz user_code_value tablice za odredeni  use_cod_val_id
+     * @param use_cod_val_id
+     * @return String[] sa dva podatka:<br/>na indexu :<br/>
+     * 0 - code
+     * 1 - desc 
+     * @throws Exception
+     */
+    public String[] getUserCodeValue(BigDecimal use_cod_val_id) throws Exception{
+        debug("getUserCodeValue use_cod_val_id=" + use_cod_val_id);
+        String code=null, desc=null;
+        try{
+            #sql [ctx]  {
+                SELECT
+                    use_code_value,
+                    use_code_desc
+                INTO
+                    :(code),
+                    :(desc)
+                FROM  user_code_value
+                WHERE use_cod_val_id =:(use_cod_val_id)
+            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getUserCodeValue ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }
+        debug("getUserCodeValue use_code_value=" + code +", use_code_desc=" + desc);
+        if(code!=null) code=code.trim();
+        if(desc!=null) desc=desc.trim();
+        return new String[]{code,desc};
+    }
+	
+	
+	/**Metoda dohvaca opis vrijednosti iz system_code_value tablice za odredenu vrijednost i odreden sys_code_id
+	 * @param sysCodeId
+	 * @param codeValue
+	 * @return
+	 * @throws Exception
+	 */
+    public String getSystemCodeDescription(String sysCodeId, String codeValue) throws Exception{
+        debug("getSystemCodeDescription sys_code_id=" + sysCodeId +", sys_code_value=" + codeValue);
+        String retValue=null;
+        try{
+            #sql [ctx]  {
+                SELECT sys_code_desc
+                INTO :retValue
+                FROM  system_code_value
+                WHERE sys_code_value = :codeValue
+                AND sys_cod_id = :sysCodeId
+            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getSystemCodeDescription ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }
+        debug("getSystemCodeDescription sys_code_id=" + sysCodeId +", sys_code_value=" + codeValue + ", sys_code_desc=" + retValue);
+        if(retValue!=null) retValue=retValue.trim();
+        return retValue;
+    }
+    
+    /**Metoda dohvaca vrijednosti iz system_code_value tablice za odredeni opis vrijednosti i odreden sys_code_id
+     * @param sysCodeId
+     * @param codeDesc
+     * @return
+     * @throws Exception
+     */
+    public String getSystemCodeValue(String sysCodeId, String codeDesc) throws Exception{
+        debug("getSystemCodeValue sys_code_id=" + sysCodeId +", sys_code_desc=" + codeDesc);
+        String retValue=null;
+        try{
+            #sql [ctx]  {
+                SELECT sys_code_value
+                INTO :retValue
+                FROM  system_code_value
+                WHERE sys_code_desc = :codeDesc
+                AND sys_cod_id = :sysCodeId
+            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getSystemCodeValue ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                return null;
+            else 
+                throw se;
+        }
+        debug("getSystemCodeValue sys_code_id=" + sysCodeId +", sys_code_desc=" + codeDesc + ", sys_code_value=" + retValue);
+        if(retValue!=null) retValue=retValue.trim();
+        return retValue;
+    }
+    
+    
+	/**Metoda dohvaca podatke o valuti preko cur_id-a
+	 * @param curId
+	 * @return Vraca objekt CurrencyData u kojem su podaci o jednoj valuti<br/>
+	 * @throws Exception
+	 */
+    public CurrencyData getCurrencyData(BigDecimal curId) throws Exception{
+        debug("getCurrencyData cur_id=" + curId);
+        CurrencyData retValues=new CurrencyData();
+        retValues.cur_id=curId;
+        
+        try{
+            #sql [ctx]  {
+	                SELECT code_num, code_char, name
+                    INTO :(retValues.code_num), :(retValues.code_char), :(retValues.name)
+                    FROM currency
+                    WHERE cur_id=:(retValues.cur_id)
+                    WITH UR
+	            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getCurrencyData ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1, "No data found!", "err012", null);
+            else 
+                throw se;
+        }        
+        debug("getCurrencyData cur_id=" + retValues.cur_id + ", code_num=" + retValues.code_num + ", code_char=" + retValues.code_char + ", name=" + retValues.name);
+        if(retValues.code_num!=null) retValues.code_num=retValues.code_num.trim();
+        if(retValues.code_char!=null) retValues.code_char=retValues.code_char.trim();
+        if(retValues.name!=null) retValues.name=retValues.name.trim();
+        return retValues;
+    }
+    
+    /**Metoda dohvaca podatke o mjestu, opcini, zupaniji zavisno o pol_map_id-u 
+     * @param polMapId
+     * @return Vraca objekt CurrencyData u kojem su podaci o jednom mjestu, opcini, zupaniji<br/>
+     * @throws Exception
+     */
+    public PoliticalMapData getPoliticalMapData(BigDecimal polMapId) throws Exception{
+        debug("PoliticalMapData pol_map_id=" + polMapId);
+        PoliticalMapData retValues=new PoliticalMapData();
+        retValues.pol_map_id=polMapId;
+        
+        try{
+            #sql [ctx]  {
+                 SELECT code, name, s.SYS_CODE_DESC 
+                 INTO :(retValues.code), :(retValues.name), :(retValues.region)
+                 FROM  political_map pm
+                 LEFT OUTER JOIN POL_REGION_MAP prm ON (pm.pol_map_id=prm.pol_map_id AND current date BETWEEN prm.date_from AND prm.date_until)
+                 LEFT OUTER JOIN SYSTEM_CODE_VALUE s ON s.SYS_COD_VAL_ID = prm.region_id
+                 WHERE pm.pol_map_id = :(retValues.pol_map_id)
+                 WITH UR 
+                }; 
+        }catch(SQLException se) {
+            info("ERROR -> PoliticalMapData ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1, "No data found!", "err012", null);
+            else 
+                throw se;
+        }        
+        debug("PoliticalMapData pol_map_id=" + retValues.pol_map_id + ", code=" + retValues.code + ", name=" + retValues.name);
+        if(retValues.code!=null) retValues.code=retValues.code.trim();
+        if(retValues.name!=null) retValues.name=retValues.name.trim();
+        return retValues;
+    }
+    
+    /**Metoda dohvaca podatke o korisniku preko use_id-a
+     * @param use_id
+     * @return Vraca objekt UserData u kojem su podaci o jednom korisniku<br/>
+     * @throws Exception
+     */
+    public UserData getUserData(BigDecimal useId) throws Exception{
+        debug("getUserData use_id=" + useId);
+        UserData retValues=new UserData();
+        retValues.use_id=useId;
+        try{
+            #sql [ctx]  {
+                    SELECT login, user_name
+                    INTO :(retValues.login), :(retValues.user_name)
+                    FROM app_user
+                    WHERE use_id = :(useId)
+                    WITH UR
+                }; 
+        }catch(SQLException se) {
+            info("ERROR -> getUserData ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1, "No data found!", "err012", null);
+            else 
+                throw se;
+        }        
+        debug("getUserData use_id=" + retValues.use_id + ", login=" + retValues.login + ", user_name=" + retValues.user_name);
+        if(retValues.login!=null) retValues.login=retValues.login.trim();
+        if(retValues.user_name!=null) retValues.user_name=retValues.user_name.trim();
+        return retValues;
+    }
+    
+    public String getInsuranceCompanyInternalRating(BigDecimal cus_id) throws Exception{
+        debug("getInsuranceCompanyInternalRating cus_id=" + cus_id);
+        String retValue=null;
+        try{
+            #sql [ctx] {
+                SELECT score
+                INTO :retValue
+                FROM customer_rating
+                WHERE cus_id = :cus_id
+                AND rat_typ_id in (1354776003, 671996251, 4278640351, 4278639351, 1354780003, 4278590351)
+                AND date_from <= CURRENT DATE
+                AND date_until >= CURRENT DATE
+                FETCH FIRST ROWS ONLY
+                WITH UR
+            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getInsuranceCompanyInternalRating ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                return null;
+            else 
+                throw se;
+        }        
+        debug("getInsuranceCompanyInternalRating use_id=" + cus_id + ", retValue=" + retValue);
+        return retValue;
+    } 
+    
+    /**Metoda dohvaca omjer NGV i iznosa police na danasnji dan
+     * @param col_hea_id
+     * @return Vraca omjer NGV i iznosa police<br/>Null ako ga ne može izraèunati
+     * @throws Exception
+     */
+    public BigDecimal getNGVInsuranceRation(BigDecimal col_hea_id) throws Exception{
+        debug("getNGVInsuranceRation col_hea_id=" + col_hea_id);
+        YRXX0 yrxx0 = new YRXX0(rc); 
+        Date value_date=DateUtils.getCurrentDate();
+        
+        BigDecimal ratio=null;
+        BigDecimal build_val=null, real_est_nm_cur_id = null, insured_amount_sum=BigDecimal.ZERO;
+        try{
+            #sql [ctx]  {
+                SELECT a.new_build_val, b.real_est_nm_cur_id 
+                INTO :build_val, :real_est_nm_cur_id
+                FROM coll_restate a
+                INNER JOIN coll_head b ON a.col_hea_id = b.col_hea_id
+                WHERE a.col_hea_id=:col_hea_id
+                WITH UR
+                }; 
+        }catch(SQLException se) {
+            info("ERROR -> getNGVInsuranceRation ->" + se.getMessage());
+            se.printStackTrace();
+            if (rc.getSQLExHandler().isEmptyRowset(se)) 
+                return null;
+            else 
+                throw se;
+        } 
+        debug("build_val=" + build_val + "real_est_nm_cur_id=" + real_est_nm_cur_id);
+        if(build_val==null) return null;
+        
+        BigDecimal ngv=yrxx0.exchange(build_val, real_est_nm_cur_id, eur_cur_id, value_date);
+        debug("ngv=" + ngv);
+        InsuPolicyIter iterInsPol = null;
+        try
+        {
+            #sql [ctx] iterInsPol = {
+                SELECT
+                    a.ip_id         AS ip_id,
+                    a.ip_code       AS ip_code,
+                    a.ip_secu_val   AS ip_secu_val,
+                    a.ip_cur_id     AS ip_cur_id
+                FROM insurance_policy a
+                WHERE a.col_hea_id = :(col_hea_id)
+                AND a.ip_act_noact = 'A'
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            debug("getNGVInsuranceRation -> Dogodila se nepredvidjena greska kod dohvata polica osiguranja kolaterala! (COL_HEA_ID=" + col_hea_id + "). \n" +ex);
+            throw ex;
+        } 
+        
+        while (iterInsPol.next())
+        {
+            BigDecimal insured_amount = yrxx0.exchange(iterInsPol.ip_secu_val(), iterInsPol.ip_cur_id(), eur_cur_id, value_date);
+            insured_amount_sum = insured_amount_sum.add(insured_amount);
+            debug(iterInsPol.ip_code() + ": " + insured_amount + " EUR");
+        }
+        if (insured_amount_sum.compareTo(BigDecimal.ZERO) > 0) ratio = ngv.divide(insured_amount_sum, 2, RoundingMode.HALF_UP);
+        debug("ratio = " + ratio);
+        
+        debug("getNGVInsuranceRation col_hea_id=" + col_hea_id + ", ratio=" + ratio );
+        return ratio;
+    }
+    
+    /**Metoda dohvaca suma hipoteka viseg reda do prve RBA
+     * @param col_hea_id
+     * @return Vraca suma hipoteka viseg reda do prve RBA<br/>0 ako ne moze dohvatiti
+     * @throws Exception
+     */
+    public BigDecimal getOtherMortageSumToFirstRBA(BigDecimal col_hea_id) throws Exception{
+        debug("getOtherMortageSumToFirstRBA col_hea_id=" + col_hea_id);
+        YRXX0 yrxx0 = new YRXX0(rc);
+        BigDecimal sum=BigDecimal.ZERO;
+        HipoIter iter = null;
+        Date value_date=DateUtils.getCurrentDate();
+        
+        try
+        {
+            debug("getOtherMortageSumToFirstRBA START");            
+            
+            #sql [ctx] iter = {
+                SELECT amount_ref, cur_id_ref, hf_own_cus_id
+                FROM coll_hf_prior a
+                WHERE hf_coll_head_id = :col_hea_id
+                AND hf_status='A'                
+                ORDER BY hf_priority ASC
+                WITH UR
+            };
+ 
+            while (iter.next())
+            {
+                if(iter.hf_own_cus_id().compareTo(new BigDecimal("8218251"))==0) break;
+                BigDecimal amount = yrxx0.exchange(iter.amount_ref(), iter.cur_id_ref(), eur_cur_id, value_date);
+                sum = sum.add(amount);
+                debug("getOtherMortageSumToFirstRBA sum: " + sum + " EUR");
+            }
+        }
+        catch (SQLException ex)
+        {
+            debug("getOtherMortageSumToFirstRBA -> Dogodila se nepredvidjena greska kod dohvata hipoteka! (COL_HEA_ID=" + col_hea_id + "). \n" +ex);
+            throw ex;
+        }
+        
+        debug("getMortageSumToFirstRBA col_hea_id=" + col_hea_id + ", sum=" + sum );
+        return sum;
+    }
+    
+    /**Metoda dohvaca realan ponder za kolateral 
+     * @param col_hea_id
+     * @return 
+     * @throws Exception
+     */
+    public BigDecimal getRealPonder(BigDecimal col_hea_id) throws Exception{
+        debug("getRealPonder col_hea_id=" + col_hea_id);
+        BigDecimal ponder=null;
+        BigDecimal col_pro_id=this.getMaxColProId(col_hea_id);
+        
+        try{
+            #sql [ctx]  {
+                SELECT real_ponder
+                INTO :ponder
+                FROM cusacc_exp_coll 
+                WHERE col_pro_id = :col_pro_id
+                AND col_hea_id = :col_hea_id
+                FETCH FIRST ROW ONLY
+            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getRealPonder ->" + se.getMessage());
+            se.printStackTrace();
+            if (!rc.getSQLExHandler().isEmptyRowset(se)){
+                throw se;
+            }
+        }        
+        
+        debug("getRealPonder col_hea_id=" + col_hea_id + ", ponder=" + ponder );
+        return ponder;
+    }
+
+    /**Metoda dohvaca sve podatke koji se vrše po nekakvim izraèunima i vraæa ih
+     * @param col_hea_id
+     * @return Vraca data objekt CalculationData 
+     * @throws Exception
+     */
+    public CalculationData getAllCalculationData(BigDecimal col_hea_id) throws Exception{
+        debug("getAllCalculationData col_hea_id=" + col_hea_id);
+        BigDecimal col_proc_id=null;
+        
+        CalculationData data=new CalculationData();
+
+        try{
+            #sql [ctx]  {
+                    SELECT ponder_value
+                    INTO :(data.MVP_ponder)
+                    FROM coll_ponder
+                    WHERE col_hea_id = :(col_hea_id) AND ponder_type='MVP' 
+                    AND status = 'A'  
+            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getAllCalculationData -> MVP_ponder -> " + se.getMessage());
+            se.printStackTrace();
+            if (!rc.getSQLExHandler().isEmptyRowset(se)){
+                throw se;
+            }
+        } 
+        data.NGV_insurance_ration=this.getNGVInsuranceRation(col_hea_id);
+        data.sum_to_first_RBA_hip=this.getOtherMortageSumToFirstRBA(col_hea_id);
+        data.real_ponder=this.getRealPonder(col_hea_id);
+        
+        col_proc_id=this.getMaxColProId(col_hea_id);
+        
+        BigDecimal wcov=BigDecimal.ZERO, exp_coll_cur_id=BigDecimal.ZERO;
+        String eligibility="";
+        
+        try{
+            #sql [ctx]  {
+                SELECT wcov, exp_coll_cur_id, code_char, cover_date, eligibility 
+                INTO :wcov, :exp_coll_cur_id, :(data.wcov_cur_char), :(data.wcov_date), :eligibility
+                FROM cusacc_exp_coll cec
+                INNER JOIN currency c ON cec.exp_coll_cur_id=c.cur_id
+                WHERE col_pro_id = :(col_proc_id)
+                AND col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY
+            };   
+        }catch(SQLException se) {
+            info("ERROR -> getAllCalculationData ->WCOV -> " + se.getMessage());
+            se.printStackTrace();
+            if (!rc.getSQLExHandler().isEmptyRowset(se)){
+                throw se;
+            }
+        }
+//        
+//        BigDecimal otherMort=BigDecimal.ZERO;
+//        BigDecimal cov_priority=null;
+//        try{
+//            #sql [ctx]  {
+//                SELECT other_mrtg, cov_priority
+//                INTO :(otherMort), :(cov_priority)
+//                FROM cusacc_exp_coll cec
+//                INNER JOIN coll_hf_prior chp ON (cec.coll_hf_prior_id = chp.coll_hf_prior_id AND chp.hf_status='A' AND chp.hf_own_cus_id=8218251)
+//                WHERE col_pro_id = :(col_proc_id)
+//                AND col_hea_id = :(col_hea_id)
+//                order by chp.hf_priority
+//                FETCH FIRST ROW ONLY
+//            };   
+//        }catch(SQLException se) {
+//            info("ERROR -> getAllCalculationData ->other_mrtg -> " + se.getMessage());
+//            se.printStackTrace();
+//            if (!rc.getSQLExHandler().isEmptyRowset(se)){
+//                throw se;
+//            }
+//        } 
+        if("N".equalsIgnoreCase(eligibility)) wcov=BigDecimal.ZERO;        
+        try {
+            data.wcov_amount = (new YRXX0(rc)).exchange(wcov, hrk_cur_id, exp_coll_cur_id, data.wcov_date);           
+        } catch (Exception e) {
+            data.wcov_amount=null;
+        }
+        
+        //WCA AMOUNT
+        try{
+            #sql [ctx]  {
+                SELECT SUM(coll_fc_amount) 
+                INTO :(data.wca_amount) 
+                FROM cusacc_exp_coll
+                WHERE col_pro_id = :(col_proc_id)
+                AND col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY
+            };   
+        }catch(SQLException se) {
+            info("ERROR -> getAllCalculationData ->WCA data -> " + se.getMessage());
+            se.printStackTrace();
+            if (!rc.getSQLExHandler().isEmptyRowset(se)){
+                throw se;
+            }
+        }        
+        debug("getAllCalculationData " + data.toString());
+        return data;
+    }
+    
+    
+    private BigDecimal getMaxColProId(BigDecimal colHeaID) throws Exception{
+        debug("getMaxColProId");
+        BigDecimal col_pro_id=null;
+        Date max_date=null;
+        
+        try{
+            #sql [ctx]  {
+                 SELECT col_pro_id, max(VALUE_DATE) AS MaxDate
+                 INTO :(col_pro_id),:(max_date)
+                 FROM COL_PROC cp
+                 WHERE cp.COL_PRO_ID in (
+                     SELECT DISTINCT cp1.COL_PRO_ID FROM CUSACC_EXP_COLL ceca
+                     INNER JOIN COL_PROC cp1 on ceca.COL_PRO_ID = cp1.COL_PRO_ID
+                     WHERE ceca.COL_HEA_ID = :(colHeaID)
+                 ) and cp.PROC_TYPE = 'M' AND proc_status='1'
+                 GROUP BY col_pro_id
+                 ORDER by MaxDate DESC
+                 FETCH FIRST ROW ONLY
+            }; 
+        }catch(SQLException se) {
+            info("ERROR -> getMaxColProId ->" + se.getMessage());
+            se.printStackTrace();
+            if (!rc.getSQLExHandler().isEmptyRowset(se)){
+                throw se;
+            }
+        }        
+        
+        debug("getMaxColProId col_pro_id=" + col_pro_id);
+        return col_pro_id;
+        
+    }
+    
+	    
+    private void debug(String s){
+        rc.debug("---YOY63 -> " + s);
+    } 
+    
+    private void info(String s){
+        rc.info("---YOY63 -> " + s);
+    } 
+}  
+ 
+
+

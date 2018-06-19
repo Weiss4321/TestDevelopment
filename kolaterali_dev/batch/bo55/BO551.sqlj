@@ -1,0 +1,1703 @@
+package hr.vestigo.modules.collateral.batch.bo55;
+
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.batch.Batch;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.Vector;
+
+public class BO551 {
+
+    
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo55/BO551.sqlj,v 1.14 2017/06/12 06:37:43 hrazst Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql public iterator CollHeadDataIterator with (holdability=true)(BigDecimal col_hea_id,
+                                                                       Timestamp user_lock, Timestamp chg_nom_val_proc_ts);
+
+    #sql public iterator CollHfPriorIterator with (holdability=true)(BigDecimal coll_hf_prior_id,
+                                                                     Timestamp user_lock);
+
+    #sql public iterator LoanBeneficiaryIterator with (holdability=true)(BigDecimal loan_ben_id, 
+                                                                         Timestamp user_lock);
+
+    #sql public iterator FrameAgreementIterator with (holdability=true)(BigDecimal fra_agr_id, 
+                                                                        Timestamp user_lock);
+
+
+    public BO551(BatchContext bc)throws Exception{
+        this.bc = bc;
+        connCtx = bc.getContext(); 
+    }
+
+
+    public CollHeadDataIterator getCollHeadData()throws SQLException{
+        CollHeadDataIterator iter = null;
+
+        try{
+            #sql [connCtx] iter={select col_hea_id, user_lock, chg_nom_val_proc_ts
+            from coll_head            
+            with ur};
+
+        }catch (SQLException sqle) {
+            
+            bc.error("getCollHeadData() - ERROR", sqle);
+            if(!bc.getSQLExHandler().isEmptyRowset(sqle)) throw sqle;
+            
+        }
+        return iter;
+
+    }
+
+    public CollHfPriorIterator getCollHfPriorData()throws SQLException{
+        CollHfPriorIterator iter2 = null;
+
+        try{
+            #sql [connCtx] iter2={select coll_hf_prior_id, user_lock
+            from coll_hf_prior            
+            with ur};
+
+        }catch (SQLException sqle) {
+            
+            bc.error("getCollHfPriorData() - ERROR", sqle);
+            if(!bc.getSQLExHandler().isEmptyRowset(sqle)) throw sqle;
+        }
+        return iter2;
+        }
+    
+    
+
+    public LoanBeneficiaryIterator getLoanBeneficiaryData()throws SQLException{
+        LoanBeneficiaryIterator iter3 = null;
+
+        try{
+            #sql [connCtx] iter3={select loan_ben_id, user_lock
+            from loan_beneficiary            
+            with ur};
+
+        }catch (SQLException sqle) {
+            
+            bc.error("getLoanBeneficiaryData() - ERROR", sqle);
+            if(!bc.getSQLExHandler().isEmptyRowset(sqle)) throw sqle;
+        }
+        return iter3;
+    }
+
+
+    public FrameAgreementIterator getFrameAgreementData()throws SQLException{
+        FrameAgreementIterator iter4 = null;
+
+        try{
+            #sql [connCtx] iter4={select fra_agr_id, user_lock
+            from frame_agreement             
+            with ur};
+
+        }catch (SQLException sqle) {
+            
+            bc.error("getFrameAgreementData() - ERROR", sqle);
+            if(!bc.getSQLExHandler().isEmptyRowset(sqle)) throw sqle;
+        }
+        return iter4;
+    }
+
+    
+    public Vector checkColHeadD(BigDecimal colHeaId) throws Exception {
+        
+        Vector chddata = null;
+        BigDecimal col_hea_id = null;
+        Timestamp user_lock = null;
+        Timestamp chg_nom_val_proc_ts = null;
+        
+        try {
+            #sql [connCtx] {
+                SELECT col_hea_id, user_lock, chg_nom_val_proc_ts
+                INTO :(col_hea_id), :(user_lock), :(chg_nom_val_proc_ts) 
+                FROM coll_head_d
+                WHERE col_hea_id = :(colHeaId)               
+                AND load_date_until = '9999-12-31'          
+            };
+        } catch(SQLException se) {
+            if (bc.getSQLExHandler().isEmptyRowset(se))
+                col_hea_id = null;
+            else
+                throw se;
+        }
+        
+        bc.debug("checkColHeadD(): colHeaId = " + colHeaId);
+        bc.debug("checkColHeadD(): user_lock = " + user_lock);
+        bc.debug("checkColHeadD(): chg_nom_val_proc_ts = " + chg_nom_val_proc_ts);
+        
+        chddata = new Vector(3);
+        chddata.add(col_hea_id);
+        chddata.add(user_lock); 
+        chddata.add(chg_nom_val_proc_ts);
+        return chddata;
+    }
+
+
+    public Vector checkCollHfPriorD( BigDecimal colHfPriorId) throws Exception, SQLException{
+
+        Vector chpdata=null;
+        BigDecimal coll_hf_prior_id = null;
+        Timestamp user_lock = null;
+
+        bc.debug( "checkCollHfPriorD(): colHfPriorId =" + colHfPriorId );
+
+
+        try{
+            #sql [connCtx] {
+            SELECT  
+            coll_hf_prior_id, user_lock
+            INTO
+            :coll_hf_prior_id, :user_lock
+            FROM 
+            coll_hf_prior_d
+            WHERE 
+            coll_hf_prior_id = :colHfPriorId   
+            AND     
+            load_date_until='9999-12-31'          
+            };
+        }catch( SQLException se ){            
+            if( se.getErrorCode() == 100 )
+                coll_hf_prior_id = null;
+            else            
+                throw se;           
+        }
+        chpdata=new Vector(2);
+        chpdata.add(coll_hf_prior_id);
+        chpdata.add(user_lock);
+
+        bc.debug( "chpdata.add(coll_hf_prior_id):" + coll_hf_prior_id);
+        bc.debug( "chpdata.add(user_lock):" + user_lock);
+        return chpdata;
+    }
+
+    public Vector checkLoanBenD( BigDecimal loanBenId) throws Exception, SQLException{
+
+        Vector lbdata=null;
+        BigDecimal loan_ben_id = null;
+        Timestamp user_lock = null;
+
+        bc.debug( "checkLoanBenD(): loanBenId = " + loanBenId );
+
+
+        try{
+            #sql [connCtx] {
+            SELECT  
+            loan_ben_id, user_lock
+            INTO
+            :loan_ben_id, :user_lock
+            FROM 
+            loan_beneficiary_d
+            WHERE 
+            loan_ben_id = :loanBenId   
+            AND     
+            load_date_until='9999-12-31'          
+            };
+        }catch( SQLException se ){
+            if( se.getErrorCode() == 100 )
+                loan_ben_id = null;
+            else            
+                throw se;             
+        }
+        lbdata=new Vector(2);
+        lbdata.add(loan_ben_id);
+        lbdata.add(user_lock);
+
+        return lbdata;
+    }
+
+    public Vector checkFrameAgreementD( BigDecimal fraAgrId) throws Exception, SQLException{
+
+        Vector fadata=null;
+        BigDecimal fra_agr_id = null;
+        Timestamp user_lock = null;
+
+        bc.debug( "checkFrameAgreementD(): fraAgrId = " + fraAgrId );
+
+
+        try{
+            #sql [connCtx] {
+            SELECT  
+            fra_agr_id, user_lock
+            INTO
+            :fra_agr_id, :user_lock
+            FROM 
+            frame_agreement_d
+            WHERE 
+            fra_agr_id = :fraAgrId   
+            AND     
+            load_date_until='9999-12-31'          
+            };
+        }catch( SQLException se ){
+            if( se.getErrorCode() == 100 )
+                fra_agr_id = null;
+            else            
+                throw se;              
+        }
+        fadata=new Vector(2);
+        fadata.add(fra_agr_id);
+        fadata.add(user_lock);
+
+        return fadata;
+    }
+    
+    
+    
+    
+    
+    
+    
+
+
+
+    public DTableData setCollHeadData(BigDecimal col_hea_id)throws SQLException {
+
+        DTableData chd=new DTableData();
+
+        try{
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED}; 
+            #sql [connCtx] {select COL_HEA_ID,
+            COL_TYPE_ID,
+            COL_NUM,
+            COL_DESC,
+            REAL_EST_EUSE_ID,
+            REAL_EST_ESTN_VALU,
+            REAL_EST_ESTN_DATE,
+            REAL_EST_DATN_FROM,
+            REAL_EST_DATN_UNTI,
+            REAL_EST_NOMI_DESC,
+            REAL_EST_NOMI_VALU,
+            REAL_EST_NOMI_DATE,
+            REAL_EST_LIQU_VALU,
+            REAL_EST_LIQU_DATE,
+            REAL_EST_BPTC_VALU,
+            REAL_EST_BPTC_DATE,
+            REAL_EST_NM_CUR_ID,
+            CUS_ID,
+            COLL_CUS_ID, 
+            DATE_TO_LOP,
+            DATE_REC_LOP,
+            REC_LOP,
+            COM_DOC,
+            MISSING_DOC,
+            DATE_TO_DOC,
+            DATE_REC_DOC,
+            REVA_COEF,
+            REVA_DATE,
+            REVA_DATE_AM,
+            REVA_BVALUE,
+            REVA_BDATE,
+            REVA_BDATE_AM,
+            AMORT_AGE,
+            AMORT_PER_CAL_ID,
+            AMORT_VAL_CAL,
+            NEPO_VALUE,
+            NEPO_DATE,
+            NEPO_PER_CAL,
+            THIRD_RIGHT,
+            THIRD_RIGHT_CUR_ID,
+            THIRD_RIGHT_NOM,
+            THIRD_RIGHT_DATE,
+            HFS_VALUE,
+            HFS_VALUE_DATE,
+            HFS_VALUE_LAST_ONE,
+            HFS_DATE_LAST_ONE,
+            WEIGH_VALUE,
+            WEIGH_DATE,
+            WEIGH_BVALUE,
+            WEIGH_BDATE,
+            SUM_LIMIT_VAL,
+            SUM_LIMIT_DAT,
+            SUM_PART_VAL,
+            SUM_PART_DAT,
+            AVAIL_VALUE,
+            AVAIL_PER_CAL,
+            AVAIL_DATE,
+            INSPOL_IND,
+            COL_PLACE,
+            COL_COUNTY,
+            COL_DISTRICT,
+            COL_RESI_QUAR,
+            COLL_MVP_PONDER,
+            COLL_HNB_PONDER,
+            COLL_RZB_PONDER,
+            REAL_EST_DATE_FROM,
+            REAL_EST_DATE_UNTI,
+            REAL_EST_ADD_DATA,
+            REAL_EST_STATUS,
+            REAL_EST_SPEC_STAT,
+            USE_OPEN_ID,
+            USE_ID,
+            OPENING_TS,
+            USER_LOCK,
+            EVE_ID,
+            BANK_SIGN,
+            ELIGIBILITY,
+            ACUM_BUY_VALUE,
+            ORIGIN_ORG_UNI_ID,
+            ORG_UNI_ID,
+            USE_ID_VER,
+            USE_ID_AUT,
+            VERIFICATION_TS,
+            AUTORIZATION_TS,
+            MORTGAGE_STATUS,
+            COLLATERAL_STATUS,
+            WORKFLOW_INDIC,
+            COVER_INDIC,
+            VER_SEND_TS,
+            BASIC_DATA_STATUS,
+            COLL_DATA_STATUS,
+            COL_CAT_ID,
+            USE_ID_VER_SND,
+            FINANCIAL_FLAG,
+            THI_LAST_ONE,
+            THI_DATE_LAST_ONE,
+            THI_DATE_LAST_UNT,
+            RBA_ELIGIBILITY,
+            LAW_ELIGIBILITY,
+            RBA_ELIG_DSC,
+            B1_ELIGIBILITY,
+            B2_IRB_ELIG,
+            FREE_STATUS,
+            NUMBER,
+            ND_ELIGIBILITY,
+            CRM_HNB,
+            used_in_recovery,
+            kind_of_recovery,
+            full_amount,
+            full_amount_cur_id,
+            recovery_amount,
+            recovery_cur_id,
+            recovery_comment,
+            recovery_date,
+            recovery_rate,
+            b2_irb_insag_elig,
+            b2_hnb_insag_elig,
+            use_id_co,
+            chg_nom_val_proc_ts,
+            real_est_nom_type,
+            prec_exec_est,
+            correct_value,
+            respect_deadline,
+            prof_to_rba,
+            prof_to_client,
+            col_eco_life,
+            real_est_estn_int,
+            est_type,
+            met_est_1,
+            met_est_2,
+            coll_risk,
+            non_ins_reason,
+            ins_cov_coll,
+            recovery_proc_stat,
+            gctc_id,
+            endorsement_type_id,
+            object_type_id,
+            property_type_id,
+            contract_type,
+            realization_amount,
+            realization_cur_id,
+            realization_date,
+            realization_kind,
+            realization_cost,
+            part_of_complex,
+            realization_cost_cur_id,
+            for_sale,
+            for_sale_date,
+            takeover_from_bank
+          INTO
+            :(chd.col_hea_id),
+            :(chd.col_type_id),
+            :(chd.col_num),
+            :(chd.col_desc), 
+            :(chd.real_est_euse_id), 
+            :(chd.real_est_estn_valu), 
+            :(chd.real_est_estn_date),
+            :(chd.real_est_datn_from),
+            :(chd.real_est_datn_unti), 
+            :(chd.real_est_nomi_desc),
+            :(chd.real_est_nomi_valu),
+            :(chd.real_est_nomi_date),
+            :(chd.real_est_liqu_valu),
+            :(chd.real_est_liqu_date),
+            :(chd.real_est_bptc_valu),
+            :(chd.real_est_bptc_date),
+            :(chd.real_est_nm_cur_id),
+            :(chd.cus_id), 
+            :(chd.coll_cus_id),
+            :(chd.date_to_lop),
+            :(chd.date_rec_lop),
+            :(chd.rec_lop),
+            :(chd.com_doc),
+            :(chd.missing_doc),
+            :(chd.date_to_doc),
+            :(chd.date_rec_doc),
+            :(chd.reva_coef),     
+            :(chd.reva_date),
+            :(chd.reva_date_am),
+            :(chd.reva_bvalue),
+            :(chd.reva_bdate),
+            :(chd.reva_bdate_am),
+            :(chd.amort_age),
+            :(chd.amort_per_cal_id),
+            :(chd.amort_val_cal),
+            :(chd.nepo_value),
+            :(chd.nepo_date),     
+            :(chd.nepo_per_cal),
+            :(chd.third_right),
+            :(chd.third_right_cur_id),
+            :(chd.third_right_nom),
+            :(chd.third_right_date),  
+            :(chd.hfs_value),
+            :(chd.hfs_value_date),
+            :(chd.hfs_value_last_one),
+            :(chd.hfs_date_last_one),
+            :(chd.weigh_value),
+            :(chd.weigh_date),
+            :(chd.weigh_bvalue),
+            :(chd.weigh_bdate),
+            :(chd.sum_limit_val),
+            :(chd.sum_limit_dat),
+            :(chd.sum_part_val),
+            :(chd.sum_part_dat),
+            :(chd.avail_value),
+            :(chd.avail_per_cal),
+            :(chd.avail_date),
+            :(chd.inspol_ind),
+            :(chd.col_place),
+            :(chd.col_county),
+            :(chd.col_district),
+            :(chd.col_resi_quar),
+            :(chd.coll_mvp_ponder),
+            :(chd.coll_hnb_ponder),   
+            :(chd.coll_rzb_ponder),       
+            :(chd.real_est_date_from),
+            :(chd.real_est_date_unti),
+            :(chd.real_est_add_data),
+            :(chd.real_est_status),
+            :(chd.real_est_spec_stat),
+            :(chd.use_open_id),   
+            :(chd.use_id),        
+            :(chd.opening_ts),    
+            :(chd.user_lock),
+            :(chd.eve_id),
+            :(chd.bank_sign),
+            :(chd.eligibility),
+            :(chd.acum_buy_value),
+            :(chd.origin_org_uni_id),
+            :(chd.org_uni_id),
+            :(chd.use_id_ver),
+            :(chd.use_id_aut),
+            :(chd.verification_ts),
+            :(chd.autorization_ts),
+            :(chd.mortgage_status),
+            :(chd.collateral_status),
+            :(chd.workflow_indic),
+            :(chd.cover_indic),
+            :(chd.ver_send_ts),
+            :(chd.basic_data_status),
+            :(chd.coll_data_status),
+            :(chd.col_cat_id),
+            :(chd.use_id_ver_snd),
+            :(chd.financial_flag),
+            :(chd.thi_last_one),
+            :(chd.thi_date_last_one),
+            :(chd.thi_date_last_unt),
+            :(chd.rba_eligibility),
+            :(chd.law_eligibility),
+            :(chd.rba_elig_dsc),
+            :(chd.b1_eligibility),
+            :(chd.b2_irb_elig),
+            :(chd.free_status),
+            :(chd.number),
+            :(chd.nd_eligibility),
+            :(chd.crm_hnb),
+            :(chd.used_in_recovery),
+            :(chd.kind_of_recovery),
+            :(chd.full_amount),
+            :(chd.full_amount_cur_id),
+            :(chd.recovery_amount),
+            :(chd.recovery_cur_id),
+            :(chd.recovery_comment),
+            :(chd.recovery_date),
+            :(chd.recovery_rate),
+            :(chd.b2_irb_insag_elig),
+            :(chd.b2_hnb_insag_elig),
+            :(chd.use_id_co),
+            :(chd.chg_nom_val_proc_ts),
+            :(chd.real_est_nom_type),
+            :(chd.prec_exec_est),
+            :(chd.correct_value),
+            :(chd.respect_deadline),
+            :(chd.prof_to_rba),
+            :(chd.prof_to_client),
+            :(chd.col_eco_life),
+            :(chd.real_est_estn_int),
+            :(chd.est_type),
+            :(chd.met_est_1),
+            :(chd.met_est_2),
+            :(chd.coll_risk),
+            :(chd.non_ins_reason),
+            :(chd.ins_cov_coll),
+            :(chd.recovery_proc_stat),
+            :(chd.gctc_id),
+            :(chd.endorsement_type_id),
+            :(chd.object_type_id),
+            :(chd.property_type_id),
+            :(chd.contract_type),
+            :(chd.realization_amount),
+            :(chd.realization_cur_id),
+            :(chd.realization_date),
+            :(chd.realization_kind),
+            :(chd.realization_cost),
+            :(chd.part_of_complex),
+            :(chd.realization_cost_cur_id),
+            :(chd.for_sale),
+            :(chd.for_sale_date),
+            :(chd.takeover_from_bank)
+            from coll_head 
+            where col_hea_id=:(col_hea_id)};
+
+        }catch (SQLException sqle) {
+            
+            bc.error("getCollHeadData() - ERROR", sqle);
+             throw sqle;
+            
+        }
+        return chd;
+    }
+
+
+    public DTableData setCollHfPriorData(BigDecimal coll_hf_prior_id)throws SQLException {
+
+        DTableData chno=new DTableData();
+
+        
+        try{
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED}; 
+            #sql [connCtx] {select COLL_HF_PRIOR_ID,
+            HF_TABLE_ID,
+            HF_REF_ID,
+            HF_COLL_HEAD_ID,
+            HF_OWN_CUS_ID,
+            HF_REGISTER_NO,
+            HF_OWN_CODE,
+            HF_OWN_FNAME,
+            HF_OWN_LNAME,
+            HF_HFC_ID,
+            HF_PRIORITY,
+            HF_NOTARY_AGR,
+            HF_NOTARY_PLACE_ID,
+            HF_NOTARY_DATE,
+            HF_NOTARY,
+            HF_NOT_FNAME,
+            HF_NOT_LNAME,
+            HF_DATE_RECIV,
+            HF_COURT_DECIS,
+            HF_DATE_EXTRACT,
+            LAND_REGN,
+            LAND_REGN_NEW,
+            JUDGE_ID,
+            JUDGE_FNAME,
+            JUDGE_LNAME,
+            COURT_ID,
+            HF_OFFI_LRD,
+            HF_OFFILRD_FNAME,
+            HF_OFFILRD_LNAME,
+            HF_REC_LOP_ID,
+            HF_ADD_DATA,
+            HF_AMOUNT,
+            HF_CUR_ID,
+            AMOUNT_REF,
+            CUR_ID_REF,
+            EXC_RAT_REF,
+            EXC_RAT_REF_DATE,
+            HF_DRAW_AMO,
+            HF_AVAIL_AMO,
+            HF_DRAW_AMO_REF,
+            AVAIL_AMO_REF,
+            HF_AVAIL_DAT,
+            DRAW_BAMO,
+            AVAIL_BAMO,
+            DRAW_BAMO_REF,
+            AVAIL_BAMO_REF,
+            AVAIL_BDAT,
+            VAL_DATE_TURN,
+            VAL_DATE_PROC,
+            HF_DATE_HFC_FROM,
+            HF_DATE_HFC_UNTIL,
+            HF_STATUS,
+            HF_SPEC_STAT,
+            HF_DATE_FROM,
+            HF_DATE_UNTIL,
+            USE_OPEN_ID,
+            USE_ID,
+            OPENING_TS,
+            USER_LOCK,
+            EVE_ID,
+            BANK_SIGN,
+            HOW_COVER,
+            IS_PART_AGREEM,
+            REM_RE_NOMI_VALU,
+            REC_LOP,
+            DATE_TO_LOP,
+            DATE_REC_LOP,
+            STATUS,
+            VEH_CON_NUM,
+            AGREEMENT,
+            FRA_AGR_ID,
+            REG_INS,
+            REG_PLACE,
+            CON_NUM,
+            CON_DATE,
+            REG_COU_ID,
+            SINDIC_IND,
+            HBOR_LOAN,
+            RBA_ARANG_SINDIC,
+            RBA_SINDIC_PART,
+            OTHER_SINDIC_PART,
+            RBA_SINDIC_AMOUNT,
+            OTHER_SINDIC_AMOUNT,
+            SINDIC_DESC,
+            OTHER_SYNDICATE_CUS_ID
+            INTO  
+            :(chno.COLL_HF_PRIOR_ID),
+            :(chno.HF_TABLE_ID),
+            :(chno.HF_REF_ID),
+            :(chno.HF_COLL_HEAD_ID),
+            :(chno.HF_OWN_CUS_ID),
+            :(chno.HF_REGISTER_NO),
+            :(chno.HF_OWN_CODE),
+            :(chno.HF_OWN_FNAME),
+            :(chno.HF_OWN_LNAME),
+            :(chno.HF_HFC_ID),
+            :(chno.HF_PRIORITY),
+            :(chno.HF_NOTARY_AGR),
+            :(chno.HF_NOTARY_PLACE_ID),
+            :(chno.HF_NOTARY_DATE),
+            :(chno.HF_NOTARY),
+            :(chno.HF_NOT_FNAME),
+            :(chno.HF_NOT_LNAME),
+            :(chno.HF_DATE_RECIV),
+            :(chno.HF_COURT_DECIS),
+            :(chno.HF_DATE_EXTRACT),
+            :(chno.LAND_REGN),
+            :(chno.LAND_REGN_NEW),
+            :(chno.JUDGE_ID),
+            :(chno.JUDGE_FNAME),
+            :(chno.JUDGE_LNAME),
+            :(chno.COURT_ID),
+            :(chno.HF_OFFI_LRD),
+            :(chno.HF_OFFILRD_FNAME),
+            :(chno.HF_OFFILRD_LNAME),
+            :(chno.HF_REC_LOP_ID),
+            :(chno.HF_ADD_DATA),
+            :(chno.HF_AMOUNT),
+            :(chno.HF_CUR_ID),
+            :(chno.AMOUNT_REF),
+            :(chno.CUR_ID_REF),
+            :(chno.EXC_RAT_REF),
+            :(chno.EXC_RAT_REF_DATE),
+            :(chno.HF_DRAW_AMO),
+            :(chno.HF_AVAIL_AMO),
+            :(chno.HF_DRAW_AMO_REF),
+            :(chno.AVAIL_AMO_REF),
+            :(chno.HF_AVAIL_DAT),
+            :(chno.DRAW_BAMO),
+            :(chno.AVAIL_BAMO),
+            :(chno.DRAW_BAMO_REF),
+            :(chno.AVAIL_BAMO_REF),
+            :(chno.AVAIL_BDAT),
+            :(chno.VAL_DATE_TURN),
+            :(chno.VAL_DATE_PROC),
+            :(chno.HF_DATE_HFC_FROM),
+            :(chno.HF_DATE_HFC_UNTIL),
+            :(chno.HF_STATUS),
+            :(chno.HF_SPEC_STAT),
+            :(chno.HF_DATE_FROM),
+            :(chno.HF_DATE_UNTIL),
+            :(chno.USE_OPEN_ID),
+            :(chno.USE_ID),
+            :(chno.OPENING_TS),
+            :(chno.user_lock),
+            :(chno.eve_id),
+            :(chno.BANK_SIGN),
+            :(chno.HOW_COVER),
+            :(chno.IS_PART_AGREEM),
+            :(chno.REM_RE_NOMI_VALU),
+            :(chno.REC_LOP),    
+            :(chno.DATE_TO_LOP),    
+            :(chno.DATE_REC_LOP),   
+            :(chno.STATUS), 
+            :(chno.VEH_CON_NUM),    
+            :(chno.AGREEMENT),  
+            :(chno.FRA_AGR_ID), 
+            :(chno.REG_INS), 
+            :(chno.REG_PLACE),  
+            :(chno.CON_NUM),    
+            :(chno.CON_DATE),   
+            :(chno.REG_COU_ID),
+            :(chno.SINDIC_IND),
+            :(chno.HBOR_LOAN),
+            :(chno.RBA_ARANG_SINDIC),
+            :(chno.RBA_SINDIC_PART),
+            :(chno.OTHER_SINDIC_PART),
+            :(chno.RBA_SINDIC_AMOUNT),
+            :(chno.OTHER_SINDIC_AMOUNT),
+            :(chno.SINDIC_DESC),
+            :(chno.OTHER_SYNDICATE_CUS_ID)
+            FROM coll_hf_prior
+            WHERE coll_hf_prior_id= :(coll_hf_prior_id)};
+        }catch (SQLException sqle) {
+           
+            bc.error("setCollHfPriorData() - ERROR", sqle);
+             throw sqle;
+        }
+        return chno;
+    }
+
+    public DTableData setLoanBenData(BigDecimal loan_ben_id)throws SQLException {
+        DTableData chno=new DTableData();
+        try{
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED}; 
+            #sql [connCtx] {SELECT
+            LOAN_BEN_ID,
+            REGISTER_NO,
+            CUS_ID,
+            ACC_NO,
+            LA_ACC_ID,
+            COLL_HF_PRIOR_ID,
+            COL_HEA_ID,
+            SER_NUM,
+            DATE_FROM,
+            DATE_UNTIL,
+            STATUS,
+            SPEC_STATUS,
+            USE_OPEN_ID,
+            USE_ID,
+            OPENING_TS,
+            USER_LOCK,
+            REQUEST_NO,
+            PRIORITY_NO,
+            ACC_NO_OLD,
+            FRA_AGR_ID,
+            APS_RQST_NO,
+            INSPOL_IND,
+            IP_CUS_ID,
+            KRAD_ADMIN_IND,
+            KRED_ADMIN_USE_ID,
+            KRED_ADMIN_TS,
+            RVRD,
+            RVRD_CUR_ID,
+            RVOD,
+            RVOD_CUR_ID
+            INTO
+            :(chno.LOAN_BEN_ID),
+            :(chno.REGISTER_NO),
+            :(chno.CUS_ID),
+            :(chno.ACC_NO),
+            :(chno.LA_ACC_ID),
+            :(chno.COLL_HF_PRIOR_ID),
+            :(chno.COL_HEA_ID),
+            :(chno.SER_NUM),
+            :(chno.DATE_FROM),
+            :(chno.DATE_UNTIL),
+            :(chno.STATUS),
+            :(chno.SPEC_STATUS),
+            :(chno.USE_OPEN_ID),
+            :(chno.USE_ID),
+            :(chno.OPENING_TS),
+            :(chno.user_lock),
+            :(chno.REQUEST_NO),
+            :(chno.PRIORITY_NO),
+            :(chno.ACC_NO_OLD),
+            :(chno.FRA_AGR_ID),
+            :(chno.APS_RQST_NO),
+            :(chno.INSPOL_IND),
+            :(chno.IP_CUS_ID),
+            :(chno.KRAD_ADMIN_IND),
+            :(chno.KRED_ADMIN_USE_ID),
+            :(chno.KRED_ADMIN_TS),
+            :(chno.RVRD),
+            :(chno.RVRD_CUR_ID),
+            :(chno.RVOD),
+            :(chno.RVOD_CUR_ID)
+            FROM loan_beneficiary
+            WHERE loan_ben_id= :(loan_ben_id) };
+        }catch (SQLException sqle) {
+           
+            bc.error("setLoanBenData() - ERROR", sqle);
+            throw sqle;
+        }
+        return chno;
+    }
+ 
+
+    public DTableData setFrameAgreementData(BigDecimal fra_agr_id)throws SQLException { 
+
+        DTableData chno=new DTableData();
+        try{
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED}; 
+            #sql [connCtx] {SELECT
+            FRA_AGR_ID,
+            CUS_ID,
+            REGISTER_NO,
+            AGREEMENT_NO,
+            AMOUNT,
+            CUR_ID,
+            AMOUNT_POST,
+            AMOUNT_REST,
+            DATE_UNTIL,
+            NUM_OF_BILL,
+            ADD_DATA,
+            PROC_STATUS,
+            HIPO_STATUS,
+            LOAN_STATUS,
+            WORKFLOW_INDIC,
+            FINANCIAL_FLAG,
+            USE_OPEN_ID,
+            ORG_UNI_OPEN_ID,
+            OPENING_TS,
+            USE_ID,
+            ORG_UNI_ID,
+            USE_ID_VER_SND,
+            VER_SEND_TS,
+            USE_ID_VER,
+            VERIFICATION_TS,
+            USER_LOCK,
+            STATUS,
+            BOE_STOCK_INDICATOR
+
+            INTO
+            :(chno.FRA_AGR_ID),
+            :(chno.CUS_ID),
+            :(chno.REGISTER_NO),
+            :(chno.AGREEMENT_NO),
+            :(chno.AMOUNT),
+            :(chno.CUR_ID),
+            :(chno.AMOUNT_POST),
+            :(chno.AMOUNT_REST),
+            :(chno.DATE_UNTIL),
+            :(chno.NUM_OF_BILL),
+            :(chno.ADD_DATA),
+            :(chno.PROC_STATUS),
+            :(chno.HIPO_STATUS),
+            :(chno.LOAN_STATUS),
+            :(chno.WORKFLOW_INDIC),
+            :(chno.FINANCIAL_FLAG),
+            :(chno.USE_OPEN_ID),
+            :(chno.ORG_UNI_OPEN_ID),
+            :(chno.OPENING_TS),
+            :(chno.USE_ID),
+            :(chno.ORG_UNI_ID),
+            :(chno.USE_ID_VER_SND),
+            :(chno.VER_SEND_TS),
+            :(chno.USE_ID_VER),
+            :(chno.VERIFICATION_TS),
+            :(chno.user_lock),
+            :(chno.STATUS),
+            :(chno.BOE_STOCK_INDICATOR)
+            FROM frame_agreement
+            WHERE fra_agr_id= :(fra_agr_id)}; 
+        }catch (SQLException sqle) {
+           
+            bc.error("setFrameAgreementData() - ERROR", sqle);
+             throw sqle;
+        }
+        return chno;
+    }
+
+
+    public void closeOldCollHeadD(DTableData chd) throws Exception{
+
+        try {
+            #sql[connCtx]{ UPDATE COLL_HEAD_D 
+            SET
+            load_date=:(chd.LOAD_DATE),
+            load_date_until=:(chd.LOAD_DATE_UNTIL)
+            WHERE
+            col_hea_id =:(chd.col_hea_id) 
+            AND
+            load_date_until='9999-12-31'
+
+            };
+
+        }catch(SQLException sqle){
+            bc.info("Update COLL_HEAD_D nije uspio!!"); 
+            sqle.printStackTrace();
+            throw sqle;         
+        }
+    }
+
+    public void closeOldCollHfPriorD(DTableData chd) throws Exception{
+
+        try {
+            #sql[connCtx]{ UPDATE COLL_HF_PRIOR_D 
+            SET
+            load_date=:(chd.LOAD_DATE),
+            load_date_until=:(chd.LOAD_DATE_UNTIL)
+            WHERE
+            coll_hf_prior_id =:(chd.COLL_HF_PRIOR_ID) 
+            AND
+            load_date_until='9999-12-31'
+
+            };
+
+        }catch(SQLException sqle){
+            bc.info("Update COLL_HF_PRIOR_D nije uspio!!"); 
+            sqle.printStackTrace();
+            throw sqle;         
+        }
+    }
+  
+    public void closeOldLoanBenD(DTableData chd) throws Exception{
+
+        try {
+            #sql[connCtx]{ UPDATE LOAN_BENEFICIARY_D 
+            SET
+            load_date=:(chd.LOAD_DATE),
+            load_date_until=:(chd.LOAD_DATE_UNTIL)
+            WHERE
+            loan_ben_id =:(chd.LOAN_BEN_ID) 
+            AND
+            load_date_until='9999-12-31'
+
+            };
+
+        }catch(SQLException sqle){
+            bc.info("Update LOAN_BENEFICIARY_D nije uspio!!"); 
+            sqle.printStackTrace();
+            throw sqle;         
+        }
+    }
+
+
+    public void closeOldFrameAgreeD(DTableData chd) throws Exception{
+
+        try {
+            #sql[connCtx]{ UPDATE FRAME_AGREEMENT_D 
+            SET
+            load_date=:(chd.LOAD_DATE),
+            load_date_until=:(chd.LOAD_DATE_UNTIL)
+            WHERE
+            fra_agr_id =:(chd.FRA_AGR_ID) 
+            AND
+            load_date_until='9999-12-31'
+            };
+
+        }catch(SQLException sqle){
+            bc.info("Update LOAN_BENEFICIARY_D nije uspio!!"); 
+            sqle.printStackTrace();
+            throw sqle;         
+        }
+
+
+
+
+    }
+
+
+
+    public void insertCollHeadD(DTableData chd) throws Exception {
+
+        try{ 
+
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+            #sql [connCtx] {INSERT INTO COLL_HEAD_D (COL_HEA_ID,
+            COL_TYPE_ID,
+            COL_NUM,
+            COL_DESC,
+            REAL_EST_EUSE_ID,
+            REAL_EST_ESTN_VALU,
+            REAL_EST_ESTN_DATE, 
+            REAL_EST_DATN_FROM,
+            REAL_EST_DATN_UNTI,
+            REAL_EST_NOMI_DESC,
+            REAL_EST_NOMI_VALU,
+            REAL_EST_NOMI_DATE,
+            REAL_EST_LIQU_VALU,
+            REAL_EST_LIQU_DATE,
+            REAL_EST_BPTC_VALU,
+            REAL_EST_BPTC_DATE,
+            REAL_EST_NM_CUR_ID,
+            CUS_ID,
+            COLL_CUS_ID,
+            DATE_TO_LOP,
+            DATE_REC_LOP,
+            REC_LOP,
+            COM_DOC,
+            MISSING_DOC,
+            DATE_TO_DOC,
+            DATE_REC_DOC,
+            REVA_COEF,
+            REVA_DATE,
+            REVA_DATE_AM,
+            REVA_BVALUE,
+            REVA_BDATE,
+            REVA_BDATE_AM,
+            AMORT_AGE,
+            AMORT_PER_CAL_ID,
+            AMORT_VAL_CAL,
+            NEPO_VALUE,
+            NEPO_DATE,
+            NEPO_PER_CAL,
+            THIRD_RIGHT,
+            THIRD_RIGHT_CUR_ID,
+            THIRD_RIGHT_NOM,
+            THIRD_RIGHT_DATE,
+            HFS_VALUE,
+            HFS_VALUE_DATE,
+            HFS_VALUE_LAST_ONE,
+            HFS_DATE_LAST_ONE,
+            WEIGH_VALUE,
+            WEIGH_DATE,
+            WEIGH_BVALUE,
+            WEIGH_BDATE,
+            SUM_LIMIT_VAL,
+            SUM_LIMIT_DAT,
+            SUM_PART_VAL,
+            SUM_PART_DAT,
+            AVAIL_VALUE,
+            AVAIL_PER_CAL,
+            AVAIL_DATE,
+            INSPOL_IND,
+            COL_PLACE,
+            COL_COUNTY,
+            COL_DISTRICT,
+            COL_RESI_QUAR,
+            COLL_MVP_PONDER,
+            COLL_HNB_PONDER,
+            COLL_RZB_PONDER,
+            REAL_EST_DATE_FROM,
+            REAL_EST_DATE_UNTI,
+            REAL_EST_ADD_DATA,
+            REAL_EST_STATUS,
+            REAL_EST_SPEC_STAT,
+            USE_OPEN_ID,
+            USE_ID,
+            OPENING_TS,
+            USER_LOCK,
+            EVE_ID,
+            BANK_SIGN,
+            ELIGIBILITY,
+            ACUM_BUY_VALUE,
+            ORIGIN_ORG_UNI_ID,
+            ORG_UNI_ID,
+            USE_ID_VER,
+            USE_ID_AUT,
+            VERIFICATION_TS,
+            AUTORIZATION_TS,
+            MORTGAGE_STATUS,
+            COLLATERAL_STATUS,
+            WORKFLOW_INDIC,
+            COVER_INDIC,
+            VER_SEND_TS,
+            BASIC_DATA_STATUS,
+            COLL_DATA_STATUS,
+            COL_CAT_ID,
+            USE_ID_VER_SND,
+            FINANCIAL_FLAG,
+            THI_LAST_ONE,
+            THI_DATE_LAST_ONE,
+            THI_DATE_LAST_UNT,
+            RBA_ELIGIBILITY,
+            LAW_ELIGIBILITY,
+            RBA_ELIG_DSC,
+            B1_ELIGIBILITY,
+            B2_IRB_ELIG,
+            FREE_STATUS,
+            NUMBER,
+            LOAD_DATE,
+            ND_ELIGIBILITY,
+            CRM_HNB,
+            LOAD_DATE_FROM,
+            LOAD_DATE_UNTIL,
+            used_in_recovery,
+            kind_of_recovery,
+            full_amount,
+            full_amount_cur_id,
+            recovery_amount,
+            recovery_cur_id,
+            recovery_comment,
+            recovery_date,
+            recovery_rate,
+            b2_irb_insag_elig,
+            b2_hnb_insag_elig,
+            use_id_co,
+            chg_nom_val_proc_ts,
+            real_est_nom_type,
+            prec_exec_est,
+            correct_value,
+            respect_deadline,
+            prof_to_rba,
+            prof_to_client,
+            col_eco_life,
+            real_est_estn_int,
+            est_type,
+            met_est_1,
+            met_est_2,
+            coll_risk,
+            non_ins_reason,
+            ins_cov_coll,
+            recovery_proc_stat,
+            gctc_id,
+            endorsement_type_id,
+            object_type_id,
+            property_type_id,
+            contract_type,
+            realization_amount,
+            realization_cur_id,
+            realization_date,
+            realization_kind,
+            realization_cost,
+            part_of_complex,
+            realization_cost_cur_id,
+            for_sale,
+            for_sale_date,
+            takeover_from_bank
+            ) 
+            VALUES (
+            :(chd.col_hea_id),
+            :(chd.col_type_id),
+            :(chd.col_num),
+            :(chd.col_desc), 
+            :(chd.real_est_euse_id), 
+            :(chd.real_est_estn_valu), 
+            :(chd.real_est_estn_date),
+            :(chd.real_est_datn_from),
+            :(chd.real_est_datn_unti), 
+            :(chd.real_est_nomi_desc),
+            :(chd.real_est_nomi_valu),
+            :(chd.real_est_nomi_date),
+            :(chd.real_est_liqu_valu),
+            :(chd.real_est_liqu_date),
+            :(chd.real_est_bptc_valu),
+            :(chd.real_est_bptc_date),
+            :(chd.real_est_nm_cur_id),
+            :(chd.cus_id), 
+            :(chd.coll_cus_id),
+            :(chd.date_to_lop),
+            :(chd.date_rec_lop),
+            :(chd.rec_lop),
+            :(chd.com_doc),
+            :(chd.missing_doc),
+            :(chd.date_to_doc),
+            :(chd.date_rec_doc),
+            :(chd.reva_coef),     
+            :(chd.reva_date),
+            :(chd.reva_date_am),
+            :(chd.reva_bvalue),
+            :(chd.reva_bdate),
+            :(chd.reva_bdate_am),
+            :(chd.amort_age),
+            :(chd.amort_per_cal_id),
+            :(chd.amort_val_cal),
+            :(chd.nepo_value),
+            :(chd.nepo_date),     
+            :(chd.nepo_per_cal),
+            :(chd.third_right),
+            :(chd.third_right_cur_id),
+            :(chd.third_right_nom),
+            :(chd.third_right_date),  
+            :(chd.hfs_value),
+            :(chd.hfs_value_date),
+            :(chd.hfs_value_last_one),
+            :(chd.hfs_date_last_one),
+            :(chd.weigh_value),
+            :(chd.weigh_date),
+            :(chd.weigh_bvalue),
+            :(chd.weigh_bdate),
+            :(chd.sum_limit_val),
+            :(chd.sum_limit_dat),
+            :(chd.sum_part_val),
+            :(chd.sum_part_dat),
+            :(chd.avail_value),
+            :(chd.avail_per_cal),
+            :(chd.avail_date),
+            :(chd.inspol_ind),
+            :(chd.col_place),
+            :(chd.col_county),
+            :(chd.col_district),
+            :(chd.col_resi_quar),
+            :(chd.coll_mvp_ponder),
+            :(chd.coll_hnb_ponder),   
+            :(chd.coll_rzb_ponder),       
+            :(chd.real_est_date_from),
+            :(chd.real_est_date_unti),
+            :(chd.real_est_add_data),
+            :(chd.real_est_status),
+            :(chd.real_est_spec_stat),
+            :(chd.use_open_id),   
+            :(chd.use_id),        
+            :(chd.opening_ts),    
+            :(chd.user_lock),
+            :(chd.eve_id),
+            :(chd.bank_sign),
+            :(chd.eligibility),
+            :(chd.acum_buy_value),
+            :(chd.origin_org_uni_id),
+            :(chd.org_uni_id),
+            :(chd.use_id_ver),
+            :(chd.use_id_aut),
+            :(chd.verification_ts),
+            :(chd.autorization_ts),
+            :(chd.mortgage_status),
+            :(chd.collateral_status),
+            :(chd.workflow_indic),
+            :(chd.cover_indic),
+            :(chd.ver_send_ts),
+            :(chd.basic_data_status),
+            :(chd.coll_data_status),
+            :(chd.col_cat_id),
+            :(chd.use_id_ver_snd),
+            :(chd.financial_flag),
+            :(chd.thi_last_one),
+            :(chd.thi_date_last_one),
+            :(chd.thi_date_last_unt),
+            :(chd.rba_eligibility),
+            :(chd.law_eligibility),
+            :(chd.rba_elig_dsc),
+            :(chd.b1_eligibility),
+            :(chd.b2_irb_elig),
+            :(chd.free_status),
+            :(chd.number),
+            :(chd.LOAD_DATE),
+            :(chd.nd_eligibility),
+            :(chd.crm_hnb),
+            :(chd.LOAD_DATE_FROM),
+            :(chd.LOAD_DATE_UNTIL),
+            :(chd.used_in_recovery),
+            :(chd.kind_of_recovery),
+            :(chd.full_amount),
+            :(chd.full_amount_cur_id),
+            :(chd.recovery_amount),
+            :(chd.recovery_cur_id),
+            :(chd.recovery_comment),
+            :(chd.recovery_date),
+            :(chd.recovery_rate),
+            :(chd.b2_irb_insag_elig),
+            :(chd.b2_hnb_insag_elig),
+            :(chd.use_id_co),
+            :(chd.chg_nom_val_proc_ts),
+            :(chd.real_est_nom_type),
+            :(chd.prec_exec_est),
+            :(chd.correct_value),
+            :(chd.respect_deadline),
+            :(chd.prof_to_rba),
+            :(chd.prof_to_client),
+            :(chd.col_eco_life),
+            :(chd.real_est_estn_int),
+            :(chd.est_type),
+            :(chd.met_est_1),
+            :(chd.met_est_2),
+            :(chd.coll_risk),
+            :(chd.non_ins_reason),
+            :(chd.ins_cov_coll),
+            :(chd.recovery_proc_stat),
+            :(chd.gctc_id),
+            :(chd.endorsement_type_id),
+            :(chd.object_type_id),
+            :(chd.property_type_id),
+            :(chd.contract_type),
+            :(chd.realization_amount),
+            :(chd.realization_cur_id),
+            :(chd.realization_date),
+            :(chd.realization_kind),
+            :(chd.realization_cost),
+            :(chd.part_of_complex),
+            :(chd.realization_cost_cur_id),
+            :(chd.for_sale),
+            :(chd.for_sale_date),
+            :(chd.takeover_from_bank)
+            )
+            };
+
+        }catch (SQLException sqle){
+            bc.debug("Greska u insertCollHeadD.");
+            bc.debug(chd.toString());
+            throw sqle;
+        }
+
+    }
+
+    //insert u coll_hf_prior_d
+
+    public void insertCollHfPriorD(DTableData chno) throws Exception {
+
+        try{ 
+
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+            #sql [connCtx] {INSERT INTO COLL_HF_PRIOR_D 
+            (COLL_HF_PRIOR_ID,
+            HF_TABLE_ID,
+            HF_REF_ID,
+            HF_COLL_HEAD_ID,
+            HF_OWN_CUS_ID,
+            HF_REGISTER_NO,
+            HF_OWN_CODE,
+            HF_OWN_FNAME,
+            HF_OWN_LNAME,
+            HF_HFC_ID,
+            HF_PRIORITY,
+            HF_NOTARY_AGR,
+            HF_NOTARY_PLACE_ID,
+            HF_NOTARY_DATE,
+            HF_NOTARY,
+            HF_NOT_FNAME,
+            HF_NOT_LNAME,
+            HF_DATE_RECIV,
+            HF_COURT_DECIS,
+            HF_DATE_EXTRACT,
+            LAND_REGN,
+            LAND_REGN_NEW,
+            JUDGE_ID,
+            JUDGE_FNAME,
+            JUDGE_LNAME,
+            COURT_ID,
+            HF_OFFI_LRD,
+            HF_OFFILRD_FNAME,
+            HF_OFFILRD_LNAME,
+            HF_REC_LOP_ID,
+            HF_ADD_DATA,
+            HF_AMOUNT,
+            HF_CUR_ID,
+            AMOUNT_REF,
+            CUR_ID_REF,
+            EXC_RAT_REF,
+            EXC_RAT_REF_DATE,
+            HF_DRAW_AMO,
+            HF_AVAIL_AMO,
+            HF_DRAW_AMO_REF,
+            AVAIL_AMO_REF,
+            HF_AVAIL_DAT,
+            DRAW_BAMO,
+            AVAIL_BAMO,
+            DRAW_BAMO_REF,
+            AVAIL_BAMO_REF,
+            AVAIL_BDAT,
+            VAL_DATE_TURN,
+            VAL_DATE_PROC,
+            HF_DATE_HFC_FROM,
+            HF_DATE_HFC_UNTIL,
+            HF_STATUS,
+            HF_SPEC_STAT,
+            HF_DATE_FROM,
+            HF_DATE_UNTIL,
+            USE_OPEN_ID,
+            USE_ID,
+            OPENING_TS,
+            USER_LOCK,
+            EVE_ID,
+            BANK_SIGN,
+            HOW_COVER,
+            IS_PART_AGREEM,
+            REM_RE_NOMI_VALU,
+            REC_LOP,
+            DATE_TO_LOP,
+            DATE_REC_LOP,
+            STATUS,
+            VEH_CON_NUM,
+            AGREEMENT,
+            FRA_AGR_ID,
+            REG_INS,
+            LOAD_DATE,
+            REG_PLACE,
+            CON_NUM,
+            CON_DATE,
+            REG_COU_ID,
+            SINDIC_IND,
+            HBOR_LOAN,
+            RBA_ARANG_SINDIC,
+            RBA_SINDIC_PART,
+            OTHER_SINDIC_PART,
+            RBA_SINDIC_AMOUNT,
+            OTHER_SINDIC_AMOUNT,
+            SINDIC_DESC,
+            OTHER_SYNDICATE_CUS_ID,
+            LOAD_DATE_FROM,
+            LOAD_DATE_UNTIL)
+            VALUES (
+            :(chno.COLL_HF_PRIOR_ID),
+            :(chno.HF_TABLE_ID),
+            :(chno.HF_REF_ID),
+            :(chno.HF_COLL_HEAD_ID),
+            :(chno.HF_OWN_CUS_ID),
+            :(chno.HF_REGISTER_NO),
+            :(chno.HF_OWN_CODE),
+            :(chno.HF_OWN_FNAME),
+            :(chno.HF_OWN_LNAME),
+            :(chno.HF_HFC_ID),
+            :(chno.HF_PRIORITY),
+            :(chno.HF_NOTARY_AGR),
+            :(chno.HF_NOTARY_PLACE_ID),
+            :(chno.HF_NOTARY_DATE),
+            :(chno.HF_NOTARY),
+            :(chno.HF_NOT_FNAME),
+            :(chno.HF_NOT_LNAME),
+            :(chno.HF_DATE_RECIV),
+            :(chno.HF_COURT_DECIS),
+            :(chno.HF_DATE_EXTRACT),
+            :(chno.LAND_REGN),
+            :(chno.LAND_REGN_NEW),
+            :(chno.JUDGE_ID),
+            :(chno.JUDGE_FNAME),
+            :(chno.JUDGE_LNAME),
+            :(chno.COURT_ID),
+            :(chno.HF_OFFI_LRD),
+            :(chno.HF_OFFILRD_FNAME),
+            :(chno.HF_OFFILRD_LNAME),
+            :(chno.HF_REC_LOP_ID),
+            :(chno.HF_ADD_DATA),
+            :(chno.HF_AMOUNT),
+            :(chno.HF_CUR_ID),
+            :(chno.AMOUNT_REF),
+            :(chno.CUR_ID_REF),
+            :(chno.EXC_RAT_REF),
+            :(chno.EXC_RAT_REF_DATE),
+            :(chno.HF_DRAW_AMO),
+            :(chno.HF_AVAIL_AMO),
+            :(chno.HF_DRAW_AMO_REF),
+            :(chno.AVAIL_AMO_REF),
+            :(chno.HF_AVAIL_DAT),
+            :(chno.DRAW_BAMO),
+            :(chno.AVAIL_BAMO),
+            :(chno.DRAW_BAMO_REF),
+            :(chno.AVAIL_BAMO_REF),
+            :(chno.AVAIL_BDAT),
+            :(chno.VAL_DATE_TURN),
+            :(chno.VAL_DATE_PROC),
+            :(chno.HF_DATE_HFC_FROM),
+            :(chno.HF_DATE_HFC_UNTIL),
+            :(chno.HF_STATUS),
+            :(chno.HF_SPEC_STAT),
+            :(chno.HF_DATE_FROM),
+            :(chno.HF_DATE_UNTIL),
+            :(chno.USE_OPEN_ID),
+            :(chno.USE_ID),
+            :(chno.OPENING_TS),
+            :(chno.user_lock),
+            :(chno.eve_id),
+            :(chno.BANK_SIGN),
+            :(chno.HOW_COVER),
+            :(chno.IS_PART_AGREEM),
+            :(chno.REM_RE_NOMI_VALU),
+            :(chno.REC_LOP),
+            :(chno.DATE_TO_LOP),
+            :(chno.DATE_REC_LOP),
+            :(chno.STATUS),
+            :(chno.VEH_CON_NUM),
+            :(chno.AGREEMENT),
+            :(chno.FRA_AGR_ID),
+            :(chno.REG_INS),
+            :(chno.LOAD_DATE),
+            :(chno.REG_PLACE),
+            :(chno.CON_NUM),
+            :(chno.CON_DATE),
+            :(chno.REG_COU_ID),
+            :(chno.SINDIC_IND),
+            :(chno.HBOR_LOAN),
+            :(chno.RBA_ARANG_SINDIC),
+            :(chno.RBA_SINDIC_PART),
+            :(chno.OTHER_SINDIC_PART),
+            :(chno.RBA_SINDIC_AMOUNT),
+            :(chno.OTHER_SINDIC_AMOUNT),
+            :(chno.SINDIC_DESC),
+            :(chno.OTHER_SYNDICATE_CUS_ID),
+            :(chno.LOAD_DATE_FROM),
+            :(chno.LOAD_DATE_UNTIL))
+            };
+
+
+        }catch (SQLException sqle){
+            bc.debug("Greska u insertCollHfPriorD.");
+            bc.debug(chno.toString());
+            throw sqle;
+        }
+
+    }
+
+    //insert loan_beneficiary_d
+
+    
+    public void insertLoanBeneficiaryD(DTableData chno) throws Exception {
+
+        try{ 
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+            #sql [connCtx] {INSERT INTO LOAN_BENEFICIARY_D (LOAN_BEN_ID,
+            REGISTER_NO,
+            CUS_ID,
+            ACC_NO,
+            LA_ACC_ID,
+            COLL_HF_PRIOR_ID,
+            COL_HEA_ID,
+            SER_NUM,
+            DATE_FROM,
+            DATE_UNTIL,
+            STATUS,
+            SPEC_STATUS,
+            USE_OPEN_ID,
+            USE_ID,
+            OPENING_TS,
+            USER_LOCK,
+            REQUEST_NO,
+            PRIORITY_NO,
+            ACC_NO_OLD,
+            FRA_AGR_ID,
+            APS_RQST_NO,
+            LOAD_DATE,
+            INSPOL_IND,
+            IP_CUS_ID,
+            KRAD_ADMIN_IND,
+            KRED_ADMIN_USE_ID,
+            KRED_ADMIN_TS,
+            RVRD,
+            RVRD_CUR_ID,
+            RVOD,
+            RVOD_CUR_ID,
+            LOAD_DATE_FROM,
+            LOAD_DATE_UNTIL)
+            VALUES (
+            :(chno.LOAN_BEN_ID),
+            :(chno.REGISTER_NO),
+            :(chno.CUS_ID),
+            :(chno.ACC_NO),
+            :(chno.LA_ACC_ID),
+            :(chno.COLL_HF_PRIOR_ID),
+            :(chno.COL_HEA_ID),
+            :(chno.SER_NUM),
+            :(chno.DATE_FROM),
+            :(chno.DATE_UNTIL),
+            :(chno.STATUS),
+            :(chno.SPEC_STATUS),
+            :(chno.USE_OPEN_ID),
+            :(chno.USE_ID),
+            :(chno.OPENING_TS),
+            :(chno.user_lock),
+            :(chno.REQUEST_NO),
+            :(chno.PRIORITY_NO),
+            :(chno.ACC_NO_OLD),
+            :(chno.FRA_AGR_ID),
+            :(chno.APS_RQST_NO),
+            :(chno.LOAD_DATE),
+            :(chno.INSPOL_IND),
+            :(chno.IP_CUS_ID),
+            :(chno.KRAD_ADMIN_IND),
+            :(chno.KRED_ADMIN_USE_ID),
+            :(chno.KRED_ADMIN_TS),
+            :(chno.RVRD),
+            :(chno.RVRD_CUR_ID),
+            :(chno.RVOD),
+            :(chno.RVOD_CUR_ID),
+            :(chno.LOAD_DATE_FROM),
+            :(chno.LOAD_DATE_UNTIL))
+            };
+
+
+        }catch (SQLException sqle){
+            bc.debug("Greska u insertLoanBeneficiaryD.");
+            bc.debug(chno.toString());
+            throw sqle;
+        }
+    }
+
+    //insert frame_agreement_d
+
+    public void insertFrameAgreementD(DTableData chno) throws Exception {
+
+        try{ 
+            #sql [connCtx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+            #sql [connCtx] {INSERT INTO FRAME_AGREEMENT_D (FRA_AGR_ID,
+            CUS_ID,
+            REGISTER_NO,
+            AGREEMENT_NO,
+            AMOUNT,
+            CUR_ID,
+            AMOUNT_POST,
+            AMOUNT_REST,
+            DATE_UNTIL,
+            NUM_OF_BILL,
+            ADD_DATA,
+            PROC_STATUS,
+            HIPO_STATUS,
+            LOAN_STATUS,
+            WORKFLOW_INDIC,
+            FINANCIAL_FLAG,
+            USE_OPEN_ID,
+            ORG_UNI_OPEN_ID,
+            OPENING_TS,
+            USE_ID,
+            ORG_UNI_ID,
+            USE_ID_VER_SND,
+            VER_SEND_TS,
+            USE_ID_VER,
+            VERIFICATION_TS,
+            USER_LOCK,
+            STATUS,
+            LOAD_DATE,
+            LOAD_DATE_FROM,
+            LOAD_DATE_UNTIL,
+            BOE_STOCK_INDICATOR
+            )
+            VALUES (
+            :(chno.FRA_AGR_ID),
+            :(chno.CUS_ID),
+            :(chno.REGISTER_NO),
+            :(chno.AGREEMENT_NO),
+            :(chno.AMOUNT),
+            :(chno.CUR_ID),
+            :(chno.AMOUNT_POST),
+            :(chno.AMOUNT_REST),
+            :(chno.DATE_UNTIL),
+            :(chno.NUM_OF_BILL),
+            :(chno.ADD_DATA),
+            :(chno.PROC_STATUS),
+            :(chno.HIPO_STATUS),
+            :(chno.LOAN_STATUS),
+            :(chno.WORKFLOW_INDIC),
+            :(chno.FINANCIAL_FLAG),
+            :(chno.USE_OPEN_ID),
+            :(chno.ORG_UNI_OPEN_ID),
+            :(chno.OPENING_TS),
+            :(chno.USE_ID),
+            :(chno.ORG_UNI_ID),
+            :(chno.USE_ID_VER_SND),
+            :(chno.VER_SEND_TS),
+            :(chno.USE_ID_VER),
+            :(chno.VERIFICATION_TS),
+            :(chno.user_lock),
+            :(chno.STATUS),
+            :(chno.LOAD_DATE),
+            :(chno.LOAD_DATE_FROM),
+            :(chno.LOAD_DATE_UNTIL),
+            :(chno.BOE_STOCK_INDICATOR)
+            )
+            };
+
+
+        }catch (SQLException sqle){
+            bc.debug("Greska u insertLoanBeneficiaryD.");
+            bc.debug(chno.toString());
+            throw sqle;
+        }
+    }
+
+
+
+
+
+
+}

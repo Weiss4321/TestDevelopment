@@ -1,0 +1,217 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from cust_bill_exch;
+
+select * FROM REQUEST_TYPE;
+
+update cust_bill_exch set payer_tax_number = '123456' where cus_bil_exc_id = 3093811823;
+
+commit;
+
+-- za lookup 
+select cus_bil_exc_id, payer_reg_no, payer_tax_number, payer_name, cus_bill_exch_no, cus_bill_ext_no from cust_bill_exch;
+
+
+SELECT cus_bil_exc_id, payer_reg_no, payer_tax_number, payer_name, cus_bill_exch_no, cus_bill_ext_no FROM cust_bill_exch
+
+
+
+
+
+select * FROM customer;
+
+select * from customer_account where cus_id = 8269694; -- Vilet Kola 2001957  i njegov račun 3205002169
+
+-- primjer dohvata 
+
+ 		SELECT 
+                rt.REQ_TYP_ID reqTypId,
+                rt.IDENTIFIER_TYPE requestTypeCode,
+                rt.REQ_NAME requestTypeName ,
+                rt.PROCESS_ID processId,
+                rt.MODULE module,
+                rt.DATE_FROM dateFrom,
+                rt.DATE_UNTIL dateUntil
+            FROM
+                REQUEST_TYPE rt
+
+
+                
+            WHERE
+                rt.bank_sign = :bankSign
+            AND ((:reqTypIdFlag=0) OR (rt.REQ_TYP_ID = :reqTypId))
+            AND ((:processFlag=0) OR (rt.PROCESS_ID = :process))
+            AND ((:moduleFlag=0) OR (rt.MODULE = :module))
+            AND ( (:dateFlag=0) OR 
+                  (:date>=rt.date_from and :date<=rt.date_until) or 
+                  (rt.date_from > rt.date_until and (:date=rt.date_from or :date=rt.date_until))
+
+
+select cus_bill_exch_no, cus_bill_ext_no,   from cust_bill_exch;
+                  
+
+select * from customer_account;
+
+select * from contract;
+
+select * from currency;
+
+select * from customer where code = '1802964335284';
+
+select * from customer;
+
+
+ 				SELECT
+                          c.code_num,
+                          pm.cou_id
+                         FROM
+                           proc_member pm,
+                           currency c
+                         WHERE 
+                          pm.cur_id = c.cur_id 
+                          AND pro_mem_id = 'RB'
+
+
+
+                          SELECT 
+ 	            	            CUS_ACC_ID, 
+  	            	            CUS_ID, 
+ 	            	            BAN_PRO_TYP_ID,
+          				        PRO_CAT_ID, 
+  	            	            BAN_REL_TYP_ID, 
+  	            	            PUR_CODE, 
+  	            	            ORG_UNI_ID,
+          				        CURRENCY_INDICATOR, 
+  	            	            OPENING_DATE, 
+  	            	            CLOSING_DATE, 
+  	            	            CUS_ACC_STATUS, 
+  	            	            CUS_ORG_UNI_ID, 
+  	            	            CUS_ACC_NO, 
+  	            	            ACC_CUR_ID,
+              			        EXTERNAL_FLAG, 
+  	            	            EXT_ACC_TYPE, 
+  	            	            CURRENCY_TYPE, 
+  	            	            P_SCH_ID,
+                                  MIN_BALANCE_CUR_ID,
+                                  MIN_BALANCE_AMOUNT,
+                                  PUR_SUB_ID,
+                                  CHG_STAT_REASON,
+  	            	            IBAN_ACC_NO                            
+                              FROM 
+  	            	            CUSTOMER_ACCOUNT
+                              WHERE  
+  	            	            cus_acc_no  = '3205003215';
+
+-----------------------------------------------------------------------------
+
+            		SELECT
+                          cbe.cus_bil_exc_id,
+                          cbe.cus_bill_exch_no,
+                          cbe.cus_bill_ext_no,
+                          cbe.payer_reg_no,
+                          cbe.payer_name,
+                          cbe.payer_tax_number,
+                          cbe.ben_iban,
+                          cbe.ben_name,
+                          cbe.ben_address,
+                          cbe.amount,                   
+                          cbe.maturity_date, 
+                          cbe.status, 
+                          cbe.paid_amount,
+                          cbe.order_trn, 
+                          cbe.payment_date,
+                          cbe.order_trn_last,
+                          cbe.payment_date_last,
+                          cbe.cur_id,
+                          cur.code_num
+                      FROM
+                          CUST_BILL_EXCH cbe
+                          LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id              
+                      WHERE
+                          cbe.bank_sign = 'RB'
+                     AND (cbe.PAYER_REG_NO like '2002123%');
+
+                     
+                     --AND ((:txtOIBFlag=0) OR (cbe.PAYER_TAX_NUMBER LIKE :payer_tax_number))   
+                     --AND ((:txtNazivFlag=0) OR (cbe.PAYER_NAME LIKE :payer_name))  
+                     --AND ((:txtBrojrjesenjaFlag=0) OR (cbe.CUS_BILL_EXT_NO LIKE :cus_bill_ext_no))
+
+--------------------------------------------------------
+select * from cusacc_ban_subserv;
+
+select * from cusacc_balance;
+
+select * from cusacc_risk;
+
+select * from cusacc_risk where ris_ind_typ_id like 'limit%';  -- limit_reduction
+
+select * from cusacc_risk where cus_acc_id = 2672546823;
+
+-------------------- primjer dohvata 
+
+select * FROM cusacc_risk 
+where cus_acc_id = 72440943 
+	and ris_ind_typ_id = 'limit_reduction' 
+	and  risk_date = (select max(risk_date) from cusacc_risk where cus_acc_id = 72440943 ) ;
+
+
+	select  cus_acc_id , ris_ind_typ_id, max(risk_date) from cusacc_risk where  cus_acc_id = 72440943  and ris_ind_typ_id = 'limit_reduction'  group by cus_acc_id, ris_ind_typ_id;
+	
+order by
+
+fetch first 3 rows only ;
+
+select max(risk_date) from cusacc_risk;
+-------------------------------------------------
+
+  			SELECT
+                    cr.cus_ris_id,
+                    cr.cus_acc_id,
+                    cr.ris_ind_typ_id,
+                    cr.risk_indic_value,
+                    cr.risk_reason,
+                    cr.risk_date,  
+                    cr.loan_acc_no,
+                    cr.loan_cus_id,
+                    cr.date_from,
+                    cr.date_until,
+                    cr.eve_id,
+                    cr.use_id,
+                    cr.bank_sign,
+                    cr.user_lock,
+                    cr.limit_date_from,
+                    cr.limit_date_until            
+                FROM 
+                    cusacc_risk cr       
+                    
+
+--------------
+
+ 		SELECT
+            min(sl.balance_date)
+        FROM
+             cusacc_ban_subserv cbs
+            , customer_account ca,
+            customer c,
+            cusacc_balance_last cbl,
+            sms_log sl
+        WHERE
+            cbs.ban_sub_typ_id = 23062019
+
+            
+        AND 
+            current_date BETWEEN cbs.date_from AND cbs.date_until
+        AND cbs.status in ('1', '2')
+        AND c.cus_id = cbs.cus_id
+        AND ca.cus_id = c.cus_id
+        AND ca.external_flag = '0'
+        AND ca.ban_rel_typ_id = 787172005
+        AND ca.cus_acc_status NOT IN ('I','C','E')
+        AND cbs.bank_sign = 'RB'
+        and cbl.cus_acc_id = ca.cus_acc_id
+        and cbl.pro_typ_id IN (826790005, 826791005)
+        and sl.acc_num_id = cbl.acc_num_id
+        and sl.cur_id = cbl.cur_id
+        and sl.balance_date = (select max(sl2.balance_date) from sms_log sl2 where sl2.acc_num_id = sl.acc_num_id and sl2.cur_id = sl.cur_id) with ur;
+
+

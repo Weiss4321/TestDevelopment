@@ -1,0 +1,617 @@
+package hr.vestigo.modules.collateral.batch.bo46;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+
+#sql iterator VehicleIterator with(holdability = true) (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_typ_id,
+        BigDecimal estimated_value,
+        BigDecimal market_value_old,
+        BigDecimal market_currency,
+        Date old_date,
+        String reva_date_am,
+        BigDecimal weight_value_old,
+        String veh_made_year,
+        BigDecimal col_sub_id,
+        String veh_kasko
+    );
+ 
+#sql iterator RealEstateIterator with(holdability = true) (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_cat_id,
+        BigDecimal col_typ_id,
+        Date datum_procjene,
+        BigDecimal estimated_value,
+        BigDecimal market_value_old,
+        BigDecimal market_currency,
+        Date old_date,
+        String reva_date_am,
+        BigDecimal weight_value_old,
+        BigDecimal col_county,
+        BigDecimal col_place,
+        BigDecimal col_district,
+        BigDecimal col_sub_id,
+        String reva_flag
+    );
+
+#sql iterator BigDecimalIterator(
+    BigDecimal id
+);
+
+public class BO461 {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo46/BO461.sqlj,v 1.13 2017/03/22 10:31:52 hrazst Exp $";
+    private BatchContext bc=null;
+    private ConnCtx connCtx;
+    private ConnCtx conn2=null;
+    private YOY00 yoy00= null;
+    
+    private BigDecimal col_pro_id=null;
+    private BigDecimal org_uni_id=null;
+    private BigDecimal use_id=null;
+    private BigDecimal eve_id=null;
+    private YOY00 primary=null;
+
+    
+    public BO461(BatchContext bc,BigDecimal org_uni_id, BigDecimal use_id) throws Exception{
+        this.bc=bc;
+        this.connCtx=bc.getContext();
+        this.conn2=new ConnCtx(bc.getNewConnection());
+        this.use_id=use_id;
+        this.org_uni_id=org_uni_id;
+        primary= new YOY00(bc);
+    }
+    
+    public void closeExtraConnection() throws Exception{
+        if(conn2!=null){
+            this.conn2.close();
+        }   
+    }
+    
+    /**
+    *
+    * Dohvat id obrade
+    * @return id obrade
+    */
+    public BigDecimal getColProId() throws Exception{
+        if(this.col_pro_id==null){           
+            this.col_pro_id=primary.getNewId();
+        }
+        return this.col_pro_id;
+    }
+    
+    public void setColProId(BigDecimal col_pro_id){
+        this.col_pro_id=col_pro_id;
+    }
+    
+    /**
+    * Dohvat zadnjeg izracuna pokrivenosti
+    * @param tip obrade- trebao bi biti N po defaultu
+    *
+    */
+    public BigDecimal getLastExposureCalculationID(String proc_type) throws Exception{
+        BigDecimal result=null;
+        BigDecimalIterator iter=null;
+        if(proc_type==null) proc_type="N";
+        try{
+            #sql [connCtx]iter={
+                select col_pro_id as id
+                from col_proc 
+                where 
+                    proc_type=:(proc_type) and 
+                    proc_status='1' 
+                order by proc_date desc
+                FETCH FIRST 1 ROWS ONLY
+                };
+            if(iter!=null){
+                if(iter.next()){
+                   result=iter.id(); 
+                }
+            }
+        }catch(SQLException e){
+            bc.debug(".....BO461.sqlj getLastExposureCalculationID        Message  : " + e.getMessage());
+            bc.debug(".....BO461.sqlj getLastExposureCalculationID      Error code : " + e.getErrorCode());
+            bc.debug(".....BO461.sqlj getLastExposureCalculationID        SQLState : " + e.getSQLState());
+            e.printStackTrace();
+            throw e;
+        }finally{
+            if(iter!=null){
+                iter.close();
+            }
+        }
+        return result;
+    }
+    
+    
+    public BigDecimal getExposuredCollateralAmount(BigDecimal col_hea_id, BigDecimal procedure_id) throws Exception{
+        BigDecimal result=null;
+        try{
+            #sql [connCtx]{
+                select sum(coll_fc_amount) 
+                into :(result) 
+                from cusacc_exp_coll 
+                where
+                    col_pro_id=:(procedure_id) and
+                    col_hea_id=:(col_hea_id)
+            };  
+            return result;
+        }catch(SQLException sqle){
+            bc.debug(".....BO461.sqlj getExposuredCollateralAmount        Message  : " + sqle.getMessage());
+            bc.debug(".....BO461.sqlj getExposuredCollateralAmount      Error code : " + sqle.getErrorCode());
+            bc.debug(".....BO461.sqlj getExposuredCollateralAmount        SQLState : " + sqle.getSQLState());
+            throw sqle;
+        }
+    }
+    
+    public String getSystemCodeValue(String sys_code_id) throws Exception{
+        String result=null;
+        try{
+            #sql [connCtx]{
+                select sys_code_value 
+                into :(result)
+                from system_code_value
+                where sys_cod_id = :(sys_code_id)
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO461.sqlj getSystemCodeValue        Message  : " + sqle.getMessage());
+                bc.debug(".....BO461.sqlj getSystemCodeValue      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO461.sqlj getSystemCodeValue        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        return result;
+        
+    }
+    
+    public String getColTypeName(BigDecimal col_typ_id) throws Exception{
+        String result=null;
+        try{
+            #sql [connCtx]{
+                select coll_type_name
+                into :(result)
+                from collateral_type 
+                where coll_type_id=:(col_typ_id)
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO461.sqlj getColTypeName        Message  : " + sqle.getMessage());
+                bc.debug(".....BO461.sqlj getColTypeName      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO461.sqlj getColTypeName        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        return result;
+        
+    } 
+
+    public String getColSubTypeName(BigDecimal col_sub_typ_id) throws Exception{
+        String result=null; 
+        try{
+            #sql [connCtx]{
+                select real_es_type_desc
+                into :(result)
+                from real_estate_type 
+                where real_es_type_id=:(col_sub_typ_id)
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO461.sqlj getColSubTypeName        Message  : " + sqle.getMessage());
+                bc.debug(".....BO461.sqlj getColSubTypeName      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO461.sqlj getColSubTypeName        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        return result;
+        
+    }
+ 
+    public String getVehSubTypeName(BigDecimal col_sub_typ_id) throws Exception{
+        String result=null; 
+        try{
+            #sql [connCtx]{
+                select veh_gro_desc
+                into :(result)
+                from vehicle_group
+                where veh_gro_id=:(col_sub_typ_id)
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO461.sqlj getVehSubTypeName        Message  : " + sqle.getMessage());
+                bc.debug(".....BO461.sqlj getVehSubTypeName      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO461.sqlj getVehSubTypeName        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        return result;
+        
+    }
+    
+    public String getCurrencyName(BigDecimal cur_id) throws Exception{
+        String result=null;
+        try{
+            #sql [connCtx]{
+                select code_char
+                into :(result)
+                from currency 
+                where cur_id=:(cur_id)
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                result=null;
+            }else{
+                bc.debug(".....BO461.sqlj getCurrencyName        Message  : " + sqle.getMessage());
+                bc.debug(".....BO461.sqlj getCurrencyName      Error code : " + sqle.getErrorCode());
+                bc.debug(".....BO461.sqlj getCurrencyName        SQLState : " + sqle.getSQLState());
+                throw sqle;
+            }
+        }
+        return result;
+        
+    } 
+       
+    public VehicleIterator selectVehicleIterator(BigDecimal col_cat_id, Date amort_reva_date) throws Exception{
+        VehicleIterator iter=null;
+        try{
+            #sql [conn2]iter={
+                select
+                    a.col_hea_id as col_hea_id,
+                    a.col_num as col_num,
+                    a.col_type_id as col_typ_id,
+                    a.real_est_estn_valu as estimated_value,
+                    a.real_est_nomi_valu as market_value_old,
+                    a.real_est_nm_cur_id as market_currency,
+                    a.real_est_nomi_date as old_date,
+                    a.reva_date_am as reva_date_am,
+                    a.weigh_value as weight_value_old,
+                    b.veh_made_year as veh_made_year,
+                    b.veh_group_id  as col_sub_id,
+                    b.veh_kasko as veh_kasko
+                from 
+                    coll_head a,
+                    coll_vehicle b,
+                    coll_atr c
+                where 
+                    a.col_cat_id = :(col_cat_id) and
+                    a.collateral_status ='3' and
+                    a.real_est_nomi_date < :(amort_reva_date) and 
+                    a.col_hea_id = b.col_hea_id and
+                    a.col_cat_id = c.col_cat_id and
+                    a.col_type_id = c.coll_type_id and
+                    b.veh_group_id = c.col_sub_id and
+                    c.amort_flag = '0'
+                WITH UR
+                };
+            return iter;
+                
+        }catch(SQLException e){
+            bc.debug(".....BO461.sqlj selectVehicleIterator        Message  : " + e.getMessage());
+            bc.debug(".....BO461.sqlj selectVehicleIterator      Error code : " + e.getErrorCode());
+            bc.debug(".....BO461.sqlj selectVehicleIterator        SQLState : " + e.getSQLState());
+            e.printStackTrace();
+            throw e;
+        }
+    } 
+    
+    public RealEstateIterator selectRealEstateIterator(BigDecimal col_cat_id, Date amort_reva_date) throws Exception{
+        RealEstateIterator iter=null;
+        try{
+            #sql [conn2]iter={
+                select
+                    a.col_hea_id as col_hea_id,
+                    a.col_num as col_num,
+                    a.col_cat_id as col_cat_id,
+                    a.col_type_id as col_typ_id,
+                    a.real_est_estn_date as datum_procjene,
+                    a.real_est_estn_valu as estimated_value,
+                    a.real_est_nomi_valu as market_value_old,
+                    a.real_est_nm_cur_id as market_currency,
+                    a.real_est_nomi_date as old_date,
+                    a.reva_date_am as reva_date_am,
+                    a.weigh_value as weight_value_old,
+                    a.col_county as col_county,
+                    a.col_place as col_place,
+                    a.col_district as col_district,
+                    b.real_est_type as col_sub_id,
+                    c.reva_flag as reva_flag
+                from 
+                    coll_head a,
+                    coll_restate b,
+                    coll_atr c
+                where 
+                    a.col_cat_id = 618223 and
+                    a.collateral_status ='3' and
+                    a.real_est_nomi_date < :(amort_reva_date) and
+                    a.col_hea_id = b.col_hea_id and
+                    a.col_cat_id = c.col_cat_id  and
+                    a.col_type_id = c.coll_type_id and
+                    b.real_est_type = c.col_sub_id
+                WITH UR
+                };
+            return iter;
+                
+        }catch(SQLException e){
+            bc.debug(".....BO461.sqlj selectRealEstateIterator        Message  : " + e.getMessage());
+            bc.debug(".....BO461.sqlj selectRealEstateIterator      Error code : " + e.getErrorCode());
+            bc.debug(".....BO461.sqlj selectRealEstateIterator        SQLState : " + e.getSQLState());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+    
+    public int getNumberOfNonRetailCustomers(BigDecimal col_hea_id) throws SQLException
+    {
+        int number = -1;
+        try
+        {
+            #sql [connCtx] {
+                SELECT COUNT(*)
+                INTO :(number)
+                FROM coll_hf_prior d
+                INNER JOIN loan_beneficiary e ON d.coll_hf_prior_id = e.coll_hf_prior_id
+                INNER JOIN customer c ON e.cus_id = c.cus_id
+                WHERE d.hf_coll_head_id = :(col_hea_id)
+                  AND d.hf_status = 'A'
+                  AND e.status = 'A'
+                  AND c.basel_cus_type NOT IN ('1','36')
+                WITH UR
+            };
+        }
+        catch(SQLException e)
+        {
+            bc.debug(".....BO461.sqlj getNumberOfNonRetailCustomers        Message  : " + e.getMessage());
+            bc.debug(".....BO461.sqlj getNumberOfNonRetailCustomers      Error code : " + e.getErrorCode());
+            bc.debug(".....BO461.sqlj getNumberOfNonRetailCustomers        SQLState : " + e.getSQLState());
+            throw e;
+        }
+        return number;
+    }
+    
+    
+    public HashMap getRealEstatePlaceData(BigDecimal col_hea_id) throws Exception{
+        HashMap result=null;
+        BigDecimal col_county, col_place, cada_id;
+        try{
+            #sql [connCtx]{
+                select 
+                    a.col_county,       
+                    a.col_place,        
+                    b.real_est_cada_munc    
+                into 
+                    :(col_county),
+                    :(col_place),
+                    :(cada_id)  
+                from 
+                    coll_head a, coll_restate b
+                where 
+                    a.col_hea_id = :(col_hea_id) and
+                    a.col_hea_id = b.col_hea_id
+            };  
+            result= new HashMap();
+            result.put("col_county", col_county);
+            result.put("col_place", col_place);
+            result.put("cada_id", cada_id);
+        }catch(SQLException sqle){
+            bc.debug(".....BO461.sqlj getRealEstatePlaceData        Message  : " + sqle.getMessage());
+            bc.debug(".....BO461.sqlj getRealEstatePlaceData      Error code : " + sqle.getErrorCode());
+            bc.debug(".....BO461.sqlj getRealEstatePlaceData        SQLState : " + sqle.getSQLState());
+            throw sqle;
+        }
+        return result;
+    }
+    
+    /**
+     * Dohvat koeficijenta revalorizacije preko zupanije
+     * @param col_cat_id - vrsta kolaterala
+     *        col_typ_id - tip nekretnine  
+     *        col_county - zupanija
+     *        datum_procjene
+     */   
+    public BigDecimal getRevalorizationCoef(BigDecimal col_cat_id,BigDecimal col_typ_id,BigDecimal col_county, int estimate_year) throws Exception{
+        BigDecimal result=null;
+        try{
+            #sql [connCtx]{
+                select koef_rev
+                into :(result)
+                from reva_koef
+                where 
+                    col_cat_id = :(col_cat_id) and
+                    col_typ_id = :(col_typ_id) and
+                    est_year = :(estimate_year) and
+                    county_id  = :(col_county) and
+                    city_id is null and
+                    district_id is null and
+                    cada_id is null and
+                    status='A'
+            };  
+        }catch(SQLException e){
+            bc.debug(".....BO461.sqlj getRevalorizationCoef        Message  : " + e.getMessage());
+            bc.debug(".....BO461.sqlj getRevalorizationCoef      Error code : " + e.getErrorCode());
+            bc.debug(".....BO461.sqlj getRevalorizationCoef        SQLState : " + e.getSQLState());
+            throw e;
+        }
+        return result;
+    }
+
+    /**
+     * Dohvat koeficijenta revalorizacije za grad Zagreb preko katastarske opcine
+     * @param col_cat_id - vrsta kolaterala
+     *        col_typ_id - tip nekretnine  
+     *        city_id - grad
+     *        cada_id - katastarska opcina
+     *        datum_procjene
+     */  
+    public BigDecimal getZagrebCoef(BigDecimal col_cat_id,BigDecimal col_typ_id,BigDecimal city_id,BigDecimal cada_id,int estimate_year) throws Exception{
+        BigDecimal result=null;
+        try{
+            #sql [connCtx]{
+                select koef_rev
+                into :(result)
+                from reva_koef
+                where 
+                    col_cat_id = :(col_cat_id) and
+                    col_typ_id = :(col_typ_id) and
+                    est_year = :(estimate_year) and
+                    city_id = :(city_id) and
+                    cada_id = :(cada_id) and
+                    status='A'
+            };  
+        }catch(SQLException e){
+            bc.debug(".....BO461.sqlj getZagrebCoef        Message  : " + e.getMessage());
+            bc.debug(".....BO461.sqlj getZagrebCoef      Error code : " + e.getErrorCode());
+            bc.debug(".....BO461.sqlj getZagrebCoef        SQLState : " + e.getSQLState());
+            throw e;
+        }
+        return result;
+    }
+
+    /** 
+     * Dohvat koeficijenta revalorizacije za ostale gradove
+     * @param col_cat_id - vrsta kolaterala
+     *        col_typ_id - tip nekretnine  
+     *        city_id - grad
+     *        datum_procjene
+     */ 
+    public BigDecimal getCityCoef(BigDecimal col_cat_id,BigDecimal col_typ_id,BigDecimal city_id,int estimate_year) throws Exception{
+        BigDecimal result=null;
+        try{
+            #sql [connCtx]{
+                select koef_rev
+                into :(result)
+                from reva_koef
+                where 
+                    col_cat_id = :(col_cat_id) and
+                    col_typ_id = :(col_typ_id) and
+                    est_year = :(estimate_year) and
+                    city_id = :(city_id) and
+                    district_id is null and
+                    cada_id is null and
+                    status='A'
+            };   
+        }catch(SQLException e){
+            bc.debug(".....BO461.sqlj getCityCoef        Message  : " + e.getMessage());
+            bc.debug(".....BO461.sqlj getCityCoef      Error code : " + e.getErrorCode());
+            bc.debug(".....BO461.sqlj getCityCoef        SQLState : " + e.getSQLState());
+            throw e;
+        }
+        return result;
+    }
+    
+    public BigDecimal getPonder(BigDecimal col_hea_id, BigDecimal col_cat_id,BigDecimal col_typ_id,BigDecimal col_sub_id, String addRequest) throws Exception{
+        BigDecimal result=null;
+        try{
+            #sql [connCtx]{
+                select ponder_value
+                into :(result)
+                from coll_ponder
+                where col_hea_id= :(col_hea_id)
+                and status = 'A'
+            };  
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                    #sql [connCtx]{
+                        select dfl_value
+                        into :(result)
+                        from dfl_col_ponder
+                        where 
+                            col_cat_id = :(col_cat_id) and
+                            col_typ_id = :(col_typ_id) and
+                            (col_sub_id = :(col_sub_id) or col_sub_id is null) and
+                            status = 'A' and
+                            date_from <= current date and
+                            date_until >= current date and
+                            add_request = :(addRequest) 
+                    }; 
+            }    
+        }
+        return result;
+        
+    }
+    
+    public void updateCollHead(BigDecimal col_hea_id,BigDecimal market_value_new,BigDecimal coefficient, 
+            BigDecimal market_value_old, BigDecimal weigh_value_new,BigDecimal weight_value_old,
+            Date old_date,String reva_date_am ) throws Exception{
+        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+        //use_id=:(use_id), user_lock=current timestamp
+        #sql [connCtx]{
+            update coll_head set
+                real_est_nomi_valu=:(market_value_new),
+                real_est_nomi_date=current date,
+                reva_coef = :(coefficient),
+                reva_date = current date,
+                reva_date_am = 'A',
+                reva_bvalue = :(market_value_old), 
+                reva_bdate = :(old_date),
+                reva_bdate_am = :(reva_date_am),
+                nepo_value = :(market_value_new),
+                nepo_date = current date,
+                weigh_value = :(weigh_value_new),
+                weigh_date = current date,
+                weigh_bvalue = :(weight_value_old),
+                CHG_NOM_VAL_PROC_TS = current timestamp
+            where col_hea_id = :(col_hea_id)
+        };  
+        
+    }
+    
+    public BigDecimal insertColTurnover(BigDecimal col_hea_id, BigDecimal coll_typ_id, BigDecimal col_sub_id, BigDecimal amount, 
+            BigDecimal amount_proc, BigDecimal proc_perc, Date date_from, Date date_until, String proc_status, String col_num,String amort_age, String proc_period) throws Exception{
+        
+        BigDecimal col_tur_id=primary.getNewId();
+        
+        #sql [connCtx]{
+            insert into col_turnover(
+                col_tur_id,
+                col_pro_id,
+                col_hea_id,
+                coll_type_id,
+                col_sub_id,
+                amount,
+                amount_proc,
+                amort_age,
+                proc_perc,
+                date_from,
+                date_until,
+                proc_period,
+                proc_status,
+                col_num)
+            values (
+                :(col_tur_id),
+                :(col_pro_id),
+                :(col_hea_id),
+                :(coll_typ_id),
+                :(col_sub_id),
+                :(amount),
+                :(amount_proc),
+                :(amort_age),
+                :(proc_perc),
+                :(date_from),
+                :(date_until),
+                :(proc_period),
+                :(proc_status),
+                :(col_num))
+            };
+        return col_tur_id;
+    }
+
+}

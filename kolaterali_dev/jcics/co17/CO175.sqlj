@@ -1,0 +1,160 @@
+package hr.vestigo.modules.collateral.jcics.co17;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO175
+ * 	
+ */
+
+#sql iterator Iter175 (	
+		String real_es_type_code,
+		String real_es_type_desc,
+		BigDecimal coll_type_id,
+		String coll_type_code,
+		String coll_type_name,
+		String desc_status,
+		BigDecimal real_es_type_id, 
+		String real_es_act_noact,
+		String real_es_spec_stat,
+		String login1,
+		String user1,
+		String login2,
+		String user2,
+		java.sql.Timestamp opening_ts,
+		java.sql.Timestamp user_lock,
+		BigDecimal use_open_id,
+		BigDecimal use_id
+	 );	
+
+/*
+ * 
+ * java.sql.Date real_es_date_from,
+		java.sql.Date real_es_date_unti,
+ */
+
+public class CO175 extends SQLJScrollableRemoteTransaction {
+	 
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co17/CO175.sqlj,v 1.6 2006/06/30 14:29:29 hrajkl Exp $";
+	
+	public DeclCO17 decl = null;
+	
+	private Iter175 iter = null;
+	
+	public CO175 (DeclCO17 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.realestatetypequerrym.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+        String codeP = "%";
+        if (decl.realestatetypequerrym.RealEstateQuerry_txtCode != null && !decl.realestatetypequerrym.RealEstateQuerry_txtCode.equals("")) {
+        	codeP = decl.realestatetypequerrym.RealEstateQuerry_txtCode.replace('*', '%');
+        	codeP =codeP+"%";
+        }
+        
+        String descP = "%";
+        if (decl.realestatetypequerrym.RealEstateQuerry_txtDesc != null && !decl.realestatetypequerrym.RealEstateQuerry_txtDesc.equals("")) {
+        	descP = decl.realestatetypequerrym.RealEstateQuerry_txtDesc.replace('*', '%');
+        	descP =descP+"%";
+        }        
+      
+        tc.debug("----------CO175   codeP:|"+codeP+"|");
+        tc.debug("----------CO175   descP:|"+descP+"|");
+        //tc.debug("----------CO175   date:|"+decl.realestatetypequerrym.RealEstateQuerry_txtValueDate+"|");
+		
+		//if(decl.realestatetypequerrym.RealEstateQuerry_txtValueDate==null){
+			#sql [ctx] iter = {
+				SELECT 
+				re.real_es_type_code, re.real_es_type_desc, re.coll_type_id, coll.coll_type_code, coll.coll_type_name,
+				re.real_es_date_from, re.real_es_date_unti, sd.desc_status,
+				re.real_es_type_id, re.real_es_act_noact, re.real_es_spec_stat, us1.login as login1, us1.user_name as user1, 
+				us2.login as login2, us2.user_name as user2, re.opening_ts, re.user_lock, re.use_open_id, re.use_id
+				FROM 
+				real_estate_type re, status_dictionary sd, app_user us1, app_user us2, collateral_type coll
+				WHERE 
+				sd.table_name='REAL_ESTATE_TYPE' AND 
+				sd.attribute='REAL_ES_ACT_NOACT' AND 
+				re.real_es_act_noact=sd.status AND
+				re.use_open_id=us1.use_id AND 
+				re.use_id = us2.use_id and
+				re.coll_type_id = coll.coll_type_id and
+				re.real_es_type_code like :codeP and 
+				re.real_es_type_desc like :descP
+				order by re.real_es_type_code, re.real_es_type_desc
+			};
+		/*}else{	// izbaceno pretrazivanje po datumu
+			#sql [ctx] iter = {
+					SELECT 
+					re.real_es_type_code, re.real_es_type_desc, re.coll_type_id, coll.coll_type_code, coll.coll_type_name,
+					re.real_es_date_from, re.real_es_date_unti, sd.desc_status,
+					re.real_es_type_id, re.real_es_act_noact, re.real_es_spec_stat, us1.login as login1, us1.user_name as user1, 
+					us2.login as login2, us2.user_name as user2, re.opening_ts, re.user_lock
+					FROM 
+					real_estate_type re, status_dictionary sd, app_user us1, app_user us2, collateral_type coll
+					WHERE 
+					sd.table_name='REAL_ESTATE_TYPE' AND 
+					sd.attribute='REAL_ES_ACT_NOACT' AND 
+					re.real_es_act_noact=sd.status AND
+					re.use_open_id=us1.use_id AND
+					re.use_id = us2.use_id and
+					re.coll_type_id = coll.coll_type_id and
+					re.real_es_type_code like :codeP and 
+					re.real_es_type_desc like :descP and 
+					:(decl.realestatetypequerrym.RealEstateQuerry_txtValueDate) between re.real_es_date_from and re.real_es_date_unti
+					order by re.real_es_type_code, re.real_es_type_desc
+				};			
+		}*/
+	}
+	/**/
+	public boolean next() throws Exception {
+		return iter.next();
+	}
+    
+	public void close() {
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	
+	public void populateRowData() throws Exception {
+
+		Vector data = new Vector();
+		Vector hidden = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		
+		//prikazuju se u tablici
+		data.add(iter.real_es_type_code());
+		data.add(iter.real_es_type_desc());
+		data.add(iter.coll_type_name());
+		data.add(iter.desc_status());
+		
+		//hidden
+		hidden.add(iter.coll_type_id());//0
+		hidden.add(iter.coll_type_code());//1
+		hidden.add(iter.real_es_type_id());//2
+		hidden.add(iter.real_es_act_noact());//3
+		hidden.add(iter.real_es_spec_stat());//4
+		hidden.add(iter.login1());//5
+		hidden.add(iter.user1());//6
+		hidden.add(iter.login2());//7
+		hidden.add(iter.user2());//8
+		hidden.add(iter.opening_ts());//9
+		hidden.add(iter.user_lock());//10
+		hidden.add(iter.use_open_id());//11
+		hidden.add(iter.use_id());//12
+				
+		decl.realestatetypequerrym.tblRealEstateType.addRow(data,hidden);
+	}
+}

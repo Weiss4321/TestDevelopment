@@ -1,0 +1,218 @@
+package hr.vestigo.modules.collateral.batch.bo31;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.rba.common.yrxX.YRXX0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+/**
+ * SQLJ za police osiguranja.
+ * @author hrakis
+ */
+public class BO315 extends ReportData
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo31/BO315.sqlj,v 1.15 2015/09/24 14:19:20 hrakis Exp $";
+    
+    #sql iterator PoliceIterator with (holdability = true)(
+        String omega_id_osiguranika,
+        String osiguranik,
+        Date polica_vrijedi_do,
+        BigDecimal osigurana_svota,
+        Date premija_placena_do,
+        String status,
+        String valuta_police,
+        String vrsta,
+        BigDecimal IP_CUS_ID,
+        String omega_id_osiguravatelja,
+        String naziv_osiguravatelja,
+        String status_osiguranika_u_zbk,
+        String napomena_o_polici
+    );
+
+    
+    public boolean hasMortgage()
+    {
+        return false;
+    }
+    
+    public String getFileName()
+    {
+        return "PoliceOsiguranja";
+    }
+    
+    public void setColumns()
+    {
+        // IZVJEŠTAJ 1
+        int idx = 0;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.akumulirana_svota);
+        columns.get(idx).add(OutputData.valuta_police);
+        columns.get(idx).add(OutputData.tip);
+        columns.get(idx).add(OutputData.omega_id_osiguranika);
+        columns.get(idx).add(OutputData.status_osiguranika_u_zbk);
+        columns.get(idx).add(OutputData.osiguranik);
+        columns.get(idx).add(OutputData.omega_id_osiguravatelja);
+        columns.get(idx).add(OutputData.naziv_osiguravatelja);
+        columns.get(idx).add(OutputData.vrsta);
+        columns.get(idx).add(OutputData.polica_vrijedi_do);
+        columns.get(idx).add(OutputData.osigurana_svota);
+        columns.get(idx).add(OutputData.premija_placena_do);
+        columns.get(idx).add(OutputData.status);
+        columns.get(idx).add(OutputData.napomena_o_polici);
+        columns.get(idx).add(OutputData.potpisana_izjava);
+        columns.get(idx).add(OutputData.nominalna_vrijednost_c_o);
+        columns.get(idx).add(OutputData.datum_trzisne_vrijednosti_datum_nom_vrijed_c_o);
+        columns.get(idx).add(OutputData.vrsta_trzisne_vrijednosti);
+        columns.get(idx).add(OutputData.ces_ponder_prijedlog);
+        columns.get(idx).add(OutputData.coll_officer);
+        columns.get(idx).add(OutputData.interni_rating_osiguravajuceg_drustva);
+        columns.get(idx).add(OutputData.vanjski_rating_osig_drustva);
+        columns.get(idx).add(OutputData.rating_agencija_osig_drustva);
+        columns.get(idx).add(OutputData.obrada);
+        
+        // IZVJEŠTAJ 2
+        idx = 1;
+        columns.get(idx).add(OutputData.sifra_kolaterala);
+        columns.get(idx).add(OutputData.akumulirana_svota);
+        columns.get(idx).add(OutputData.valuta_police);
+        columns.get(idx).add(OutputData.misljenje_pravne_sluzbe);
+        columns.get(idx).add(OutputData.ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.hnb_ekonomska_neovisnost);
+        columns.get(idx).add(OutputData.prihv_za_rezervacije);
+        columns.get(idx).add(OutputData.b2_hnb_stand_prihvatljivost);
+        columns.get(idx).add(OutputData.b2_irb_prihvatljivost);
+        columns.get(idx).add(OutputData.rba_prihvatljivost);
+        columns.get(idx).add(OutputData.nd_prihvatljivost);
+        columns.get(idx).add(OutputData.omega_id_korisnika_plasmana);
+        columns.get(idx).add(OutputData.zbk_status_korisnika_plasmana);
+        columns.get(idx).add(OutputData.naziv_korisnika_plasmana);
+        columns.get(idx).add(OutputData.partija_plasmana);
+        columns.get(idx).add(OutputData.plasman_osiguran);
+        columns.get(idx).add(OutputData.osiguravatelj);
+        columns.get(idx).add(OutputData.broj_zahtjeva);
+        columns.get(idx).add(OutputData.broj_zahtjeva_aps);
+        columns.get(idx).add(OutputData.broj_ugovora);
+        columns.get(idx).add(OutputData.valuta_izlozenosti);
+        columns.get(idx).add(OutputData.izlozenost_po_plasmanu);
+        columns.get(idx).add(OutputData.datum_izlozenosti);
+        columns.get(idx).add(OutputData.b2_asset_class_vlasnika_plasmana);
+        columns.get(idx).add(OutputData.dwh_status_plasmana);
+        columns.get(idx).add(OutputData.originalni_status_plasmana);
+        columns.get(idx).add(OutputData.datum_dospijeca_plasmana);
+        columns.get(idx).add(OutputData.sifra_liste_na_kojoj_se_nalazi_kolateral);
+        columns.get(idx).add(OutputData.login_referenta);
+        columns.get(idx).add(OutputData.ime_referenta);
+        columns.get(idx).add(OutputData.sifra_oj_referenta);
+        columns.get(idx).add(OutputData.naziv_oj_referenta);
+        columns.get(idx).add(OutputData.datum_unosa);
+        columns.get(idx).add(OutputData.datum_zadnje_promjene);
+        columns.get(idx).add(OutputData.unos_plasmana);
+        columns.get(idx).add(OutputData.im_suduznika);
+        columns.get(idx).add(OutputData.naziv_suduznika);
+        columns.get(idx).add(OutputData.uloga_suduznika);
+        columns.get(idx).add(OutputData.wcov_orig_valuta);
+        columns.get(idx).add(OutputData.kol_ponder_dfl);
+        columns.get(idx).add(OutputData.kolateral_ponder_co);
+        columns.get(idx).add(OutputData.realan_ponder);
+        columns.get(idx).add(OutputData.wcov);
+        columns.get(idx).add(OutputData.iskoristenost_kolaterala_wca);
+        columns.get(idx).add(OutputData.vrsta_ugovora);
+        columns.get(idx).add(OutputData.collateral_code_gctc_kolaterala);
+        columns.get(idx).add(OutputData.endorsement_type_gctc);
+        columns.get(idx).add(OutputData.object_type_gctc);
+        columns.get(idx).add(OutputData.property_type_gctc);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_local_level);
+        columns.get(idx).add(OutputData.b2_allocated_collateral_value_group_level);
+        columns.get(idx).add(OutputData.suma_hipoteka_viseg_reda_do_prve_rba);
+        columns.get(idx).add(OutputData.raspoloziva_neponderirana_vrijednost);
+        columns.get(idx).add(OutputData.datum_izracuna_raspolozive_vrijednosti);
+    }
+
+    
+    public void selectAdditionalData(HashMap data, Date value_date, YRXX0 yrxx0) throws Exception
+    {
+        BigDecimal col_hea_id = (BigDecimal)data.get(OutputData.COL_HEA_ID);
+        
+        data.put(OutputData.nominalna_vrijednost_c_o, data.get(OutputData.trzisna_vrijednost));
+        data.put(OutputData.potpisana_izjava, data.get(OutputData.upisano_pravo_banke));
+        
+        try
+        {
+            bc.startStopWatch("BO315.selectAdditionalData#basic");
+            
+            PoliceIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    e.ins_reg_no            AS omega_id_osiguranika,
+                    e.ins_data              AS osiguranik,
+                    e.ip_valid_until        AS polica_vrijedi_do,
+                    e.ip_nom_value          AS osigurana_svota,
+                    e.ip_paid_until         AS premija_placena_do,
+                    e.ip_status             AS status,
+                    j.code_char             AS valuta_police,
+                    m.int_pol_type_name     AS vrsta,
+                    e.ip_cus_id             AS IP_CUS_ID,
+                    o.register_no           AS omega_id_osiguravatelja,
+                    o.name                  AS naziv_osiguravatelja,
+                    p.status                AS status_osiguranika_u_zbk,
+                    s.sys_code_desc         AS napomena_o_polici
+                FROM coll_inspolicy e
+                LEFT OUTER JOIN currency j              ON e.ip_nom_cur_id = j.cur_id
+                LEFT OUTER JOIN insu_policy_type m      ON e.ip_type_id = m.int_pol_type_id
+                LEFT OUTER JOIN insu_company n          ON e.ip_cus_id = n.ic_id
+                LEFT OUTER JOIN customer o              ON n.ic_cus_id = o.cus_id
+                LEFT OUTER JOIN customer p              ON e.ins_cus_id = p.cus_id
+                LEFT OUTER JOIN system_code_value s     ON (e.ip_spec_stat = s.sys_code_value AND s.sys_cod_id = 'clt_pol_spec_st')
+                WHERE e.col_hea_id = :(col_hea_id)
+                FETCH FIRST ROW ONLY      
+                WITH UR
+            };
+            
+            while (iter.next())
+            {
+                fillDataFromIterator(iter, data, OutputData.class);
+            }
+            
+            bc.stopStopWatch("BO315.selectAdditionalData#basic");
+        }
+        catch (Exception ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata podataka o polici osiguranja! " + data.toString(), ex);
+            throw ex;
+        }
+        
+        
+        BigDecimal ip_cus_id = (BigDecimal)data.get(OutputData.IP_CUS_ID);
+        
+        String interni_rating = null;
+        try
+        {
+            #sql [connCtx] {
+                SELECT score
+                INTO :(interni_rating)
+                FROM customer_rating
+                WHERE cus_id = :(ip_cus_id)
+                AND rat_typ_id IN (1354776003, 671996251, 4278640351, 4278639351, 1354780003, 4278590351)
+                AND :(value_date) BETWEEN date_from AND date_until
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                bc.error("Dogodila se nepredvidjena greska kod dohvata internog ratinga osiguravatelja (IP_CUS_ID=" + ip_cus_id + ")! " + data.toString(), ex);
+                throw ex;
+            }
+        }        
+
+        data.put(OutputData.interni_rating_osiguravajuceg_drustva, interni_rating);
+        data.put(OutputData.vanjski_rating_osig_drustva, null);
+        data.put(OutputData.rating_agencija_osig_drustva, null);
+    }
+}

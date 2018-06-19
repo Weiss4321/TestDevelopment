@@ -1,0 +1,542 @@
+package hr.vestigo.modules.collateral.common.yoyG;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+import hr.vestigo.modules.collateral.common.yoyE.YOYE1;
+ 
+
+/**
+ * SQLJ za dohvat i ažuriranje potebnih parametara prilikom ažuriranja prihvatljivosti.
+ * @author hrakis
+ */
+public class YOYG1
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyG/YOYG1.sqlj,v 1.13 2017/03/22 10:31:45 hrazst Exp $";
+
+    private RemoteContext rc;
+    private ConnCtx ctx;
+    
+    #sql iterator IteratorOpisi( 
+       String sys_code_value,
+       String sys_code_desc
+    );
+    
+    #sql iterator Iter2 (
+        BigDecimal exposure_cur_id, 
+        BigDecimal exposure_amount 
+    );
+
+    public YOYG1(RemoteContext rc) throws SQLException
+    {
+        this.rc = rc;
+        this.ctx = rc.getContext();
+    }
+    
+    /**
+     * Metoda koja dohvaæa osnovne parametre za kolateral.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiOsnovneParametre(YOYGData parametri) throws SQLException
+    {
+        #sql[ctx] {
+            SELECT
+                col_num,
+                col_cat_id,
+                col_type_id,
+                rba_eligibility,
+                com_doc,
+                law_eligibility,
+                rec_lop,
+                real_est_spec_stat,
+                real_est_nomi_desc,
+                crm_hnb,
+                crm_hnb,
+                b1_eligibility,
+                RTRIM(eligibility),
+                b2_irb_elig,
+                nd_eligibility,
+                real_est_nomi_valu,
+                real_est_nm_cur_id,
+                real_est_nomi_date
+            INTO
+                :(parametri.col_num),
+                :(parametri.col_cat_id),
+                :(parametri.col_type_id),
+                :(parametri.rba_eligibility),
+                :(parametri.com_doc),
+                :(parametri.law_eligibility),
+                :(parametri.rec_lop),
+                :(parametri.real_est_spec_stat),
+                :(parametri.real_est_nomi_desc),
+                :(parametri.crm_hnb),
+                :(parametri.crm_hnb_old),
+                :(parametri.hnb_eligibility_old),
+                :(parametri.b2stand_eligibility_old),
+                :(parametri.b2irb_eligibility_old),
+                :(parametri.nd_eligibility_old),
+                :(parametri.ncv_amount),
+                :(parametri.ncv_cur_id),
+                :(parametri.ncv_date)
+            FROM coll_head
+            WHERE col_hea_id = :(parametri.col_hea_id)
+        };
+    }
+    
+    
+    /** Metoda dohvaæa opise prihvatljivosti.
+     * @return Iterator s vrijednosti i opisom prihvatljivosti.
+     */
+    public IteratorOpisi dohvatiOpise() throws SQLException
+    {
+        IteratorOpisi iter = null;
+        #sql [ctx] iter = {
+           SELECT sys_code_value, sys_code_desc
+           FROM system_code_value
+           WHERE sys_cod_id = 'clt_eligib'
+           WITH UR
+        };
+        return iter;
+    }
+
+    /**
+     * Metoda koja dohvaæa parametre za depozit.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiParametreZaDepozit(YOYGData parametri) throws SQLException
+    {
+        #sql[ctx] {
+            SELECT 
+                cde_dep_unti_final, 
+                cde_dep_unti
+            INTO 
+                :(parametri.date_until),
+                :(parametri.date_until_fallback)
+            FROM coll_cashdep
+            WHERE col_hea_id = :(parametri.col_hea_id)
+        };
+    } 
+    
+    /**
+     * Metoda koja dohvaæa parametre za garanciju.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiParametreZaGaranciju(YOYGData parametri) throws SQLException
+    {
+        #sql[ctx] {
+            SELECT
+                g.first_call,
+                g.guar_issuer_id,
+                g.guar_datn_unti,
+                g.guar_cou_id,
+                g.pos_analyst_opinion,
+                c.basel_cus_type
+            INTO
+                :(parametri.first_call),
+                :(parametri.guar_issuer_id),
+                :(parametri.date_until),
+                :(parametri.guar_cou_id),
+                :(parametri.pos_analyst_opinion),
+                :(parametri.guar_issuer_b2ac)
+            FROM coll_guarantee g
+            LEFT OUTER JOIN customer c ON g.guar_issuer_id = c.cus_id
+            WHERE col_hea_id = :(parametri.col_hea_id)
+        };
+        
+        if(parametri.guar_issuer_b2ac != null) parametri.guar_issuer_b2ac = parametri.guar_issuer_b2ac.trim();
+    }
+    
+    /**
+     * Metoda koja dohvaæa parametre za nekretninu.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiParametreZaNekretninu(YOYGData parametri) throws SQLException
+    {
+        #sql [ctx] {
+           SELECT
+               real_est_type,
+               build_perm_ind,
+               build_perm,
+               purpose
+           INTO
+               :(parametri.col_subtype_id),
+               :(parametri.build_perm_ind),
+               :(parametri.build_perm),
+               :(parametri.purpose)
+           FROM coll_restate
+           WHERE col_hea_id = :(parametri.col_hea_id)
+        };
+    }
+    
+    /**
+     * Metoda koja dohvaæa parametre za vozilo.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiParametreZaVozilo(YOYGData parametri) throws SQLException
+    {
+        #sql [ctx] {
+           SELECT veh_kasko
+           INTO :(parametri.veh_kasko)
+           FROM coll_vehicle
+           WHERE col_hea_id = :(parametri.col_hea_id)
+        };
+    }
+
+    /**
+     * Metoda koja dohvaæa parametre za vrijednosne papire.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiParametreZaVRP(YOYGData parametri) throws SQLException
+    {
+        try
+        {
+            #sql [ctx] {
+                SELECT 
+                    i.maturity_date,
+                    v.price_date,
+                    s.code
+                INTO 
+                    :(parametri.date_until),
+                    :(parametri.price_date),
+                    :(parametri.market_code)
+                FROM coll_vrp v
+                LEFT OUTER JOIN coll_in2 i ON v.col_in2_id = i.col_in2_id
+                LEFT OUTER JOIN stock_exchange s ON i.sto_mar_id = s.sto_exc_id
+                WHERE col_hea_id = :(parametri.col_hea_id)
+            };
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() != 100) throw ex;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa parametre za cesiju.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiParametreZaCesiju(YOYGData parametri) throws SQLException
+    {
+        #sql [ctx] {
+           SELECT ces_nap_pls, ces_typ_id
+           INTO :(parametri.ces_nap_pls), :(parametri.ces_typ_id)
+           FROM coll_cesija
+           WHERE col_hea_id = :(parametri.col_hea_id)
+        };
+    }
+    
+    /**
+     * Metoda koja dohvaæa parametre za policu osiguranja.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */    
+    public void dohvatiParametreZaPolicuOsiguranja(YOYGData parametri) throws SQLException
+    {
+        #sql [ctx] {
+            SELECT ip_paid_until
+            INTO :(parametri.ip_paid_until)
+            FROM coll_inspolicy
+            WHERE col_hea_id = :(parametri.col_hea_id)
+         };
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa parametre vezane za vlasnika kolaterala.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiParametreVlasnika(YOYGData parametri) throws SQLException
+    {
+        try
+        {
+            #sql [ctx] {
+                SELECT
+                    p.cus_typ_id,
+                    o.num_of_estate
+                INTO
+                    :(parametri.cus_typ_id),
+                    :(parametri.num_of_estate)
+                FROM coll_owner o
+                INNER JOIN customer p ON o.cus_id = p.cus_id 
+                WHERE o.col_hea_id = :(parametri.col_hea_id)
+                  AND o.main_owner = 'D'
+                FETCH FIRST ROW ONLY
+            };
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() != 100) throw ex;
+        }
+    }
+
+    
+    /** 
+     * Metoda koja za zadani kolateral dohvaæa da li je kolateral osiguran.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiOsiguranost(YOYGData parametri) throws SQLException
+    {
+        int broj = -1;
+        #sql [ctx] {
+            SELECT COUNT(*)
+            INTO :(broj)
+            FROM insurance_policy 
+            WHERE col_hea_id = :(parametri.col_hea_id)
+              AND ip_act_noact = 'A'
+              AND ip_vali_until >= CURRENT DATE - 30 DAYS
+            WITH UR
+        };
+        if(broj > 0) parametri.inspol_ind_aktivna = "D"; else parametri.inspol_ind_aktivna = "N";
+    }
+    
+    /**
+     * Metoda koja za zadani kolateral dohvaæa šifru vrste procjene preko opisa vrste procjene.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void dohvatiVrstuProcjene(YOYGData parametri) throws SQLException
+    {
+        try
+        {
+            #sql [ctx] {
+                SELECT sys_cod_val_id
+                INTO :(parametri.real_est_nomi_desc_id)
+                FROM system_code_value
+                WHERE sys_cod_id = 'kol_evaluation_typ'
+                  AND sys_code_desc = :(parametri.real_est_nomi_desc)
+                FETCH FIRST ROW ONLY
+            };
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() != 100) throw ex;
+        }
+    }
+    
+    /** 
+     * Metoda koja za zadani kolateral dohvaæa maksimalni datum dospijeæa plasmana.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     * @param prekoHipoteke Da li se do plasmana dolazi preko hipoteke.
+     */
+    public void dohvatiDatumDospijecaPlasmana(YOYGData parametri, boolean prekoHipoteke) throws SQLException
+    {
+        try
+        {
+            if(prekoHipoteke)
+            {
+                #sql [ctx] {
+                    SELECT MAX(due_date)
+                    INTO :(parametri.due_date)
+                    FROM coll_hf_prior c
+                    INNER JOIN loan_beneficiary d ON c.coll_hf_prior_id = d.coll_hf_prior_id 
+                    INNER JOIN cusacc_exposure e ON (d.la_acc_id = e.cus_acc_id OR d.acc_no = e.cus_acc_no OR d.request_no = e.request_no)
+                    WHERE
+                        c.hf_coll_head_id = :(parametri.col_hea_id) AND
+                        c.hf_status = 'A' AND (
+                            e.cus_acc_status='A' OR (
+                                e.cus_acc_status = 'C' AND (
+                                    (e.module_code='TRC' AND e.cus_acc_orig_st='E') OR 
+                                    (e.module_code='PKR' AND e.cus_acc_orig_st='T') OR 
+                                    (e.module_code='PPZ' AND e.cus_acc_orig_st IN ('SS', 'NM')) OR
+                                    (e.module_code='SDR' AND e.cus_acc_orig_st IN ('SS', 'NM')) OR  
+                                    (e.module_code='KRD' AND e.cus_acc_orig_st='SS') OR 
+                                    (e.module_code='GAR' AND e.cus_acc_orig_st='SS') OR 
+                                    (e.module_code='KKR' AND e.cus_acc_orig_st IN ('94','95')) OR 
+                                    (e.module_code='LOC' AND e.cus_acc_orig_st='SS')
+                                )
+                            )
+                        )
+                    WITH UR
+                };
+            }
+            else
+            {
+                #sql [ctx] {
+                    SELECT MAX(due_date)
+                    INTO :(parametri.due_date)
+                    FROM loan_beneficiary d
+                    INNER JOIN cusacc_exposure e ON (d.la_acc_id = e.cus_acc_id OR d.acc_no = e.cus_acc_no OR d.request_no = e.request_no) 
+                    WHERE
+                        d.col_hea_id = :(parametri.col_hea_id) AND (
+                            e.cus_acc_status='A' OR (
+                                e.cus_acc_status = 'C' AND (
+                                    (e.module_code='TRC' AND e.cus_acc_orig_st='E') OR 
+                                    (e.module_code='PKR' AND e.cus_acc_orig_st='T') OR 
+                                    (e.module_code='PPZ' AND e.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                                    (e.module_code='SDR' AND e.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                                    (e.module_code='KRD' AND e.cus_acc_orig_st='SS') OR 
+                                    (e.module_code='GAR' AND e.cus_acc_orig_st='SS') OR 
+                                    (e.module_code='KKR' AND e.cus_acc_orig_st IN ('94','95')) OR 
+                                    (e.module_code='LOC' AND e.cus_acc_orig_st='SS')
+                                )
+                            )
+                        )
+                    WITH UR
+                };
+            }
+        }
+        catch(SQLException ex)
+        {
+            if(ex.getErrorCode() != 100) throw ex;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa izloženost svih aktivnih plasmana za kolateral po valuti i zbraja ih u valuti kolaterala.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     * @author hramkr
+     */    
+    public void dohvatiOmjerPlasmaniNcvKolaterala(YOYGData parametri) throws Exception
+    {
+        Iter2 iter = null;
+        #sql[ctx] iter = { 
+            SELECT
+                c.exposure_cur_id       AS exposure_cur_id, 
+                SUM(c.exposure_balance) AS exposure_amount
+            FROM
+                coll_hf_prior a
+                INNER JOIN loan_beneficiary b ON a.coll_hf_prior_id = b.coll_hf_prior_id 
+                INNER JOIN cusacc_exposure c ON (b.la_acc_id = c.cus_acc_id OR b.acc_no = c.cus_acc_no OR b.request_no = c.request_no)
+            WHERE 
+                a.hf_coll_head_id = :(parametri.col_hea_id) AND
+                a.hf_status = 'A' AND
+                b.status = 'A' AND
+                    (c.cus_acc_status = 'A' OR (
+                        c.cus_acc_status = 'C' AND (
+                            (c.module_code='TRC' AND c.cus_acc_orig_st='E') OR 
+                            (c.module_code='PKR' AND c.cus_acc_orig_st='T') OR 
+                            (c.module_code='PPZ' AND c.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (c.module_code='SDR' AND c.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (c.module_code='KRD' AND c.cus_acc_orig_st='SS') OR 
+                            (c.module_code='GAR' AND c.cus_acc_orig_st='SS') OR 
+                            (c.module_code='KKR' AND c.cus_acc_orig_st IN ('94','95')) OR 
+                            (c.module_code='LOC' AND c.cus_acc_orig_st='SS')
+                        )
+                    ))
+             GROUP BY c.exposure_cur_id 
+        };
+
+        rc.debug("NCV_CUR_ID = " + parametri.ncv_cur_id);
+        BigDecimal exposure_sum = new BigDecimal("0.00");
+        while (iter.next())
+        {
+            rc.debug("EXPOSURE_CUR_ID = " + iter.exposure_cur_id() + ", EXPOSURE_AMOUNT = " + iter.exposure_amount());
+            if(iter.exposure_amount() != null && iter.exposure_cur_id() != null && parametri.ncv_cur_id != null)
+            {
+                BigDecimal exp_amount_coll_cur = getExpAmountInCollateralCurrency(parametri.ncv_cur_id, iter.exposure_cur_id(), iter.exposure_amount());
+                rc.debug("EXPOSURE_AMOUNT in NCV_CUR_ID = " + exp_amount_coll_cur);
+                exposure_sum = exposure_sum.add(exp_amount_coll_cur);
+            }
+        }
+        iter.close();
+        rc.debug("EXPOSURE_SUM = " + exposure_sum);
+ 
+        YOYE1 YOYE1_find = new YOYE1(rc);
+        BigDecimal other_mortgages = YOYE1_find.getMortgagesSum(parametri.col_hea_id, parametri.ncv_cur_id);
+        rc.debug("OTHER_MORTGAGES = " + other_mortgages);
+        
+        BigDecimal exposure_mortgages = exposure_sum.add(other_mortgages);
+        rc.debug("EXPOSURE_MORTGAGES = " + exposure_mortgages);
+
+        BigDecimal ratio = new BigDecimal("1.00");
+        if (exposure_mortgages.compareTo(new BigDecimal("0.00")) != 0 && parametri.ncv_amount.compareTo(new BigDecimal("0.00")) != 0)
+        {
+            ratio = exposure_mortgages.divide(parametri.ncv_amount, 2, BigDecimal.ROUND_HALF_UP);
+        }
+        parametri.exp_coll_ratio = ratio;
+        rc.debug("RATIO = " + ratio);      
+    }
+
+    /**
+     * Method calculates the amount in collateral currency.
+     * @param col_cur_id (valuta kolaterala)
+     * @param exp_cur_id (valuta izlozenosti)
+     * @param exp_amount (iznos izlozenosti u valuti izlozenosti)
+     * @return exp_amount_kol (iznos izlozenosti u valuti kolaterala)
+     */
+    private BigDecimal getExpAmountInCollateralCurrency(BigDecimal col_cur_id, BigDecimal exp_cur_id, BigDecimal exp_amount) throws Exception
+    {
+        YOYE1 YOYE1_find = new YOYE1(rc);
+        
+        BigDecimal exch_rate_kol = null;
+        BigDecimal exch_rate_exp = null;
+        BigDecimal exp_amount_kol = null;
+
+        exch_rate_kol = YOYE1_find.getMiddRate(col_cur_id);
+        exch_rate_exp = YOYE1_find.getMiddRate(exp_cur_id);
+        exp_amount_kol = exp_amount.multiply(exch_rate_exp);
+        exp_amount_kol = exp_amount_kol.divide(exch_rate_kol, 2, BigDecimal.ROUND_HALF_UP);
+        
+        return exp_amount_kol;
+    }
+    
+    /**
+     * Metoda dohvaæa vrijednost ocjene za zadani tip ratinga i komitenta. 
+     * @param cus_id ID komitenta
+     * @param rat_typ_id ID vrste ratinga
+     * @return vrijednost ocjene
+     */
+    public String dohvatiRating(BigDecimal cus_id, BigDecimal rat_typ_id) throws SQLException
+    {
+        try
+        {    
+            String score = null;
+            #sql[ctx] {
+                SELECT score
+                INTO :(score)
+                FROM customer_rating
+                WHERE cus_id = :(cus_id)
+                  AND rat_typ_id = :(rat_typ_id)
+                  AND CURRENT DATE BETWEEN date_from AND date_until
+                ORDER BY date_until DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return score;
+        }
+        catch(SQLException ex)
+        {
+            if(rc.getSQLExHandler().isEmptyRowset(ex)) return null;
+            else throw ex;
+        }
+    }
+    
+
+    
+    /**
+     * Metoda koja zapisuje prihvatljivosti u bazu podataka.
+     * @param parametri Objekt s parametrima za odreðivanje prihvatljivosti.
+     */
+    public void zapisiPrihvatljivosti(YOYGData parametri, String CRMHNBMisljenje, String HNBPrihvatljivost, String B2StandPrihvatljivost, String B2IRBPrihvatljivost, String NDPrihvatljivost) throws SQLException
+    {
+        //20.03.2017 - logika za update vremena azuriranja zapisa 
+        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS, a posebno za tranakcije
+        if(this.rc.getCallerID()==RemoteConstants.VESTIGO_BATCH){
+            #sql[ctx] {
+                UPDATE coll_head
+                SET
+                    crm_hnb = :(CRMHNBMisljenje),
+                    b1_eligibility = :(HNBPrihvatljivost),
+                    eligibility = :(B2StandPrihvatljivost),
+                    b2_irb_elig = :(B2IRBPrihvatljivost),
+                    nd_eligibility = :(NDPrihvatljivost),
+                    CHG_NOM_VAL_PROC_TS = current timestamp
+                WHERE col_hea_id = :(parametri.col_hea_id)
+                };     
+        }else{
+            #sql[ctx] {
+            UPDATE coll_head
+            SET
+                crm_hnb = :(CRMHNBMisljenje),
+                b1_eligibility = :(HNBPrihvatljivost),
+                eligibility = :(B2StandPrihvatljivost),
+                b2_irb_elig = :(B2IRBPrihvatljivost),
+                nd_eligibility = :(NDPrihvatljivost),
+                user_lock = current timestamp
+            WHERE col_hea_id = :(parametri.col_hea_id) 
+            };
+        }
+    }
+}

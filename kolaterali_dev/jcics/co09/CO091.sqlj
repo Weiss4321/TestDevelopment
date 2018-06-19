@@ -1,0 +1,383 @@
+package hr.vestigo.modules.collateral.jcics.co09;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//COLL_HF_PRIOR LIST  in favour RBA
+
+
+//COLL_HF_PRIOR_ID
+//HF_TABLE_ID
+//HF_REF_ID
+//HF_COLL_HEAD_ID
+//HF_OWN_CUS_ID
+//HF_REGISTER_NO
+//HF_OWN_CODE
+//HF_OWN_FNAME
+//HF_OWN_LNAME
+//HF_HFC_ID
+//HF_PRIORITY
+//HF_NOTARY_AGR
+//HF_NOTARY_PLACE_ID
+//HF_NOTARY_DATE
+//HF_NOTARY
+//HF_NOT_FNAME
+//HF_NOT_LNAME
+//HF_DATE_RECIV
+//HF_COURT_DECIS
+//HF_DATE_EXTRACT
+//HF_OFFI_LRD
+//HF_OFFILRD_FNAME
+//HF_OFFILRD_LNAME
+//HF_REC_LOP_ID
+//HF_ADD_DATA
+//HF_AMOUNT
+//HF_CUR_ID
+//AMOUNT_REF
+//CUR_ID_REF
+//EXC_RAT_REF
+//EXC_RAT_REF_DATE
+//HF_DRAW_AMO
+//HF_AVAIL_AMO
+//HF_DRAW_AMO_REF
+//AVAIL_AMO_REF
+//HF_AVAIL_DAT
+//DRAW_BAMO
+//AVAIL_BAMO
+//DRAW_BAMO_REF
+//AVAIL_BAMO_REF
+//AVAIL_BDAT
+//VAL_DATE_TURN
+//VAL_DATE_PROC
+//HF_DATE_HFC_FROM
+//HF_DATE_HFC_UNTIL
+//HF_STATUS
+//HF_SPEC_STAT
+//HF_DATE_FROM
+//HF_DATE_UNTIL
+//USE_OPEN_ID
+//USE_ID
+//OPENING_TS
+//USER_LOCK
+//EVE_ID
+//BANK_SIGN
+
+
+
+
+
+
+#sql iterator Iter1 (
+		java.math.BigDecimal coll_hf_prior_id ,
+		String  coll_type_name, 
+		String  col_num,
+		java.math.BigDecimal hf_hfc_id ,
+		String  HfHfcSCD,
+		java.math.BigDecimal hf_amount ,
+		java.math.BigDecimal hf_cur_id ,
+		String  hfCurIdCodeC,
+		java.sql.Date hf_date_hfc_from,
+		java.sql.Date hf_date_hfc_until,
+		String hf_priority,
+		java.math.BigDecimal hf_avail_amo,
+		String acc_prior,
+		java.math.BigDecimal 		coll_type_id      ,      
+		java.math.BigDecimal 		hf_coll_head_id   ,      
+		java.math.BigDecimal 		amount_ref        ,      
+		java.math.BigDecimal 		cur_id_ref        ,      
+		java.math.BigDecimal 		exc_rat_ref       ,      
+		java.sql.Date 			 	exc_rat_ref_date  ,      
+		java.math.BigDecimal 		hf_draw_amo       ,      
+		java.math.BigDecimal 		hf_draw_amo_ref   ,      
+		java.math.BigDecimal 		avail_amo_ref     ,      
+		java.sql.Date 			 	hf_avail_dat      ,      
+		java.math.BigDecimal 		draw_bamo         ,      
+		java.math.BigDecimal 		avail_bamo        ,      
+		java.math.BigDecimal 		draw_bamo_ref     ,      
+		java.math.BigDecimal 		avail_bamo_ref    ,      
+		java.sql.Date 				avail_bdat        ,      
+		java.sql.Date 				val_date_turn     ,      
+		java.sql.Date 				val_date_proc     ,      
+		String						hf_status         ,      
+		String						hf_spec_stat      ,      
+		java.sql.Date 				hf_date_from      ,      
+		java.sql.Date 				hf_date_until  ,
+		String 						coll_type_code  ,
+		String  					hfCurIdRefCodeC
+
+);	
+
+
+
+
+public class CO091 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co09/CO091.sqlj,v 1.12 2006/04/13 11:39:41 hrasia Exp $";
+	
+	public DeclCO09 decl = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO091 (DeclCO09 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		tc.debug("..........O091.sqlj    decl.CollHfPriorListRba_CUS_ID je    " + decl.CollHfPriorListRba_CUS_ID);
+		tc.debug("..........O091.sqlj    decl.CollHfPriorListRba_COL_TYPE_ID je    " + decl.CollHfPriorListRba_COL_TYPE_ID);
+		tc.debug("..........O091.sqlj    decl.CollHfPriorListRba_txtColNum je    " + decl.CollHfPriorListRba_txtColNum);
+		tc.debug("..........O091.sqlj    COLL_HF_PRIOR LIST  in favour RBA ");
+		
+		
+		
+		
+		String CollHfPriorListRba_txtColNum = decl.CollHfPriorListRba_txtColNum;
+		if (!(CollHfPriorListRba_txtColNum == null)){
+			CollHfPriorListRba_txtColNum = CollHfPriorListRba_txtColNum.trim();
+			if(CollHfPriorListRba_txtColNum.compareTo("")== 0){
+				CollHfPriorListRba_txtColNum = null;
+			}
+		}
+		
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+			
+		if((decl.CollHfPriorListRba_COL_TYPE_ID == null) && (CollHfPriorListRba_txtColNum  == null)){
+			//00
+			//COL_TYPE_ID	
+			//CollHfPriorListRba_txtColNum
+			#sql [ctx] iter1 = {   
+					SELECT  
+						chp.coll_hf_prior_id as coll_hf_prior_id , cot.coll_type_name as coll_type_name, 
+						coh.col_num as col_num, 
+						chp.hf_hfc_id as hf_hfc_id, scv1.sys_code_desc as HfHfcSCD, 
+						chp.hf_amount as hf_amount , chp.hf_cur_id as hf_cur_id, cur1.code_char as hfCurIdCodeC,
+						chp.hf_date_hfc_from as hf_date_hfc_from, chp.hf_date_hfc_until as hf_date_hfc_until,
+						chp.hf_priority as hf_priority,  chp.hf_avail_amo as hf_avail_amo,
+						cot.acc_prior as acc_prior,
+						cot.coll_type_id  ,	chp.hf_coll_head_id ,      
+				chp.amount_ref ,chp.cur_id_ref ,      
+				chp.exc_rat_ref ,chp.exc_rat_ref_date  ,        
+				chp.hf_draw_amo ,	chp.hf_draw_amo_ref ,      
+				chp.avail_amo_ref , chp.hf_avail_dat ,        
+				chp.draw_bamo  , chp.avail_bamo ,           
+				chp.draw_bamo_ref , chp.avail_bamo_ref ,      
+				chp.avail_bdat  ,	chp.val_date_turn ,        
+				chp.val_date_proc ,	chp.hf_status ,            
+				chp.hf_spec_stat ,chp.hf_date_from ,        
+				chp.hf_date_until ,cot.coll_type_code ,cur2.code_char as hfCurIdRefCodeC
+					
+					FROM coll_hf_prior chp
+						INNER JOIN  coll_head coh  ON chp.hf_coll_head_id = coh.col_hea_id   
+						INNER JOIN  collateral_type cot  ON  coh.col_type_id  = cot.coll_type_id
+						INNER JOIN  currency cur1   ON   chp.hf_cur_id = cur1.cur_id
+						LEFT OUTER JOIN  system_code_value scv1 ON  chp.hf_hfc_id = scv1.sys_cod_val_id  
+						LEFT OUTER JOIN  currency cur2 ON  chp.cur_id_ref  = cur2.cur_id 
+					WHERE chp.hf_own_cus_id = 8218251
+					AND chp.hf_rec_lop_id = 1602772003
+					AND coh.cus_id = :(decl.CollHfPriorListRba_CUS_ID)
+					
+					};
+		}
+		if((decl.CollHfPriorListRba_COL_TYPE_ID == null) && (CollHfPriorListRba_txtColNum  != null)){
+			//01	
+			#sql [ctx] iter1 = {   
+					SELECT  
+						chp.coll_hf_prior_id as coll_hf_prior_id , cot.coll_type_name as coll_type_name, 
+						coh.col_num as col_num, 
+						chp.hf_hfc_id as hf_hfc_id, scv1.sys_code_desc as HfHfcSCD, 
+						chp.hf_amount as hf_amount , chp.hf_cur_id as hf_cur_id, cur1.code_char as hfCurIdCodeC,
+						chp.hf_date_hfc_from as hf_date_hfc_from, chp.hf_date_hfc_until as hf_date_hfc_until,
+						chp.hf_priority as hf_priority,  chp.hf_avail_amo as hf_avail_amo,
+						cot.acc_prior as acc_prior,
+						cot.coll_type_id  ,	chp.hf_coll_head_id ,      
+				chp.amount_ref ,chp.cur_id_ref ,      
+				chp.exc_rat_ref ,chp.exc_rat_ref_date  ,        
+				chp.hf_draw_amo ,	chp.hf_draw_amo_ref ,      
+				chp.avail_amo_ref , chp.hf_avail_dat ,        
+				chp.draw_bamo  , chp.avail_bamo ,           
+				chp.draw_bamo_ref , chp.avail_bamo_ref ,      
+				chp.avail_bdat  ,	chp.val_date_turn ,        
+				chp.val_date_proc ,	chp.hf_status ,            
+				chp.hf_spec_stat ,chp.hf_date_from ,        
+				chp.hf_date_until  ,cot.coll_type_code,cur2.code_char as hfCurIdRefCodeC 
+					
+					FROM coll_hf_prior chp
+						INNER JOIN  coll_head coh  ON chp.hf_coll_head_id = coh.col_hea_id   
+						INNER JOIN  collateral_type cot  ON  coh.col_type_id  = cot.coll_type_id
+						INNER JOIN  currency cur1   ON   chp.hf_cur_id = cur1.cur_id
+						LEFT OUTER JOIN  system_code_value scv1 ON  chp.hf_hfc_id = scv1.sys_cod_val_id 
+						LEFT OUTER JOIN  currency cur2 ON  chp.cur_id_ref  = cur2.cur_id 
+					WHERE chp.hf_own_cus_id = 8218251
+					AND chp.hf_rec_lop_id = 1602772003
+					AND coh.cus_id = :(decl.CollHfPriorListRba_CUS_ID)
+					AND coh.col_num = :(decl.CollHfPriorListRba_txtColNum)
+					};
+			
+		}
+		if((decl.CollHfPriorListRba_COL_TYPE_ID != null) && (CollHfPriorListRba_txtColNum  == null)){
+			//10	
+			#sql [ctx] iter1 = {   
+					SELECT  
+						chp.coll_hf_prior_id as coll_hf_prior_id , cot.coll_type_name as coll_type_name, 
+						coh.col_num as col_num, 
+						chp.hf_hfc_id as hf_hfc_id, scv1.sys_code_desc as HfHfcSCD, 
+						chp.hf_amount as hf_amount , chp.hf_cur_id as hf_cur_id, cur1.code_char as hfCurIdCodeC,
+						chp.hf_date_hfc_from as hf_date_hfc_from, chp.hf_date_hfc_until as hf_date_hfc_until,
+						chp.hf_priority as hf_priority,  chp.hf_avail_amo as hf_avail_amo,
+						cot.acc_prior as acc_prior,
+						cot.coll_type_id  ,	chp.hf_coll_head_id ,      
+				chp.amount_ref ,chp.cur_id_ref ,      
+				chp.exc_rat_ref ,chp.exc_rat_ref_date  ,        
+				chp.hf_draw_amo ,	chp.hf_draw_amo_ref ,      
+				chp.avail_amo_ref , chp.hf_avail_dat ,        
+				chp.draw_bamo  , chp.avail_bamo ,           
+				chp.draw_bamo_ref , chp.avail_bamo_ref ,      
+				chp.avail_bdat  ,	chp.val_date_turn ,        
+				chp.val_date_proc ,	chp.hf_status ,            
+				chp.hf_spec_stat ,chp.hf_date_from ,        
+				chp.hf_date_until ,cot.coll_type_code ,cur2.code_char as hfCurIdRefCodeC 
+					
+					FROM coll_hf_prior chp
+						INNER JOIN  coll_head coh  ON chp.hf_coll_head_id = coh.col_hea_id   
+						INNER JOIN  collateral_type cot  ON  coh.col_type_id  = cot.coll_type_id
+						INNER JOIN  currency cur1   ON   chp.hf_cur_id = cur1.cur_id
+						LEFT OUTER JOIN  system_code_value scv1 ON  chp.hf_hfc_id = scv1.sys_cod_val_id  
+						LEFT OUTER JOIN  currency cur2 ON  chp.cur_id_ref  = cur2.cur_id 
+					WHERE chp.hf_own_cus_id = 8218251
+					AND chp.hf_rec_lop_id = 1602772003
+					AND coh.cus_id = :(decl.CollHfPriorListRba_CUS_ID)
+					AND cot.coll_type_id = :(decl.CollHfPriorListRba_COL_TYPE_ID)
+
+					};
+			
+		}
+		
+		if((decl.CollHfPriorListRba_COL_TYPE_ID != null) && (CollHfPriorListRba_txtColNum  != null)){
+			//11	
+			#sql [ctx] iter1 = {   
+					SELECT  
+						chp.coll_hf_prior_id as coll_hf_prior_id , cot.coll_type_name as coll_type_name, 
+						coh.col_num as col_num, 
+						chp.hf_hfc_id as hf_hfc_id, scv1.sys_code_desc as HfHfcSCD, 
+						chp.hf_amount as hf_amount , chp.hf_cur_id as hf_cur_id, cur1.code_char as hfCurIdCodeC,
+						chp.hf_date_hfc_from as hf_date_hfc_from, chp.hf_date_hfc_until as hf_date_hfc_until,
+						chp.hf_priority as hf_priority,  chp.hf_avail_amo as hf_avail_amo,
+						cot.acc_prior as acc_prior,
+						cot.coll_type_id  ,	chp.hf_coll_head_id ,      
+				chp.amount_ref ,chp.cur_id_ref ,      
+				chp.exc_rat_ref ,chp.exc_rat_ref_date  ,        
+				chp.hf_draw_amo ,	chp.hf_draw_amo_ref ,      
+				chp.avail_amo_ref , chp.hf_avail_dat ,        
+				chp.draw_bamo  , chp.avail_bamo ,           
+				chp.draw_bamo_ref , chp.avail_bamo_ref ,      
+				chp.avail_bdat  ,	chp.val_date_turn ,        
+				chp.val_date_proc ,	chp.hf_status ,            
+				chp.hf_spec_stat ,chp.hf_date_from ,        
+				chp.hf_date_until,cot.coll_type_code ,cur2.code_char as hfCurIdRefCodeC  
+					
+					FROM coll_hf_prior chp
+						INNER JOIN  coll_head coh  ON chp.hf_coll_head_id = coh.col_hea_id   
+						INNER JOIN  collateral_type cot  ON  coh.col_type_id  = cot.coll_type_id
+						INNER JOIN  currency cur1   ON   chp.hf_cur_id = cur1.cur_id
+						LEFT OUTER JOIN  system_code_value scv1 ON  chp.hf_hfc_id = scv1.sys_cod_val_id 
+						LEFT OUTER JOIN  currency cur2 ON  chp.cur_id_ref  = cur2.cur_id 
+					WHERE chp.hf_own_cus_id = 8218251
+					AND chp.hf_rec_lop_id = 1602772003
+					AND coh.cus_id = :(decl.CollHfPriorListRba_CUS_ID)
+					AND cot.coll_type_id = :(decl.CollHfPriorListRba_COL_TYPE_ID)
+					AND coh.col_num = :(decl.CollHfPriorListRba_txtColNum)
+
+					};
+			
+		}
+					
+
+			
+	}//executeScrollable
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+						java.util.Vector row = new java.util.Vector();
+						java.util.Vector row1 = new java.util.Vector();
+						
+						
+							                                             
+							//10 Vrsta kolat.		table.collateral.tblCollHfPriorList.CollTypeName				    
+							//10 Sifra kolat.		table.collateral.tblCollHfPriorList.ColNum
+							//10 Vrsta tereta		table.collateral.tblCollHfPriorList.HfHfcSCD
+							//10 Iznos kolat.		table.collateral.tblCollHfPriorList.HfAmount
+							// 4 Val.				table.collateral.tblCollHfPriorList.HfCurId
+							//10 Vrijedi od			table.collateral.tblCollHfPriorList.CollHfDateFrom
+							//10 Vrijedi do  		table.collateral.tblCollHfPriorList.CollHfDateUntil
+							// 3 Red naplate		table.collateral.tblCollHfPriorList.CollHfPriority
+							//10 Preostali iznos	table.collateral.tblCollHfPriorList.CollHfAvailAmo
+							// 3 Pri.knjizenja		table.collateral.tblCollHfPriorList.PriAccou
+							
+					//13.04.2006.
+					//Trebat ce promijeniti             na mjesto hf_amount bi trebalo doci amount_ref
+					//Trebat ce promijeniti             na mjesto hfCurIdCodeC bi trebalo doci cur_id_ref
+					//a tada treba srediti i povezivanje	
+						row.add(iter1.coll_type_name());   
+						row.add(iter1.col_num());      
+						row.add(iter1.HfHfcSCD());      
+						row.add(iter1.hf_amount());      
+						row.add(iter1.hfCurIdCodeC());  
+						row.add(iter1.hf_date_hfc_from());      
+						row.add(iter1.hf_date_hfc_until()); 
+						row.add(iter1.hf_priority());  
+						row.add(iter1.hf_avail_amo());      
+						row.add(iter1.acc_prior()); 
+						
+						
+						
+						row1.add(iter1.coll_hf_prior_id ());  
+						row1.add(iter1.hf_hfc_id ());  
+						row1.add(iter1.hf_cur_id ()); 
+						row1.add(iter1.coll_type_id ()); 
+						row1.add(iter1.hf_coll_head_id ()); 
+						row1.add(iter1.amount_ref ()); 
+						row1.add(iter1.cur_id_ref ()); 
+						row1.add(iter1.exc_rat_ref ()); 
+						row1.add(iter1.exc_rat_ref_date ()); 
+						row1.add(iter1.hf_draw_amo ()); 
+						row1.add(iter1.hf_draw_amo_ref ()); 
+						row1.add(iter1.avail_amo_ref ()); 
+						row1.add(iter1.hf_avail_dat ()); 
+						row1.add(iter1.draw_bamo()); 
+						row1.add(iter1.avail_bamo ()); 
+						row1.add(iter1.draw_bamo_ref ()); 
+						row1.add(iter1.avail_bamo_ref()); 
+						row1.add(iter1.avail_bdat ()); 
+						row1.add(iter1.val_date_turn ()); 
+						row1.add(iter1.val_date_proc()); 
+						row1.add(iter1.hf_status ()); 
+						row1.add(iter1.hf_spec_stat ()); 
+						row1.add(iter1.hf_date_from ()); 
+						row1.add(iter1.hf_date_until ()); 
+						row1.add(iter1.coll_type_code ()); 
+						row1.add(iter1.hfCurIdRefCodeC ()); 
+						
+												
+						decl.tblCollHfPriorListRba.addRow(row,row1);
+    			
+	}
+	
+}

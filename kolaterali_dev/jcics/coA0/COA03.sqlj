@@ -1,0 +1,81 @@
+package hr.vestigo.modules.collateral.jcics.coA0;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.sql.Timestamp;
+import java.sql.Date;
+
+//import hr.vestigo.modules.f_payment.share.FPaymentStyle;
+  
+#sql iterator Iter1 (
+					BigDecimal col_pon_id,
+					Date date_from,
+					Date date_until,
+					BigDecimal ponder_value,
+					String status,
+					String user_name,
+					Timestamp create_ts,
+                    String ponder_type
+	);
+
+public class COA03 extends RemoteTransaction {
+	
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA0/COA03.sqlj,v 1.2 2014/10/07 10:54:20 hrazst Exp $";
+	public DeclCOA0 decl = null;
+	private Iter1 iter=null;
+	
+	public COA03 (DeclCOA0 decl) {
+		this.decl = decl;
+	} 
+	   
+           
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx connCtx0 = tc.getContext();
+		
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+   		tc.info("dohvat svih pondera za kolateral.... col_hea_id: "+decl.coponderlistmap.Mvp_col_hea_id);
+  		BigDecimal col_hea_id = decl.coponderlistmap.Mvp_col_hea_id;		
+  		#sql [connCtx0] iter = {
+								SELECT
+   										a.col_pon_id as col_pon_id,
+ 										a.date_from as date_from,
+   										a.date_until as date_until,
+   										a.ponder_value as ponder_value,
+  										a.status as status,
+										b.user_name as user_name,
+   										a.create_ts as create_ts,
+  		                                ponder_type as ponder_type
+								FROM 	coll_ponder a,
+   										app_user b
+								WHERE
+  										a.col_hea_id = :(col_hea_id)
+								AND
+										a.use_id = b.use_id
+							ORDER BY
+										a.date_until DESC, a.create_ts DESC
+  				};
+  		
+  		while (iter.next()) {
+  		  Vector row=new Vector();
+          row.add(iter.status());      
+          row.add(iter.date_from());
+          row.add(iter.date_until());
+          row.add(iter.ponder_value());
+          row.add(iter.user_name());
+          row.add(iter.create_ts());
+              
+          Vector unique = new Vector();
+          
+          unique.add(iter.col_pon_id());
+
+          if(iter.ponder_type().equals("MVP")){
+              decl.coponderlistmap.tblMvpPonder.addRow(row, unique);
+          }else{
+              decl.coponderlistmap.tblCESPonder.addRow(row, unique);
+          }            
+        }	  		
+	}	
+}

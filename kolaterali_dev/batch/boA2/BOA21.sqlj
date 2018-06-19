@@ -1,0 +1,347 @@
+package hr.vestigo.modules.collateral.batch.boA2;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+public class BOA21
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/boA2/BOA21.sqlj,v 1.1 2017/03/13 12:03:22 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator IterCol(
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal new_build_val
+    );
+    
+    #sql iterator IterPl(
+        String register_no, 
+        String name, 
+        String cus_acc_no, 
+        String cus_acc_orig_st
+    );
+
+    public BOA21(BatchContext batchContext) throws SQLException
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    /**
+     * Metoda ubacuje zapis u EVENT tablicu.
+     * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+     */
+    public BigDecimal insertIntoEvent()
+    {
+        try
+        {
+            batchContext.startStopWatch("BOA21.insertIntoEvent");
+            batchContext.beginTransaction();
+
+            BigDecimal eve_id = new YXYD0(connCtx).getNewId();
+            batchContext.debug("eve_id = " + eve_id);
+            
+            HashMap event = new HashMap();
+            event.put("eve_id", eve_id);
+            event.put("eve_typ_id", new BigDecimal("1221851327"));
+            event.put("event_date", new Date(System.currentTimeMillis()));
+            event.put("cmnt", "Izvjesce o kolateralima s vise aktivnih polica");
+            event.put("use_id", batchContext.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null);
+            event.put("bank_sign", batchContext.getBankSign());
+
+            new YXYB0(batchContext).insertEvent(event);
+            batchContext.updateEveID(eve_id);
+
+            batchContext.commitTransaction();
+            batchContext.stopStopWatch("BOA21.insertIntoEvent");
+            return eve_id;
+        }
+        catch (Exception ex)
+        {
+            batchContext.error("Greska pri ubacivanju zapisa u event tablicu!", ex);
+            return null;
+        }
+    }
+    
+    /**
+     * Metoda koja dohvaæa kolaterale koji ulaze u izvješæe.
+     * @return Iterator.
+     */
+    public IterCol selectCollaterals(String cust_type) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BOA21.selectCollaterals");
+            
+            IterCol iter = null;
+            #sql [connCtx] iter = {
+                SELECT 
+                    a.col_hea_id, 
+                    a.col_num, 
+                    b.new_build_val
+                FROM coll_head a
+                INNER JOIN coll_restate b ON a.col_hea_id = b.col_hea_id
+                WHERE a.col_cat_id = 618223
+                  AND a.collateral_status IN ('1','2','3')
+                ORDER BY a.col_num
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja podataka za izvjesce!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BOA21.selectCollaterals");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o aktivnoj grupnoj polici osiguranja zadanog kolaterala.
+     * @param collData objekt s podacima o kolateralu
+     */
+    public void selectGroupPolicy(CollateralData collData) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BOA21.selectGroupPolicy");
+            
+            #sql [connCtx] {
+                SELECT 
+                    ip_id, 
+                    ip_code, 
+                    ip_vali_from, 
+                    ip_vali_until
+                INTO 
+                    :(collData.group_ip_id),
+                    :(collData.group_ip_code),
+                    :(collData.group_ip_vali_from),
+                    :(collData.group_ip_vali_until)
+                FROM insurance_policy
+                WHERE col_hea_id = :(collData.col_hea_id)
+                  AND ip_ic_id = 6111
+                  AND ip_contractor = 8218251
+                  AND ip_act_noact = 'A'
+                  AND wrn_status = '0'
+                FETCH FIRST ROW ONLY
+                WITH UR 
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                batchContext.error("Greska kod dohvata aktivne grupne police osiguranja za kolateral " + collData.col_num + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BOA21.selectGroupPolicy");    
+        }
+    }
+
+    
+    /**
+     * Metoda koja dohvaæa podatke o drugoj aktivnoj polici osiguranja zadanog kolaterala.
+     * @param collData objekt s podacima o kolateralu
+     */
+    public void selectOtherPolicy(CollateralData collData) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BOA21.selectOtherPolicy");
+            
+            #sql [connCtx] {
+                SELECT 
+                    ip_id, 
+                    ip_code, 
+                    ip_vali_from, 
+                    ip_vali_until, 
+                    ip_date_sec_val, 
+                    ic_name
+                INTO 
+                    :(collData.other_ip_id), 
+                    :(collData.other_ip_code), 
+                    :(collData.other_ip_vali_from), 
+                    :(collData.other_ip_vali_until), 
+                    :(collData.other_ip_date_sec_val), 
+                    :(collData.other_ic_name)
+                FROM insurance_policy a
+                LEFT OUTER JOIN insu_company b ON a.ip_ic_id = b.ic_id
+                WHERE col_hea_id = :(collData.col_hea_id)
+                  AND ip_id <> :(collData.group_ip_id)
+                  AND ip_act_noact = 'A'
+                  AND wrn_status = '0'
+                ORDER BY ip_vali_until DESC
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                batchContext.error("Greska kod dohvata druge aktivne police osiguranja za kolateral " + collData.col_num + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BOA21.selectOtherPolicy");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o vlasniku zadanog kolaterala.
+     * @param collData objekt s podacima o kolateralu
+     */
+    public void selectCollateralOwner(CollateralData collData) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BOA21.selectCollateralOwner");
+            
+            #sql [connCtx] {
+                SELECT b.name
+                INTO :(collData.coll_owner_name)
+                FROM coll_owner a
+                INNER JOIN customer b ON a.cus_id = b.cus_id
+                WHERE a.col_hea_id = :(collData.col_hea_id) 
+                  AND a.main_owner = 'D'
+                  AND CURRENT DATE BETWEEN a.date_from AND a.date_until 
+                FETCH FIRST ROW ONLY 
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                batchContext.error("Greska kod dohvata vlasnika kolaterala " + collData.col_num + "!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BOA21.selectCollateralOwner");
+        }
+    }
+    
+    
+    /**
+     * Metoda ispituje da li je prva aktivna RBA hipoteka zadanog kolaterala povezana na plasman èiji je vlasnik komitent B2 asset klase 1 ili 36.
+     * @param col_hea_id ID kolaterala
+     */
+    public String selectRetailPlacementOwner(BigDecimal col_hea_id) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BOA21.selectRetailPlacementOwner");
+            
+            // prva aktivna RBA hipoteka na zadanom kolateralu
+            BigDecimal coll_hf_prior_id = null;
+            String hf_priority = null;
+            #sql [connCtx] {
+                SELECT coll_hf_prior_id, hf_priority
+                INTO :(coll_hf_prior_id), :(hf_priority)
+                FROM coll_hf_prior
+                WHERE hf_coll_head_id = :(col_hea_id)
+                  AND hf_status = 'A'
+                  AND hf_own_cus_id = 8218251
+                ORDER BY hf_priority
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            // da li postoji fizièka osoba vlasnik plasmana povezanog na hipoteku
+            String owner_name = null, owner_register_no = null, cus_acc_no = null;
+            #sql [connCtx] {
+                SELECT c.name, c.register_no, e.cus_acc_no
+                INTO :(owner_name), :(owner_register_no), :(cus_acc_no)
+                FROM loan_beneficiary l
+                INNER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                INNER JOIN customer c ON e.cus_id = c.cus_id
+                WHERE l.coll_hf_prior_id = :(coll_hf_prior_id)
+                  AND l.status = 'A'
+                  AND c.basel_cus_type IN ('1','36')
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            
+            return "hipoteka #" + hf_priority + " -> plasman " + cus_acc_no + " -> vlasnik plasmana " + owner_register_no + " " + owner_name;
+        }
+        catch (SQLException ex)
+        {
+            if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                batchContext.error("Greska kod ispitivanja da li polica osiguranja pripada Retailu!", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BOA21.selectRetailPlacementOwner");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa plasmane povezane na zadani kolateral.
+     * @return Iterator.
+     */
+    public IterPl selectPlacements(String cust_type, CollateralData collData) throws Exception
+    {
+        try
+        {
+            batchContext.startStopWatch("BOA21.selectPlacements");
+            
+            IterPl iter = null;
+            #sql [connCtx] iter = {
+                SELECT DISTINCT 
+                    c.register_no, 
+                    c.name, 
+                    e.cus_acc_no, 
+                    e.cus_acc_orig_st
+                FROM coll_hf_prior h
+                INNER JOIN loan_beneficiary l ON (h.coll_hf_prior_id = l.coll_hf_prior_id AND l.status = 'A')
+                INNER JOIN cusacc_exposure e ON (l.la_acc_id = e.cus_acc_id OR l.acc_no = e.cus_acc_no OR l.request_no = e.request_no)
+                INNER JOIN customer c ON e.cus_id = c.cus_id
+                WHERE h.hf_coll_head_id = :(collData.col_hea_id)
+                  AND h.hf_status = 'A' 
+                  AND c.basel_cus_type IN ('1','36')
+                WITH UR 
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja plasmana kolaterala " + collData.col_num + "!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BOA21.selectPlacements");
+        }
+    }
+}

@@ -1,0 +1,1304 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from customer_account;
+
+
+select * from turnover;
+
+
+
+select * from batch_log where bat_deF_ID = '1617844003' ORDER BY recording_time desc; -- bn38
+
+		select * from customer_account where ban_pro_typ_id = 6561936704;
+
+		select * from customer_account where cus_acc_id = 52635326;
+
+		--- 1135000650
+
+		SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 52635326 AND ba.cus_id = 417352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 52635326 AND cb.cus_id = 417352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '19.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+
+		 --- blokirani raèun 1135000772
+
+	select * from customer_account where cus_acc_no =  '1135000004'; -- IBM
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 3137830823 AND ba.cus_id = 26738352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 3137830823 AND cb.cus_id = 26738352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '04.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+ select * from customer_account where cus_acc_no =  '1135000772';
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 77393326 AND ba.cus_id = 121406352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 77393326 AND cb.cus_id = 121406352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+ 		
+
+ 		select * from customer_account where cus_acc_no =  '1135000029';  -- nema love
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 3142396823 AND ba.cus_id = 26738352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 3142396823 AND cb.cus_id = 26738352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+ 
+
+	select * from 	CUST_BILL_EXCH order by user_lock desc;
+
+	select ben_reg_no, payer_reg_no from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 	select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status,chg_stat_reason, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 	update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 1317683326;
+
+ 	update CUST_BILL_EXCH set chg_stat_reason = '00' where cus_bil_exc_id = 673934326;
+
+ 	update CUST_BILL_EXCH set maturity_date = '14.01.2016' where cus_bil_exc_id = 673459326;
+
+ 	update CUST_BILL_EXCH set issue_date = '14.01.2016' where cus_bil_exc_id = 673459326;
+
+ 	
+
+ 	update CUST_BILL_EXCH set paid_amount = null where cus_bil_exc_id = 674153326;
+
+	commit;
+
+
+	
+	SET CURRENT_SCHEMA = 'SITP'
+
+select * from customer_account;
+
+
+select * from turnover;
+
+
+
+select * from batch_log where bat_deF_ID = '1617844003' ORDER BY recording_time desc;
+
+		select * from customer_account where ban_pro_typ_id = 6561936704;
+
+		select * from customer_account where cus_acc_id = 52635326;
+
+		--- 1135000650
+
+		SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 52635326 AND ba.cus_id = 417352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 52635326 AND cb.cus_id = 417352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '19.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+
+		 --- blokirani raèun 1135000772
+
+	select * from customer_account where cus_acc_no =  '1135000004'; -- IBM
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 3137830823 AND ba.cus_id = 26738352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 3137830823 AND cb.cus_id = 26738352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '04.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+ select * from customer_account where cus_acc_no =  '1135000772';
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 77393326 AND ba.cus_id = 121406352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 77393326 AND cb.cus_id = 121406352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+
+ 		
+
+ 		select * from customer_account where cus_acc_no =  '1135000029';  -- nema love
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 3142396823 AND ba.cus_id = 26738352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 3142396823 AND cb.cus_id = 26738352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '16.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+ 
+
+	select * from 	CUST_BILL_EXCH order by user_lock desc;
+
+	select ben_reg_no, payer_reg_no from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 	select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status,chg_stat_reason, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 	update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 540659656;
+
+ 	update CUST_BILL_EXCH set chg_stat_reason = '00' where cus_bil_exc_id = 673934326;
+
+ 	update CUST_BILL_EXCH set maturity_date = '14.06.2016' where cus_bil_exc_id = 540659656;
+
+ 	update CUST_BILL_EXCH set issue_date = '14.01.2016' where cus_bil_exc_id = 673459326;
+
+ 	
+
+ 	update CUST_BILL_EXCH set paid_amount = null where cus_bil_exc_id = 674153326;
+
+	commit;
+
+
+		 			SELECT
+                                    fch.fee_cal_hea_id,
+                                    fch.cus_id,
+                                    fch.fee_cur_id,
+                                    c.name,
+                                    c.code,
+                                    c.register_no,
+                                    fch.total_fee_amount,
+                                    cur.code_num,
+                                    fch.amo_type,
+                                    fch.starting_date,
+                                    fch.closing_date,
+                                    fc.fee_cod_dsc,
+                                    ca.cus_acc_no
+                                FROM
+                                    fee_calc_head fch,
+                                    customer c,
+                                    currency cur,
+                                    fee_code fc,
+                                    customer_account ca
+                                WHERE
+                                    fch.cus_id=c.cus_id
+                                AND
+                                    fch.fee_cur_id=cur.cur_id
+                                AND
+                                    fch.fee_cod_id=fc.fee_cod_id
+                                AND
+                                    c.cus_id = ca.cus_id 
+                                AND
+                                    c.cus_id = :(d.cus_id)
+                                AND
+                                    ca.cus_acc_id = :(d.cus_acc_id)
+                                AND 
+                                    fch.module_name = :(d.moduleName)
+                                AND 
+                                    :(d.txtDate)  BETWEEN    fch.starting_date AND  fch.closing_date
+                                ORDER BY
+                                    fch.closing_date DESC
+
+
+			select * from fee_calc_head;
+
+
+				SELECT
+                                    fch.fee_cal_hea_id,
+                                    fch.cus_id,
+                                    fch.fee_cur_id,
+                                    c.name,
+                                    c.code,
+                                    c.register_no,
+                                    fch.total_fee_amount,
+                                    cur.code_num,
+                                    fch.amo_type,
+                                    fch.starting_date,
+                                    fch.closing_date,
+                                    fc.fee_cod_dsc,
+                                    ca.cus_acc_no
+                                FROM
+                                    fee_calc_head fch,
+                                    customer c,
+                                    currency cur,
+                                    fee_code fc,
+                                    customer_account ca
+                                WHERE
+                                    fch.cus_id=c.cus_id
+                                AND
+                                    fch.fee_cur_id=cur.cur_id
+                                AND
+                                    fch.fee_cod_id=fc.fee_cod_id
+                                AND
+                                    c.cus_id = ca.cus_id 
+                                AND
+                                    c.cus_id =  26738352
+					   AND
+					   	    fch.amo_type = '603'
+                                    
+                                AND
+                                    ca.cus_acc_id = :(d.cus_acc_id)
+                                AND 
+                                    fch.module_name = :(d.moduleName)
+                                AND 
+                                    :(d.txtDate)  BETWEEN    fch.starting_date AND  fch.closing_date
+                                ORDER BY
+                                    fch.closing_date DESC
+
+
+
+                                    	SELECT
+                                    fch.fee_cal_hea_id,
+                                    fch.cus_id,
+                                    fch.fee_cur_id,
+                                    c.name,
+                                    c.code,
+                                    c.register_no,
+                                    fch.total_fee_amount,
+                                    cur.code_num,
+                                    fch.amo_type,
+                                    fch.starting_date,
+                                    fch.closing_date,
+                                    fc.fee_cod_dsc,
+                                    ca.cus_acc_no
+                                FROM
+                                    fee_calc_head fch,
+                                    customer c,
+                                    currency cur,
+                                    fee_code fc,
+                                    customer_account ca
+                                WHERE
+                                    fch.cus_id=c.cus_id
+                                AND
+                                    fch.fee_cur_id=cur.cur_id
+                                AND
+                                    fch.fee_cod_id=fc.fee_cod_id
+                                AND
+                                    c.cus_id = ca.cus_id 
+                                AND
+                                    c.cus_id =  26738352
+                               AND(  (1=0) OR (fch.amo_type like '603')      )  
+
+						  AND ( (1=0) OR   ( fch.fee_cur_id = 63999)  )
+                                   
+
+
+
+                                  
+				SELECT
+                                    fch.fee_cal_hea_id,
+                                    fch.cus_id,
+                                    fch.fee_cur_id,
+                                    c.name,
+                                    c.code,
+                                    c.register_no,
+                                    fch.total_fee_amount,
+                                    cur.code_num,
+                                    fch.amo_type,
+                                    fch.starting_date,
+                                    fch.closing_date,
+                                    fc.fee_cod_dsc,
+                                    ca.cus_acc_no
+                                FROM
+                                    fee_calc_head fch,
+                                    customer c,
+                                    currency cur,
+                                    fee_code fc,
+                                    customer_account ca
+                                WHERE
+                                    fch.cus_id=c.cus_id
+                                AND
+                                    fch.fee_cur_id=cur.cur_id
+                                AND
+                                    fch.fee_cod_id=fc.fee_cod_id
+                                AND
+                                    c.cus_id = ca.cus_id 
+                                AND
+                                    c.cus_id =  26738352
+					   AND
+					   	    fch.amo_type = '603'
+					  
+					   	    
+
+
+                                    -----
+
+                                    select * from fee_calc_item
+
+
+                                    SELECT
+					fp.sw_msg_typ_code,
+					'OUR'  option,
+					fp.foreign_reference,
+					fp.order_trn,
+					t.value_date,
+					c.code_num,
+					fci.trx_amount,
+					fci.fee_amount  
+				FROM
+					paym_cover pc,
+					currency c,
+					f_payment fp,
+					fee_calc_item fci LEFT OUTER JOIN turnover t
+						ON	t.tur_id=fci.tur_id
+				WHERE
+					fci.pay_cov_id=pc.pay_cov_id
+				AND
+					pc.f_pay_id=fp.f_pay_id
+				AND
+					c.cur_id=fci.trx_cur_id
+				AND
+					fci.fee_cal_hea_id =  :(fee_cal_hea_id)
+				AND
+					fci.fee_status is null
+				ORDER by
+					fci.fee_amount, 
+					t.value_date
+
+
+
+					
+
+
+		select * from BATCH_LOG where bat_Def_id = 1592758003;
+
+		select * from BATCH_LOG where bat_Def_id = 1592758003 order by user_lock desc;
+
+		-----------------------------------------------------------------------------------------------------------
+		select * from batch_def where bat_Def_id = 1592758003; -- bf94: Generiranje CSV datoteke za specifikaciju obraèuna naknade
+
+		select * from fee_calc_head
+
+		select * from fee_calc_item  -- ima vezu na fee_calc_head
+
+					SELECT
+							cus_id,
+							cus_let_typ_id,
+							fee_met_sch_id,
+							freq_code,
+							starting_date,
+							closing_date,
+							fee_cur_id,
+							total_fee_amount,
+							posting_eve_id,
+							amo_type				
+					FROM
+							fee_calc_head
+					WHERE
+							fee_cal_hea_id = 399455579
+
+				--------------  obrada trenutna
+
+				SELECT btc.ban_tar_user_code FROM fee_calc_item fci, BANK_TARIFF_CODE btc
+					where fci.ban_tar_code = btc.ban_tar_code
+
+			SELECT
+					fp.sw_msg_typ_code,
+					'OUR'  option,
+					fp.foreign_reference,
+					fp.order_trn,
+					t.value_date,
+					c.code_num,
+					fci.trx_amount,
+					fci.fee_amount,
+					btc.ban_tar_user_code  
+				FROM
+					paym_cover pc,
+					currency c,
+					f_payment fp,
+					fee_calc_item fci
+					LEFT OUTER JOIN turnover t
+						ON	t.tur_id=fci.tur_id
+					 left outer join BANK_TARIFF_CODE btc on fci.ban_tar_code = btc.ban_tar_code	
+				WHERE
+					fci.pay_cov_id=pc.pay_cov_id
+				AND
+					pc.f_pay_id=fp.f_pay_id
+				AND
+					c.cur_id=fci.trx_cur_id
+				AND
+					fci.fee_cal_hea_id = 433552005
+				AND
+					fci.fee_status is null
+				ORDER by
+					fci.fee_amount, 
+					t.value_date
+
+
+				--------------  obrada dorada
+
+			SELECT
+					fp.sw_msg_typ_code,
+					'OUR'  option,
+					fp.foreign_reference,
+					fp.order_trn,
+					t.value_date,
+					c.code_num,
+					fci.trx_amount,
+					fci.fee_amount  
+				FROM
+					paym_cover pc,
+					currency c,
+					f_payment fp,
+					fee_calc_item fci LEFT OUTER JOIN turnover t
+						ON	t.tur_id=fci.tur_id
+				WHERE
+					fci.pay_cov_id=pc.pay_cov_id
+				AND
+					pc.f_pay_id=fp.f_pay_id
+				AND
+					c.cur_id=fci.trx_cur_id
+				AND
+					fci.fee_cal_hea_id = 433552005
+				AND
+					fci.fee_status is null
+				ORDER by
+					fci.fee_amount, 
+					t.value_date
+							
+		
+
+						SELECT
+					fp.sw_msg_typ_code,
+					'OUR'  option,
+					fp.foreign_reference,
+					fp.order_trn,
+					t.value_date,
+					c.code_num,
+					fci.trx_amount,
+					fci.fee_amount,
+					btc.ban_tar_user_code ,
+					fci.fee_cal_hea_id 
+				FROM
+					paym_cover pc,
+					currency c,
+					f_payment fp,
+					fee_calc_item fci
+					LEFT OUTER JOIN turnover t
+						ON	t.tur_id=fci.tur_id
+					 left outer join BANK_TARIFF_CODE btc on fci.ban_tar_code = btc.ban_tar_code	
+				WHERE
+					fci.pay_cov_id=pc.pay_cov_id
+				AND
+					pc.f_pay_id=fp.f_pay_id
+				AND
+					c.cur_id=fci.trx_cur_id
+
+		select * from fee_calc_head where fee_cal_hea_id = 758878005
+
+		select * from fee_calc_item where fee_cal_hea_id = 758878005
+				
+
+
+				SELECT
+										fci.fee_cal_ite_id,
+										fci.pay_cov_id,
+										fp.f_pay_id,
+										fci.trx_cur_id,
+										fp.order_trn,
+										fci.trx_amount,
+										c.code_num,
+										fci.fee_amount,
+										fci.tur_id,
+										t.process_date,
+										fci.fee_status
+								FROM
+										paym_cover pc,
+										currency c,
+										f_payment fp,
+										fee_calc_item fci
+								LEFT OUTER JOIN
+										turnover t
+								ON
+										t.tur_id=fci.tur_id
+								WHERE
+								
+							
+										fci.fee_cal_hea_id=3012173335
+								ORDER BY
+										fp.f_pay_id
+
+
+
+				3012173335
+
+
+								SELECT
+										fci.fee_cal_ite_id,
+										fci.pay_cov_id,
+										
+										fci.trx_cur_id,
+										
+										fci.trx_amount,
+										c.code_num,
+										fci.fee_amount,
+										fci.tur_id,
+										t.process_date,
+										fci.fee_status,
+										pc.f_pay_id
+										
+								FROM
+										paym_cover pc,
+										currency c,
+									
+										fee_calc_item fci
+								LEFT OUTER JOIN
+										turnover t
+								ON
+										t.tur_id=fci.tur_id
+								WHERE
+										fci.pay_cov_id=pc.pay_cov_id							
+							
+								AND		c.cur_id=fci.trx_cur_id										
+								AND		fci.fee_cal_hea_id = 3012173335			
+
+
+
+						FROM
+										paym_cover pc,
+										currency c,
+										f_payment fp,
+										fee_calc_item fci
+								LEFT OUTER JOIN
+										turnover t
+								ON
+										t.tur_id=fci.tur_id
+								WHERE
+										fci.pay_cov_id=pc.pay_cov_id
+								AND
+										pc.f_pay_id=fp.f_pay_id
+								AND
+										c.cur_id=fci.trx_cur_id
+								AND
+										fci.fee_cal_hea_id=:(d.feecalcreportdatafetch.fee_cal_hea_id)
+								ORDER BY
+										fp.f_pay_id
+
+
+
+
+								 FROM
+                                    paym_cover pc,
+                                    currency c,
+                                    payment_order po,
+                                    fee_calc_item fci
+                            LEFT OUTER JOIN
+                                    turnover t
+                            ON
+                                    t.tur_id=fci.tur_id
+                            WHERE
+                                    fci.pay_cov_id=pc.pay_cov_id
+                            AND
+                                    (pc.pay_ord_id = po.pay_ord_id AND pc.f_pay_id IS NULL)
+                            AND
+                                    c.cur_id=fci.trx_cur_id
+                            AND
+                                    fci.fee_cal_hea_id=:(d.feecalcitemreportselect.fee_cal_hea_id)
+                    ORDER BY
+                                    pay_id
+
+
+				---------------- CF593 
+
+				select * from fee_calc_item where fee_cal_hea_id=  3012173335
+
+				select * from BANK_TARIFF_CODE
+
+					SELECT btc.ban_tar_user_code FROM fee_calc_item fci, BANK_TARIFF_CODE btc
+					where fci.ban_tar_code = btc.ban_tar_code
+
+					
+								SELECT
+							fch.cus_id,
+							fch.cus_let_typ_id,
+							fch.fee_met_sch_id,
+							fch.freq_code,
+							fch.starting_date,
+							fch.closing_date,
+							fch.fee_cur_id,
+							fch.total_fee_amount,
+							fch.posting_eve_id,
+							fch.amo_type,
+							btc.ban_tar_user_code
+											
+					FROM
+							fee_calc_head fch, fee_calc_item fci, BANK_TARIFF_CODE btc
+					WHERE
+							fch.fee_cal_hea_id  =  3012173335
+							AND fci.fee_cal_hea_id =  fch.fee_cal_hea_id							
+							AND 	 fci.ban_tar_code = btc.ban_tar_code	
+
+
+							-------------------------------------
+						SELECT
+                    fch.fee_cal_hea_id,
+                    fch.cus_id,
+                    fch.fee_cur_id,
+                    c.name,
+                    c.code,
+                    c.register_no,
+                    fch.total_fee_amount,
+                    cur.code_num,
+                    fch.amo_type,
+                    fch.starting_date,
+                    fch.closing_date,
+                    fc.fee_cod_dsc,
+                    ca.cus_acc_no,                  
+				btc.ban_tar_user_code
+                FROM
+                    fee_calc_head fch,
+                    customer c,
+                    currency cur,
+                    fee_code fc,
+                    customer_account ca,
+                    fee_calc_item fci,
+                    BANK_TARIFF_CODE btc
+                WHERE
+                    fch.cus_id=c.cus_id
+                AND
+                    fch.fee_cur_id=cur.cur_id
+                AND
+                    c.cus_id = ca.cus_id
+                AND
+                    fch.fee_cod_id=fc.fee_cod_id
+                AND 
+                    fci.fee_cal_hea_id =  fch.fee_cal_hea_id							
+			AND 	 
+			     fci.ban_tar_code = btc.ban_tar_code	    
+                ORDER BY
+                    fch.closing_date DESC
+
+
+							-----------------------------------------
+
+										
+									SELECT
+						*					
+					FROM
+							fee_calc_head
+					WHERE
+							fee_cal_hea_id=  3012173335	
+
+
+						SELECT
+						*					
+					FROM
+							fee_calc_item
+					WHERE
+							fee_cal_hea_id=  3012173335				
+
+
+
+
+											SELECT
+                            fch.fee_cal_hea_id,
+                            fch.cus_id,
+                            fch.fee_cur_id,
+                            c.name,
+                            c.code,
+                            c.register_no,
+                            fch.total_fee_amount,
+                            cur.code_num,
+                            fch.amo_type,
+                            fch.starting_date,
+                            fch.closing_date,
+                            fc.fee_cod_dsc,
+                            ca.cus_acc_no,
+                            btc.ban_tar_user_code
+                        FROM
+                            fee_calc_head fch,
+                            customer c,
+                            currency cur,
+                            fee_code fc,
+                            customer_account ca,
+                            fee_calc_item fci,
+                            bank_tariff_code btc
+                        WHERE
+                            fch.cus_id=c.cus_id
+                        AND
+                            fch.fee_cur_id=cur.cur_id
+                        AND
+                            fch.fee_cod_id=fc.fee_cod_id
+
+
+
+                                 SELECT
+                                    fch.fee_cal_hea_id,
+                                    fch.cus_id,
+                                    fch.fee_cur_id,
+                                    c.name,
+                                    c.code,
+                                    c.register_no,
+                                    fch.total_fee_amount,
+                                    cur.code_num,
+                                    fch.amo_type,
+                                    fch.starting_date,
+                                    fch.closing_date,
+                                    fc.fee_cod_dsc,
+                                    ca.cus_acc_no,
+                                    btc.ban_tar_user_code
+                                FROM
+                                    fee_calc_head fch,
+                                    customer c,
+                                    currency cur,
+                                    fee_code fc,
+                                    customer_account ca,
+                                    fee_calc_item fci,
+                                    bank_tariff_code btc
+                                WHERE
+                                    fch.cus_id=c.cus_id
+                                AND
+                                    fch.fee_cur_id=cur.cur_id
+                                AND
+                                    fch.fee_cod_id=fc.fee_cod_id
+                                AND 
+                                    fci.fee_cal_hea_id =  fch.fee_cal_hea_id                            
+                                AND      
+                                    fci.ban_tar_code = btc.ban_tar_code
+                                AND
+                                    c.cus_id = ca.cus_id
+
+
+
+
+										 SELECT
+                    fch.fee_cal_hea_id,
+                    fch.cus_id,
+                    fch.fee_cur_id,
+                    c.name,
+                    c.code,
+                    c.register_no,
+                    fch.total_fee_amount,
+                    cur.code_num,
+                    fch.amo_type,
+                    fch.starting_date,
+                    fch.closing_date,
+                    fc.fee_cod_dsc,
+                    ca.cus_acc_no,
+                    fee_calc_item fci,
+                    btc.ban_tar_user_code
+                FROM
+                    fee_calc_head fch,
+                    customer c,
+                    currency cur,
+                    fee_code fc,
+                    customer_account ca,
+                    fee_calc_item fci,
+                    bank_tariff_code btc
+
+                    
+                WHERE
+                    fch.cus_id=c.cus_id
+                AND
+                    fch.fee_cur_id=cur.cur_id
+                AND
+                    c.cus_id = ca.cus_id                  
+                AND
+                    fch.fee_cod_id=fc.fee_cod_id
+                AND 
+                    fci.fee_cal_hea_id =  fch.fee_cal_hea_id                            
+                AND      
+                   fci.ban_tar_code = btc.ban_tar_code
+
+
+
+						-- prvi SQL 
+
+                            SELECT
+                                    fci.fee_cal_ite_id,
+                                    fci.pay_cov_id,
+                                    fp.f_pay_id   pay_id,
+                                    fci.trx_cur_id,
+                                    fp.order_trn,
+                                    fci.trx_amount,
+                                    c.code_num,
+                                    fci.fee_amount,
+                                    fci.tur_id,
+                                    t.process_date,
+                                    fci.fee_status,
+                                    btc.ban_tar_user_code
+                            FROM
+                                    paym_cover pc,
+                                    currency c,
+                                    f_payment fp,
+                                    bank_tariff_code btc,
+                                    fee_code fc,
+                                    fee_calc_head fch,
+                                    fee_calc_item fci                                                                      
+                            LEFT OUTER JOIN
+                                    turnover t
+                            ON
+                                    t.tur_id=fci.tur_id
+                            WHERE
+                                    fci.pay_cov_id=pc.pay_cov_id
+                            AND
+                                    (pc.f_pay_id=fp.f_pay_id AND pc.pay_ord_id IS NULL)  
+                            AND
+                                    c.cur_id=fci.trx_cur_id
+                            AND
+                    			fch.fee_cod_id=fc.fee_cod_id
+                	       AND 
+                    		fci.fee_cal_hea_id =  fch.fee_cal_hea_id    
+
+
+                    		                                  
+                    UNION
+
+                    
+                            SELECT
+                                    fci.fee_cal_ite_id,
+                                    fci.pay_cov_id,
+                                    po.pay_ord_id   pay_id,
+                                    fci.trx_cur_id,
+                                    po.order_trn,
+                                    fci.trx_amount,
+                                    c.code_num,
+                                    fci.fee_amount,
+                                    fci.tur_id,
+                                    t.process_date,
+                                    fci.fee_status,
+                                    btc.ban_tar_user_code
+                            FROM
+                                    paym_cover pc,
+                                    currency c,
+                                    payment_order po,
+                                    fee_code fc,
+                                    bank_tariff_code btc,
+                                    fee_calc_head fch,
+                                    fee_calc_item fci
+                            LEFT OUTER JOIN
+                                    turnover t
+                            ON
+                                    t.tur_id=fci.tur_id
+                            WHERE
+                                    fci.pay_cov_id=pc.pay_cov_id
+                            AND
+                                    (pc.pay_ord_id = po.pay_ord_id AND pc.f_pay_id IS NULL)
+                            AND
+                                    c.cur_id=fci.trx_cur_id 
+					   AND
+                    			fch.fee_cod_id=fc.fee_cod_id
+                	       AND 
+                    		fci.fee_cal_hea_id =  fch.fee_cal_hea_id 	
+                                                            
+                          ORDER BY
+                                    pay_id
+
+
+
+                                    3012173335
+
+
+
+
+                              SELECT
+                                    fci.fee_cal_ite_id,
+                                    fci.pay_cov_id,
+                                    fp.f_pay_id   pay_id,
+                                    fci.trx_cur_id,
+                                    fp.order_trn,
+                                    fci.trx_amount,
+                                    c.code_num,
+                                    fci.fee_amount,
+                                    fci.tur_id,
+                                    t.process_date,
+                                    fci.fee_status,
+                                    btc.ban_tar_user_code
+                            FROM
+                                    paym_cover pc,
+                                    currency c,
+                                    f_payment fp,
+                                    bank_tariff_code btc,
+                                    fee_calc_item fci
+                            LEFT OUTER JOIN
+                                    turnover t
+                            ON
+                                    t.tur_id=fci.tur_id
+                            WHERE
+                                    fci.pay_cov_id=pc.pay_cov_id
+                            AND
+                                    (pc.f_pay_id=fp.f_pay_id AND pc.pay_ord_id IS NULL) 
+                           AND      
+                 			fci.ban_tar_code = btc.ban_tar_code            
+                            AND
+                                    c.cur_id=fci.trx_cur_id
+                            AND
+                                  fci.fee_cal_hea_id=  3012173335
+                    UNION
+                            SELECT
+                                    fci.fee_cal_ite_id,
+                                    fci.pay_cov_id,
+                                    po.pay_ord_id   pay_id,
+                                    fci.trx_cur_id,
+                                    po.order_trn,
+                                    fci.trx_amount,
+                                    c.code_num,
+                                    fci.fee_amount,
+                                    fci.tur_id,
+                                    t.process_date,
+                                    fci.fee_status,
+                                    btc.ban_tar_user_code
+                            FROM
+                                    paym_cover pc,
+                                    currency c,
+                                    payment_order po,
+                                    bank_tariff_code btc,
+                                    fee_calc_item fci
+                                    
+                            LEFT OUTER JOIN
+                                    turnover t
+                            ON
+                                    t.tur_id=fci.tur_id
+                            WHERE
+                                    fci.pay_cov_id=pc.pay_cov_id
+                            AND
+                                    (pc.pay_ord_id = po.pay_ord_id AND pc.f_pay_id IS NULL)
+                            AND
+                                    c.cur_id=fci.trx_cur_id
+                            AND      
+                 			fci.ban_tar_code = btc.ban_tar_code        
+                            AND
+                                   fci.fee_cal_hea_id=3012173335
+                        ORDER BY
+                                    pay_id  
+
+
+
+
+			--------------------------------
+
+			SELECT org_uni_id, code,name FROM organization_unit
+			
+			
+			WHERE RTRIM(name) LIKE ? AND ? BETWEEN opening_date AND closing_date  [%, 2016-07-04]
+
+
+			-------------------------
+
+			select * from sms_log order by user_lock desc;
+			
+
+
+			         SELECT
+                                    fch.fee_cal_hea_id,
+                                    fch.cus_id,
+                                    fch.fee_cur_id,
+                                    c.name,
+                                    c.code,
+                                    c.register_no,
+                                    fch.total_fee_amount,
+                                    cur.code_num,
+                                    fch.amo_type,
+                                    fch.starting_date,
+                                    fch.closing_date,
+                                    fc.fee_cod_dsc,
+                                    ca.cus_acc_no,
+                                    btc.ban_tar_user_code
+                                FROM
+                                    fee_calc_head fch,
+                                    customer c,
+                                    currency cur,
+                                    fee_code fc,
+                                    customer_account ca,
+                                    fee_calc_item fci,
+                                    bank_tariff_code btc
+                                WHERE
+                                    fch.cus_id=c.cus_id
+                                AND
+                                    fch.fee_cur_id=cur.cur_id
+                                AND
+                                    fch.fee_cod_id=fc.fee_cod_id
+                                AND
+                                    c.cus_id = ca.cus_id 
+                                AND 
+                                    fci.fee_cal_hea_id =  fch.fee_cal_hea_id                            
+                                AND      
+                                    fci.ban_tar_code = btc.ban_tar_code
+                                AND
+                                    c.cus_id = :(d.cus_id)
+                                AND
+                                    ca.cus_acc_id = :(d.cus_acc_id)
+                                AND 
+                                    fch.module_name = :(d.moduleName)
+                                AND   
+                                    (0=0 OR (fch.amo_type like :(VI))  )
+                                AND 
+                                    (0=0 OR (fch.fee_cur_id = :(cur_id))  )
+                                AND 
+                                    :(d.txtDate)  BETWEEN    fch.starting_date AND  fch.closing_date
+                                ORDER BY
+                                    fch.closing_date DESC
+
+
+
+                                  SELECT
+                                    fch.fee_cal_hea_id,
+                                    fch.cus_id,
+                                    fch.fee_cur_id,
+                                    c.name,
+                                    c.code,
+                                    c.register_no,
+                                    fch.total_fee_amount,
+                                    cur.code_num,
+                                    fch.amo_type,
+                                    fch.starting_date,
+                                    fch.closing_date,
+                                    fc.fee_cod_dsc,
+                                    ca.cus_acc_no,
+                                    btc.ban_tar_user_code
+                                FROM
+                                    fee_calc_head fch,
+                                    customer c,
+                                    currency cur,
+                                    fee_code fc,
+                                    customer_account ca,
+                                    fee_calc_item fci,
+                                    bank_tariff_code btc
+                                WHERE
+                                    fch.cus_id=c.cus_id
+                                AND
+                                    fch.fee_cur_id=cur.cur_id
+                                AND
+                                    fch.fee_cod_id=fc.fee_cod_id
+                                AND
+                                    c.cus_id = ca.cus_id 
+                                AND 
+                                    fci.fee_cal_hea_id =  fch.fee_cal_hea_id                            
+                                AND      
+                                    fci.ban_tar_code = btc.ban_tar_code
+                                AND
+                                    c.cus_id = 26738352
+                                AND
+                                    ca.cus_acc_id = 62780022
+                                AND 
+                                    fch.module_name ='PAY'                         
+
+                              AND(
+                              		(    fch.starting_date >= '01.01.2016' AND fch.closing_date <= '30.06.2016')
+                              	OR 
+                              		( fch.closing_date >= '30.06.2016' AND fch.starting_date <= '01.02.2016')
+                              	) 
+                                   
+                                ORDER BY
+                                    fch.closing_date DESC
+
+-----------------------------------------------------------------------------------------------------------------------------------
+                                    
+			      AND 
+                                   '01.06.2016'  BETWEEN    fch.starting_date AND  fch.closing_date
+						  AND 
+                                   '30.06.2016'  BETWEEN    fch.starting_date AND  fch.closing_date
+
+
+
+                                   
+select * from batch_def where bat_Def_id = 1617844003;
+
+select * from batch_log where bat_Def_id = 332214327;
+
+select * from batch_log where bat_Def_id = 344447327
+
+select * from batch_log where bat_Def_id = 1617844003 and exec_Status = 'D';
+
+select * from batch_log where exec_Status = 'D';
+
+
+
+select * from customer_account;
+
+
+select * from citizen;
+
+select * from citizen where employee_flag = '1';  -- zaposelnik banke
+
+select * from CUSTOMER_ACCOUNT where cus_id = 30531934;   -- BRANKA VILET 3205002819
+
+
+		select * from customer_account where cus_acc_no = '1135006530'; -- cus_id 148221330
+
+		select * from customer_account where cus_acc_no = '1135003393'; -- cus_acc_id = 338852326  cus_id 16,062,352
+
+		select * from customer where cus_id = 16062352;
+
+		--- provjera stanja za oba raèuna  ---------
+
+		
+				  SELECT               
+                   *              
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id IN (338852326,  338410326 )
+                   AND pro_typ_id IN (42999, 36999) 
+                   and cur_id = 63999
+
+		------------  provjera   ----------
+			 SELECT
+                        cbs.cus_id
+                        , c.register_no
+                        , cbs.cus_ban_subserv_id
+                        , ca.cus_acc_id
+                        , ca.cus_acc_no
+                        , ca.ban_pro_typ_id
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c ,                    
+                        customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+                        AND cbs.status = '2'
+                        AND cbs.cus_id = ca.cus_id
+                        AND c.cus_id = ca.cus_id
+                        AND cbs.cus_id = ca.cus_id
+                        AND c.cus_id = 16062352
+                        AND ca.cus_acc_status  IN ('A','B') 
+                        AND current_date >= cbs.date_from AND current_date <= cbs.date_until
+                        AND ca.ban_rel_typ_id in  
+                                                 ( 
+                                                    SELECT ban_rel_typ_id 
+                                                    FROM bank_relation_type 
+                                                    WHERE  ban_rel_type IN 
+                                                                            ( SELECT sys_code_value 
+                                                                               FROM system_code_value
+                                                                                WHERE sys_cod_id = 'sms_brt_pay') )
+                        AND cbs.bank_sign = 'RB'
+
+		------------ kraj provjere ----------
+
+		
+				  SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 338852326
+                   AND pro_typ_id IN (42999, 36999) 
+
+		cus_acc_id = 338852326
+
+		cus_acc_id = 338410326
+
+		  SELECT
+                        cbs.cus_id
+                        , c.register_no
+                        , cbs.cus_ban_subserv_id
+                        , ca.cus_acc_id
+                        , ca.cus_acc_no
+                        , ca.ban_pro_typ_id
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c ,                    
+                        customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+                        AND cbs.status = '2'
+                        AND cbs.cus_id = ca.cus_id
+                        AND c.cus_id = ca.cus_id
+                        AND cbs.cus_id = ca.cus_id
+                        AND ca.cus_acc_status  IN ('A','B') 
+                        AND current_date >= cbs.date_from AND current_date <= cbs.date_until
+                        AND ca.ban_rel_typ_id in  
+                                                 ( 
+                                                    SELECT ban_rel_typ_id 
+                                                    FROM bank_relation_type 
+                                                    WHERE  ban_rel_type IN 
+                                                                            ( SELECT sys_code_value 
+                                                                               FROM system_code_value
+                                                                                WHERE sys_cod_id = 'sms_brt_pay') )
+                        AND cbs.bank_sign = 'RB'
+
+
+		select  * from turnover order by SYSTEM_TIMESTAMP desc;
+
+		select  * from TURN_CUSTOMER order by PROCESS_TIMESTAMP desc;
+
+		select * from sms_log;
+
+
+
+
+
+
+
+
+		-- bn38 provjera podataka na SIDEV-u
+
+
+		  SELECT
+                        cbs.cus_id
+                        , c.register_no
+                        , cbs.cus_ban_subserv_id
+                        , ca.cus_acc_id
+                        , ca.cus_acc_no
+                        , ca.ban_pro_typ_id
+                    FROM
+                        cusacc_ban_subserv cbs,
+                        customer c ,                    
+                        customer_account ca
+                    WHERE
+                        cbs.ban_sub_typ_id = 23053019
+                        AND cbs.status = '2'
+                        AND cbs.cus_id = ca.cus_id
+                        AND c.cus_id = ca.cus_id
+                        AND cbs.cus_id = ca.cus_id
+                        AND ca.cus_acc_status  IN ('A','B') 
+                        AND current_date >= cbs.date_from AND current_date <= cbs.date_until
+                        AND ca.ban_rel_typ_id in  
+                                                 ( 
+                                                    SELECT ban_rel_typ_id 
+                                                    FROM bank_relation_type 
+                                                    WHERE  ban_rel_type IN 
+                                                                            ( SELECT sys_code_value 
+                                                                               FROM system_code_value
+                                                                                WHERE sys_cod_id = 'sms_brt_pay') )
+                        AND cbs.bank_sign = 'RB'
+
+
+					select * from customer_account where cus_acc_id = 436979326; -- 1135004216
+
+                           SELECT
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id ,
+                       t.tur_id,
+                       t.pay_ord_id
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc                      
+                    WHERE
+                    tc.tur_id = t.tur_id                   
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = 436979326
+				  AND tc.process_timestamp >= '2016-07-01 16:49:24.610223'
+                    AND tc.process_timestamp <= '2016-07-08 10:50:20.825153' 
+                      AND t.process_timestamp >= '2016-07-07 16:49:24.610223' 
+                        AND t.process_timestamp <= '2016-07-08 10:50:20.825153'  
+				  ORDER BY tc.process_timestamp desc  with ur 
+
+                    
+                    AND tc.process_timestamp >= '2016-07-01 16:49:24.610223'
+                    AND tc.process_timestamp <= '2016-07-08 09:50:20.825153'
+
+                    
+                    AND t.process_timestamp >= 
+                    
+                    AND t.process_timestamp <= 
+                  ORDER BY tc.process_timestamp ASC  with ur 
+
+
+
+                     AND tc.process_timestamp >= '2016-07-07 16:49:24.610223'
+                    AND t.process_timestamp >= '2016-07-07 16:49:24.610223'  
+                    AND tc.process_timestamp <= '2016-07-08 09:50:20.825153'
+                    AND t.process_timestamp <= '2016-07-08 09:50:20.825153'
+
+
+
+				
+		select * from interface_coll_tbl order by recording_time desc;
+
+		select * from interface_coll_tbl 
+				where orig_trx_date between '01.06.2016' and '30.06.2016'
+		order by recording_time desc;
+
+		

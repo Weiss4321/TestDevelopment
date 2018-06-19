@@ -1,0 +1,83 @@
+package hr.vestigo.modules.collateral.jcics.coA9;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+import java.util.Calendar;
+import sqlj.runtime.ref.*;
+
+/**
+ * COA93 transakcija za postavljanje sudužnika u status neaktivan/aktivan
+ *      
+ */
+public class COA93 extends RemoteTransaction {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA9/COA93.sqlj,v 1.2 2012/02/20 13:58:05 hradnp Exp $";
+    public DeclCOA9 decl = null;
+    
+    public COA93 (DeclCOA9 decl) {
+        this.decl = decl;
+    }
+            
+    public void execute(TransactionContext tc) throws Exception {
+
+        ConnCtx ctx = tc.getContext();
+        sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+        int broj = 0;
+        int activeProducts = 0;
+        boolean chg_flag=false;
+
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        Date todaySQLDate = new Date(timeT);
+        
+        Date date_until = (Date)decl.coborrowerupdatem.DATE_UNTIL;
+        Date max_date = Date.valueOf("9999-12-31");
+        
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        //provjera da li je zapis Aktivan (date_until je jednak max_date) ili Neaktivan (inaèe)
+        if(date_until.equals(max_date) ){
+            //zapis je Aktivan - potrebno ga je deaktivirati
+            try{
+                #sql [ctx, exCtx] {UPDATE   loan_coborrower
+                                   SET      date_until=current date - 1 day, 
+                                            use_id=:(decl.coborrowerupdatem.use_id), 
+                                            user_lock=current timestamp
+                                   WHERE    loa_cob_id=:(decl.coborrowerupdatem.LOA_COB_ID)};
+
+                if(exCtx.getUpdateCount()==0){
+                    throw new VestigoTMException(1,"Transaction COA93: Error updating table loan_coborrower","erruptzst2", null);
+                }
+            }catch(java.sql.SQLException se){
+
+                tc.info ( "......COA93.sqlj update  SQL ErrorCode " + se.getErrorCode());
+                tc.info ( "......COA93.sqlj update  SQL SQLState " + se.getSQLState());
+                tc.info ( "......COA93.sqlj update  SQL Message " + se.getMessage());
+                throw new VestigoTMException(1, "Transaction COA93: Error updating  in table loan_coborrower! ","err411a", null);
+            }
+        }else{
+            //zapis je neaktivan - potrebno ga je aktivirati
+            try{
+                #sql [ctx, exCtx] {UPDATE   loan_coborrower
+                                   SET      date_until='9999-12-31', 
+                                            use_id=:(decl.coborrowerupdatem.use_id), 
+                                            user_lock=current timestamp
+                                   WHERE    loa_cob_id=:(decl.coborrowerupdatem.LOA_COB_ID)};
+
+                if(exCtx.getUpdateCount()==0){
+                    throw new VestigoTMException(1,"Transaction COA93: Error updating table loan_coborrower","erruptzst2", null);
+                }
+            }catch(java.sql.SQLException se){
+
+                tc.info ( "......COA93.sqlj update  SQL ErrorCode " + se.getErrorCode());
+                tc.info ( "......COA93.sqlj update  SQL SQLState " + se.getSQLState());
+                tc.info ( "......COA93.sqlj update  SQL Message " + se.getMessage());
+                throw new VestigoTMException(1, "Transaction COA93: Error updating  in table loan_coborrower! ","err411a", null);
+            }
+        }
+    }
+}

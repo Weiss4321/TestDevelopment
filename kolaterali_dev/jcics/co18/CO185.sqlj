@@ -1,0 +1,145 @@
+package hr.vestigo.modules.collateral.jcics.co18;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoyF.YOYF0;
+import hr.vestigo.modules.collateral.common.yoyF.YOYFData;
+
+import java.sql.SQLException;
+
+/**
+ *  * @author hramkr
+ *  	
+ */    
+ 
+  
+    
+public class CO185 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co18/CO185.sqlj,v 1.3 2011/05/18 13:31:59 hrakis Exp $";
+
+	
+	public DeclCO18 decl = null;
+
+
+	
+	public CO185 (DeclCO18 decl) {
+		this.decl = decl;
+	} 
+	 
+
+	
+	public void execute(TransactionContext tc) throws Exception {
+		ConnCtx ctx = tc.getContext();			
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+		 
+		String proc_type = decl.insupolicystatusupdatem.proc_type_flag;
+
+		tc.debug("update za  : "          + decl.insupolicystatusupdatem.IP_ID);
+		tc.debug("proc_type  : "          + decl.insupolicystatusupdatem.proc_type_flag);		
+		tc.debug("premija placena do  : " + decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateUntil);
+		tc.debug("premija placena od  : " + decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateFrom);
+		tc.debug("poluca vrijedi do : "   + decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateSecVal);
+		tc.debug("spec status : "         + decl.insupolicystatusupdatem.IP_SPEC_STAT);
+		
+	    // Saša, 16.5.2011 - FBPr200006766
+        // dohvat starog stanja - za povijest promjena
+        YOYFData data = new YOYFData();
+        data.ip_id = decl.insupolicystatusupdatem.IP_ID;
+        data.use_id = decl.insupolicystatusupdatem.use_id;
+        data.org_uni_id = decl.insupolicystatusupdatem.org_uni_id;
+        YOYF0 yoyF0 = new YOYF0(tc, data);
+        try {
+            yoyF0.selectOldState();
+        }
+        catch(Exception ex) {
+            throw new VestigoTMException(1, "Transaction CO185: insurance policy change history", "err411a", null);
+        }
+		
+		if (proc_type.equalsIgnoreCase("D")) {
+// deaktivacija police osiguranja			
+			try {
+				#sql [ctx]{
+					UPDATE insurance_policy 
+					SET		
+						ip_vali_until =:(decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateUntil),
+						ip_spec_stat  =:(decl.insupolicystatusupdatem.IP_SPEC_STAT),
+						use_id        =:(decl.insupolicystatusupdatem.use_id),
+						user_lock     = current timestamp		
+					WHERE
+						ip_id =:(decl.insupolicystatusupdatem.IP_ID)
+				};   
+
+			} catch(SQLException e) {
+				if (e.getErrorCode()!=100) throw e;
+			}  
+		} else if (proc_type.equalsIgnoreCase("S")) {
+// storno police osiguranja			
+			try {
+				#sql [ctx]{
+					UPDATE insurance_policy 
+					SET		
+						ip_vali_until =:(decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateUntil),
+						ip_spec_stat  =:(decl.insupolicystatusupdatem.IP_SPEC_STAT),
+						use_id        =:(decl.insupolicystatusupdatem.use_id),
+						user_lock     = current timestamp						
+					WHERE
+						ip_id =:(decl.insupolicystatusupdatem.IP_ID)
+				};   
+
+			} catch(SQLException e) {
+				if (e.getErrorCode()!=100) throw e;
+			}			
+		} else if (proc_type.equalsIgnoreCase("A")){
+// aktivacija police osiguranja			
+			try {
+				#sql [ctx]{
+					UPDATE insurance_policy 
+					SET		
+						ip_date_sec_val =:(decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateSecVal),
+						ip_vali_from    =:(decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateFrom),
+						ip_vali_until   =:(decl.insupolicystatusupdatem.InsuPolicyDialog_txtDateUntil),
+						ip_spec_stat    =:(decl.insupolicystatusupdatem.IP_SPEC_STAT),
+						use_id          =:(decl.insupolicystatusupdatem.use_id),
+						user_lock       = current timestamp				
+						
+					WHERE
+						ip_id =:(decl.insupolicystatusupdatem.IP_ID)
+				};   
+
+			} catch(SQLException e) {
+				if (e.getErrorCode()!=100) throw e;
+			}			
+		}
+
+        // Saša, 16.5.2011 - FBPr200006766
+        // dohvat novog stanja i ažuriranje povijesti promjena
+        try {
+            yoyF0.selectNewState();
+            yoyF0.insertIntoIpChgHistory();
+        }
+        catch(Exception ex) {
+            throw new VestigoTMException(1, "Transaction CO185: insurance policy change history", "err411a", null);
+        }
+		
+		
+// dohvatiti novi opis za specijalni status
+		
+		try{
+
+	           #sql [ctx] {
+	                SELECT sys_code_desc
+	                INTO :(decl.insupolicystatusupdatem.InsuPolicyDialog_txtSpecActDes)
+	                FROM system_code_value
+	                WHERE 
+						sys_cod_id = 'clt_pol_spec_st'
+					AND
+						sys_code_value = :(decl.insupolicystatusupdatem.IP_SPEC_STAT)};
+  
+        }catch(SQLException e){
+              if (e.getErrorCode()!=100) throw e;
+        }					
+			
+	}//execute
+ 	 
+}	   
+			

@@ -1,0 +1,155 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+  
+//COLL_HF_PRIOR_LIST
+
+/**
+ * CO0341 class selects all data from table COLL_HF_PRIOR
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+
+#sql iterator Iter1 (	BigDecimal coll_hf_prior_id,
+						BigDecimal hf_hfc_id,
+						String HfHfcIdSCV,
+						String HfHfcSCD,
+						BigDecimal hf_own_cus_id,
+						String hf_register_no,
+						String hf_own_code,
+
+						BigDecimal hf_amount,
+						BigDecimal hf_cur_id,
+						String HfCurIdCChar,
+						Date hf_date_hfc_from,
+						Date hf_date_hfc_until,
+						BigDecimal hf_avail_amo,
+						String hf_priority,
+						BigDecimal hf_coll_head_id, 
+						BigDecimal cus_id_placem,
+						BigDecimal how_cover,
+						String rec_lop,
+						String agreement
+					 );	
+//java.sql.Date hf_date_extract, 
+public class CO341 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co34/CO341.sqlj,v 1.2 2014/07/29 13:37:27 hraskd Exp $";
+	
+	public DeclCO34 d = null;
+	
+	private Iter1 iter1 = null;
+	
+	public CO341 (DeclCO34 d) {
+		this.d = d;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(d.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+		tc.debug("..........d.HF_COL_HEA_ID.....    " + d.HF_COL_HEA_ID);	
+			 
+
+		if(d.HF_COL_HEA_ID != null){			
+			#sql [ctx] iter1 = {
+							SELECT 	chp.coll_hf_prior_id as coll_hf_prior_id, 
+                                    chp.hf_hfc_id as hf_hfc_id, 
+									scv.sys_code_value as HfHfcIdSCV,
+									scv.sys_code_desc as HfHfcSCD,
+									chp.hf_own_cus_id as hf_own_cus_id,
+									cu.register_no as hf_register_no,
+									cu.code as hf_own_code,
+ 									chp.hf_amount as hf_amount, 
+									chp.hf_cur_id as hf_cur_id,
+									cur.code_char as HfCurIdCChar,
+									chp.hf_date_hfc_from as hf_date_hfc_from,
+									chp.hf_date_hfc_until as hf_date_hfc_until, 
+									chp.hf_avail_amo as hf_avail_amo,
+									chp.hf_priority	as hf_priority,
+									chp.hf_coll_head_id as hf_coll_head_id, 
+									coh.cus_id as cus_id_placem,
+									chp.how_cover as how_cover,
+									chp.rec_lop as rec_lop,
+									chp.agreement as agreement
+							FROM
+									coll_hf_prior chp, system_code_value scv, customer cu, currency cur, coll_head coh
+									
+							WHERE
+								coh.col_hea_id  = :(d.HF_COL_HEA_ID)
+							AND chp.hf_hfc_id = scv.sys_cod_val_id
+							AND chp.hf_own_cus_id = cu.cus_id
+							AND chp.hf_cur_id = cur.cur_id
+							AND chp.hf_coll_head_id = coh.col_hea_id 
+                            AND hf_status <> 'D'
+							ORDER BY hf_priority asc
+			};
+		
+		} 
+		
+	}
+	
+	public boolean next() throws Exception {
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}  
+      
+	
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector unique = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+				
+		//vrsta
+		//u korist - interni MB
+		//u korist - eksterni MB
+		//datum ZK izvatka
+		//iznos tereta
+		//valuta tereta
+		//teret vrijedi od
+		//teret vrijedi do
+		//preostali iznos tereta
+		//prioritet
+		
+		 
+		row.add(iter1.HfHfcSCD());	
+		row.add(iter1.hf_register_no());
+		row.add(iter1.hf_own_code());
+		row.add(iter1.hf_amount());
+		row.add(iter1.HfCurIdCChar());
+		row.add(iter1.hf_date_hfc_from());	
+		row.add(iter1.hf_date_hfc_until());
+		row.add(iter1.hf_avail_amo());
+		row.add(iter1.hf_priority());
+		row.add(iter1.agreement());		
+		
+		unique.add(iter1.coll_hf_prior_id());
+		unique.add(iter1.hf_coll_head_id());
+		unique.add(iter1.cus_id_placem());
+		unique.add(iter1.how_cover());
+		unique.add(iter1.rec_lop());
+
+				
+		d.tblKolMortgage.addRow(row,unique);
+     	 
+		
+	}
+	
+}

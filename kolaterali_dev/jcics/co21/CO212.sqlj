@@ -1,0 +1,233 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+import hr.vestigo.modules.collateral.common.yoy9.*;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+  
+public class CO212 extends RemoteTransaction {
+// akcija ponisti collateral
+// insert u tbl. COLL_LIST_Q sloga za akciju CANCEL
+// update statusa collaterala
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO212.sqlj,v 1.11 2011/12/02 14:10:39 hramkr Exp $";
+	 
+	private DeclCO21 d = null;
+ 
+	private Date CURR_DATE = null;
+	private Timestamp CREATE_DATE_TIME = null;
+	
+	public CO212(DeclCO21 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		
+		String mortgage_status = "";
+		String collateral_status = "";
+		String workflow_indic= "";
+		String cover_indic= "";
+		String basic_data_status= "";
+		String coll_data_status= "";
+
+		String mortgage_flag = "";
+		String cover_flag = "";
+		String coll_data_flag ="";
+		
+		BigDecimal col_lis_typ_id = null;
+		
+		String financial_flag = "";
+		
+
+		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+		
+		#sql[ctx]{
+					SELECT
+							a.mortgage_status,
+							a.collateral_status,
+							a.workflow_indic,
+							a.cover_indic, 
+							a.basic_data_status,
+							a.coll_data_status,
+							a.financial_flag,
+							b.mortgage_flag,
+							b.cover_flag,
+							b.coll_data_flag
+					INTO
+							:(mortgage_status),
+							:(collateral_status),
+							:(workflow_indic),
+							:(cover_indic),
+							:(basic_data_status),
+							:(coll_data_status),
+							:(financial_flag),
+							:(mortgage_flag), 
+							:(cover_flag),
+							:(coll_data_flag)
+					FROM
+							coll_head a, collateral_type b
+					WHERE
+							a.col_hea_id=:(d.collworkliststop.col_hea_id)
+					AND
+							a.col_type_id = b.coll_type_id
+		};  
+
+	 	
+// ako je knjizen ne moze se ponistiti ni obustaviti dok se knjizenja ne storniraju, Milka 11.10.2006 privremeno maknuta kontrola
+		
+/*		if (financial_flag.equals("1")) {
+			throw new VestigoTMException(1, "Transaction CO212: Error-nisu stornirana knjizenja! ","colErr010", null);			
+		}	*/		
+		
+// ako je akcija pozvana s monitoring liste treba naci listu na kojoj se trenutno nalazi collateral
+		
+		if ((d.collworkliststop.source_list).equalsIgnoreCase("000000")) {
+
+			try{
+					#sql [ctx] {
+						SELECT 
+								col_lis_typ_id
+						INTO
+								:(col_lis_typ_id)
+						FROM
+								coll_list_q
+						WHERE
+								col_hea_id=:(d.collworkliststop.col_hea_id)
+						AND
+								status='0'
+					};
+			}catch(SQLException sqle){
+				if (sqle.getErrorCode() == 100) {
+					
+				}
+			}
+			
+			d.collworkliststop.source_list = col_lis_typ_id.toString();
+			
+		}
+
+
+		tc.info("COLL_HEA_ID:...." + d.collworkliststop.col_hea_id);
+		tc.info("BASIC_DATA_STATUS:...." + basic_data_status);
+
+		#sql[ctx] { 
+			SELECT current date, current timestamp 
+			INTO :(CURR_DATE), :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};		
+		
+		YOY60 YOY60=new YOY60(tc);
+		
+		CollListQData plq=new CollListQData();   
+
+   
+		plq.col_hea_id=d.collworkliststop.col_hea_id;	
+		plq.status="1";
+		plq.income_time = CREATE_DATE_TIME;
+		plq.use_id=d.collworkliststop.use_id;	
+		plq.release_time = CREATE_DATE_TIME;
+		plq.cmnt=d.collworkliststop.CollListQ_txaCmnt;
+		plq.action_type=d.collworkliststop.action_type;		 
+		plq.org_uni_id = d.collworkliststop.org_uni_id;
+		plq.source_list = d.collworkliststop.source_list;
+		plq.status_source_list = "1";
+		plq.target_list = d.collworkliststop.target_list;
+		plq.status_target_list = "0";
+		
+		plq.target_list_use_id = null;
+		plq.target_list_org_uni_id = null;
+
+		tc.info("COL_HEA_ID .....:" + plq.col_hea_id);
+		tc.info("STATUS......:"+plq.status);
+		tc.info("INCOME_TIME ....."+plq.income_time);
+		tc.info("USE_ID....."+plq.use_id);
+		tc.info("RELEASE TIME .....:" + plq.release_time);
+		tc.info("CMNT......:"+plq.cmnt);
+		tc.info("ACTION_TYPE ....."+plq.action_type);
+		tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+		tc.info("SOURCE_LIST .....:" + plq.source_list);
+		tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		tc.info("TARGET_LIST ....."+plq.target_list);
+		tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+		
+		 
+		YOY60.update_insert_CollListQ(plq); 
+		
+//		YOY60.updateCollListQ(plq);
+
+		
+//		 Milka, 05.02.2007 - dodano isknjizenje kolaterala
+//		 ako je kolateral bio proknjizen treba ga isknjiziti kada ga se obustavlja
+				
+		if (financial_flag.equals("1")) {
+//		proknjizen 		
+			YOY90 YOY90=new YOY90(tc); 
+					 
+			try {
+				YOY90.CollPosting(d.collworkliststop.col_hea_id, true); 
+			} catch (Exception e) {
+					// TODO: handle exception
+				throw e;
+			}		
+		} 		
+		
+		
+// napraviti update statusa		
+
+		collateral_status = d.collworkliststop.proc_status;  // 4 - collateral je ponisten
+		basic_data_status = "0";
+		
+// ostale statuse staviti na "0" osim ako parametrizacijom nije definirano da se ne unose (X)
+		
+		if (mortgage_flag.equalsIgnoreCase("X"))
+			mortgage_status = "X";
+		else 
+			mortgage_status = "0";
+		
+		if (cover_flag.equalsIgnoreCase("X"))
+			cover_indic = "X";
+		else 
+			cover_indic = "0";
+		
+		if (coll_data_flag.equalsIgnoreCase("X"))
+			coll_data_status = "X";
+		else 
+			coll_data_status = "0";
+			 
+		  
+		 
+		
+		#sql[ctx]{
+					UPDATE
+							coll_head 
+					SET
+							mortgage_status = :(mortgage_status),
+							collateral_status = :(collateral_status),
+							cover_indic = :(cover_indic), 
+							basic_data_status = :(basic_data_status),
+							coll_data_status = :(coll_data_status),
+		                    user_lock = current timestamp
+					WHERE
+							col_hea_id=:(d.collworkliststop.col_hea_id)
+				};
+		
+		
+	}
+	
+
+}
+
+

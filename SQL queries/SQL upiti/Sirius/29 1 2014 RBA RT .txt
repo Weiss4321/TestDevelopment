@@ -1,0 +1,128 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+select * FROM customer;
+
+
+select * from direct_notices order by user_lock desc; -- tablica direct notices;
+
+select * FROM customer where cus_id =  38253233551;
+
+
+select * from direct_notices where  ban_pro_typ_id = '790661005' order by user_lock desc; -- tablica dohvaæa podatke
+
+
+----------------------------------- direct_notices
+
+select * from direct_notices where date_until < '2014-01-01' and date_from > '2013-01-01' and info_result = 'I';
+
+select * from direct_notices where date_until < '2014-01-01' and date_from > '2013-01-01' and status = 'A';
+
+
+select * from direct_notices where date_until < '2014-01-01' and date_from > '2013-01-01'  and title like '%Ponuda%';
+
+
+
+select * from bank_product_type;
+
+-------------------------------------------------------------------
+
+  						SELECT
+                                dn.DIR_NOT_ID,
+                                dn.TITLE,
+                                dn.DATE_UNTIL,
+                                dn.status,
+                                scvi.SYS_CODE_DESC  
+                            FROM DIRECT_NOTICES dn
+                                left outer join SYSTEM_CODE_VALUE scvi on dn.INFO_RESULT = scvi.SYS_CODE_VALUE AND SYS_COD_ID = 'dir_not_result',
+                                BANK_PRODUCT_TYPE bpt, CUSTOMER c
+                                WHERE dn.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID
+                                    AND dn.CUS_ID = c.CUS_ID
+                                    AND dn.NOTICE_TYPE = 'C'
+                                    AND bpt.BANK_SIGN = 'RB'
+                                    AND c.BANK_SIGN = 'RB'
+                                    --AND (:orgUniId = 0 OR :org_uni_id = c.ORG_UNI_DOMICIL_ID)
+                                    --AND (:useId = 0 OR :use_id = dn.USE_ID)
+                                    --AND (:banProTypeCode = 0 OR :ban_pro_typ_code = bpt.CODE)
+                                    --AND (:infoResult = 0 OR :info_result = dn.INFO_RESULT)
+                                   -- AND dn.CUS_ID = :cus_id
+                                    AND dn.DATE_FROM >= '01.01.2013'
+                                    AND dn.DATE_UNTIL <= '01.01.2014'
+                                    --AND  (dn.STATUS = :(status) AND dn.date_until >= '29.01.2014')                                                                                                                  
+                                ORDER BY dn.DATE_UNTIL, dn.CUS_ID, dn.TITLE, dn.status, dn.INFO_RESULT;
+
+---------------------
+select * from direct_notices where dir_not_id = 284678826522;  -- cus_id = 1414737551
+
+select * from customer where cus_id = 6477908551; ---  Kolar Josip register no 191469
+
+
+		SELECT
+	                COUNT(*)	          
+	            FROM
+	                DIRECT_NOTICES
+	            WHERE
+	                   -- cus_id = :(cus_id)
+	                 status IN ('A', 'I')
+	                AND '01.01.2013' <= '29.01.2014' AND '01.01.2014' >= '29.01.2014'
+	                AND (info_result IS NULL OR info_result IN ('I', 'D'));
+---------------------------------------------------------------------
+
+			SELECT
+	               *      
+	            FROM
+	                DIRECT_NOTICES
+	            WHERE
+	                   -- cus_id = :(cus_id)
+	                 status IN ('A', 'I')
+	                AND date_from > '01.01.2013'
+	                --AND (info_result IS NULL OR info_result IN ('I', 'D'));
+----------------------------------------------------------------------------------------
+
+
+			SELECT
+	               *      
+	            FROM
+	                DIRECT_NOTICES
+	            WHERE
+	                   -- cus_id = :(cus_id)
+	                 status IN ('A', 'I');
+
+-------------------------------------------------------   30.1.2014. dohvat komitenata koji zadovoljavaju uvjet da imaju obavijesti - hasNotices
+	      SELECT
+	               *      
+	            FROM
+	                DIRECT_NOTICES
+	            WHERE
+	                   -- cus_id = :(cus_id)
+	                 status IN ('A', 'I')
+	                AND date_from > '01.07.2013';
+	               
+----------------------------------------------------------------------------------------
+
+            SELECT
+	               dn.cus_id,
+	               c.register_no,
+	               c.name,
+	               scvi.SYS_CODE_DESC    
+	             FROM DIRECT_NOTICES dn
+                                left outer join SYSTEM_CODE_VALUE scvi on dn.INFO_RESULT = scvi.SYS_CODE_VALUE AND SYS_COD_ID = 'dir_not_result',
+                                BANK_PRODUCT_TYPE bpt, CUSTOMER c
+                                WHERE dn.BAN_PRO_TYP_ID = bpt.BAN_PRO_TYP_ID
+                                    AND dn.CUS_ID = c.CUS_ID
+                                    AND dn.NOTICE_TYPE = 'C'
+                                    AND bpt.BANK_SIGN = 'RB'
+                                    AND c.BANK_SIGN = 'RB'
+							AND dn.date_until > '01.08.2013';
+
+
+------------------------------------------------------------------                                    
+	                 
+	                 status IN ('A', 'I')
+	                AND dn.CUS_ID = c.CUS_ID 
+	                
+
+-------------
+
+select * from customer;
+
+

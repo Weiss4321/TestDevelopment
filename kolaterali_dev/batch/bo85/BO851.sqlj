@@ -1,0 +1,259 @@
+package hr.vestigo.modules.collateral.batch.bo85;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+public class BO851
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo85/BO851.sqlj,v 1.3 2017/09/29 14:34:35 hrazst Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    
+    #sql iterator CollSubtypeIdsIterator (
+        BigDecimal col_hea_id,
+        BigDecimal col_sub_id
+    );
+    
+    #sql iterator AllocationIterator (
+        BigDecimal cus_id,
+        BigDecimal col_hea_id,
+        BigDecimal exp_coll_amount,
+        String register_no,
+        String name,
+        String b2_asset_class,
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        BigDecimal exp_balance_hrk,
+        BigDecimal col_cat_id,
+        BigDecimal col_typ_id,
+        BigDecimal ponder,
+        String col_type_name,
+        String frame_cus_acc_no,
+        String module_code,
+        String cus_acc_orig_st,
+        String dir_rel_ind
+    );
+    
+
+
+    public BO851(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+    
+    /**
+     * Metoda dohvaæa ID izvršene obrade izraèuna pokrivenosti za zadani datum i zadanu oznaku vrste obrade.
+     * Ako se obrada nije izvršila u potpunosti ili se uopæe nije izvršila, metoda vraæa null.
+     * @param value_date Datum valute izraèuna pokrivenosti
+     * @param proc_type Oznaka vrste obrade
+     * @return ID obrade izraèuna pokrivenosti; null ako se obrada nije izvršila
+     */
+    public BigDecimal selectColProId(Date value_date, String proc_type) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO851.selectColProId");
+            
+            BigDecimal col_pro_id = null;
+            #sql [connCtx] { 
+                SELECT col_pro_id
+                INTO :(col_pro_id)
+                FROM col_proc
+                WHERE value_date = :(value_date)
+                  AND proc_type = :(proc_type)
+                  AND proc_status = '1'
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+            return col_pro_id;
+        }
+        catch (SQLException ex)
+        {
+            if (bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                return null;
+            }
+            else
+            {
+                error("Dogodila se nepredvidjena greska kod dohvata ID-a obrade izracuna pokrivenosti! (datum = " + value_date + ", oznaka vrsta obrade=" + proc_type + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BO851.selectColProId");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa ID-eve svih kolaterala koji imaju podvrstu, te ID pripadajuæe podvrste kolaterala.
+     * @return iterator s podacima.
+     */
+    public CollSubtypeIdsIterator selectCollSubtypeIds() throws Exception
+    {
+        try
+        {
+            CollSubtypeIdsIterator iter = null;
+            
+            #sql [connCtx] iter = { 
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    real_est_type   AS col_sub_id
+                FROM coll_restate
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    veh_group_id    AS col_sub_id
+                FROM coll_vehicle
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    ves_typ_id      AS col_sub_id
+                FROM coll_vessel
+
+                UNION
+
+                SELECT
+                    col_hea_id      AS col_hea_id,
+                    mov_typ_id      AS col_sub_id
+                FROM coll_movable
+
+                WITH UR
+            };
+            
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata ID-eva podvrsta svih kolaterala koji imaju podvrstu!", ex);
+            throw ex;
+        }
+    }
+
+
+    /**
+     * Metoda koja dohvaæa analitièke podatke dobivene izraèunom pokrivenosti plasmana kolateralima.
+     * @param col_pro_id ID obrade izraèuna pokrivenosti
+     * @param register_no Interni MB komitenta. Ako je null, u izvješæe ulaze sve pravne ili fizièke osobe. 
+     * @param client_type Tip komitenta. Moguæe vrijednosti su P za pravne osobe ili F za fizièke osobe.
+     * @param allocationType Vrsta izraèuna pokrivenosti.
+     * @return iterator s podacima
+     */
+    public AllocationIterator selectData(BigDecimal col_pro_id, String register_no, String client_type, AllocationTypeData allocationType) throws Exception
+    { 
+        bc.startStopWatch("BO851.selectData");
+        
+        // odredi opseg izvješæa
+        int filterByClientType = -1;
+        if (register_no != null && !register_no.equals("")) filterByClientType = 0;    // jedan komitent
+        else if ("P".equals(client_type)) filterByClientType = 1;                      // pravne osobe
+        else if ("F".equals(client_type)) filterByClientType = 2;                      // fizièke osobe
+        
+        // oznaka vrste podataka
+        String exp_type_ind = allocationType.dataType.getExpTypeInd();
+
+        AllocationIterator iter = null;
+        try
+        {
+            if (allocationType.dataType == DataType.GeneralLedger)
+            {
+                #sql [connCtx] iter = {
+                    SELECT 
+                        a.cus_id            AS cus_id,
+                        a.col_hea_id        AS col_hea_id,
+                        a.exp_coll_amount   AS exp_coll_amount,
+                        c.register_no       AS register_no,
+                        c.name              AS name,
+                        c.basel_cus_type    AS b2_asset_class,
+                        b.cus_acc_id        AS cus_acc_id,
+                        b.cus_acc_no        AS cus_acc_no,
+                        a.exp_balance_hrk   AS exp_balance_hrk,
+                        d.col_cat_id        AS col_cat_id,
+                        d.col_type_id       AS col_typ_id,
+                        a.mvp_dfl           AS ponder,
+                        g.coll_type_name    AS col_type_name,
+                        b.frame_cus_acc_no  AS frame_cus_acc_no,
+                        b.module_code       AS module_code,
+                        b.cus_acc_orig_st   AS cus_acc_orig_st,
+                        a.dir_rel_ind       AS dir_rel_ind
+                    FROM cusacc_exp_coll a
+                        INNER JOIN cusacc_exposure_new b ON a.cus_acc_id = b.cus_acc_id
+                        INNER JOIN customer c ON a.cus_id = c.cus_id
+                        LEFT OUTER JOIN coll_head d ON (a.col_hea_id = d.col_hea_id AND a.cov_priority IS NOT NULL)
+                        LEFT OUTER JOIN collateral_type g ON d.col_type_id = g.coll_type_id 
+                    WHERE
+                        a.col_pro_id = :(col_pro_id) AND
+                        b.exp_type_ind = :(exp_type_ind) AND
+                        (   (:filterByClientType = 0 AND c.register_no = :(register_no)) OR
+                            (:filterByClientType = 1 AND c.cus_typ_id IN (2999,2998,999)) OR
+                            (:filterByClientType = 2 AND c.cus_typ_id IN (1999,1998))   )
+                    ORDER BY 4, 7, 13
+                    WITH UR
+                };
+            }
+            else
+            {
+                #sql [connCtx] iter = {
+                    SELECT 
+                        a.cus_id            AS cus_id,
+                        a.col_hea_id        AS col_hea_id,
+                        a.exp_coll_amount   AS exp_coll_amount,
+                        c.register_no       AS register_no,
+                        c.name              AS name,
+                        c.basel_cus_type    AS b2_asset_class,
+                        b.cus_acc_id        AS cus_acc_id,
+                        b.cus_acc_no        AS cus_acc_no,
+                        a.exp_balance_hrk   AS exp_balance_hrk,
+                        d.col_cat_id        AS col_cat_id,
+                        d.col_type_id       AS col_typ_id,
+                        a.mvp_dfl           AS ponder,
+                        g.coll_type_name    AS col_type_name,
+                        b.frame_cus_acc_no  AS frame_cus_acc_no,
+                        b.module_code       AS module_code,
+                        b.cus_acc_orig_st   AS cus_acc_orig_st,
+                        a.dir_rel_ind       AS dir_rel_ind
+                    FROM cusacc_exp_coll a
+                        INNER JOIN cusacc_exposure b ON a.cus_acc_id = b.cus_acc_id
+                        INNER JOIN customer c ON a.cus_id = c.cus_id
+                        LEFT OUTER JOIN coll_head d ON (a.col_hea_id = d.col_hea_id AND a.cov_priority IS NOT NULL)
+                        LEFT OUTER JOIN collateral_type g ON d.col_type_id = g.coll_type_id 
+                    WHERE
+                        a.col_pro_id = :(col_pro_id) AND
+                        (   (:filterByClientType = 0 AND c.register_no = :(register_no)) OR
+                            (:filterByClientType = 1 AND c.cus_typ_id IN (2999,2998,999)) OR
+                            (:filterByClientType = 2 AND c.cus_typ_id IN (1999,1998))   )
+                    ORDER BY 4, 7, 13
+                    WITH UR
+                };
+            }
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata analitickih vrijednosti pokrivenosti plasmana kolateralima! (ID obrade izracuna pokrivenosti = " + col_pro_id + ", interni MB komitenta = " + register_no + ", vrsta komitenta = " + client_type + ", vrsta izracuna pokrivenosti = " + allocationType, ex);
+        }
+        
+        bc.stopStopWatch("BO851.selectData");
+        return iter;
+    }
+    
+    
+    
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

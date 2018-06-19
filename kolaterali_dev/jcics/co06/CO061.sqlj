@@ -1,0 +1,553 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+ 
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+
+ 
+public class CO061 extends RemoteTransaction {
+ 	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO061.sqlj,v 1.37 2017/12/21 14:04:04 hrazst Exp $";
+	private DeclCO06 decl = null;
+	private YOY63 SQLhelper = null;
+	CollHeadSelectData chs = new CollHeadSelectData();
+	
+	public CO061(DeclCO06 decl) {
+		this.decl = decl;
+	}  
+	
+	public void execute(TransactionContext tc) throws Exception {
+		tc.debug ( "......COL_HEA_ID " + decl.COL_HEA_ID);
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();
+        SQLhelper = new YOY63(tc);
+        
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		//select iz COLL_HEAD		
+		YOY42 headSel = new YOY42(tc, chs);
+		chs.COL_HEA_ID = decl.COL_HEA_ID;
+		headSel.selectFromCollHead();
+		
+		tc.debug ( "......PUNIM DECL  ");		
+		// punjenje decla iz objekta chs		
+		fillDeclFromCHSObj();				
+		tc.debug ( "......COL_HEA_ID " + decl.Coll_txtCode);
+   		
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT); 
+        
+		try{			
+			#sql [ctx] {SELECT 
+								col_vrp_id , 
+								col_hea_id , 
+								col_in2_id , 
+								nom_cur_id ,
+								one_nom_amo,
+								one_nom_amo_kn , 
+								one_mar_amo , 
+								one_mar_amo_kn , 
+								one_mar_amo_per ,
+								num_of_sec , 
+								nominal_amount , 
+								market_amount , 
+								nominal_amount_kn , 
+								market_amount_kn , 
+								stop_sell_ind ,
+								stop_sell_period ,
+								sto_mar_id ,
+								price_date ,
+								currency_clause,
+								iss_cus_id,
+								tem_kap_per,
+		                        margin_granica,
+		                        margin_omjer,
+		                        custody_acc_no
+						INTO
+								:(decl.COL_SEC_ID),    													                                                
+								:(decl.COL_HEA_ID),  
+								:(decl.ISIN_ID),
+								:(decl.REAL_EST_NM_CUR_ID),
+								:(decl.Coll_txtNominalAmount),
+								:(decl.Coll_txtNominalAmountKn),
+								:(decl.Coll_txtMarketPrice),
+								:(decl.Coll_txtMarketPriceKn),
+								:(decl.Coll_txtMarketPriceFo),
+								:(decl.Coll_txtNumOfSec),
+								:(decl.Coll_txtNominalAmountTot),
+								:(decl.Coll_txtTotalMarketValue),
+								:(decl.Coll_txtNominalAmountTotKn),
+								:(decl.Coll_txtTotalMarketValueKn),
+								:(decl.Vrp_txtStopSell),
+								:(decl.Vrp_txtPeriodStopSell),
+								:(decl.MARKET_TYPE),
+								:(decl.Coll_txtMarketPriceDate),
+								:(decl.Vrp_txtValutnaKlauzula),
+								:(decl.ISSUER_ID),
+								:(decl.Vrp_txtUdjeliUPod),
+		                        :(decl.Kol_txtMarginGranica),
+		                        :(decl.Kol_txtMarginOmjer),
+		                        :(decl.Vrp_txtCustodyAccountNumber) 
+ 
+						FROM coll_vrp
+						WHERE col_hea_id = :(decl.COL_HEA_ID) }; 
+			
+		}catch(SQLException se){
+			
+			tc.debug ( "......CO061.sqlj select from coll_security SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO061.sqlj select from coll_security SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO061.sqlj select from coll_security SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO061: Error selecting coll_vrp! ","err411a", null);
+		}
+				                    
+//dohvat iz tabele CURRENCY	       
+         	
+		try{ 
+			if (decl.REAL_EST_NM_CUR_ID != null){ 
+ 				#sql [ctx] {
+                    SELECT code_char
+                        INTO :(decl.Coll_txtNominalAmountCur)
+                        FROM currency
+                        WHERE cur_id = :(decl.REAL_EST_NM_CUR_ID)};
+       		}
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+   	    }	    
+        
+        decl.Coll_txtNomAmoCur = decl.Coll_txtNominalAmountCur;
+        decl.NOMINAL_CUR_ID = decl.REAL_EST_NM_CUR_ID;
+        
+// napuniti ostale podatke iu coll_in2, coll_in2_rating preko isin-a
+  
+		try{      
+			if (decl.ISIN_ID != null){ 
+				#sql [ctx] {
+		        	SELECT
+							a.iss_cus_id,
+							a.isin,
+							a.sto_mar_id,
+							a.maturity_date,
+							a.int_rate,
+							a.stock_ind,
+							b.code as market_code,
+							b.name as market_dsc,
+							rtrim(c.register_no),
+							rtrim(c.name),
+			                c.tax_number,
+			                a.daily_price,
+			                a.seniority_indic
+					INTO
+							:(decl.ISSUER_ID),
+							:(decl.Coll_txtISIN),
+							:(decl.MARKET_TYPE),
+							:(decl.Coll_txtMaturityDate),
+							:(decl.Coll_txtAccruedInterest),
+							:(decl.Vrp_txtRefMarketInx),
+							:(decl.Coll_txtRefMarketCode),
+							:(decl.Coll_txtRefMarketDesc),
+							:(decl.Coll_txtIssuerCode),
+							:(decl.Coll_txtIssuerName),
+			                :(decl.Kol_txtOIB),
+			                :(decl.Coll_txtDailyPublishPrice),
+			                :(decl.Coll_txtSeniorityIndicator)
+					FROM coll_in2 a, stock_exchange b, customer c 
+					WHERE 
+						a.col_in2_id = :(decl.ISIN_ID)
+					and
+						a.sto_mar_id = b.sto_exc_id
+					and
+			            a.iss_cus_id = c.cus_id
+					};		 
+       		}				 
+			
+		}catch(SQLException e){ 
+	           if (tc.getSQLExHandler().isEmptyRowset(e)) {
+	            } else {
+	                throw e;
+	            }
+	   	}	
+// za udjele u poduzecu dohvatiti izdavatelja iz ZBK
+		BigDecimal  col_cat_id = decl.COL_CAT_ID;
+		if (col_cat_id.compareTo(new BigDecimal("629223")) == 0) {
+			if (decl.ISSUER_ID != null){ 			
+			
+    		 	try{  
+    			    #sql [ctx] {SELECT 
+									rtrim(a.register_no), 
+									rtrim(a.name)
+		 					INTO
+									:(decl.Coll_txtIssuerCode),
+									:(decl.Coll_txtIssuerName)
+		 					FROM	customer a
+				     		WHERE 
+		 						a.cus_id = :(decl.ISSUER_ID)
+							};	    	
+    			 		
+    		 	} catch(SQLException e){
+    		           if (tc.getSQLExHandler().isEmptyRowset(e)) {
+    		            } else {
+    		                throw e;
+    		            }
+    		 	}										 	
+			}
+			
+		} 
+		 
+// dohvatiti opis deviznosti
+		try {
+			if (decl.Vrp_txtValutnaKlauzula != null) {
+				#sql [ctx] {
+		        	SELECT
+							sys_code_desc
+			 		INTO
+ 							:(decl.Vrp_txtValutnaKlauzulaDsc)
+ 					FROM	
+							system_code_value
+ 					WHERE 
+			 				sys_cod_id = 'currency_clause'
+					AND
+							sys_code_value = :(decl.Vrp_txtValutnaKlauzula)
+
+					};						
+			}
+		}catch(SQLException e){
+	           if (tc.getSQLExHandler().isEmptyRowset(e)) {
+	            } else {
+	                throw e;
+	            }
+   	}		
+// dohvatiti rating izdavatelja
+// rtc12029 umjesto rat_typ_id =1354776003 dohvatiti odgovarajuæi rating izdavatelja
+//		try{      
+//			if (decl.ISSUER_ID != null){ 
+//				#sql [ctx] {
+//		        	SELECT
+//							score 
+//			 		INTO
+// 							:(decl.Vrp_txtRatingIssuer)
+// 					FROM	
+//							customer_rating b
+// 					WHERE 
+//			 				cus_id = :(decl.ISSUER_ID)
+//					AND
+//							rat_typ_id in (1354776003 ,671996251 ,4278640351,4278639351,1354780003,4278590351)
+//					AND
+//							date_from <= current date
+//					AND
+//							date_until >= current date
+//                    FETCH FIRST ROWS ONLY
+//					};		
+//       		}				
+//  
+//		}catch(SQLException e){
+//	           if (tc.getSQLExHandler().isEmptyRowset(e)) {
+//	            } else {
+//	                throw e;
+//	            }
+//	   	}			
+//// dohvatiti rating za VRP, long i short
+//		
+//		try{      
+//			if (decl.ISIN_ID != null){ 
+//				#sql [ctx] {
+//					SELECT
+//							rat_typ_id, rat_sco_id, score
+//			 		INTO
+//							:(decl.rat_typ_id_long),
+//							:(decl.rat_sco_id_long),
+//							:(decl.Vrp_txtRatingLong)
+//					FROM
+//							coll_in2_rating
+//		     		WHERE 
+//	 						col_in2_id = :(decl.ISIN_ID)
+//					AND 
+//							rat_typ_id = 660835251
+//					AND
+//							date_from <= current date
+//					AND
+//							date_to >= current date
+//				};	    	
+//       		}				
+//
+//		}catch(SQLException e){
+//	           if (tc.getSQLExHandler().isEmptyRowset(e)) {
+//	            } else {
+//	                throw e;
+//	            }
+//	   	}					
+//
+//		try{      
+//			if (decl.ISIN_ID != null){ 
+//				#sql [ctx] {
+//					SELECT
+//							rat_typ_id, rat_sco_id, score
+//			 		INTO
+//							:(decl.rat_typ_id_short),
+//							:(decl.rat_sco_id_short),
+//							:(decl.Vrp_txtRatingShort)
+//					FROM
+//							coll_in2_rating
+//		     		WHERE 
+//	 						col_in2_id = :(decl.ISIN_ID)
+// 					AND 
+//							rat_typ_id = 660836251
+//					AND
+//							date_from <= current date
+//					AND
+//							date_to >= current date
+//				};	    	
+//       		}				
+//
+//		}catch(SQLException e){
+//	           if (tc.getSQLExHandler().isEmptyRowset(e)) {
+//	            } else {
+//	                throw e;
+//	            }
+//	   	}
+
+		CalculationData cData = SQLhelper.getAllCalculationData(decl.COL_HEA_ID);               
+        
+        decl.Kol_txtPonderMVP = cData.MVP_ponder;
+        decl.Coll_txtWcaAmountDate = cData.wcov_date;
+        decl.Coll_txtWcaAmount = cData.wcov_amount;
+        decl.Coll_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+        decl.Coll_txtUsedWCAAmount = cData.wca_amount;
+        decl.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+        decl.Coll_txtRealPonderAmount = cData.real_ponder; 
+		        
+        kolData.colHeaId = decl.COL_HEA_ID;
+        kolData.colCurId = decl.REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.Coll_txtNomiValu;
+        
+        kolData.colCatId = decl.COL_CAT_ID;
+        kolData.colTypId = decl.COL_TYPE_ID;
+        kolData.colSubTypId = null;
+        kolData.addRequest = "N";
+
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+        
+      decl.Coll_txtAcouValue = kolData.ponderAmount;
+      decl.Coll_txtAcouDate = todaySQLDate;
+
+      decl.Coll_txtSumPartVal = kolData.exposureAmount;
+      decl.Coll_txtSumPartDat = kolData.exposureDate;   
+      
+      decl.Coll_txtCollMvpPonderMin = kolData.minPonder;
+      decl.Coll_txtCollMvpPonder = kolData.dflPonder;
+      decl.Coll_txtCollMvpPonderMax = kolData.maxPonder;
+
+      decl.Coll_txtAvailValue = kolData.restAmount;
+      decl.Coll_txtAvailDate = kolData.coverDate;
+      
+      decl.Coll_txtAvailPonValue = kolData.restPonAmount;
+      decl.Coll_txtNDAvailDate = kolData.NDCoverDate;
+      
+      decl.Coll_txtAvailDate = kolData.coverDate;
+      
+      //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja
+      try{ 
+          #sql [ctx] {
+                  SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+                  INTO
+                  :(decl.Coll_txtCoConfirm),
+                  :(decl.Coll_txtCoConfirmUserId),
+                  :(decl.Coll_txtCoConfirmUserName),
+                  :(decl.Coll_txtCoConfirmTime)
+                  FROM co_chg_history as a, app_user as app
+                  WHERE 
+                         a.col_hea_id = :(decl.COL_HEA_ID)
+                  and    a.co_use_id=app.use_id
+                  and
+                          a.co_ind='D'
+                  and
+                          a.co_chg_ts is null
+                  and co_chg_use_id is null
+                  FETCH FIRST ROWS ONLY
+                 };  
+              
+      }catch(SQLException e){
+          if (tc.getSQLExHandler().isEmptyRowset(e)) {
+          } else {
+              throw e;
+          }
+      } 
+      
+      
+        
+	}
+	
+	private void fillDeclFromCHSObj () {
+		decl.COL_HEA_ID = chs.COL_HEA_ID;    													                                                
+		decl.COL_TYPE_ID = chs.COL_TYPE_ID;  
+		decl.Coll_txtCode = chs.Coll_txtCode;
+		decl.REAL_EST_EUSE_ID = chs.REAL_EST_EUSE_ID;
+		decl.Coll_txtEstnValu = chs.Coll_txtEstnValu;                   
+		decl.Coll_txtEstnDate = chs.Coll_txtEstnDate;                   
+		decl.Coll_txtDatnFrom = chs.Coll_txtDatnFrom;                   
+		decl.Coll_txtDatnUnti = chs.Coll_txtDatnUnti;                   
+		decl.Coll_txtNomiDesc = chs.Coll_txtNomiDesc; 
+		decl.Coll_txtNomiValu = chs.Coll_txtNomiValu;                   		
+		decl.Coll_txtNomiDate = chs.Coll_txtNomiDate; 
+		decl.Coll_txtLiquValu = chs.Coll_txtLiquValu;                  		
+		decl.Coll_txtLiquDate = chs.Coll_txtLiquDate;                   		
+		decl.Coll_txtBptcValu = chs.Coll_txtBptcValu;                   		
+		decl.Coll_txtBptcDate = chs.Coll_txtBptcDate; 
+		decl.REAL_EST_NM_CUR_ID = chs.REAL_EST_NM_CUR_ID; 
+		decl.CUS_ID = chs.CUS_ID;   
+		decl.COLL_CUS_ID = chs.COLL_CUS_ID;   
+		decl.Coll_txtDateToLop = chs.Coll_txtDateToLop;   
+		decl.Coll_txtDateRecLop = chs.Coll_txtDateRecLop; 
+		decl.Coll_txtRecLop = chs.Coll_txtRecLop; 
+		decl.Coll_txtComDoc = chs.Coll_txtComDoc;                              		                                      
+		decl.Coll_txtMissingDoc = chs.Coll_txtMissingDoc;                          		                                      
+		decl.Coll_txtDateToDoc = chs.Coll_txtDateToDoc;                          		                                      
+		decl.Coll_txtDateRecDoc = chs.Coll_txtDateRecDoc;                   		                                    
+		decl.Coll_txtRevaCoefMan = chs.Coll_txtRevaCoefMan;                        		                                                           		                                         
+		decl.Coll_txtRevaDate = chs.Coll_txtRevaDate;                            		                                           
+		decl.Coll_txtRevaDateAM = chs.Coll_txtRevaDateAM;                         		                                         
+		decl.Coll_txtRevaBValue = chs.Coll_txtRevaBValue;                          		                                          
+		decl.Coll_txtRevaBDate = chs.Coll_txtRevaBDate;                           		
+		decl.Coll_txtRevaBDateAM = chs.Coll_txtRevaBDateAM;                       	     
+		decl.Coll_txtAmortAge = chs.Coll_txtAmortAge;                            	    
+		decl.AMORT_PER_CAL_ID = chs.AMORT_PER_CAL_ID;                        	                            
+		decl.Coll_txtAmortValCal = chs.Coll_txtAmortValCal;
+		decl.Coll_txtNepoValue = chs.Coll_txtNepoValue;                           	                            
+		decl.Coll_txtNepoDate = chs.Coll_txtNepoDate;                            	                            
+		decl.Coll_txtNepoPerCal = chs.Coll_txtNepoPerCal; 
+		decl.Coll_txtThirdRight = chs.Coll_txtThirdRight;                          	                            
+		decl.THIRD_RIGHT_CUR_ID = chs.THIRD_RIGHT_CUR_ID;                   	                            
+		decl.Coll_txtThirdRightInNom = chs.Coll_txtThirdRightInNom;                      		                                         
+		decl.Coll_txtThirdRightDate = chs.Coll_txtThirdRightDate;                    	                                                        		                                         
+		decl.Coll_txtHfsValue = chs.Coll_txtHfsValue;                           	                                                        		                                         
+		decl.Coll_txtHfsValueDate = chs.Coll_txtHfsValueDate;                         		                                         
+		decl.Coll_txtHfsValueLastOne = chs.Coll_txtHfsValueLastOne;                      		                                         
+		decl.Coll_txtHfsDateLastOne = chs.Coll_txtHfsDateLastOne;     
+		decl.Coll_txtAcouValue = chs.Coll_txtAcouValue;                            		                                                              
+		decl.Coll_txtAcouDate = chs.Coll_txtAcouDate;                          
+		decl.Coll_txtAcouBValue = chs.Coll_txtAcouBValue;                        
+		decl.Coll_txtAcouBDate = chs.Coll_txtAcouBDate;  
+		decl.Coll_txtSumLimitVal = chs.Coll_txtSumLimitVal;                                                     
+		decl.Coll_txtSumLimitDat = chs.Coll_txtSumLimitDat;                                                       
+		decl.Coll_txtSumPartVal = chs.Coll_txtSumPartVal;                                                         
+		decl.Coll_txtSumPartDat = chs.Coll_txtSumPartDat;
+		decl.Coll_txtAvailValue = chs.Coll_txtAvailValue;                                                       
+		decl.Coll_txtAvailPerCal = chs.Coll_txtAvailPerCal;                                                       
+		decl.Coll_txtAvailDate = chs.Coll_txtAvailDate;  
+		decl.INSPOL_IND = chs.INSPOL_IND;  
+		decl.COL_PLACE = chs.COL_PLACE; 
+		decl.COL_COUNTY = chs.COL_COUNTY; 
+		decl.COL_DISTRICT = chs.COL_DISTRICT; 
+		decl.COL_RESI_QUAR = chs.COL_RESI_QUAR; 
+		decl.Coll_txtCollMvpPonder = chs.Coll_txtCollMvpPonder;
+		decl.Coll_txtCollHnbPonder = chs.Coll_txtCollHnbPonder; 
+		decl.Coll_txtCollRzbPonder = chs.Coll_txtCollRzbPonder;
+		decl.Coll_txtDateFrom = chs.Coll_txtDateFrom;                   	                         
+		decl.Coll_txtDateUnti = chs.Coll_txtDateUnti;                   	 
+		decl.Coll_txtAddData = chs.Coll_txtAddData;  
+		decl.STATUS = chs.STATUS;                      		                          
+		decl.SPEC_STATUS = chs.SPEC_STATUS;  
+		decl.USE_OPEN_ID = chs.USE_OPEN_ID;
+		decl.USE_ID = chs.USE_ID;
+		decl.Coll_txtOpeningTs = chs.Coll_txtOpeningTs;
+		decl.Coll_txtUserLock = chs.Coll_txtUserLock; 				
+		decl.Coll_txtEUseIdLogin = chs.Coll_txtEUseIdLogin;
+		decl.Coll_txtEUseIdName = chs.Coll_txtEUseIdName;
+		decl.Coll_txtEstnCurr = chs.Coll_txtEstnCurr;
+		decl.Coll_txtCarrierRegisterNo = chs.Coll_txtCarrierRegisterNo;
+		decl.Coll_txtCarrierName = chs.Coll_txtCarrierName;
+		decl.Coll_txtOwnerRegisterNo = chs.Coll_txtOwnerRegisterNo;
+		decl.Coll_txtOwnerName = chs.Coll_txtOwnerName;
+		decl.Coll_txtThirdRightCurCodeChar = chs.Coll_txtThirdRightCurCodeChar;	
+		decl.Coll_txtUseOpenIdLogin = chs.Coll_txtUseOpenIdLogin;
+		decl.Coll_txtUseOpenIdName = chs.Coll_txtUseOpenIdName;
+		decl.Coll_txtUseIdLogin = chs.Coll_txtUseIdLogin;
+		decl.Coll_txtUseIdName = chs.Coll_txtUseIdName; 					
+		decl.Coll_txtAmortPerCal = chs.Coll_txtAmortPerCal;	
+		decl.Coll_txtCollTypeCode = chs.Coll_txtCollTypeCode;
+		decl.Coll_txtCollTypeName  = chs.Coll_txtCollTypeName;
+		decl.USER_LOCK = chs.USER_LOCK;
+		decl.Coll_txtNmValCurr = chs.Coll_txtNmValCurr;
+		decl.Coll_txtEligibility = chs.Coll_txtEligibility;
+		decl.Coll_txtEligDesc = chs.Coll_txtEligDesc;
+		decl.Coll_txtAcumBuyValue = chs.Coll_txtAcumBuyValue;		 
+		decl.ORIGIN_ORG_UNI_ID = chs.ORIGIN_ORG_UNI_ID;
+		decl.ORG_UNI_ID = chs.ORG_UNI_ID;
+		decl.USE_ID_VER = chs.USE_ID_VER;
+		decl.USE_ID_AUT = chs.USE_ID_AUT;
+		decl.VERIFICATION_TS = chs.VERIFICATION_TS;
+		decl.AUTORIZATION_TS = chs.AUTORIZATION_TS;
+		decl.MORTGAGE_STATUS = chs.MORTGAGE_STATUS;
+		decl.COLLATERAL_STATUS = chs.COLLATERAL_STATUS;
+		decl.WORKFLOW_INDIC = chs.WORKFLOW_INDIC;
+		decl.COVER_INDIC = chs.COVER_INDIC;
+		decl.VER_SEND_TS = chs.VER_SEND_TS;
+		decl.BASIC_DATA_STATUS = chs.BASIC_DATA_STATUS;
+		decl.COLL_DATA_STATUS = chs.COLL_DATA_STATUS;
+		decl.COL_CAT_ID = chs.COL_CAT_ID;
+		decl.USE_ID_VER_SND = chs.USE_ID_VER_SND;
+		decl.C_FINANCIAL_FLAG = chs.FINANCIAL_FLAG;
+		decl.C_txtUseIdSndVerLogin = chs.C_txtUseIdSndVerLogin;
+		decl.C_txtUseIdSndVerName = chs.C_txtUseIdSndVerName;
+		decl.C_txtUseIdVerLogin = chs.C_txtUseIdVerLogin;
+		decl.C_txtUseIdVerName = chs.C_txtUseIdVerName;
+		decl.C_txtUseIdAutLogin = chs.C_txtUseIdAutLogin;
+		decl.C_txtUseIdAutName = chs.C_txtUseIdAutName;	
+		decl.Coll_txtBasicDataSt = chs.Coll_txtBasicDataSt;
+		decl.Coll_txtCollDataSt = chs.Coll_txtCollDataSt;
+		decl.Coll_txtCoverIndic = chs.Coll_txtCoverIndic;
+		decl.Coll_txtFinFlag = chs.Coll_txtFinFlag;
+		decl.Coll_txtMortgageSt = chs.Coll_txtMortgageSt;
+		decl.ColRba_txtEligibility = chs.ColRba_txtEligibility;
+		decl.ColRba_txtEligDesc = chs.ColRba_txtEligDesc;
+		decl.KolLow_txtEligibility = chs.KolLow_txtEligibility;
+		decl.KolLow_txtEligDesc = chs.KolLow_txtEligDesc;
+		decl.Kol_txtRbaEligDsc = chs.Kol_txtRbaEligDsc; 
+		decl.Coll_txtB1Eligibility = chs.Coll_txtB1Eligibility;
+		decl.Coll_txtB1EligDesc = chs.Coll_txtB1EligDesc;
+		decl.Coll_txtB2IRBEligibility = chs.Coll_txtB2IRBEligibility;
+		decl.Coll_txtB2IRBEligDesc = chs.Coll_txtB2IRBEligDesc;
+		decl.Kol_txtPonderMVP = chs.Kol_txtPonderMVP;
+		decl.Kol_txtCRMHnb=chs.Kol_txtCRMHnb;
+		decl.Coll_txtNDEligibility=chs.Coll_txtNDEligibility;
+        decl.Coll_txtNDEligDesc=chs.Coll_txtNDEligDesc;
+        
+        decl.Coll_txtTypeTVCode= chs.real_est_nom_type; 
+        decl.Coll_txtTypeTV= chs.real_est_nom_type_desc; 
+        decl.USE_ID_CO= chs.use_id_co;
+        decl.Coll_txtCollOfficer= chs.use_id_co_name;
+        decl.Coll_txtContractTypeCode= chs.contract_type; 
+        decl.Coll_txtContractTypeDesc= chs.contract_type_desc; 
+        decl.Coll_txtRealPonderAmount= null; 
+        decl.Coll_txtWcaOrigCurrencyCode= null;  
+        decl.Coll_txtUsedWCAAmount= null;  
+        
+        decl.Coll_txtCollateralGCTCCode= chs.gctc_code; 
+        decl.Coll_txtCollateralGCTCDesc= chs.gctc_desc; 
+        decl.Coll_txtEndorsementTypeGCTCCode= chs.endorsement_type_code;
+        decl.Coll_txtEndorsementTypeGCTCDesc= chs.endorsement_type_desc;
+        decl.Coll_txtObjectTypeGCTCCode= chs.object_type_code; 
+        decl.Coll_txtObjectTypeGCTCDesc= chs.object_type_desc; 
+        decl.Coll_txtPropertyTypeGCTCCode= chs.property_type_code; 
+        decl.Coll_txtPropertyTypeGCTCDesc= chs.property_type_desc; 
+        decl.Coll_txtB2ValueLLAmount= null;
+        decl.Coll_txtB2ValueLLCurCode= null; 
+        decl.Coll_txtB2ValueGLAmount= null;
+        decl.Coll_txtB2ValueGLCurCode= null;   
+        
+        decl.Coll_txtProccessing="";
+        decl.Coll_txtProccessingTimestamp=chs.chg_nom_val_proc_ts;  
+	}		 
+	
+}  
+

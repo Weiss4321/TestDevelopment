@@ -1,0 +1,129 @@
+package hr.vestigo.modules.collateral.jcics.co36;
+
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+
+
+
+
+#sql iterator CollAmortWorkupsDetailsIter ( 
+		String col_num,
+		String col_cat,	
+		String cat_name,
+		String valuta,
+	    BigDecimal amount,
+		BigDecimal proc_perc,
+		BigDecimal amount_proc,
+		BigDecimal amount_new,
+		Date nomi_date
+		  );	
+
+
+//dohvaca podatke o svim kolateralima amortiziranim u danoj obradi - akcija detalji
+public class CO362 extends SQLJScrollableRemoteTransaction{
+
+public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co36/CO362.sqlj,v 1.3 2007/06/26 07:13:42 hratar Exp $";
+
+public DeclCO36 decl = null;
+
+
+private CollAmortWorkupsDetailsIter iter = null; 
+
+
+private BigDecimal col_pro_id = null;
+
+public CO362(DeclCO36 decl){
+	this.decl = decl;
+}
+
+/**
+*
+*/ 
+
+public void executeScrollable(TransactionContext tc) throws Exception {
+	setLevel(decl.collamortworkupsdetailsmapping.ActionListLevel);
+	setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+	ConnCtx ctx = tc.getContext();
+
+	#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+	//1. col_hea_id, cus_acc_id, cus_id 
+
+	col_pro_id = decl.collamortworkupsdetailsmapping.COL_PRO_ID;
+	tc.debug("col_pro_id" + col_pro_id);
+	//exposure_blance treba u kn			
+
+
+	tc.debug("1 .tu sam ");
+
+	#sql [ctx] iter = {
+		SELECT	
+				b.col_num as col_num,
+				c.code as col_cat,
+				d.coll_type_name as cat_name,
+				e.code_char as valuta,
+				a.amount as amount,
+				a.proc_perc as proc_perc,
+				a.amount_proc as amount_proc,
+				b.real_est_nomi_valu as amount_new,
+				b.real_est_nomi_date as nomi_date	 
+
+		FROM
+				col_turnover a,  
+				coll_head b,
+				coll_category c,
+				collateral_type d,
+				currency e
+		WHERE	
+				a.col_pro_id = :(col_pro_id)        
+				and a.col_hea_id = b.col_hea_id
+				and b.col_cat_id = c.col_cat_id
+				and b.col_type_id = d.coll_type_id
+				and b.real_est_nm_cur_id = e.cur_id
+		ORDER BY
+				1
+
+	};	
+} 
+
+public boolean next() throws Exception {
+return iter.next();
+}
+
+public void close() {
+if(iter!=null) {
+try {
+iter.close();
+} catch (Exception ignored) {}
+}
+}
+
+public void populateRowData() throws Exception {
+	Vector row = new Vector();
+	Vector hiddenRow = new Vector();
+
+	row.add(iter.col_num());
+	row.add(iter.col_cat());
+	row.add(iter.cat_name());
+	row.add(iter.valuta());	
+	row.add(iter.amount());
+	row.add(iter.proc_perc());
+	row.add(iter.amount_proc());      
+	row.add(iter.amount_new());
+	row.add(iter.nomi_date());
+
+	decl.collamortworkupsdetailsmapping.tblCollAmortWorkupsDetails.addRow(row,hiddenRow);
+
+	}
+
+
+
+}

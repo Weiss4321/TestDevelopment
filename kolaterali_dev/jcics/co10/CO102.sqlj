@@ -1,0 +1,58 @@
+package hr.vestigo.modules.collateral.jcics.co10;
+
+//Transaction checks sum  inserted amount COMP_COV_AMO for one COMP_HF_PRIOR_ID in coll_component
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+
+
+public class CO102 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co10/CO102.sqlj,v 1.2 2006/02/17 11:05:46 hrasia Exp $";
+	private DeclCO10 decl = null;
+		
+	
+	public CO102(DeclCO10 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO102.sqlj     " );
+		tc.debug ( "......CO102.sqlj     decl.collcomponentitemcheckmapping.CollComponentItem_COMP_HF_PRIOR_ID " + decl.collcomponentitemcheckmapping.CollComponentItem_COMP_HF_PRIOR_ID);
+		java.math.BigDecimal numberZero = new java.math.BigDecimal("0.00");	
+		
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+	
+		
+		try{			
+			#sql [ctx] {SELECT  sum(comp_cov_amo) 
+						INTO    :(decl.collcomponentitemcheckmapping.curSumTotalFromCollComponent)
+					    FROM 	coll_component   colc                                                                                          
+						WHERE  	colc.comp_hf_prior_id = :(decl.collcomponentitemcheckmapping.CollComponentItem_COMP_HF_PRIOR_ID)                                                 
+								
+				};                                                         
+		                                                                                                                          
+		}catch(java.sql.SQLException se){
+			tc.debug("......CO102.sqlj  SQLException   COMP_HF_PRIOR_ID     " + decl.collcomponentitemcheckmapping.CollComponentItem_COMP_HF_PRIOR_ID );
+			tc.debug("......CO102.sqlj  SQLException   curSumTotalFromCollComponent     " + decl.collcomponentitemcheckmapping.curSumTotalFromCollComponent );
+			
+			tc.debug ( "......CO102.sqlj select sum(comp_cov_amo) from coll_component SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO102.sqlj select sum(comp_cov_amo) from coll_component SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO102.sqlj select sum(comp_cov_amo) from coll_component SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO102: Error selecting sum(comp_cov_amo) from coll_component ! ","errclt2", null);
+		}
+		tc.debug("......CO102.sqlj  curSumTotalFromCollComponent     " + decl.collcomponentitemcheckmapping.curSumTotalFromCollComponent );
+		if(decl.collcomponentitemcheckmapping.curSumTotalFromCollComponent == null){
+			decl.collcomponentitemcheckmapping.curSumTotalFromCollComponent = numberZero;
+		
+		}		                    
+
+	}
+	
+}
+

@@ -1,0 +1,151 @@
+package hr.vestigo.modules.collateral.jcics.co16;
+
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Date;
+import java.sql.Timestamp;
+
+/**
+ * CO164 class update data about loan beneficiary in table loan_beneficiary
+ *  	
+ */
+public class CO167 extends RemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co16/CO167.sqlj,v 1.2 2011/12/02 13:53:19 hramkr Exp $";
+	public DeclCO16 decl = null;
+
+	public CO167 (DeclCO16 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		ConnCtx ctx = tc.getContext();
+		sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+
+		tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+
+
+		tc.debug ( "......CO167.sqlj update plasmana - flag provedenosti " );	
+		
+		Timestamp currentSQLTimestamp = null;			
+		
+		try{ 
+			#sql[ctx] { 
+				SELECT current timestamp 
+				INTO :(currentSQLTimestamp)
+				FROM sysibm.sysdummy1
+			};	
+				 
+
+		} catch(java.sql.SQLException e){
+			tc.debug (".......CO167.sqlj ..... Select from  sysibm.sysdummy1 unsuccessful.");
+			tc.debug ( "......CO167.sqlj Select from  sysibm.sysdummy1  SQL ErrorCode " + e.getErrorCode());
+			tc.debug ( "......CO167.sqlj Select from  sysibm.sysdummy1  SQL SQLState " + e.getSQLState());
+			tc.debug ( "......CO167.sqlj Select from  sysibm.sysdummy1 event  SQL Message " + e.getMessage());
+			e.printStackTrace();
+			throw e;
+		}
+		
+		decl.lbenkredadminmapping.LBenDialog_txtKredAdminTime = currentSQLTimestamp;
+		try{	
+/*			#sql [ctx, exCtx]{ 
+			UPDATE loan_beneficiary  
+			SET 
+				krad_admin_ind = :(decl.lbenkredadminmapping.LBenDialog_txtKredAdmin),
+				kred_admin_use_id = :(decl.lbenkredadminmapping.LBenDialog_KredAdminUSE_ID),
+				kred_admin_ts = :(decl.lbenkredadminmapping.LBenDialog_txtKredAdminTime) 	
+			WHERE
+				loan_ben_id  =:(decl.lbenkredadminmapping.LBenDialog_LOAN_BEN_ID)
+			AND 	
+				user_lock =:(decl.lbenkredadminmapping.LBenDialog_txtUserLock_O)  
+			}; */
+
+		    #sql [ctx, exCtx]{ 
+	            UPDATE loan_beneficiary  
+	            SET 
+	                krad_admin_ind = :(decl.lbenkredadminmapping.LBenDialog_txtKredAdmin),
+	                kred_admin_use_id = :(decl.lbenkredadminmapping.LBenDialog_KredAdminUSE_ID),
+	                kred_admin_ts = :(decl.lbenkredadminmapping.LBenDialog_txtKredAdminTime),
+		            user_lock = current timestamp
+	            WHERE
+	                loan_ben_id  =:(decl.lbenkredadminmapping.LBenDialog_LOAN_BEN_ID)
+	            
+	            };
+		    
+		    
+			if(exCtx.getUpdateCount()==0){
+				throw new VestigoTMException(1,"Transaction CO167: Error updating loan_beneficiary because of user_lock","errclt7", null);
+			}
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO167.sqlj update loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO167.sqlj update loan_beneficiary SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO167.sqlj update loan_beneficiary SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO164: Error updating  loan_beneficiary! ","err411a", null);
+		}
+
+
+  
+//		insert u loan_beneficiary_a		 	
+		try{	 
+	 		#sql [ctx]{	INSERT INTO loan_beneficiary_a
+  				(	loan_ben_id,
+					register_no,
+					cus_id,
+					acc_no,
+					la_acc_id,
+					coll_hf_prior_id,
+					col_hea_id,
+					ser_num,
+					date_from,
+					date_until,
+					status,
+					spec_status,
+					use_open_id,
+					use_id,
+					opening_ts,
+					user_lock,
+					request_no,
+					priority_no,
+					fra_agr_id,
+					aps_rqst_no,
+					inspol_ind,
+					ip_cus_id, 	
+					krad_admin_ind, 
+					kred_admin_use_id,
+					kred_admin_ts) 	
+			VALUES( :(decl.lbenkredadminmapping.LBenDialog_LOAN_BEN_ID),
+			:(decl.lbenkredadminmapping.LBenDialog_txtRegNo_O),
+			:(decl.lbenkredadminmapping.LBenDialog_CUS_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtAccNo_O),
+			:(decl.lbenkredadminmapping.LBenDialog_LA_ACC_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_COLL_HF_PRIOR_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_COLL_HEA_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtSerNum_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtDateFrom_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtDateUntil_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtStatus_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtSpecStatus_O),
+			:(decl.lbenkredadminmapping.LBenDialog_USE_OPEN_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_USE_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtOpeningTS_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtUserLock_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtRequestNo_O)	,
+			:(decl.lbenkredadminmapping.LBenDialog_txtPriorityNo_O),
+			:(decl.lbenkredadminmapping.LBenDialog_fra_agr_id_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtApsRqstNo_O),
+			:(decl.lbenkredadminmapping.LBenDialog_Insu_O),
+			:(decl.lbenkredadminmapping.LBenDialog_IP_CUS_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtKredAdmin_O),
+			:(decl.lbenkredadminmapping.LBenDialog_KredAdminUSE_ID_O),
+			:(decl.lbenkredadminmapping.LBenDialog_txtKredAdminTime_O))
+			};  
+		}catch(java.sql.SQLException se){
+			tc.debug ( "......CO167.sqlj insert into loan_beneficiary SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO167.sqlj insert into loan_beneficiary SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO167.sqlj insert into loan_beneficiary SQL Message " + se.getMessage());
+			throw new VestigoTMException(1, "Transaction CO167: Error inserting loan_beneficiary! ","err411a", null);
+		}			
+
+	} 
+} 

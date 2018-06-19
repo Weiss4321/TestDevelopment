@@ -1,0 +1,363 @@
+package hr.vestigo.modules.collateral.jcics.co18;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+  
+/**  
+ * CO142 class insert data into  table INSURANCE_POLICY 
+ *  
+ */
+
+#sql iterator Iter2 (
+		String ip_activ_and_pay 
+		);
+ 
+public class CO182 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co18/CO182.sqlj,v 1.22 2017/09/22 12:09:05 hrazst Exp $";
+    public DeclCO18 decl = null;
+	
+	public CO182 (DeclCO18 decl) {
+		this.decl = decl;
+	}
+		       
+	public void execute(TransactionContext tc) throws Exception {
+		Iter2 iter2=null;				
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();
+		ConnCtx ctx = tc.getContext();
+//			 int broj = 0;	
+		int broj_polica = 0;
+
+		Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);              
+        
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+    
+            //generator id-a za modul Collateral
+        YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		java.math.BigDecimal collaterall_id = id_generator.getNewId();	
+        
+// Milka, dodala u uvjet da je polica vezana za kolateral koji nije obustavljen 
+// Milka, 20.03.2009 - iskljucene neaktivne police iz uvjeta		
+// Milka, 27.03.2009 - iskljucena kontrola na broj police			
+/*			try {
+			    #sql [ctx] {SELECT COUNT(*) INTO :broj 
+			    			FROM INSURANCE_POLICY a, COLL_HEAD b
+			    			WHERE 
+								 IP_CODE=:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtCode)
+							AND	a.col_hea_id = b.col_hea_id 
+							AND a.ip_act_noact = 'A'
+							AND b.collateral_status in ('0','1','2','3')
+			    };	    	
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+			    	tc.debug ( "...broj: " + broj);
+			    	tc.debug ( " /n/n/n/n/n/n/n");
+		    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO182.sqlj select from INSURANCE_POLICY SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO182.sqlj select from INSURANCE_POLICY SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO182.sqlj select from INSURANCE_POLICY SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO132: Error inserting into INSURANCE_POLICY! ","err411a", null);
+            }
+            if(broj > 0){
+			    throw new VestigoTMException(1, "Transaction CO132: Error inserting into INSURANCE_POLICY! ","wrnclt124", null);
+			}*/	
+			
+			
+//INSERT INTO INSURANCE_POLICY 
+		try{	
+		        	tc.debug ("\n\n\n\nIP_CODE=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtCode);
+					tc.debug ("\nIP_TYPE_ID=" + decl.insupolicydialoginsertm.IP_TYPE_ID);
+					tc.debug ("\nIP_IC_ID=" + decl.insupolicydialoginsertm.IP_IC_ID);
+					tc.debug ("\nIP_contractor=" + decl.insupolicydialoginsertm.IP_CONTRACTOR);
+					tc.debug ("\nIP_pol_holder=" + decl.insupolicydialoginsertm.IP_POL_HOLDER);
+					tc.debug ("\nIP_place=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtPlace);
+					tc.debug ("\nIP_SEC_VAL=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtSecuVal);
+					tc.debug ("\nIP_cur_id=" + decl.insupolicydialoginsertm.IP_CUR_ID);
+					tc.debug ("\nIP_date_sec_val=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtDateSecVal);
+					tc.debug ("\ncol_hea_id=" + decl.insupolicydialoginsertm.COL_HEA_ID);
+					tc.debug ("\nIP_replace=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtReplace);
+					tc.debug ("\nDate_from=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtDateFrom);
+					tc.debug ("\nDate_until=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtDateUntil);
+					tc.debug ("\nIP_ACT=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtAct);
+					tc.debug ("\nIP_spec_stat=" + decl.insupolicydialoginsertm.IP_SPEC_STAT);
+					tc.debug ("\nOpen_use_id=" + decl.insupolicydialoginsertm.use_id);
+					tc.debug ("\nuse_id=" + decl.insupolicydialoginsertm.use_id);
+	                tc.debug ("\nWRN_STATUS=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtWrnStatusCode);
+	                tc.debug ("\nKMT_STATUS=" + decl.insupolicydialoginsertm.InsuPolicyDialog_txtKmtStatusCode);
+
+	                //hrajkl: promjene RTC 10752, podaci koji se unose za NGV
+	                tc.info("********** 10752 **********");
+	                tc.info("CO182 InsuPolicyDialog_txtVinkulacija1RedSifra:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtVinkulacija1RedSifra);
+	                tc.info("CO182 InsuPolicyDialog_txtIznosOsiguraneSvote:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvote);
+	                tc.info("CO182 InsuPolicyDialog_txtIznosOsiguraneSvoteValutaID:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvoteValutaID);
+	                tc.info("CO182 InsuPolicyDialog_txtIznosIznosVinkuliranUKorist:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKorist);
+	                tc.info("CO182 InsuPolicyDialog_txtIznosIznosVinkuliranUKoristValutaID:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKoristValutaID);
+	                tc.info("CO182 InsuPolicyDialog_txtRBAVinkulacijaSifra:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtRBAVinkulacijaSifra);
+	                tc.info("CO182 InsuPolicyDialog_txtDodatniPodaci:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtDodatniPodaci);
+				   
+	                HashMap rateMap = new LinkedHashMap();
+	                BigDecimal cur1=null, rate1=null, cur2=null, rate2=null, cur3=null, rate3=null;
+	                try{
+	                    
+	                        #sql [ctx] {
+	                               SELECT osigurana_svota.cur_id, osigurana_svota.midd_rate, osigurana_svota_police.cur_id, osigurana_svota_police.midd_rate
+	                               INTO :(cur1), :(rate1), :(cur2), :(rate2)
+	                               FROM EXCHANGE_RATE osigurana_svota, EXCHANGE_RATE osigurana_svota_police
+	                               WHERE osigurana_svota.cur_id = :(decl.insupolicydialoginsertm.IP_CUR_ID) AND current date between osigurana_svota.date_from AND osigurana_svota.date_until AND
+	                                   osigurana_svota_police.cur_id = :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvoteValutaID) AND current date between osigurana_svota_police.date_from AND osigurana_svota_police.date_until
+	                               WITH UR
+	                        };
+	                    
+	                    //podatak nije obavezan pa ovisno o tome je li popunjen se teèaj dohvaæa
+	                    if(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKoristValutaID != null && decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKorist != null){
+	                           #sql [ctx] {
+	                               SELECT  vinkuliran_iznos.cur_id, vinkuliran_iznos.midd_rate
+	                               INTO  :(cur3), :(rate3)
+	                               FROM EXCHANGE_RATE vinkuliran_iznos
+	                               WHERE vinkuliran_iznos.cur_id = :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKoristValutaID) AND current date between vinkuliran_iznos.date_from AND vinkuliran_iznos.date_until
+	                               WITH UR
+	                            };
+	                    }
+	                        
+	                }catch(SQLException e){
+	                    tc.info("Greska kod dohvata srednjeg tecaja:"+e.toString());
+	                    e.printStackTrace();
+	                    throw new VestigoTMException(1, "Transaction CO182: greska kod dohvata tecaja!!","err411a", null,e);
+	                }
+	                
+	                //kontrola iznosa
+	                BigDecimal val1Hrk = decl.insupolicydialoginsertm.InsuPolicyDialog_txtSecuVal.multiply(rate1);
+	                tc.info("Iznos 1:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtSecuVal+" po tecaju:"+rate1+"je:"+val1Hrk);
+	                
+	                BigDecimal val2Hrk = decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvote.multiply(rate2);
+	                tc.info("Iznos 2:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvote+" po tecaju:"+rate2+"je:"+val2Hrk);
+	                //1. kontrola - iznos u polju InsuPolicyDialog_txtSecuVal ne smije biti veæi od InsuPolicyDialog_txtIznosOsiguraneSvote (podaci su obavezni)
+                    if(val1Hrk.compareTo(val2Hrk)==1){
+                        tc.info("Iznos "+decl.insupolicydialoginsertm.InsuPolicyDialog_txtSecuVal+" veci od iznosa "+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvote + " ("+val1Hrk+":"+val2Hrk+")");                      
+                        throw new VestigoTMException(1, "Transaction CO182: pogresan iznos Osigurana svota!!","wrn_clt_001");
+                    }
+	                
+                    if(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKoristValutaID != null && decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKorist != null){
+                        BigDecimal val3Hrk = decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKorist.multiply(rate3);
+                        tc.info("Iznos 3:"+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKorist+" po tecaju:"+rate3+"je:"+val3Hrk);    
+                        
+                        //2. kontrola - iznos iu polju InsuPolicyDialog_txtIznosIznosVinkuliranUKorist ne smije biti veæi od InsuPolicyDialog_txtIznosOsiguraneSvote(ovaj podatak je neobavezan pa je kontrola uvjetna)
+                        if(val3Hrk.compareTo(val2Hrk)==1){
+                            tc.info("Iznos "+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKorist+" veci od iznosa "+decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvote + " ("+val3Hrk+":"+val2Hrk+")");
+                            throw new VestigoTMException(1, "Transaction CO182: pogresan iznos Iznos vinkuliran u korist drugih banaka!!","wrn_clt_002");
+                        }                        
+                    }
+
+	                
+			    	 #sql [ctx]{	INSERT INTO INSURANCE_POLICY 
+			    					          	(IP_ID,
+			    						  	 	IP_CODE,
+			    						 	 	IP_TYPE_ID,
+			    								IP_IC_ID,
+			    								IP_CONTRACTOR,
+			    								IP_POL_HOLDER,
+			    								IP_PLACE,
+			    								IP_SECU_VAL,
+			    								IP_CUR_ID,
+			    								IP_DATE_SEC_VAL,
+			    								COL_HEA_ID,
+			    								IP_REPLACE,
+			    								IP_VALI_FROM,
+			    								IP_VALI_UNTIL,
+			    								IP_ACT_NOACT,
+			    								IP_SPEC_STAT,
+			    								USE_OPEN_ID,
+			    								USE_ID,
+												opening_ts,
+												user_lock,
+					                            WRN_STATUS,
+					                            KMT_STATUS,
+	                                            IP_RESTR_1_IND,
+	                                            IP_P_SECU_VAL,
+	                                            IP_P_CUR_ID,
+	                                            IP_RESTR_VAL,
+	                                            IP_RESTR_CUR_ID,
+	                                            IP_RESTR_TYPE,
+	                                            IP_ADD_DATA
+			    								) 
+			    			VALUES( :collaterall_id,
+                					:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtCode),
+                					:(decl.insupolicydialoginsertm.IP_TYPE_ID),
+                					:(decl.insupolicydialoginsertm.IP_IC_ID),
+                					:(decl.insupolicydialoginsertm.IP_CONTRACTOR),
+                					:(decl.insupolicydialoginsertm.IP_POL_HOLDER),
+			    					:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtPlace),
+			    					:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtSecuVal),
+			    					:(decl.insupolicydialoginsertm.IP_CUR_ID),
+			    					:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtDateSecVal),
+			    					:(decl.insupolicydialoginsertm.COL_HEA_ID),
+			    					:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtReplace),
+									:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtDateFrom),
+									:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtDateUntil),
+									:(decl.insupolicydialoginsertm.InsuPolicyDialog_txtAct),
+									:(decl.insupolicydialoginsertm.IP_SPEC_STAT),
+			    					:(decl.insupolicydialoginsertm.use_id),
+									:(decl.insupolicydialoginsertm.use_id),
+			    					current timestamp,
+			    					current timestamp,
+					                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtWrnStatusCode),
+					                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtKmtStatusCode),
+	                                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtVinkulacija1RedSifra),
+	                                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvote),
+	                                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosOsiguraneSvoteValutaID),
+	                                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKorist),
+	                                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtIznosIznosVinkuliranUKoristValutaID),
+	                                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtRBAVinkulacijaSifra),
+	                                :(decl.insupolicydialoginsertm.InsuPolicyDialog_txtDodatniPodaci)
+			    					)
+         		        	}; 
+ 
+		}catch(java.sql.SQLException se){
+						tc.debug ( "\n......CO182.sqlj insert into INSURANCE_POLICY  SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "\n......CO182.sqlj insert into INSURANCE_POLICY  SQL SQLState " + se.getSQLState());
+						tc.debug ( "\n......CO182.sqlj insert into INSURANCE_POLICY  SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO182: Error inserting INSURANCE_POLICY! ","err411a", null);
+		}
+
+		
+// Milka - kada se upise polica osiguranja postaviti flag "nekretnina osigurana" na D
+// Milka , 25.08.2008. polica mora imati datum do kad vazi veci ili jednak current date		
+// Milka, 21.01.2009 - polica mora biti aktivna i imati datum do kad je plaæena premija veæi ili jendak current date			
+		decl.insupolicydialoginsertm.RealEstate_txtInspolInd = "N";
+ 
+		try {
+			    #sql [ctx] {SELECT COUNT(*) INTO :broj_polica 
+			    			FROM INSURANCE_POLICY
+			    			WHERE 
+								col_hea_id = :(decl.insupolicydialoginsertm.COL_HEA_ID)
+							AND
+								ip_act_noact = 'A'
+							AND
+                                ip_vali_until >= current date
+			    };	    	
+  
+	    } catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO182.sqlj select from INSURANCE_POLICY_2 SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO182.sqlj select from INSURANCE_POLICY_2 SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO182.sqlj select from INSURANCE_POLICY_2 SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO132: Error inserting into INSURANCE_POLICY_2! ","err411a", null);
+	    }
+	        if(broj_polica  > 0){
+	            decl.insupolicydialoginsertm.RealEstate_txtInspolInd = "D";
+		}	
+			
+	        tc.info ("RealEstate_txtInspolInd" + decl.insupolicydialoginsertm.RealEstate_txtInspolInd);
+            
+// Milka - 22.11.2006 - napraviti update atributa u COLL_HEAD		
+			 
+		try {
+			    #sql [ctx] {UPDATE COLL_HEAD
+			    			SET inspol_ind = :(decl.insupolicydialoginsertm.RealEstate_txtInspolInd),
+		                        user_lock = current timestamp
+			    			WHERE COL_HEA_ID =:(decl.insupolicydialoginsertm.COL_HEA_ID) 
+			    	};	    	
+			    	tc.debug ( "...UPDATE COLL_HEAD: " + decl.insupolicydialoginsertm.COL_HEA_ID+decl.insupolicydialoginsertm.RealEstate_txtInspolInd);
+		} catch (java.sql.SQLException  sqle) {
+                tc.debug ( "......CO182.sqlj update from COLL_HEAD SQL ErrorCode " + sqle.getErrorCode());
+				tc.debug ( "......CO182.sqlj update from COLL_HEAD SQL SQLState " + sqle.getSQLState());
+				tc.debug ( "......CO182.sqlj update from COLL_HEAD SQL Message " + sqle.getMessage());
+				throw new VestigoTMException(1, "Transaction CO132: Error update COLL_HEAD! ","err411a", null);
+        }		
+	
+	  //radimo update COLL_VEHICLE tablice po COL_HEA_ID tako da ažuriramo kasko flag
+	  //ako u tablici COLL_VEHICLE ne postoji zapis sa COL_HEA_ID onda kolateral nije vozilo i nece se  nista azurirat  
+      try {
+          #sql [ctx] {UPDATE COLL_VEHICLE
+                      SET veh_kasko = :(decl.insupolicydialoginsertm.RealEstate_txtInspolInd)
+                      WHERE COL_HEA_ID =:(decl.insupolicydialoginsertm.COL_HEA_ID) 
+                  };          
+              tc.debug ( "...UPDATE COLL_VEHICLE: " + decl.insupolicydialoginsertm.COL_HEA_ID+ ", veh_kasko = " +decl.insupolicydialoginsertm.RealEstate_txtInspolInd);
+      } catch (java.sql.SQLException  sqle) {
+              tc.debug ( "......CO182.sqlj update from COLL_VEHICLE SQL ErrorCode " + sqle.getErrorCode());
+              tc.debug ( "......CO182.sqlj update from COLL_VEHICLE SQL SQLState " + sqle.getSQLState());
+              tc.debug ( "......CO182.sqlj update from COLL_VEHICLE SQL Message " + sqle.getMessage());
+      } 	
+//		  dohvatiti status police osiguranja i da li je placena premija
+		decl.insupolicydialoginsertm.ip_activ_and_pay  = "N";
+			 
+		#sql[ctx] iter2 = {
+                 	SELECT ip_act_noact as ip_activ_and_pay
+  							FROM insurance_policy
+							WHERE col_hea_id = :(decl.insupolicydialoginsertm.COL_HEA_ID)
+							AND
+		    					ip_act_noact = 'A' 
+		    				AND
+                                ip_vali_until >= current date
+							fetch first row only
+                              };
+		while (iter2.next()) {
+		    decl.insupolicydialoginsertm.ip_activ_and_pay  = iter2.ip_activ_and_pay();
+		} 
+		if(iter2!=null) { 
+		    try {
+		        iter2.close();
+			} catch (Exception ignored) {}
+		}						
+			 
+		// preracunati ponderiranu i raspolozivu vrijednost			
+		//      dohvat MVP pondera  
+		// dodatni uvjet odrediti prema kategoriji i tipu          
+		String add_request = decl.insupolicydialoginsertm.RealEstate_txtInspolInd;      
+
+		kolData.colHeaId = decl.insupolicydialoginsertm.COL_HEA_ID;
+		kolData.colCurId = decl.insupolicydialoginsertm.RealEstate_REAL_EST_NM_CUR_ID;
+		kolData.nominalAmount = decl.insupolicydialoginsertm.RealEstate_txtNomiValu;
+
+		kolData.colCatId = decl.insupolicydialoginsertm.RealEstate_COL_CAT_ID;
+		kolData.colTypId = decl.insupolicydialoginsertm.RealEstate_COL_TYPE_ID;
+		kolData.colSubTypId = decl.insupolicydialoginsertm.RealEstate_REAL_EST_TYPE;
+		kolData.addRequest = add_request;        
+
+		//        kolData.ponder = decl.insupolicydialoginsertm.RealEstate_txtCollMvpPonder;
+
+		//        yoye0.getPonderAndRestAmount(kolData);
+		yoye0.getNoPonderAndPonderRestAmount(kolData);
+
+		decl.insupolicydialoginsertm.RealEstate_txtWeighValue = kolData.ponderAmount;
+		decl.insupolicydialoginsertm.RealEstate_txtWeighDate = todaySQLDate;
+		decl.insupolicydialoginsertm.RealEstate_txtAvailValue = kolData.restAmount;
+		//        decl.insupolicydialoginsertm.RealEstate_txtAvailDate = todaySQLDate;
+		decl.insupolicydialoginsertm.RealEstate_txtAvailDate = kolData.coverDate;
+		decl.insupolicydialoginsertm.RealEstate_txtSumPartVal = kolData.exposureAmount;
+		decl.insupolicydialoginsertm.RealEstate_txtSumPartDat = kolData.exposureDate;   
+
+		decl.insupolicydialoginsertm.RealEstate_txtCollMvpPonderMin = kolData.minPonder;
+		decl.insupolicydialoginsertm.RealEstate_txtCollMvpPonder = kolData.dflPonder;
+		decl.insupolicydialoginsertm.RealEstate_txtCollMvpPonderMax = kolData.maxPonder;
+
+		decl.insupolicydialoginsertm.RealEstate_txtPonAvailValue =  kolData.restPonAmount;
+
+		// postaviti prihvatljivosti ovisne o polici osiguranja        
+		// poziv common-a za update prihvatljivosti
+		BigDecimal col_hea_id = decl.insupolicydialoginsertm.COL_HEA_ID;
+		YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);
+
+		yoyg0.azurirajPrihvatljivosti();
+		decl.insupolicydialoginsertm.Kol_ND =yoyg0.getNDPrihvatljivost();
+		decl.insupolicydialoginsertm.Kol_B2 = yoyg0.getB2StandPrihvatljivost();
+		decl.insupolicydialoginsertm.Kol_HNB = yoyg0.getHNBPrihvatljivost();
+		decl.insupolicydialoginsertm.Kol_B2IRB = yoyg0.getB2IRBPrihvatljivost();   
+
+		decl.insupolicydialoginsertm.Kol_ND_dsc = yoyg0.getOpisNDPrihvatljivosti();
+		decl.insupolicydialoginsertm.Kol_B2_dsc = yoyg0.getOpisB2StandPrihvatljivosti();
+		decl.insupolicydialoginsertm.Kol_HNB_dsc = yoyg0.getOpisHNBPrihvatljivosti();
+		decl.insupolicydialoginsertm.Kol_B2IRB_dsc = yoyg0.getOpisB2IRBPrihvatljivosti();        
+
+	}//execute
+}	 
+ 

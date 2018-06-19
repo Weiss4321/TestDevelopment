@@ -1,0 +1,121 @@
+package hr.vestigo.modules.collateral.jcics.coB3;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+import java.sql.Date;
+
+#sql iterator Iter1 (
+        BigDecimal col_gcm_typ_id,
+        BigDecimal col_gcm_typ_map_id,
+        BigDecimal col_cat_id,
+        String map_code,
+        String naziv_stavke,
+        String sifra_stavke,
+        String dodatni_naziv,
+        String RB,
+        String kat_sifra,
+        String kat_naziv,
+        String tip_sifra,
+        String tip_naziv,
+        String vrsta_sifra,
+        String vrsta_naziv,
+        String podvrsta_sifra,
+        String podvrsta_naziv        
+        );
+
+public class COB31 extends SQLJScrollableRemoteTransaction {
+
+public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB3/COB31.sqlj,v 1.2 2017/04/14 10:13:07 hraziv Exp $";
+public DeclCOB3 d=null;
+private Iter1 iter=null;
+
+public COB31 (DeclCOB3 d) {
+this.d = d;  
+} 
+
+public void executeScrollable(TransactionContext tc) throws Exception {
+setLevel(d.ActionListLevel);
+setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+ConnCtx ctx = tc.getContext();
+
+#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+
+#sql [ctx] iter = {
+                    SELECT distinct cgt.col_gcm_typ_id, cgtm.col_gcm_typ_map_id,
+                    cc.col_cat_id, cgt.map_code, cgt.name as naziv_stavke, cgt.code as sifra_stavke, cgt.name_add as dodatni_naziv, cgt.ord_no as RB, 
+                    cc.code as kat_sifra, cc.name as kat_naziv, ct.coll_type_code as tip_sifra, ct.coll_type_name as tip_naziv, 
+                    case 
+                    when cgtm.col_cat_id in (618223) and cgtm.col_sub_id = ret.real_es_type_id THEN ret.REAL_ES_TYPE_CODE
+                    when cgtm.col_cat_id in (624223) and cgtm.col_sub_id = vg.veh_gro_id THEN vg.veh_gro_code
+                    when cgtm.col_cat_id= 621223 and cgtm.col_sub_id = mt.mov_typ_id THEN mt.mov_typ_code
+                    when cgtm.col_cat_id= 620223 and cgtm.col_sub_id = vt.ves_typ_id THEN vt.ves_code
+                    END as vrsta_sifra,
+                    case 
+                    when cgtm.col_cat_id in (618223) and cgtm.col_sub_id = ret.real_es_type_id THEN ret.REAL_ES_TYPE_DESC
+                    when cgtm.col_cat_id in (624223) and cgtm.col_sub_id = vg.veh_gro_id THEN vg.veh_gro_desc 
+                    when cgtm.col_cat_id= 621223 and cgtm.col_sub_id = mt.mov_typ_id THEN mt.mov_typ_dsc
+                    when cgtm.col_cat_id= 620223 and cgtm.col_sub_id = vt.ves_typ_id THEN vt.VES_DSC
+                    END as vrsta_naziv, 
+                    case 
+                    when cgtm.col_cat_id= 618223 and cgtm.col_gro_id = rst.RE_SUB_TYPE_ID THEN rst.RE_SUB_TYPE_CODE
+                    when cgtm.col_cat_id= 624223 and cgtm.col_gro_id = vs.VEH_SUB_ID THEN vs.VEH_SUB_CODE
+                    END as podvrsta_sifra,
+                    case 
+                    when cgtm.col_cat_id= 618223 and cgtm.col_gro_id = rst.RE_SUB_TYPE_ID THEN rst.RE_SUB_TYPE_DESC
+                    when cgtm.col_cat_id= 624223 and cgtm.col_gro_id = vs.VEH_SUB_ID THEN vs.VEH_SUB_DESC
+                    END as podvrsta_naziv
+                    FROM coll_gcm_type cgt 
+                    INNER JOIN coll_gcm_type_map cgtm on cgt.col_gcm_typ_id = cgtm.col_gcm_typ_id
+                    INNER JOIN coll_category cc on cc.col_cat_id = cgtm.col_cat_id
+                    left join COLLATERAL_TYPE ct on ct.coll_type_id = cgtm.col_typ_id
+                    LEFT JOIN VEHICLE_GROUP vg on cgtm.col_typ_id = vg.coll_type_id and cgtm.col_sub_id = vg.veh_gro_id
+                    LEFT JOIN movable_type mt on cgtm.col_typ_id = mt.col_typ_id and cgtm.col_sub_id = mt.mov_typ_id
+                    LEFT JOIN VESSEL_TYPE vt on cgtm.col_sub_id = vt.ves_typ_id
+                    left join VEHICLE_SUBGROUP vs on vs.VEH_SUB_ID = cgtm.col_gro_id
+                    left join RE_SUB_TYPE rst on rst.RE_SUB_TYPE_ID = cgtm.col_gro_id
+                    LEFT OUTER JOIN REAL_ESTATE_TYPE ret on cgtm.col_typ_id = ret.coll_type_id and cgtm.col_sub_id = ret.real_es_type_id
+                  
+                };        
+}
+
+    public boolean next() throws Exception {
+        return iter.next();
+    }
+
+    public void close() {
+        if(iter!=null) {
+            try {
+                iter.close();
+            } catch (Exception ignored) {}
+        }
+    }
+
+
+    public void populateRowData() throws Exception {
+        
+        Vector row=new Vector();
+        
+        row.add(iter.map_code());
+        row.add(iter.naziv_stavke());
+        row.add(iter.sifra_stavke());
+        row.add(iter.dodatni_naziv());
+        row.add(iter.RB());
+        row.add(iter.kat_sifra());
+        row.add(iter.kat_naziv());
+        row.add(iter.tip_sifra());
+        row.add(iter.tip_naziv());
+        row.add(iter.vrsta_sifra());
+        row.add(iter.vrsta_naziv());
+        row.add(iter.podvrsta_sifra());
+        row.add(iter.podvrsta_naziv());
+        
+        Vector hidden = new Vector();
+        hidden.add(iter.col_gcm_typ_id());
+        hidden.add(iter.col_gcm_typ_map_id());  
+        System.out.println(iter.col_gcm_typ_map_id());
+        d.tblCollMappingList.addRow(row, hidden);       
+    }
+}

@@ -1,0 +1,848 @@
+package hr.vestigo.modules.collateral.jcics.co07;
+
+
+import java.sql.SQLData;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+import hr.vestigo.modules.coreapp.common.yxyG.YXYG0;
+
+/**
+ * CO072 class insert data into table LOAN_REL_COLL
+ *  	
+ */
+
+
+public class CO072 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co07/CO072.sqlj,v 1.10 2006/02/26 11:06:43 hrasia Exp $";
+	
+	public DeclCO07 decl = null;
+	
+	
+	
+	////////////////////////////////////////////////////
+	////////////////////////////////////////////////////
+	//LOAN_COMPONENT
+	//visible 
+	String						LC_ordNoLoanComp = null;			//redni broj komponente plasmana			                                                                                    
+	String 						LC_accNo = null;					//partija plasmana                
+	String 						LC_loantypeSCD = null;				//vrsta plasmana                  
+	java.math.BigDecimal 		LC_Balance = null;  				//stanje plasmana                 
+	java.sql.Date				LC_BalanceDate = null;				//datum stanja plasmana           
+	String 						LC_BalanceCurIdLoanCodeC = null ;  	// valuta plasmana, kao i dijela  
+	java.math.BigDecimal 		LC_AmoLoanComp = null;				//iznos komponente plasmana
+	java.math.BigDecimal 		LC_AmoLoanCompRef = null;			//iznos komponente plasmana u ref. valuti - today u trenutku unosa
+	java.sql.Date				LC_DateLinkLoanComp = null;			//datum povezivanja - today u trenutku unosa
+	String 						LC_CurIdRefLoanCodeC = null ;  		// referentna valuta plasmana, kao i dijela  
+
+	//invisible
+	java.math.BigDecimal 		LC_laAccId = null;
+	java.math.BigDecimal 		LC_CUR_ID = null;
+	java.math.BigDecimal 		LC_CUR_ID_REF = null;
+	java.math.BigDecimal 		LC_ExcRatRefPart = null;			//tecaj po kome se izracunava dio plasmana u ref. valuti
+	java.sql.Date				LC_ExcRatRefDatePart = null;		//datum iznosa dijela plasmana u ref. valuti - today u trenutku unosa
+	java.sql.Date				LC_lcDateFrom = null;				//Datum od kada vrijede podaci ovog dijela plasmana
+	java.sql.Date				LC_lcDateUntil = null;				//Datum do kada vrijede podaci ovog dijela plasmana
+
+	java.math.BigDecimal 		LC_lc_cov_bamo = null;				//Iznos ovog dijela plasmana iz prethodnog perioda
+	java.sql.Date				LC_lc_cov_bdate = null;				//Datum iznosa ovog dijela plasmana iz prethodnog perioda
+	java.math.BigDecimal 		LC_lc_cov_bamo_ref = null;			//Iznos ovog dijela plasmana u referentnoj valuti iz prethodnog perioda
+	
+	
+	
+	
+
+	//COLL_COMPONENT
+	//visible 
+	String						CC_ordNoCollComp = null;			//redni broj komponente plasmana koju ova komp
+	String						CC_ColNum   = null;                
+	String						CC_CollTypeName = null;            
+	String						CC_HfHfcSCD = null; 				//vrsta tereta               
+	java.math.BigDecimal 		CC_HfAmount = null;                 
+	String						CC_CompCurIdCodeC = null;          
+	String						CC_HfPriority = null;              
+	String						CC_AccPrior = null;                
+	java.math.BigDecimal 		CC_CompCovAmo = null;  				//iznos komponente kolaterala             
+	java.math.BigDecimal 		CC_CompCovAmoRef = null;            //iznos komponente kolaterala u ref. valuti
+	java.sql.Date				CC_CompCovDate  = null;             //Datum iznosa ovog dijela kolaterala- today u trenutku unosa
+	String						CC_CurIdRefCodeC = null;           
+
+
+	//invisible
+	java.math.BigDecimal 		CC_COL_HEA_ID = null;			//kljuc iz COLL_HEAD
+	java.math.BigDecimal 		CC_COL_TYPE_ID = null;			//tip kolaterala
+	String						CC_CollTypeCode = null;
+	java.math.BigDecimal 		CC_HfHfcId = null;				//vrsta tereta
+	java.math.BigDecimal 		CC_COMP_CUR_ID = null;			//valuta komponente kolaterala jednaka je HF_CUR_ID u COLL_HF_PRIOR
+	java.math.BigDecimal 		CC_CUR_ID_REF = null;
+	java.math.BigDecimal 		CC_COMP_HF_PRIOR_ID = null;		//primarni kljuc u COLL_HF_PRIOR
+	java.math.BigDecimal 		CC_ExcRatRef = null;			//tecaj po kome se izracunava dio kolaterala u ref. valuti
+	java.sql.Date				CC_ExcRatRefDate = null;		//datum iznosa dijela kolaterala u ref. valuti - today u trenutku unosa
+
+
+
+	//comp_cov_bamo kod inserta nema
+	//comp_cov_bdate kod inserta nema
+	//comp_cov_bamo_ref kod inserta nema
+
+	java.math.BigDecimal 		CC_comp_cov_bamo = null;
+	java.sql.Date				CC_comp_cov_bdate = null;                                                                                                                                          
+	java.math.BigDecimal 		CC_comp_cov_bamo_ref = null;  
+
+	java.sql.Date				CC_CompDateFrom = null;			//Datum od kada vrijede podaci komponente kolaterala
+	java.sql.Date				CC_CompDateUntil = null;		//Datum do kada vrijede  podaci komponente kolaterala
+
+	////////////////////////////////////////////////////
+	////////////////////////////////////////////////////
+	hr.vestigo.modules.collateral.common.yoy0.YOY00 coll_gen = null;
+	hr.vestigo.modules.coreapp.common.yxyD.YXYD0 core_gen = null;
+	
+	java.math.BigDecimal   lcAccId = null;					//kljuc loan_component
+	java.math.BigDecimal   compId = null;					//kljuc coll_component
+	java.math.BigDecimal   lrcId = null;					//kljuc od LOAN_REL_COLL
+	
+	String bankSign = null;
+	java.math.BigDecimal userId = null;
+	
+	java.sql.Timestamp OpeningTs = null;
+	java.sql.Timestamp UserLock = null;
+	
+	java.math.BigDecimal eve_id = null;
+	
+	
+	java.sql.Date todaySQLDate = null;
+	hr.vestigo.modules.coreapp.common.yxyB.YXYB0 yxyBobj  = null;
+	//insert into event
+	
+	
+	
+	public CO072 (DeclCO07 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+							
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+	    
+			coll_gen = new hr.vestigo.modules.collateral.common.yoy0.YOY00(ctx);			//COLLATERAL_IDN
+			core_gen = new hr.vestigo.modules.coreapp.common.yxyD.YXYD0(ctx);				//COREAPP_IDN
+			
+			yxyBobj  = new hr.vestigo.modules.coreapp.common.yxyB.YXYB0(tc);
+			bankSign = tc.getBankSign();
+			
+			
+			userId = decl.collateraldialoginsertmapping.use_id;
+			
+			
+			
+			java.math.BigDecimal eve_typ_id =  new java.math.BigDecimal("1607253003.0");
+			java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+			long timeT = calendar.getTime().getTime();
+			todaySQLDate = new java.sql.Date(timeT);
+			
+			try{
+				java.util.HashMap event = new java.util.HashMap();
+				event.put("eve_typ_id", eve_typ_id);
+				event.put("event_date", todaySQLDate);
+				event.put("cmnt", "Insert into real_estate");
+				event.put("use_id",decl.collateraldialoginsertmapping.use_id);
+				event.put("ext_event_code", null);
+				event.put("ext_event_num", null);
+				event.put("bank_sign", tc.getBankSign());
+				
+				eve_id = yxyBobj.insertEventWithGeneratedId(event);
+			}catch(java.sql.SQLException e){
+				
+				
+				tc.debug (".......CO072.sqlj ..... Insert into event unsuccessful.");
+				tc.debug ( "......CO072.sqlj insert into event  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO072.sqlj insert into event  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO072.sqlj insert into event  SQL Message " + e.getMessage());
+				e.printStackTrace();
+				throw e;
+			}
+			
+			tc.debug("..........EVE_ID je    " + eve_id);
+			
+			
+			
+			hr.vestigo.framework.common.TableData tdLoan = null;
+			hr.vestigo.framework.common.TableData tdCola = null;
+			
+			
+			tdLoan = decl.collateraldialoginsertmapping.tblCollateralDialogLoanComp;
+			
+			
+			tdCola = decl.collateraldialoginsertmapping.tblCollateralDialogCollComp;
+			
+			
+			
+			if(tdLoan == null){
+				
+				tc.debug(".....CO072.sqlj tblCollateralDialogLoanComp is empty ");
+				throw new VestigoTMException(1, "Transaction CO072: Error getting table  tblCollateralDialogLoanComp! ","err411a", null);
+			}else{
+				tc.debug(".....CO072.sqlj tblCollateralDialogLoanComp is fetched ");
+				
+			}
+			
+			if(tdCola == null){
+				
+				tc.debug(".....CO072.sqlj tblCollateralDialogCollComp is empty ");
+				throw new VestigoTMException(1, "Transaction CO072: Error getting table  tblCollateralDialogCollComp! ","err411a", null);
+			}else{
+				tc.debug(".....CO072.sqlj tblCollateralDialogCollComp is fetched ");
+				
+			}
+			
+			
+			
+	        if (tdLoan != null){
+	        	 	java.util.Vector vidljiviDioTabliceLoan = tdLoan.getData();
+	 				java.util.Vector nevidljiviDioTabliceLoan = (java.util.Vector) tdLoan.getUnique();
+	 			
+	 			for(int i = 0; i < vidljiviDioTabliceLoan.size(); i++){
+	 				java.util.Vector vidljiviRedakLoan = (java.util.Vector) vidljiviDioTabliceLoan.elementAt(i);
+	 				java.util.Vector nevidljiviRedakLoan = (java.util.Vector) nevidljiviDioTabliceLoan.elementAt(i);
+	 				
+	 				tc.debug(".....CO072.sqlj                                      ");
+	 				tc.debug(".....CO072.sqlj      "+ i + ". vidljivi redakLoan    ");
+	 				for(int j= 0; j < vidljiviRedakLoan.size();j++){
+	 					tc.debug(".....CO072.sqlj      " +j + ". element je " + vidljiviRedakLoan.elementAt(j));
+	 				}
+	 				tc.debug(".....CO072.sqlj                                         ");
+	 				tc.debug(".....CO072.sqlj      " + i + ". nevidljivi redakLoan    ");
+	 				for(int k= 0; k < nevidljiviRedakLoan.size();k++){
+	 					tc.debug(".....CO072.sqlj      " + k + ". element je " + nevidljiviRedakLoan.elementAt(k));
+	 				}
+	 				
+	 			}//glavni for
+	        	
+	        	
+	        	
+	        }
+	        if (tdCola != null){
+	        		java.util.Vector vidljiviDioTabliceColl = tdCola.getData();
+					java.util.Vector nevidljiviDioTabliceColl = (java.util.Vector) tdCola.getUnique();
+				
+					for(int i = 0; i < vidljiviDioTabliceColl.size(); i++){
+						java.util.Vector vidljiviRedakColl = (java.util.Vector) vidljiviDioTabliceColl.elementAt(i);
+						java.util.Vector nevidljiviRedakColl = (java.util.Vector) nevidljiviDioTabliceColl.elementAt(i);
+					
+						tc.debug(".....CO072.sqlj                                      ");
+						tc.debug(".....CO072.sqlj      "+ i + ". vidljivi redakColl    ");
+						for(int j= 0; j < vidljiviRedakColl.size();j++){
+							tc.debug(".....CO072.sqlj      " +j + ". element je " + vidljiviRedakColl.elementAt(j));
+						}
+						tc.debug(".....CO072.sqlj                                         ");
+						tc.debug(".....CO072.sqlj      " + i + ". nevidljivi redakColl    ");
+						for(int k= 0; k < nevidljiviRedakColl.size();k++){
+							tc.debug(".....CO072.sqlj      " + k + ". element je " + nevidljiviRedakColl.elementAt(k));
+						}
+					
+					}//glavni for
+	        }
+			
+	        
+	        
+	        ////////////////////////////////////////////////////
+	        ////////////////////////////////////////////////////
+	        if (tdLoan != null){
+	        		
+    	 			java.util.Vector vidljiviDioTabliceLoan = tdLoan.getData();
+					java.util.Vector nevidljiviDioTabliceLoan = (java.util.Vector) tdLoan.getUnique();
+					for(int i = 0; (i < vidljiviDioTabliceLoan.size()) ; i++){
+						nullElLoanComponent();
+						java.util.Vector vidljiviRedakLoan = (java.util.Vector) vidljiviDioTabliceLoan.elementAt(i);
+						java.util.Vector nevidljiviRedakLoan = (java.util.Vector) nevidljiviDioTabliceLoan.elementAt(i);
+						
+						//Dohvat vidljivih elemenata jedne komponente plasmana
+						//LOAN_COMPONENT                                                                                                                                                          
+						//visible  
+						LC_ordNoLoanComp = (String) vidljiviRedakLoan.elementAt(0);
+						LC_ordNoLoanComp = LC_ordNoLoanComp.trim();
+						
+						LC_accNo = (String) vidljiviRedakLoan.elementAt(1);
+						LC_accNo = LC_accNo.trim();
+						
+						LC_loantypeSCD = (String) vidljiviRedakLoan.elementAt(2);
+						tc.debug(" LC_loantypeSCD"  + LC_loantypeSCD   );
+						
+						tc.debug(" LC_BALANCE: |"  + vidljiviRedakLoan.elementAt(3)+"|"   );
+						
+						LC_Balance = (java.math.BigDecimal) vidljiviRedakLoan.elementAt(3);
+						tc.debug(" LC_BALANCE"  + LC_Balance   );
+						
+						
+						LC_BalanceDate = (java.sql.Date) vidljiviRedakLoan.elementAt(4);
+						
+						LC_BalanceCurIdLoanCodeC = (String) vidljiviRedakLoan.elementAt(5);
+						LC_BalanceCurIdLoanCodeC = LC_BalanceCurIdLoanCodeC.trim();
+						
+						LC_AmoLoanComp = (java.math.BigDecimal) vidljiviRedakLoan.elementAt(6);
+						LC_AmoLoanCompRef = (java.math.BigDecimal) vidljiviRedakLoan.elementAt(7);
+						LC_DateLinkLoanComp = (java.sql.Date) vidljiviRedakLoan.elementAt(8);
+						LC_CurIdRefLoanCodeC =(String) vidljiviRedakLoan.elementAt(9);
+						
+						
+						
+						//Dohvat nevidljivih elemenata jedne komponente plasmana
+						//LOAN_COMPONENT                                                                                                                                                          
+						//invisible                                                                                                                                                             
+						LC_laAccId = (java.math.BigDecimal) nevidljiviRedakLoan.elementAt(0);                                                                                                                                 
+						LC_CUR_ID = (java.math.BigDecimal) nevidljiviRedakLoan.elementAt(1);                                                                                                                                    
+						LC_CUR_ID_REF = (java.math.BigDecimal) nevidljiviRedakLoan.elementAt(2);                                                                                                               
+						LC_ExcRatRefPart = (java.math.BigDecimal) nevidljiviRedakLoan.elementAt(3);                                                                   
+						LC_ExcRatRefDatePart = (java.sql.Date) nevidljiviRedakLoan.elementAt(4);                                                      
+						LC_lcDateFrom = (java.sql.Date) nevidljiviRedakLoan.elementAt(5);                                                                           
+						LC_lcDateUntil = (java.sql.Date) nevidljiviRedakLoan.elementAt(6);    	
+						
+						nullElCollComponent();
+						//COLL_COMPONEBT BEGIN
+
+						 if (tdCola != null){
+						 		java.util.Vector vidljiviDioTabliceColl = tdCola.getData();
+						 		java.util.Vector nevidljiviDioTabliceColl = (java.util.Vector) tdCola.getUnique();
+						 		
+						 		
+						 		for(int t = 0; t < vidljiviDioTabliceColl.size(); t++){
+										java.util.Vector vidljiviRedakColl = (java.util.Vector) vidljiviDioTabliceColl.elementAt(t);
+										java.util.Vector nevidljiviRedakColl = (java.util.Vector) nevidljiviDioTabliceColl.elementAt(t);
+							
+										//COLL_COMPONENT                                                                                                                                                            
+										//visible                                                                                                                                                                   
+										CC_ordNoCollComp = (String) vidljiviRedakColl.elementAt(0);
+										CC_ordNoCollComp = CC_ordNoCollComp.trim();
+										
+										CC_ColNum   = (String) vidljiviRedakColl.elementAt(1);  
+										CC_CollTypeName = (String) vidljiviRedakColl.elementAt(2);                                                                                                                                    
+										CC_HfHfcSCD = (String) vidljiviRedakColl.elementAt(3);                                                                                                                   
+										CC_HfAmount = (java.math.BigDecimal) vidljiviRedakColl.elementAt(4);                                                                                                                                
+										
+										CC_CompCurIdCodeC = (String) vidljiviRedakColl.elementAt(5); 
+										CC_CompCurIdCodeC = CC_CompCurIdCodeC.trim();
+										
+										CC_HfPriority = (String) vidljiviRedakColl.elementAt(6);                                                                                                                                      
+										CC_AccPrior = (String) vidljiviRedakColl.elementAt(7);  
+										CC_CompCovAmo = (java.math.BigDecimal) vidljiviRedakColl.elementAt(8);                                                                                           
+										CC_CompCovAmoRef = (java.math.BigDecimal) vidljiviRedakColl.elementAt(9);                                                                       
+										CC_CompCovDate  = (java.sql.Date) vidljiviRedakColl.elementAt(10);                                                        
+										CC_CurIdRefCodeC = (String) vidljiviRedakColl.elementAt(11);                                                                                                                          
+								                                                                    
+								                                                                      
+										//invisible                                                                                                                                                                 
+										CC_COL_HEA_ID = (java.math.BigDecimal) nevidljiviRedakColl.elementAt(0);                                                                                                    
+										CC_COL_TYPE_ID = (java.math.BigDecimal) nevidljiviRedakColl.elementAt(1);                                                                                                         
+										CC_CollTypeCode = (String) nevidljiviRedakColl.elementAt(2);                                                                                                                                     
+										CC_HfHfcId = (java.math.BigDecimal) nevidljiviRedakColl.elementAt(3);                                                                                                           
+										CC_COMP_CUR_ID =  (java.math.BigDecimal) nevidljiviRedakColl.elementAt(4);                                                    
+										CC_CUR_ID_REF = (java.math.BigDecimal) nevidljiviRedakColl.elementAt(5);                                                                                                                                
+										CC_COMP_HF_PRIOR_ID = (java.math.BigDecimal) nevidljiviRedakColl.elementAt(6);                                                                                     
+										CC_ExcRatRef = (java.math.BigDecimal) nevidljiviRedakColl.elementAt(7);                                                                
+										CC_ExcRatRefDate = (java.sql.Date) nevidljiviRedakColl.elementAt(8);                                                     
+										//comp_cov_bamo kod inserta nema                                                                                                                                            
+										//comp_cov_bdate kod inserta nema                                                                                                                                           
+										//comp_cov_bamo_ref kod inserta nema                                                                                                                                        
+								                                                                      
+										CC_comp_cov_bamo = null;                                                                                                                            
+										CC_comp_cov_bdate = null;                                                                                                                                          
+										CC_comp_cov_bamo_ref = null;                                                                                                                                  
+								                                                                      
+										CC_CompDateFrom = (java.sql.Date) nevidljiviRedakColl.elementAt(9);                                                                          
+										CC_CompDateUntil = (java.sql.Date) nevidljiviRedakColl.elementAt(10);                                                                         
+
+										if(CC_CompCurIdCodeC.compareTo(LC_BalanceCurIdLoanCodeC)== 0){
+											
+											if(LC_ordNoLoanComp.compareTo(CC_ordNoCollComp) == 0){
+												//MORA BITI 1-1 veza komponenata
+												insertLoanComponent(ctx,tc);
+												
+												insertCollComponent(ctx,tc);
+												//SELECT COLL_HF_PRIOR if is available amount to cover placement
+												//must be implemented
+												updateCollHfPrior(ctx,tc);
+
+												//select za komponente plasmana jesu li pokrivene
+												insertLoanRelColl(ctx,tc);
+											}
+											
+										}else{
+											// SREDITI AKO JE DRUGA VALUTA 
+										}
+										
+										
+							
+							}//glavni for CollComp
+						 }//tdCola != null
+						 
+						 
+						
+						
+						//COLL_COMPONENT END
+						
+						
+
+						
+					}//for i
+	        }//tdLoan != null
+			
+			
+	        ////////////////////////////////////////////////////
+	        ////////////////////////////////////////////////////
+	        tdLoan = null;
+	        tdCola = null;	
+	}//execute
+
+	
+	
+	
+	
+	public void nullElCollComponent(){
+    	//COLL_COMPONENT                                                                                                                                                            
+		//visible                                                                                                                                                                   
+		CC_ordNoCollComp = null;			//redni broj komponente plasmana koju ova komp                                                                              
+		CC_ColNum   = null;                                                                                                                                       
+		CC_CollTypeName = null;                                                                                                                                   
+		CC_HfHfcSCD = null; 				//vrsta tereta                                                                                                                
+		CC_HfAmount = null;                                                                                                                                 
+		CC_CompCurIdCodeC = null;                                                                                                                                 
+		CC_HfPriority = null;                                                                                                                                     
+		CC_AccPrior = null;                                                                                                                                       
+		CC_CompCovAmo = null;  				//iznos komponente kolaterala                                                                                         
+		CC_CompCovAmoRef = null;            //iznos komponente kolaterala u ref. valuti                                                                     
+		CC_CompCovDate  = null;             //Datum iznosa ovog dijela kolaterala- today u trenutku unosa                                                       
+		CC_CurIdRefCodeC = null;                                                                                                                                  
+                                                                    
+                                                                      
+		//invisible                                                                                                                                                                 
+		CC_COL_HEA_ID = null;			//kljuc iz COLL_HEAD                                                                                                      
+		CC_COL_TYPE_ID = null;			//tip kolaterala                                                                                                        
+		CC_CollTypeCode = null;                                                                                                                                   
+		CC_HfHfcId = null;				//vrsta tereta                                                                                                            
+		CC_COMP_CUR_ID = null;			//valuta komponente kolaterala jednaka je HF_CUR_ID u COLL_HF_PRIOR                                                     
+		CC_CUR_ID_REF = null;                                                                                                                               
+		CC_COMP_HF_PRIOR_ID = null;		//primarni kljuc u COLL_HF_PRIOR                                                                                      
+		CC_ExcRatRef = null;			//tecaj po kome se izracunava dio kolaterala u ref. valuti                                                                
+		CC_ExcRatRefDate = null;		//datum iznosa dijela kolaterala u ref. valuti - today u trenutku unosa                                                     
+                                                                      
+                                                                      
+                                                                      
+		//comp_cov_bamo kod inserta nema                                                                                                                                            
+		//comp_cov_bdate kod inserta nema                                                                                                                                           
+		//comp_cov_bamo_ref kod inserta nema                                                                                                                                        
+                                                                      
+		CC_comp_cov_bamo = null;                                                                                                                            
+		CC_comp_cov_bdate = null;                                                                                                                                          
+		CC_comp_cov_bamo_ref = null;                                                                                                                                  
+                                                                      
+		CC_CompDateFrom = null;			//Datum od kada vrijede podaci komponente kolaterala                                                                        
+		CC_CompDateUntil = null;		//Datum do kada vrijede  podaci komponente kolaterala                                                                       
+     } //nullElCollComponent                                                                                                                                                                            
+	
+
+
+		public void nullElLoanComponent(){
+                                                                      
+					//LOAN_COMPONENT                                                                                                                                                          
+					//visible                                                                                                                                                               
+					LC_ordNoLoanComp = null;			//redni broj komponente plasmana			                                                                                    
+					LC_accNo = null;					//partija plasmana                                                                                                              
+					LC_loantypeSCD = null;				//vrsta plasmana                                                                                                            
+					LC_Balance = null;  				//stanje plasmana                                                                                                       
+					LC_BalanceDate = null;				//datum stanja plasmana                                                                                                   
+					LC_BalanceCurIdLoanCodeC = null ;  	// valuta plasmana, kao i dijela                                                                                      
+                     
+					LC_AmoLoanComp = null;				//iznos komponente plasmana
+					LC_AmoLoanCompRef = null;			//iznos komponente plasmana u ref. valuti - today u trenutku unosa
+					LC_DateLinkLoanComp = null;			//datum povezivanja - today u trenutku unosa
+					LC_CurIdRefLoanCodeC = null ;  		// referentna valuta plasmana, kao i dijela  
+					
+					//invisible                                                                                                                                                             
+					LC_laAccId = null;                                                                                                                                  
+					LC_CUR_ID = null;                                                                                                                                   
+					LC_CUR_ID_REF = null;               // referentna valuta plasmana, kao i dijela                                                                                                                 
+					LC_ExcRatRefPart = null;			//tecaj po kome se izracunava dio plasmana u ref. valuti                                                              
+					LC_ExcRatRefDatePart = null;		//datum iznosa dijela plasmana u ref. valuti - today u trenutku unosa                                                   
+					LC_lcDateFrom = null;				//Datum od kada vrijede podaci ovog dijela plasmana                                                                         
+					LC_lcDateUntil = null;				//Datum do kada vrijede podaci ovog dijela plasmana 
+					
+					//lc_cov_bamo kod inserta nema                                                                                                                                            
+					//lc_cov_bdate kod inserta nema                                                                                                                                           
+					//lc_cov_bamo_ref kod inserta nema       
+					LC_lc_cov_bamo = null;
+					LC_lc_cov_bdate = null;
+					LC_lc_cov_bamo_ref = null;
+					
+       	}  //nullElLoanComponent                                                                                                                                                                             
+	
+		
+		public void  insertLoanComponent(ConnCtx argCtx,TransactionContext tc){
+			 
+			 
+					//INSERT LOAN_COMPONENT
+					//LC_ACC_ID						Genereirani primarni kljuc tablice   primary key                                   
+					//LA_ACC_ID                     Veza na tablicu LOAN_ACCOUNT                                                       
+					//LC_COV_AMO                    Iznos ovog dijela plasmana koji je pokriven komponentom kolaterala                 
+					//LC_CUR_ID                     Valuta ovog dijela plasmana( to je jednako CUR_ID u LOAN_ACCOUNT)                  
+					//LC_COV_DATE                   Datum iznosa ovog dijela plasmana                                                  
+					//LC_COV_AMO_REF                Iznos ovog dijela plasmana u referentnoj valuti                                    
+					//CUR_ID_REF                    Referentna valuta ovog dijela plasmana  ( to je jednako CUR_ID_REF u LOAN_ACCOUNT )
+					//EXC_RAT_REF                   Tecaj referentne valute                                                            
+					//EXC_RAT_REF_DATE              Datum tecaja referentne valute                                                     
+					//LC_COV_BAMO                   Iznos ovog dijela plasmana iz prethodnog perioda                                   
+					//LC_COV_BDATE                  Datum iznosa ovog dijela plasmana iz prethodnog perioda                            
+					//LC_COV_BAMO_REF               Iznos ovog dijela plasmana u referentnoj valuti iz prethodnog perioda              
+					//LC_DATE_FROM                  Datum od kada vrijede podaci ovog dijela plasmana                                  
+					//LC_DATE_UNTIL                 Datum do kada vrijede  podaci ovog dijela plasmana                                 
+					//LC_STATUS                     Status zapisa                                                                      
+					//LC_SPEC_STATUS                Rezervirani status                                                                 
+					//USE_OPEN_ID                   Korisnik koji je unio podatke                                                      
+					//USE_ID                        Korisnik koji je zadnji mijenjao podatke                                           
+					//OPENING_TS                    Timestamp upisa sloga                                                              
+					//USER_LOCK                     Timestamp promjene sloga                                                           
+					//EVE_ID                        Dogadjaj                                                                            
+					//BANK_SIGN                     Oznaka banke                                                                       
+			
+			try{	
+					
+				lcAccId = coll_gen.getNewId();
+				#sql [argCtx]{
+					INSERT INTO loan_component(lc_acc_id,					
+										   la_acc_id, 
+        									lc_cov_amo, 
+											lc_cur_id,         
+											lc_cov_date , 
+											lc_cov_amo_ref ,   
+											cur_id_ref, 
+											exc_rat_ref ,      
+											exc_rat_ref_date , 
+											lc_cov_bamo  ,     
+											lc_cov_bdate ,     
+											lc_cov_bamo_ref , 
+											lc_date_from ,     
+											lc_date_until ,    
+											lc_status ,        
+											lc_spec_status,
+											use_open_id,
+											use_id ,
+											opening_ts ,       
+											user_lock ,
+											eve_id ,           
+											bank_sign ) 
+													
+
+									VALUES(	:lcAccId,  
+							  				:LC_laAccId,	
+							  				:LC_AmoLoanComp,
+							  				:LC_CUR_ID,
+							  				:LC_DateLinkLoanComp,
+							  				:LC_AmoLoanCompRef,
+											:LC_CUR_ID_REF,
+											:LC_ExcRatRefPart,
+											:LC_ExcRatRefDatePart,
+											:LC_lc_cov_bamo ,
+											:LC_lc_cov_bdate ,
+											:LC_lc_cov_bamo_ref,
+											:LC_lcDateFrom,
+											:LC_lcDateUntil,
+											'A',
+											'00',
+											:userId ,
+                                            :userId,
+											current timestamp,
+											current timestamp,
+											:eve_id,
+											:bankSign )
+
+                                  	       
+					};
+		                                                        
+			}catch(java.sql.SQLException se){
+	
+				tc.debug ( "......CO072.sqlj insert into loan_component SQL ErrorCode " + se.getErrorCode());
+				tc.debug ( "......CO072.sqlj insert into loan_component SQL SQLState " + se.getSQLState());
+				tc.debug ( "......CO072.sqlj insert into loan_component SQL Message " + se.getMessage());
+				throw new VestigoTMException(1, "Transaction CO072: Error inserting loan_component! ","err411a", null);
+	
+			}catch(Exception ex){
+				tc.debug ( "......CO072.sqlj insert into loan_component  Error " );
+				throw new VestigoTMException(1, "Transaction CO072: Error inserting loan_component! ","err411a", null);
+			
+			
+			}
+			
+			
+		}//insertLoanComponent
+		
+		
+		public void  insertCollComponent(ConnCtx argCtx,TransactionContext tc){
+			 //INSERT COLL_COMPONENT
+			//		COMP_ID								Genereirani primarni kljuc tablice   primary key ( COMP_ID)                    
+			//		COMP_HF_PRIOR_ID                    Veza na tablicu COLL_HF_PRIOR                                                       
+			//		COMP_COV_AMO                        Iznos pokrica plasmana ( ovog dijela kolaterala)                                    
+			//		COMP_CUR_ID                         Valuta iznosa   ovog dijela kolaterala ( to je jednako HF_CUR_ID u COLL_HF_PRIOR)   
+			//		COMP_COV_DATE                       Datum iznosa ovog dijela kolaterala                                                 
+			//		COMP_COV_AMO_REF                    Iznos ovog dijela kolaterala u referentnoj valuti                                   
+			//		CUR_ID_REF                          Referentna valuta ovog dijela kolaterala ( to je jednako CUR_ID_REF u COLL_HF_PRIOR)
+			//		EXC_RAT_REF                         Tecaj referentne valute                                                             
+			//		EXC_RAT_REF_DATE                    Datum tecaja                                                                        
+			//		COMP_COV_BAMO                       Iznos ovog dijela kolaterala iz prethodnog perioda                                  
+			//		COMP_COV_BDATE                      Datum iznosa ovog dijela kolaterala iz prethodnog perioda                           
+			//		COMP_COV_BAMO_REF                   Iznos ovog dijela kolaterala  u referentnoj valuti                                  
+			//		COMP_DATE_FROM                      Datum od kada vrijede podaci komponente kolaterala                                  
+			//		COMP_DATE_UNTIL                     Datum do kada vrijede  podaci komponente kolaterala                                 
+			//		COMP_STATUS                         Status kolaterala                                                                   
+			//		COMP_SPEC_STATUS                    Rezervirani status                                                                  
+			//		USE_OPEN_ID                         Korisnik koji je unio podatke                                                       
+			//		USE_ID                              Korisnik koji je zadnji mijenjao podatke                                            
+			//		OPENING_TS                          Timestamp upisa sloga                                                               
+			//		USER_LOCK                           Timestamp promjene sloga                                                            
+			//		EVE_ID                              Dogadjaj                                                                             
+			//		BANK_SIGN                           Oznaka banke                                                                        
+
+
+			try{	
+					compId = coll_gen.getNewId();
+					#sql [argCtx]{
+
+							INSERT INTO coll_component 
+									(	 			comp_id	,							
+													comp_hf_prior_id  ,    
+													comp_cov_amo ,         
+													comp_cur_id ,          
+													comp_cov_date ,        
+													comp_cov_amo_ref ,     
+													cur_id_ref ,           
+													exc_rat_ref,           
+													exc_rat_ref_date,      
+													comp_cov_bamo ,        
+													comp_cov_bdate,        
+													comp_cov_bamo_ref ,    
+													comp_date_from ,       
+													comp_date_until ,      
+													comp_status  ,         
+													comp_spec_status,      
+													use_open_id ,          
+													use_id ,               
+													opening_ts  ,          
+													user_lock ,            
+													eve_id  ,              
+													bank_sign )
+
+									VALUES( :compId,  
+							  				:CC_COMP_HF_PRIOR_ID,	
+							  				:CC_CompCovAmo,
+							  				:CC_COMP_CUR_ID,
+							  				:CC_CompCovDate,
+											:CC_CompCovAmoRef,
+							  				:CC_CUR_ID_REF,
+											:CC_ExcRatRef,
+											:CC_ExcRatRefDate,
+											:CC_comp_cov_bamo ,                                                                                                                           
+											:CC_comp_cov_bdate ,                                                                                                                                         
+											:CC_comp_cov_bamo_ref , 
+											:CC_CompDateFrom,
+											:CC_CompDateUntil,
+											'A',
+											'00',
+											:userId,
+											:userId,
+											current timestamp,
+											current timestamp,
+											:eve_id,
+											:bankSign)   
+				};
+			}catch(java.sql.SQLException se){
+				
+					tc.debug ( "......CO072.sqlj insert into coll_component SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO072.sqlj insert into coll_component SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO072.sqlj insert into coll_component SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO072: Error inserting coll_component! ","err411a", null);
+				
+			}catch(Exception ex){
+				tc.debug ( "......CO072.sqlj insert into coll_component  Error " );
+				throw new VestigoTMException(1, "Transaction CO072: Error inserting coll_component! ","err411a", null);
+			
+			
+			}
+
+		}//insertCollComponent
+		
+		
+		public void  updateCollHfPrior(ConnCtx argCtx,TransactionContext tc){
+
+			 //UPDATE COLL_HF_PRIOR
+
+
+//		COLL_HF_PRIOR_ID						Genereirani primarni kljuc tablice   primary key ( COLL_HF_PRIOR_ID)                                              
+//		HF_TABLE_ID                 Tablica dodatnih podataka kolaterala  REAL_ESTATE, VEHICLE, BOND, ...                                             
+//		HF_REF_ID                   Referenca u tablici  coll_restate, coll_vehicel                                                                   
+//		HF_COLL_HEAD_ID             Referenca u tablici COLL_HEAD                                                                                     
+//		HF_OWN_CUS_ID               Broj komitenta u ciju je korist upisana hipoteka ili fiducija ili pravo ( ako je to npr. druga banka onda njen id)
+//		HF_REGISTER_NO              Omega id komitenta u ciju je korist upisana hipoteka                                                              
+//		HF_OWN_CODE                 Sifra komitenta ( SMBK, JMBG, broj identifikacijske isprave) u ciju je korist upisana hipoteka                    
+//		HF_OWN_FNAME                Ime osobe u ciju je korist upisana hipoteka                                                                       
+//		HF_OWN_LNAME                Prezime osobe u ciju je korist upisana hipoteka ili naziv pravne osobe u ciju je korist upisana hipoteka          
+//		HF_HFC_ID                   Vrsta tereta( hipoteka , fiducija  i sl. )                                                                        
+//		HF_PRIORITY                 Prioritet hipoteke , fiducije 1 najveci prioritet ( prva upisana hipoteka),  2 druga upisana hipoteka,  ...., 99 zadnja devedesetdeveta upisana hipoteka  
+//		HF_NOTARY_AGR 							Broj  javnobiljeznicke ovjere ugovora na osnovu kojeg se upisuje hipoteka , fiducija , ...                
+//		HF_NOTARY_PLACE_ID          Mjesto  javnobiljeznicke ovjere ugovora na osnovu kojeg se upisuje hipoteka , fiducija , ...
+//		HF_NOTARY_DATE              Datum javnobiljeznicke ovjere ugovora na osnovu kojeg se upisuje hipoteka , fiducija , ...  
+//		HF_NOTARY                   Javni biljeznik koji je ovjerio ugovor koji je temelj upisa hipoteke                        
+//		HF_NOT_FNAME                Ime javnog biljeznika                                                                       
+//		HF_NOT_LNAME                Prezime javnog biljeznika ( ili naziv javnobiljeznickog ureda)                              
+//		HF_DATE_RECIV               Datum zaprimanja rjesenja o upisu u zemljisne knjige                                        
+//		HF_COURT_DECIS              Oznaka rjesenja suda o upisu tereta na nekretnini                                           
+//		HF_DATE_EXTRACT             Datum izvatka iz zemljisnih knjiga                                                          
+//		HF_OFFI_LRD                 Sluzbenik zemljisno knjiznog ureda opcinskog suda                                           
+//		HF_OFFILRD_FNAME            Ime sluzbenika zemljisno knjiznog ureda opcinskog suda koji je izdao zk izvadak             
+//		HF_OFFILRD_LNAME            Prezime sluzbenika zemljisno knjiznog ureda opcinskog suda koji je izdao zk izvadak         
+//		HF_REC_LOP_ID               Je li upisano pravo  Pravo upisano u korist Raiffeisenbank Austria d.d. Zagreb R , Pravo upisano u korist trece osobekorist trece osobe  F  
+//		HF_ADD_DATA 								Slobodni unos                                                                                                                                                                 
+//		HF_AMOUNT                   Iznos upisane hipoteke, fiducije za danu nekretninu, plovilo, ...                                                                                             
+//		HF_CUR_ID                   Valuta iznosa  upisane hipoteke ili  fiducije ( jednaka je valuti nominalne vrijednosti osnovnog kolaterala: nekretnine, vozila, snopa vrijednsonih papira...)
+//		AMOUNT_REF                  Referentni iznos upisane hipoteke, fiducije za danu nekretninu, plovilo,  u nekoj referentnoj valuti ako je razlicita od nominalne...                         
+//		CUR_ID_REF                  Referentna valuta iznosa  upisane hipoteke ili  fiducije                                                                                                      
+//		EXC_RAT_REF                 Tecaj                                                                                                                                                         
+//		EXC_RAT_REF_DATE            Datum tecaja                                                                                                                                                  
+//		HF_DRAW_AMO                 Iskoristeni iznos  upisanog tereta (hipoteke, fiducije ili ...)                                                                                               
+//		HF_AVAIL_AMO                Preostali iznos upisanog tereta (hipoteke, fiducije ili ...)                                                                                                  
+//		HF_DRAW_AMO_REF             Iskoristeni iznos  upisanog tereta (hipoteke, fiducije ili ...) u referentnoj valuti                                                                          
+//		AVAIL_AMO_REF               Preostali iznos upisanog tereta (hipoteke, fiducije ili ...) u referentnoj valuti                                                                             
+//		HF_AVAIL_DAT                Datum preostalog iznosa                                                                                                                                       
+//		DRAW_BAMO                   Iskoristeni iznos  upisanog tereta iz prethodnog perioda (hipoteke, fiducije ili ...)                                                                         
+//		AVAIL_BAMO                  Preostali iznos upisanog tereta  iz prethodnog perioda (hipoteke, fiducije ili ...)                                                                           
+//		DRAW_BAMO_REF               Iskoristeni iznos  upisanog tereta  iz prethodnog perioda (hipoteke, fiducije ili ...) u referentnoj valuti                                                   
+//		AVAIL_BAMO_REF              Preostali iznos upisanog tereta  iz prethodnog perioda (hipoteke, fiducije ili ...) u referentnoj valuti                                                      
+//		AVAIL_BDAT                  Datum preostalog iznosa iz prethodnog perioda                                                                                                                 
+//		VAL_DATE_TURN                                                                                                                                                                             
+//		VAL_DATE_PROC                                                                                                                                                                             
+//		HF_DATE_HFC_FROM            Datum od kada vrijedi hipoteka                                                                                                                                
+//		HF_DATE_HFC_UNTIL           Datum do kada vrijedi  hipoteka                                                                                                                               
+//		HF_STATUS                   Status upisanog tereta                                                                                                                                        
+//		HF_SPEC_STAT                Rezervirani status                                                                                                                                            
+//		HF_DATE_FROM                Datum od kada vrijedi zapis                                                                                                                                   
+//		HF_DATE_UNTIL               Datum do kada vrijedi  zapis                                                                                                                                  
+//		USE_OPEN_ID                 Korisnik koji je unio podatke                                                                                                                                 
+//		USE_ID                      Korisnik koji je zadnji mijenjao podatke                                                                                                                      
+//		OPENING_TS                  Timestamp upisa sloga                                                                                                                                         
+//		USER_LOCK                   Timestamp promjene sloga                                                                                                                                      
+//		EVE_ID                      Dogaðaj                                                                                                                                                       
+//		BANK_SIGN                   Oznaka banke                                                                                                                                                  
+		                            
+		     
+		     
+		     
+		     
+		     
+		     try{	
+						
+				#sql [argCtx]{
+							UPDATE coll_hf_prior SET hf_draw_amo =  hf_draw_amo + :CC_CompCovAmo,
+                            use_id = :userId , user_lock = current timestamp
+		     				WHERE coll_hf_prior_id = :(CC_COMP_HF_PRIOR_ID)
+				                                   	       
+				};
+				                                                       
+				#sql [argCtx]{
+					UPDATE coll_hf_prior
+					SET hf_avail_amo = hf_amount - hf_draw_amo , use_id = :userId , user_lock = current timestamp
+     				WHERE coll_hf_prior_id = :(CC_COMP_HF_PRIOR_ID)
+		                                   	       
+		     	};	 	
+					
+			
+			}catch(java.sql.SQLException se){
+				
+					tc.debug ( "......CO072.sqlj update into coll_hf_prior SQL ErrorCode " + se.getErrorCode());
+					tc.debug ( "......CO072.sqlj update into coll_hf_prior SQL SQLState " + se.getSQLState());
+					tc.debug ( "......CO072.sqlj update into coll_hf_prior SQL Message " + se.getMessage());
+					throw new VestigoTMException(1, "Transaction CO072: Error updating coll_hf_prior! ","err411a", null);
+				
+			}catch(Exception ex){
+				tc.debug ( "......CO072.sqlj insert into coll_hf_prior  Error " );
+				throw new VestigoTMException(1, "Transaction CO072: Error inserting coll_hf_prior! ","err411a", null);
+			
+			
+			}
+
+
+			
+
+		}//updateCollHfPrior
+		
+		
+		
+		
+		public void  insertLoanRelColl(ConnCtx argCtx,TransactionContext tc){
+
+//			INSERT  LOAN_REL_COLL
+
+					try{	
+						lrcId = coll_gen.getNewId();	
+					#sql [argCtx]{
+								INSERT INTO loan_rel_coll
+										(			
+										 		lrc_id,
+												comp_id,
+												lc_acc_id,
+												lcr_date_from,
+												lcr_date_until,
+												lcr_status,
+												lcr_spec_status,
+												use_open_id,
+												use_id,
+												opening_ts,
+												user_lock,
+												eve_id,
+												bank_sign )
+
+								VALUES( :lrcId,  
+								  			:compId,	
+								  			:lcAccId,  
+								  			:LC_lcDateFrom,                        
+											:LC_lcDateUntil,                        
+											'A',
+											'00',
+											:userId,
+											:userId,
+											current timestamp,
+											current timestamp,
+											:eve_id,
+											:bankSign)   
+					                                   	       
+					};
+						                                                        
+						
+						
+				
+				}catch(java.sql.SQLException se){
+					
+						tc.debug ( "......CO072.sqlj insert into coll_restate SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO072.sqlj insert into coll_restate SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO072.sqlj insert into coll_restate SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO072: Error inserting loan_rel_coll! ","err411a", null);
+					
+				}catch(Exception ex){
+					tc.debug ( "......CO072.sqlj insert into coll_restate  Error " );
+					throw new VestigoTMException(1, "Transaction CO072: Error inserting loan_rel_coll! ","err411a", null);
+				
+				
+				}
+
+
+				lcAccId = null;
+				compId = null;
+				
+
+			}//insertLoanRelColl
+		
+		
+}	
+			

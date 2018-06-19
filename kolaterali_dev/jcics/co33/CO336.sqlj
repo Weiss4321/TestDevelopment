@@ -1,0 +1,162 @@
+package hr.vestigo.modules.collateral.jcics.co33;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Date;
+	
+
+  
+public class CO336 extends RemoteTransaction {
+// akcija zatvaranja ugovora na listi aktivnih ugovora
+// update aktivnog sloga za listu aktivnih 
+// 		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = ZATVORI UGOVOR	
+// insert u tbl. COLL_LIST_Q sloga za listu na koju ce predmet otici 
+// 		status=0
+//		income_time = current timestamp
+//		use_id = null 
+//		org_uni_id = null 
+// update status na N, use_id, org_uni_id, user_lock, datum do kojeg vrijedi ugovor u tbl. frame_agreement 
+
+// 	
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co33/CO336.sqlj,v 1.1 2007/03/06 14:19:06 hramkr Exp $";
+	
+	private DeclCO33 d = null;
+
+	public CO336(DeclCO33 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		
+		String proc_status = "";
+	
+		Timestamp ver_ts = null;
+		Date close_date = null;
+
+		
+//	zatvoriti se moze ugovor koji je na listi aktivnih 		
+//  proc_status = 2
+		
+// da li je ugovor na listi aktivnih		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+
+		try {
+			
+				#sql[ctx]{  
+						SELECT
+								proc_status
+						INTO
+								:(proc_status)
+						FROM
+								frame_agreement
+						WHERE
+								fra_agr_id=:(d.agrlistclose.w_fra_agr_id)
+						AND	
+								proc_status = '2'
+
+				};  
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO336: Predmet nije na ref listi! ","colErr017", null);	
+			}
+		}		
+			
+	   
+		#sql[ctx] { 
+				SELECT current date, current timestamp 
+				INTO :(close_date), :(ver_ts)
+				FROM sysibm.sysdummy1 
+		};		
+			
+		tc.info("FRA_AGR_ID:...." + d.agrlistclose.w_fra_agr_id);
+		tc.info("PROC_STATUS:...." + d.agrlistclose.w_proc_status);		
+		
+
+		YOY61 YOY61=new YOY61(tc);
+		
+		CollListQData plq=new CollListQData();   		
+		
+//	verifikacija
+		
+		plq.col_hea_id=d.agrlistclose.w_fra_agr_id;
+
+		
+// source lista
+		plq.source_list = d.agrlistclose.source_list;		
+		plq.status_source_list = "1";		
+		plq.release_time = ver_ts;
+		plq.use_id=d.agrlistclose.use_id;	
+		plq.org_uni_id = d.agrlistclose.org_uni_id;
+		plq.cmnt=null;		
+		plq.action_type=d.agrlistclose.action_type;					
+		
+//		 target lista		
+		plq.target_list = d.agrlistclose.target_list;	
+		plq.status_target_list = "0";		
+		plq.income_time = ver_ts;
+		plq.target_list_use_id = null;
+		plq.target_list_org_uni_id = null;
+ 	
+		plq.status=d.agrlistclose.w_proc_status;
+
+		tc.info("AGR_FRA_ID .....:" + plq.col_hea_id);
+		tc.info("INCOME_TIME ....."+plq.income_time);
+		tc.info("USE_ID....."+plq.use_id);
+		tc.info("RELEASE TIME .....:" + plq.release_time);
+		tc.info("CMNT......:"+plq.cmnt);
+		tc.info("ACTION_TYPE ....."+plq.action_type);
+		tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+		tc.info("SOURCE_LIST .....:" + plq.source_list);
+		tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		tc.info("TARGET_LIST ....."+plq.target_list);
+		tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+		tc.info("PROC_STATUS....."+plq.status);				
+		 
+		YOY61.update_insert_AgrListQ(plq); 
+  
+ 
+		
+// napraviti update status na N, use_id, org_uni_id, user_lock, datum do kojeg vrijedi ugovor u tbl. frame_agreement 
+
+
+		try {
+			#sql[ctx]{
+					UPDATE
+							frame_agreement
+					SET
+							date_until = current date,
+							use_id = :(d.agrlistclose.use_id),
+							org_uni_id = :(d.agrlistclose.org_uni_id),
+							user_lock = :(ver_ts),
+							status = 'N'
+					WHERE
+							fra_agr_id=:(d.agrlistclose.w_fra_agr_id)
+					AND	
+							proc_status = '2'
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO336: Predmet nije na listi aktivnih! ","colErr021", null);	
+			}
+		}  
+
+	}
+	 
+
+} 
+
+

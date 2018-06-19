@@ -1,0 +1,294 @@
+package hr.vestigo.modules.collateral.batch.boA0;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.batch.BatchContext;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za Izvješæe o koncentraciji kolaterala.
+* @author hrakis
+*/
+public class BOA01
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/boA0/BOA01.sqlj,v 1.4 2016/07/21 10:29:43 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql iterator DataIterator (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_cat_id,
+        BigDecimal real_est_nomi_valu,
+        BigDecimal real_est_nm_cur_id,
+        String real_est_nm_cur_code,
+        BigDecimal acum_buy_value,
+        String cus_acc_no,
+        String request_no,
+        String cus_acc_status,
+        String cus_acc_orig_st,
+        String placement_owner_register_no,
+        String placement_owner_name,
+        BigDecimal collateral_owner_cus_id,
+        String collateral_owner_register_no,
+        String collateral_owner_name
+    );
+
+    
+    public BOA01(BatchContext batchContext) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+
+    
+    /**
+     * Metoda dohvaæa podatke za izvještaj.
+     * @return iterator s podacima
+     */
+    public DataIterator selectData(Date value_date) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BOA01.selectData");
+            
+            DataIterator iter = null;
+            #sql [connCtx] iter = { 
+                SELECT 
+                    e.col_hea_id            AS col_hea_id,
+                    e.col_num               AS col_num,
+                    e.col_cat_id            AS col_cat_id,
+                    e.real_est_nomi_valu    AS real_est_nomi_valu,
+                    e.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    x.code_char             AS real_est_nm_cur_code,
+                    e.acum_buy_value        AS acum_buy_value,
+                    b.cus_acc_no            AS cus_acc_no,
+                    b.request_no            AS request_no,
+                    b.cus_acc_status        AS cus_acc_status,
+                    b.cus_acc_orig_st       AS cus_acc_orig_st,
+                    po.register_no          AS placement_owner_register_no,
+                    po.name                 AS placement_owner_name,
+                    co.cus_id               AS collateral_owner_cus_id,
+                    co.register_no          AS collateral_owner_register_no,
+                    co.name                 AS collateral_owner_name
+                FROM coll_head_d e
+                    LEFT OUTER JOIN currency x ON e.real_est_nm_cur_id = x.cur_id
+                    INNER JOIN coll_hf_prior_d d ON d.hf_coll_head_id = e.col_hea_id
+                    INNER JOIN loan_beneficiary_d c ON c.coll_hf_prior_id = d.coll_hf_prior_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                    INNER JOIN customer po ON b.cus_id = po.cus_id
+                    LEFT OUTER JOIN coll_owner o ON (e.col_hea_id = o.col_hea_id AND o.main_owner = 'D' AND :(value_date) BETWEEN o.date_from AND o.date_until)
+                    LEFT OUTER JOIN customer co ON o.cus_id = co.cus_id
+                WHERE (e.col_cat_id IN (615223,613223,619223,622223,627223,612223,618223,621223,620223,624223) OR e.col_type_id IN (91777,93777,54777))
+                  AND e.col_type_id NOT IN (35777,76777,77777)
+                  AND e.collateral_status = '3'
+                  AND :(value_date) BETWEEN e.load_date_from AND e.load_date_until
+                  AND d.hf_status = 'A'
+                  AND :(value_date) BETWEEN d.load_date_from AND d.load_date_until
+                  AND c.status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND (b.cus_acc_status='A' OR
+                         (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                         )
+                      )
+
+                UNION
+
+                SELECT 
+                    e.col_hea_id            AS col_hea_id,
+                    e.col_num               AS col_num,
+                    e.col_cat_id            AS col_cat_id,
+                    e.real_est_nomi_valu    AS real_est_nomi_valu,
+                    e.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    x.code_char             AS real_est_nm_cur_code,
+                    e.acum_buy_value        AS acum_buy_value,
+                    b.cus_acc_no            AS cus_acc_no,
+                    b.request_no            AS request_no,
+                    b.cus_acc_status        AS cus_acc_status,
+                    b.cus_acc_orig_st       AS cus_acc_orig_st,
+                    po.register_no          AS placement_owner_register_no,
+                    po.name                 AS placement_owner_name,
+                    co.cus_id               AS collateral_owner_cus_id,
+                    co.register_no          AS collateral_owner_register_no,
+                    co.name                 AS collateral_owner_name
+                FROM coll_head_d e
+                    LEFT OUTER JOIN currency x ON e.real_est_nm_cur_id = x.cur_id
+                    INNER JOIN loan_beneficiary_d c ON c.col_hea_id = e.col_hea_id
+                    INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                    INNER JOIN customer po ON b.cus_id = po.cus_id
+                    LEFT OUTER JOIN coll_owner o ON (e.col_hea_id = o.col_hea_id AND o.main_owner = 'D' AND :(value_date) BETWEEN o.date_from AND o.date_until)
+                    LEFT OUTER JOIN customer co ON o.cus_id = co.cus_id
+                WHERE (e.col_cat_id IN (615223,613223,619223,622223,627223,612223,618223,621223,620223,624223) OR e.col_type_id IN (91777,93777,54777))
+                  AND e.col_type_id NOT IN (35777,76777,77777)
+                  AND e.collateral_status = '3'
+                  AND :(value_date) BETWEEN e.load_date_from AND e.load_date_until
+                  AND c.status = 'A'
+                  AND :(value_date) BETWEEN c.load_date_from AND c.load_date_until
+                  AND (b.cus_acc_status='A' OR
+                         (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                         )
+                      )
+                      
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            error("Dogodila se nepredvidjena greska kod dohvata podataka za izvjestaj!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BOA01.selectData");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa izdavatelja zadanog VRP-a.
+     * @param data objekt s podacima o VRP-u
+     */
+    public void selectVrpIssuer(AnalyticData data) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BOA01.selectVrpIssuer");
+            
+            #sql [connCtx] {
+                SELECT 
+                    c.cus_id,
+                    c.register_no,
+                    c.name
+                INTO 
+                    :(data.collateral_owner_cus_id),
+                    :(data.collateral_owner_register_no),
+                    :(data.collateral_owner_name)
+                FROM coll_vrp e
+                LEFT OUTER JOIN coll_in2 f ON e.col_in2_id = f.col_in2_id
+                LEFT OUTER JOIN customer c ON f.iss_cus_id = c.cus_id
+                WHERE e.col_hea_id = :(data.col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska pri dohvatu izdavatelja VRP-a! (COL_HEA_ID = " + data.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BOA01.selectVrpIssuer");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa izdavatelja zadane garancije.
+     * @param data objekt s podacima o garanciji
+     */
+    public void selectGuaranteeIssuer(AnalyticData data) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BOA01.selectGuaranteeIssuer");
+            
+            #sql [connCtx] {
+                SELECT 
+                    guar_issuer_id,
+                    guar_iss_regno, 
+                    guar_issuer
+                INTO 
+                    :(data.collateral_owner_cus_id),
+                    :(data.collateral_owner_register_no),
+                    :(data.collateral_owner_name)
+                FROM coll_guarantee
+                WHERE col_hea_id = :(data.col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska pri dohvatu izdavatelja garancije! (COL_HEA_ID = " + data.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BOA01.selectGuaranteeIssuer");
+        }
+    }
+    
+    
+    /**
+     * Metoda dohvaæa osiguranika zadane police osiguranja.
+     * @param data objekt s podacima o polici osiguranja
+     */
+    public void selectInsuredCustomer(AnalyticData data) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BOA01.selectInsuredCustomer");
+            
+            #sql [connCtx] {
+                SELECT 
+                    ins_cus_id,
+                    ins_reg_no, 
+                    ins_data
+                INTO 
+                    :(data.collateral_owner_cus_id),
+                    :(data.collateral_owner_register_no),
+                    :(data.collateral_owner_name)
+                FROM coll_inspolicy
+                WHERE col_hea_id = :(data.col_hea_id)
+                FETCH FIRST ROW ONLY
+                WITH UR
+            };
+        }
+        catch (SQLException ex)
+        {
+            if (!bc.getSQLExHandler().isEmptyRowset(ex))
+            {
+                error("Dogodila se nepredvidjena greska pri dohvatu osiguranika police osiguranja! (COL_HEA_ID = " + data.col_hea_id + ")", ex);
+                throw ex;
+            }
+        }
+        finally
+        {
+            bc.stopStopWatch("BOA01.selectInsuredCustomer");
+        }
+    }
+
+
+    private void error(String message, Exception ex) throws Exception
+    {
+        if (ex != null) bc.error(message, ex); else bc.error(message, new String[]{});
+        bc.userLog("GRESKA: " + message);
+    }
+}

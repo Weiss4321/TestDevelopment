@@ -1,0 +1,40 @@
+package hr.vestigo.modules.collateral.jcics.coA7;
+
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.SQLException;
+
+
+public class COA73
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA7/COA73.sqlj,v 1.1 2011/03/24 14:26:29 hrakis Exp $";
+
+    public DeclCOA7 decl = null;
+    
+
+    public COA73(DeclCOA7 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        try
+        {
+            #sql [ctx] {
+                UPDATE frame_acc_exception 
+                SET 
+                    status = :(decl.frameaccexceptiondialogupdatem.FrameAccExceptionDialog_txtStatus),
+                    comment = :(decl.frameaccexceptiondialogupdatem.FrameAccExceptionDialog_txtComment),
+                    use_id = :(decl.frameaccexceptiondialogupdatem.use_id), 
+                    user_lock = CURRENT TIMESTAMP
+                WHERE fra_acc_exc_id = :(decl.frameaccexceptiondialogupdatem.FRA_ACC_EXC_ID) 
+            };
+        }
+        catch (SQLException ex)
+        {
+            throw new VestigoTMException(1, "Transaction COA73: Error updating FRAME_ACC_EXCEPTION!", "err411a", null, ex);
+        }
+    }
+}

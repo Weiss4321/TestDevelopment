@@ -1,0 +1,291 @@
+package hr.vestigo.modules.collateral.batch.bo77;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoyM.*;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData.GcmTypeMappingData;
+import hr.vestigo.modules.rba.util.ExcelUtils;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+
+import sqlj.runtime.ref.*;
+
+/**
+ * Klasa za kreiranje izvještaja 6.1 Discounts Applied
+ * @author hradnp
+ */
+public class BO77G {
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo77/BO77G.sqlj,v 1.5 2014/06/11 08:51:29 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    private Date value_date;
+
+    private YOYM0 mapping_gctc;
+    private YOYM0 mapping_gct;
+    private YOYM0 mapping_disc_min_gd;
+
+    private Workbook workbook;
+    private ExcelStyleData styles;
+    private Sheet sheet1, sheet2;
+    private int rowIndex1 = 0, rowIndex2 = 0;
+    
+    private HashMap data;
+    
+    private final BigDecimal zero = new BigDecimal("0.00");
+    
+    /**
+     * Konstruktor klase.
+     * @param batchContext Kontekst u kojem se izvršava obrada
+     * @param value_date Datum valute (datum za koji se radi izvještaj)
+     */
+    public BO77G(BatchContext batchContext, Date value_date) throws Exception
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+        this.value_date = value_date;
+
+        // mapiranja
+        this.mapping_gctc = new YOYM0(bc, "gctc", value_date);                      // GCTC kodovi
+        this.mapping_gct = new YOYM0(bc, "gct", value_date);                        // GCT kodovi
+        this.mapping_disc_min_gd = new YOYM0(bc, "disc_min_gd", value_date);        // Discount Minimum (GD)
+
+        // kreiraj strukturu u kojoj æe se èuvati podaci - HashMap kojem je kljuè tip kolaterala, a vrijednost sumarni podaci za tip
+        this.data = new HashMap();
+        Iterator iter = mapping_gctc.getGcmTypes().iterator();
+        while (iter.hasNext())
+        {
+            GcmTypeData type = (GcmTypeData)iter.next();
+            data.put(type, new SummaryData(type));
+        }
+        
+        // kreiraj workbook
+        this.workbook = new SXSSFWorkbook(100);
+        this.styles = ExcelStyleData.createStyles(workbook);
+
+        // kreiraj sheetove
+        this.sheet1 = workbook.createSheet("Detailed Analysis");
+        this.sheet2 = workbook.createSheet("Aggregated Analysis");
+        ExcelUtils.setColumnWidths(sheet1, new int[] { 85, 285, 163, 170, 75, 75, 90, 112, 100, 100, 100, 100, 75, 75, 75 });
+        ExcelUtils.setColumnWidths(sheet2, new int[] { 220, 65, 110, 85, 110, 110, 110, 110, 130, 130, 75 });
+
+        // kreiraj naslove izvještaja
+        Row row = sheet1.createRow(0);
+        ExcelUtils.createCell(row, 0, "6.1", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "Discounts Applied", styles.titleStyle);
+        row = sheet1.createRow(1);
+        ExcelUtils.createCell(row, 1, "Detailed Analysis", styles.normalStyle);
+        rowIndex1 += 3;
+        
+        row = sheet2.createRow(0);
+        ExcelUtils.createCell(row, 0, "6.1", styles.titleStyle);
+        ExcelUtils.createCell(row, 1, "Discounts Applied", styles.titleStyle);
+        row = sheet2.createRow(1);
+        ExcelUtils.createCell(row, 1, "Aggregated Analysis", styles.normalStyle);
+        rowIndex2 += 3;
+
+        // kreiraj headere izvještaja
+        row = sheet1.createRow(rowIndex1);
+        row.setHeightInPoints(64);
+        ExcelUtils.createCell(row, 0, "Customer ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 1, "Customer Name", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 2, "Collateral ID", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 3, "Collateral Type", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 4, "Country of the collateral", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 5, "Country Code", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 6, "GCT", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 7, "Object/property type according to GCTC", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 8, "NCV/NGV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 9, "WCOV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 10, "WCV/WGV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 11, "Discounts applied", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 12, "Discount Minimum (GD)", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 13, "Eligibility", styles.headingWrapAllBordersStyle);
+        rowIndex1++;
+        
+        row = sheet2.createRow(rowIndex2);
+        row.setHeightInPoints(64);
+        ExcelUtils.createCell(row, 0, "Collateral Type", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 1, "GCT", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 2, "Object/property type according to GCTC", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 3, "Total Number of Collaterals", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 4, "Average NCV/NGV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 5, "Average WCOV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 6, "Average WCV/WGV", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 7, "Average value Discount Applied", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 8, "Discount Minimum", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 9, "Discount Maximum", styles.headingWrapAllBordersStyle);
+        ExcelUtils.createCell(row, 10, "Discount Minimum (GD)", styles.headingWrapAllBordersStyle);
+        rowIndex2++;
+    }
+    
+    /**
+     * Metoda koja provjerava ulazi li zadani kolateral u izvještaj i stvara redak u izlaznoj datoteci za njega (ako on u isti ulazi).
+     * @param collateral Objekt s podacima o kolateralu
+     * @param date Datum za koji vrijede dani podaci
+     */
+    public void processCollateral(CollateralData collateral, Date date) throws Exception
+    {
+        // ako datum nije jednak datumu valute, preskoèi ovaj kolateral
+        if (date.compareTo(value_date) != 0) return;
+        
+        // mapiraj kolateral na pripadajuæi tip
+        GcmTypeData type = mapping_gctc.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        if (type == null)
+        {
+            bc.warning("...Greska u parametrizaciji - nije definiran GCTC kod. Kolateral ne ulazi u izvjestaj 6.1.");
+            return;
+        }
+        // mapiraj kolateral na pripadajuæi gct i 
+        GcmTypeData gct = mapping_gct.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+        GcmTypeData disc_min_gd = mapping_disc_min_gd.resolve(collateral.col_cat_id, collateral.col_typ_id, collateral.col_sub_id);
+                
+        // provjeri da li kolateral ulazi u izvještaj 6.1
+        if (collateral.ponder.compareTo(new BigDecimal(0.0))==0){
+            bc.debug("...Kolateral ne ulazi u izvjestaj 6.1. jer mu je ponder 0.");
+            return;
+        }
+            
+        // upisivanje podatka u izvještaj 6.1 - 1.sheet
+        Row row = sheet1.createRow(rowIndex1);
+        ExcelUtils.createCell(row, 0, collateral.placement_owner_register_no, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 1, collateral.placement_owner_name, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 2, collateral.col_num, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 3, type.name, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 4, "CROATIA", styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 5, "HR", styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 6, gct.code, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 7, type.code, styles.normalAllBordersStyle);                
+        ExcelUtils.createCell(row, 8, collateral.ncv, styles.normalNumericAllBordersStyle);
+        ExcelUtils.createCell(row, 9, collateral.wcov, styles.normalNumericAllBordersStyle);
+        ExcelUtils.createCell(row, 10, collateral.wcv, styles.normalNumericAllBordersStyle);
+        ExcelUtils.createCell(row, 11, collateral.actual_discont, styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 12, new BigDecimal(disc_min_gd.code), styles.normalAllBordersStyle);
+        ExcelUtils.createCell(row, 13, collateral.b2_irb_eligibility, styles.normalAllBordersStyle);
+        rowIndex1++;
+        bc.debug("...Kolateral zapisan u izvjestaj 6.1. - 1.sheet.");                
+
+        // sumiranje podataka za izvjestaj 6.1 - 2.sheet
+        // pribroji vrijednosti kolaterala u odgovarajuæi tip
+        SummaryData summary = (SummaryData)data.get(type);
+        summary.ncv_sum = summary.ncv_sum.add(collateral.ncv);
+        summary.wcov_sum = summary.wcov_sum.add(collateral.wcov);
+        summary.wcv_sum = summary.wcv_sum.add(collateral.wcv);
+        summary.actual_discount_sum = summary.actual_discount_sum.add(collateral.actual_discont);
+        
+        if(summary.min_discount.compareTo(zero)==0 || summary.min_discount.compareTo(collateral.actual_discont)>0) summary.min_discount = collateral.actual_discont;
+        if(summary.max_discount.compareTo(collateral.actual_discont)<0) summary.max_discount = collateral.actual_discont;
+        
+        summary.count++;
+        bc.debug("...Kolateral pribrojen u izvjestaj 6.1 - 2.sheet pod tip " + type.code + ".");
+    }
+    
+    
+    /**
+     * Metoda koja sprema kreirani izvještaj.
+     */
+    public void createReport() throws Exception
+    {
+        // upisivanje podatka u izvještaj 6.1 - 2.sheet 
+        // kreiraj red za svaku kategoriju
+        Iterator iter = mapping_gctc.getGcmTypes().iterator();
+        while (iter.hasNext())
+        {
+            GcmTypeData type = (GcmTypeData)iter.next();
+            SummaryData summary = (SummaryData)data.get(type);
+            
+            ArrayList mapp = mapping_gctc.getGcmTypeMappings();
+            Iterator mapIter = mapp.iterator();
+            
+            BigDecimal discMinGD = null;
+            String gctCode = null;
+            
+            // iteriram kroz sva mapiranja
+            while(mapIter.hasNext())
+            {
+                GcmTypeMappingData gtm = (GcmTypeMappingData)mapIter.next();
+
+                // za sva mapiranja koja se vežu na odreðeni tip kolaterala (Collateral Type - GCTC) provjeravaju se min i max postotak umanjenja, kao i min GD
+                if(gtm.gcmType==type)
+                {    
+                    // ako veæ nije dohvaæen, dohvatiti i GCT kod za trenutni tip kolaterala
+                    if(gctCode==null)
+                    {
+                        GcmTypeData gcmType = mapping_gct.resolve(gtm.col_cat_id, gtm.col_typ_id, gtm.col_sub_id);
+                        if(gcmType==null) bc.info("Za col_cat_id="+gtm.col_cat_id + " col_typ_id="+gtm.col_typ_id +" col_sub_id=" + gtm.col_sub_id + " ne postoji gcmTyp.");
+                        else gctCode = gcmType.code;
+                    }
+                    
+                    // dohvatiti Discount Minimum GD
+                    GcmTypeData discType = mapping_disc_min_gd.resolve(gtm.col_cat_id, gtm.col_typ_id, gtm.col_sub_id);
+                    if(discType != null){
+                        BigDecimal disc_min_gd = new BigDecimal(discType.code);
+                        
+                        // provjera da li je dohvaæeni disc_min_gd manji od trenutne vrijednosti - u tom sluèaju postavi ga za minimalnog GD
+                        if(discMinGD == null || disc_min_gd.compareTo(discMinGD)<0) discMinGD = disc_min_gd;
+                    }
+            	}
+            }
+            
+            // raèunanje vrijednosti
+            BigDecimal count = new BigDecimal(summary.count);
+            BigDecimal avg_ncv = zero, avg_wcov = zero, avg_wcv = zero, avg_disc = zero;
+            if (count.compareTo(zero) != 0){
+                avg_ncv = ((BigDecimal)summary.ncv_sum). divide(count, 2, RoundingMode.HALF_UP);
+                avg_wcov = ((BigDecimal)summary.wcov_sum).divide(count, 2, RoundingMode.HALF_UP);
+                avg_wcv = ((BigDecimal)summary.wcv_sum).divide(count, 2, RoundingMode.HALF_UP);
+                avg_disc = ((BigDecimal)summary.actual_discount_sum).divide(count, 2, RoundingMode.HALF_UP);
+            }
+            
+            Row row = sheet2.createRow(rowIndex2);
+            ExcelUtils.createCell(row, 0, summary.type.name, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 1, gctCode, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 2, summary.type.code, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 3, summary.count, styles.normalAllBordersStyle);
+            ExcelUtils.createCell(row, 4, avg_ncv, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 5, avg_wcov, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 6, avg_wcv, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 7, avg_disc, styles.normalNumericAllBordersStyle);                
+            ExcelUtils.createCell(row, 8, summary.min_discount, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 9, summary.max_discount, styles.normalNumericAllBordersStyle);
+            ExcelUtils.createCell(row, 10, discMinGD, styles.normalNumericAllBordersStyle);
+            rowIndex2++;
+        }
+        
+        // spremi izvještaj
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd");
+        String fileName = bc.getOutDir() + "/" + "Discounts_Applied" + "_" + dateFormat.format(value_date) + ".xlsx";
+        FileOutputStream fileOut = new FileOutputStream(fileName);
+        workbook.write(fileOut);
+        fileOut.close();
+        dispose();
+
+        // kreiraj marker datoteku
+        new File(fileName + ".marker").createNewFile();
+        
+        bc.info("Uspjesno kreiran izvjestaj 6.1.");
+    }
+
+    
+    /**
+     * Metoda koja briše privremene datoteke koje se stvaraju za vrijeme kreiranja izvještaja.
+     */
+    public void dispose()
+    {
+        if (workbook instanceof SXSSFWorkbook) ((SXSSFWorkbook)workbook).dispose();
+    }
+}

@@ -1,0 +1,223 @@
+package hr.vestigo.modules.collateral.common.yoy6;
+
+
+import java.math.BigDecimal;
+
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+import java.sql.SQLException;
+
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+
+
+
+public class YOY61 {
+
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy6/YOY61.sqlj,v 1.1 2007/03/06 14:05:56 hramkr Exp $";
+
+	private String bank_sign=null;
+	private ConnCtx ctx=null;
+	private RemoteContext rc=null;
+	private YOY00 idGen=null;
+
+ 
+	
+	public YOY61(RemoteContext rc) throws Exception {
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc=rc;
+		this.idGen=new YOY00(rc);
+	}
+
+	public void insertFirstIntoAgrListQ(CollListQData plq) throws Exception{
+// kod 1. inserta predmeta
+		
+			BigDecimal id=getId();
+			
+			#sql [ctx] {
+						INSERT INTO agr_list_q
+								   (agr_lis_q_id, 
+									col_lis_typ_id, 
+									fra_agr_id,
+									status, 
+									income_time,
+									use_id,
+									release_time,
+									bank_sign,
+									cmnt,
+									action_type,
+									org_uni_id)
+						VALUES 
+								   (:(id), 
+									:(plq.col_lis_typ_id), 
+									:(plq.col_hea_id),
+									:(plq.status), 
+									:(plq.income_time),
+									:(plq.use_id),
+									:(plq.release_time),
+									:(bank_sign),
+									:(plq.cmnt),
+									:(plq.action_type),
+									:(plq.org_uni_id))
+			};
+	}	
+
+ 
+	public void update_insert_AgrListQ(CollListQData plq) throws Exception{
+// koristi se kada se nekom akcijom predmet salje s jedne liste (source_list) na drugu listu (target list)
+// treba napraviti update na slogu za source list i insertirati slog za target listu		
+	
+
+		plq.col_lis_typ_id=new BigDecimal(plq.source_list);  
+		BigDecimal col_lis_q_id=null;
+		col_lis_q_id=isThereActiveList(plq);
+		rc.info("col_lis_q_id....:"+col_lis_q_id);
+		
+		if(col_lis_q_id==null){
+			BigDecimal id=getId();
+			
+			#sql [ctx] {
+
+					INSERT INTO agr_list_q
+							   (agr_lis_q_id, 
+								col_lis_typ_id, 
+								fra_agr_id,
+								status, 
+								income_time,
+								use_id,
+								release_time,
+								bank_sign,
+								cmnt,
+								action_type,
+								org_uni_id)
+					VALUES 
+					   		(:(id), 
+							:(plq.col_lis_typ_id), 
+							:(plq.col_hea_id),
+							:(plq.status_target_list), 
+							:(plq.income_time),
+							:(plq.use_id),
+							null,
+							:(bank_sign),
+							null,
+							null,
+							:(plq.org_uni_id))
+					};		
+					 
+
+			col_lis_q_id = id; 
+			rc.info("col_lis_q_id....:"+col_lis_q_id);
+		}
+		rc.info("UPDATE  ZA col_lis_q_id....:"+col_lis_q_id);
+		#sql [ctx] {  
+			UPDATE
+					agr_list_q 
+			SET
+					status = :(plq.status_source_list),
+					use_id=:(plq.use_id),
+					release_time = :(plq.release_time),
+					cmnt = :(plq.cmnt),
+					action_type = :(plq.action_type),
+					org_uni_id=:(plq.org_uni_id)
+			WHERE
+					agr_lis_q_id=:(col_lis_q_id)
+		};				
+		
+		
+ 
+		
+		plq.col_lis_typ_id=new BigDecimal(plq.target_list); 
+		plq.use_id = plq.target_list_use_id;
+
+		plq.release_time = null; 
+		plq.cmnt = null;
+		plq.action_type = null;
+		plq.org_uni_id = plq.target_list_org_uni_id;
+
+		
+		BigDecimal id=getId();
+		
+		#sql [ctx] {
+				INSERT INTO agr_list_q
+							   (agr_lis_q_id, 
+								col_lis_typ_id, 
+								fra_agr_id,
+								status, 
+								income_time,
+								use_id,
+								release_time,
+								bank_sign,
+								cmnt,
+								action_type,
+								org_uni_id)
+				VALUES 
+					   (:(id), 
+						:(plq.col_lis_typ_id), 
+						:(plq.col_hea_id),
+						:(plq.status_target_list), 
+						:(plq.income_time),
+						:(plq.use_id),
+						:(plq.release_time),
+						:(bank_sign),
+						:(plq.cmnt),
+						:(plq.action_type),
+						:(plq.org_uni_id))
+					};		
+
+	}	
+	
+	
+	
+	
+
+	
+	public BigDecimal isThereActiveList(CollListQData plq) throws Exception{
+		
+		BigDecimal col_lis_q_id=null;
+		
+		try{
+	
+			if(plq.col_hea_id!=null){
+	
+				#sql [ctx] {
+							SELECT 
+									agr_lis_q_id 
+							INTO
+									:(col_lis_q_id)
+							FROM
+									agr_list_q
+							WHERE
+									fra_agr_id=:(plq.col_hea_id)
+							AND
+									col_lis_typ_id=:(plq.col_lis_typ_id)
+							AND
+									status='0'
+				};
+		
+			}
+	
+	
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+		
+			}
+		}
+		
+		return col_lis_q_id;
+		
+	}
+	
+	private BigDecimal getId() throws Exception{
+		return idGen.getNewId();
+		
+	}
+
+	
+}
+ 
+				
+			
+		
+		

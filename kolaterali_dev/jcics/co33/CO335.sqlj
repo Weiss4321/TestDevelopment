@@ -1,0 +1,95 @@
+package hr.vestigo.modules.collateral.jcics.co33;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+
+#sql iterator Iter5 (
+					BigDecimal agr_lis_q_id,
+					String status,
+					String name,
+					String action_type,
+					String user_name,
+					Timestamp income_time,					
+					Timestamp release_time,
+					String cmnt
+					);
+
+public class CO335 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co33/CO335.sqlj,v 1.1 2007/03/06 14:19:06 hramkr Exp $";
+	public DeclCO33 d=null;
+	private Iter5 iter=null;
+	
+	public CO335 (DeclCO33 d) {
+		this.d = d;
+	} 
+         
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(d.agrlistqselect.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+ 		 
+  		#sql [ctx] iter = {
+								SELECT
+										plq.agr_lis_q_id,
+										plq.status,
+										plt.name,
+										plq.action_type,
+										au.user_name,
+										plq.income_time,										
+										plq.release_time,
+										plq.cmnt
+								FROM
+										agr_list_q plq, app_user au, coll_list_type plt
+								WHERE
+										plq.use_id = au.use_id
+								AND
+										plq.col_lis_typ_id=plt.col_lis_typ_id
+								AND
+										plq.status not in ('0')
+								AND
+										plq.fra_agr_id=:(d.agrlistqselect.w_fra_agr_id)
+								ORDER BY
+										release_time desc
+		}; 
+	}
+ 	  
+	public boolean next() throws Exception {
+		return iter.next();
+	}
+    
+	public void close() {
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+					
+		Vector row=new Vector();
+		
+		row.add(iter.status());
+		row.add(iter.name());
+		row.add(iter.action_type());
+		row.add(iter.user_name());
+		row.add(iter.income_time());		
+		row.add(iter.release_time());
+
+		row.add(iter.cmnt());  
+		
+		Vector unique = new Vector();
+		
+		unique.add(iter.agr_lis_q_id());
+					
+		d.agrlistqselect.tblAgrListQ.addRow(row, unique);
+			
+	}
+}

@@ -1,0 +1,215 @@
+package hr.vestigo.modules.collateral.jcics.co32;
+
+import hr.vestigo.framework.controller.lookup.EmptyLookUp;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import java.util.Vector;
+
+//import hr.vestigo.framework.util.CharUtil;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+
+
+#sql iterator Iter6 	(BigDecimal fra_agr_id,
+		 				String frame_num,
+		 				String register_no,
+		 				String name,
+						BigDecimal amount,
+						String code_char,
+						BigDecimal cur_id,
+						String status,
+						Date maturity_date);
+
+public class CO326 extends RemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co32/CO326.sqlj,v 1.4 2014/10/07 10:54:20 hrazst Exp $";
+	private DeclCO32 d = null;
+   	
+	private String ind;
+	   	
+	public CO326(DeclCO32 d) {
+			this.d = d;
+		}
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx connCtx0 = tc.getContext();
+		Iter6 iter6 = null;		
+       	
+		#sql[connCtx0] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+		// broj partije
+
+		if (d.agrselmap.frame_num!= null) {
+			if (d.agrselmap.frame_num.equals("")) {
+				d.agrselmap.frame_num = null;
+			}else{
+				d.agrselmap.frame_num = d.agrselmap.frame_num.replace('*','%');
+			}
+		} 
+		
+        if (d.agrselmap.l_register_no!= null) {
+            if (d.agrselmap.l_register_no.equals("")) {
+                d.agrselmap.l_register_no = null;
+            }else{
+                d.agrselmap.l_register_no = d.agrselmap.l_register_no.replace('*','%');
+            }
+        } 
+		
+
+        if (d.agrselmap.frame_num == null && d.agrselmap.l_register_no == null) {				
+				#sql [connCtx0] iter6 =	{ SELECT 
+											a.fra_agr_id as fra_agr_id, 
+											a.agreement_no as frame_num, 
+											a.register_no as register_no,
+											c.name as name, 
+											a.amount as amount,
+											b.code_char as code_char, 
+											a.cur_id as cur_id,
+											a.status as status,
+											a.date_until as maturity_date
+										FROM 	frame_agreement a, customer c, currency b
+										WHERE
+												a.proc_status in ('0','1','2')
+										AND
+												a.status = 'A'
+										AND
+												a.date_until >= current date 
+										AND
+												a.cus_id = c.cus_id  
+										AND
+												a.cur_id = b.cur_id
+			                        ORDER BY    c.name 
+
+									};				
+
+
+        } else if (d.agrselmap.frame_num != null && d.agrselmap.l_register_no == null ) {
+				#sql [connCtx0] iter6 =	{ SELECT 
+										a.fra_agr_id as fra_agr_id, 
+										a.agreement_no as frame_num, 
+										a.register_no as register_no,
+										c.name as name, 
+										a.amount as amount,
+										b.code_char as code_char, 
+										a.cur_id as cur_id,
+										a.status as status,
+										a.date_until as maturity_date
+									FROM 	frame_agreement a, customer c, currency b
+									WHERE
+											a.agreement_no like :(d.agrselmap.frame_num)
+									AND
+											a.proc_status in ('0','1','2')
+									AND
+											a.status = 'A'
+									AND
+											a.date_until >= current date 
+									AND
+											a.cus_id = c.cus_id  
+									AND
+											a.cur_id = b.cur_id
+			                    ORDER BY    c.name
+
+				};								
+        } else if (d.agrselmap.frame_num == null && d.agrselmap.l_register_no != null ) {
+                #sql [connCtx0] iter6 = { SELECT 
+                        a.fra_agr_id as fra_agr_id, 
+                        a.agreement_no as frame_num, 
+                        a.register_no as register_no,
+                        c.name as name, 
+                        a.amount as amount,
+                        b.code_char as code_char, 
+                        a.cur_id as cur_id,
+                        a.status as status,
+                        a.date_until as maturity_date
+                    FROM    frame_agreement a, customer c, currency b
+                    WHERE
+                            a.register_no like :(d.agrselmap.l_register_no)
+                    AND
+                            a.proc_status in ('0','1','2')
+                    AND
+                            a.status = 'A'
+                    AND
+                            a.date_until >= current date 
+                    AND
+                            a.cus_id = c.cus_id  
+                    AND
+                            a.cur_id = b.cur_id
+                ORDER BY    c.name
+
+			    };                              
+        } else if (d.agrselmap.frame_num != null && d.agrselmap.l_register_no != null ) {
+                #sql [connCtx0] iter6 = { SELECT 
+                        a.fra_agr_id as fra_agr_id, 
+                        a.agreement_no as frame_num, 
+                        a.register_no as register_no,
+                        c.name as name, 
+                        a.amount as amount,
+                        b.code_char as code_char, 
+                        a.cur_id as cur_id,
+                        a.status as status,
+                        a.date_until as maturity_date
+                    FROM    frame_agreement a, customer c, currency b
+                    WHERE
+                            a.agreement_no like :(d.agrselmap.frame_num)
+                    AND
+                            a.register_no like :(d.agrselmap.l_register_no)
+                    AND
+                            a.proc_status in ('0','1','2')
+                    AND
+                            a.status = 'A'
+                    AND
+                            a.date_until >= current date 
+                    AND
+                            a.cus_id = c.cus_id  
+                    AND
+                            a.cur_id = b.cur_id
+                ORDER BY    c.name
+
+                };                              
+        }
+		
+		int number_of_rows=10;//tc.LOOKUP_FETCH_SIZE;
+		int level=d.agrselmap.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+		int count=0;
+		int count_returned=0;
+		while (iter6!=null && iter6.next()){
+			if(start<=count && start+number_of_rows>count){
+
+				Vector row=new Vector();
+				Vector unique = new Vector();
+			
+				row.add(iter6.frame_num());	
+				row.add(iter6.register_no());
+				row.add(iter6.name());
+				row.add(iter6.amount());
+				row.add(iter6.code_char());
+				row.add(iter6.status());
+				row.add(iter6.maturity_date());
+				
+				unique.add(iter6.fra_agr_id());	
+				unique.add(iter6.cur_id()); 
+				
+				d.agrselmap.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			} 
+			count++;  
+		}
+		if(count==0){
+		    return;
+		}		
+		if(count_returned==0){
+			throw new VestigoTMException(1, "Transaction CO326: No more data! ","wrn090", null);
+		}		
+		if(iter6 != null) iter6.close(); 
+	}
+}
+
+
+
+

@@ -1,0 +1,80 @@
+package hr.vestigo.modules.collateral.jcics.co12;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.util.scramble.Scramble;
+
+/**
+ * CO129 class update data about resident quarter in table POLITICAL_MAP 
+ *  	
+ */
+public class CO129 extends RemoteTransaction {
+		
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co12/CO129.sqlj,v 1.3 2006/04/14 09:02:42 hrarmv Exp $";
+    public DeclCO12 decl = null;
+	
+	public CO129 (DeclCO12 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+			
+			ConnCtx ctx = tc.getContext();
+			int broj = 0;				
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+			try {
+				    #sql [ctx] {SELECT COUNT(*) 
+			    				INTO :broj 
+				    			FROM political_map 
+				    			WHERE pol_map_typ_id = :(decl.polmapresiquarupdatemapping.RESIQ_ID)  
+				    			AND(
+			    					 code = :(decl.polmapresiquarupdatemapping.txtResiQuarCode) 
+			    					 OR 
+			    					 name = :(decl.polmapresiquarupdatemapping.txtResiQuarName)
+			    					)
+			    				AND user_lock <> :(decl.polmapresiquarupdatemapping.USER_LOCK)
+				    			};
+			    
+			    } catch (java.sql.SQLException  sqle) {
+	                tc.debug ( "......CO129.sqlj count equal districts in political_map SQL ErrorCode " + sqle.getErrorCode());
+					tc.debug ( "......CO129.sqlj count equal districts in political_map SQL SQLState " + sqle.getSQLState());
+					tc.debug ( "......CO129.sqlj count equal districts in political_mapp SQL Message " + sqle.getMessage());
+					throw new VestigoTMException(1, "Transaction CO129: Error updating resident quarter in political_map! ","err411a", null);
+	            }
+	            
+	            if(broj != 0){
+				    throw new VestigoTMException(1, "Transaction CO129: Error updating resident quarter in political_map! ","errclt8", null);
+				}
+				
+	        	
+			String nameSC = null;
+			String name = decl.polmapresiquarupdatemapping.txtResiQuarName;
+			Scramble scrambler = new Scramble();
+			nameSC = scrambler.doScramble(name, "L");
+			
+        //UPDATE district in political_map
+			try{	
+								
+				#sql [ctx]{ 
+			    	UPDATE political_map 
+			    	SET 
+			    		code =:(decl.polmapresiquarupdatemapping.txtResiQuarCode), 
+			    		name =:(decl.polmapresiquarupdatemapping.txtResiQuarName),
+			    		name_sc = :nameSC, 
+			    		user_lock = current timestamp
+			    	WHERE 
+			    		POL_MAP_ID=:(decl.polmapresiquarupdatemapping.RESIQ_ID)
+			    		AND user_lock =:(decl.polmapresiquarupdatemapping.USER_LOCK)  
+			    	};
+			    	
+				}catch(java.sql.SQLException se){
+
+						tc.debug ( "......CO129.sqlj update resident quarter in political_map SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO129.sqlj update resident quarter inpolitical_map SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO129.sqlj update resident quarter in political_map SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO129: Error updating resident quarter in political_map! ","err411a", null);
+
+				}
+		}
+}	
+			

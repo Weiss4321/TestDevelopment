@@ -1,0 +1,1159 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+-- 
+
+select * from customer where register_no like  '2902452063%';
+
+select * from customer where name like  'IBM HRVATSKA D.O.O.%';
+
+select * from customer where cus_id = 26738352;
+
+ --update customer set tax_number = '02902452063' where cus_id = 26738352;
+
+ commit;
+
+select login from app_user where use_id like 1352021003;
+
+select * FROM cust_chg_history order by user_lock desc;
+
+
+SELECT   cbe.cus_bil_exc_id , cbe.cus_bill_exch_no , cbe.cus_bill_ext_no , cbe.payer_reg_no , cbe.payer_name,  cbe.payer_tax_number,  cbe.ben_iban,  cbe.ben_name,  cbe.ben_address , cbe.ben_place , cbe.amount,  cbe.maturity_date , cbe.status ,  cbe.paid_amount , cbe.order_trn ,  cbe.payment_date , cbe.order_trn_last , cbe.payment_date_last , cbe.cur_id , cur.code_char,  cbe.use_id,  cbe.issue_date 
+FROM  CUST_BILL_EXCH cbe  LEFT OUTER JOIN CURRENCY cur ON cur.cur_id = cbe.cur_id  
+WHERE  cbe.bank_sign = 'RB'  AND RTRIM(cbe.PAYER_REG_NO) LIKE '1045' AND RTRIM(cbe.PAYER_TAX_NUMBER) LIKE '2902452063' 
+
+
+AND RTRIM(cbe.PAYER_NAME) LIKE 'IBM HRVATSKA D.O.O.' AND cbe.MATURITY_DATE BETWEEN '0002-11-30' AND '9999-12-31' ORDER BY cbe.maturity_date ASC;
+
+
+
+
+select * from 
+
+select * from customer_account where External_FLAG = '1' and ban_pro_typ_id = 790661005;
+
+
+select * from citizen where EMPLOYEE_FLAG = '1'
+
+select * from payment_order;
+
+select * from turnover order by system_timestamp desc;
+
+select * from CUST_BILL_EXCH order by recording_time desc;
+
+		select cus_bil_exc_id, cus_bill_exch_no,  cus_bill_ext_no,  payer_reg_no,  payer_name,  payer_tax_number,  status,  payer_acc_no,  payer_cus_id  
+		FROM CUST_BILL_EXCH  WHERE bank_sign = 'RB'  AND RTRIM(STATUS) LIKE '%' AND RTRIM(PAYER_REG_NO) LIKE '%' AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' 
+		AND RTRIM(PAYER_NAME) LIKE '%' AND CUS_BILL_EXCH_NO LIKE 'MJ-24032015-00000012' AND RTRIM(cus_bill_ext_no) LIKE '%' ;
+
+		select * 
+		FROM CUST_BILL_EXCH  WHERE bank_sign = 'RB'  AND RTRIM(STATUS) LIKE '%' AND RTRIM(PAYER_REG_NO) LIKE '%' AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' 
+		AND RTRIM(PAYER_NAME) LIKE '%' AND CUS_BILL_EXCH_NO LIKE 'MJ-24032015-00000012' AND RTRIM(cus_bill_ext_no) LIKE '%' 
+		AND (   
+		      (RTRIM(payer_acc_no) LIKE '%' ) 
+		      OR  
+		      (  RTRIM(master_acc_no) LIKE '%' ) 
+		      ) with ur;
+
+		SELECT   cus_bil_exc_id, cus_bill_exch_no,  cus_bill_ext_no,  payer_reg_no,  payer_name,  payer_tax_number,  status,  payer_acc_no,  payer_cus_id  FROM CUST_BILL_EXCH  WHERE bank_sign = 'RB'  AND RTRIM(STATUS) LIKE '%' AND RTRIM(PAYER_REG_NO) LIKE '%' AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' AND RTRIM(PAYER_NAME) LIKE '%' AND RTRIM(CUS_BILL_EXCH_NO) LIKE 'MJ-24032015-00000012' 
+		AND RTRIM(cus_bill_ext_no) LIKE '%'
+		AND (
+			(RTRIM(PAYER_ACC_NO) LIKE '%') 
+			OR 
+		
+		( RTRIM(MASTER_ACC_NO) LIKE '%')
+		) with ur;
+
+		SELECT   cus_bil_exc_id, cus_bill_exch_no,  cus_bill_ext_no,  payer_reg_no,  payer_name,  payer_tax_number,  status,  payer_acc_no,  payer_cus_id, master_acc_no
+		FROM CUST_BILL_EXCH  
+		WHERE bank_sign = 'RB'  
+		AND RTRIM(STATUS) LIKE '%' 
+		AND RTRIM(PAYER_REG_NO) LIKE '%' 
+		AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' 
+		AND RTRIM(PAYER_NAME) LIKE '%' 
+		AND RTRIM(CUS_BILL_EXCH_NO) LIKE 'MJ-09032015-00000010' 
+
+			
+		AND RTRIM(CUS_BILL_EXT_NO) LIKE '%' 
+		
+		
+		AND ( (  RTRIM(PAYER_ACC_NO) LIKE '%') OR  (   RTRIM(MASTER_ACC_NO) LIKE '%') )  AND ( (  RTRIM(PAYER_ACC_NO) LIKE '%') OR  (   RTRIM(MASTER_ACC_NO) LIKE '%') )
+
+		
+		
+
+		select * from CUST_BILL_EXCH where CUS_BILL_EXCH_NO LIKE 'MJ-12032015-00000014'  ;
+
+		SELECT   cus_bil_exc_id, cus_bill_exch_no,  cus_bill_ext_no,  payer_reg_no,  payer_name,  payer_tax_number,  status,  payer_acc_no,  payer_cus_id  
+		FROM CUST_BILL_EXCH  
+		WHERE bank_sign = 'RB'  
+		AND RTRIM(STATUS) LIKE '%' 
+		AND RTRIM(PAYER_REG_NO) LIKE '%' 
+		AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' 
+		AND RTRIM(PAYER_NAME) LIKE '%' 
+		AND RTRIM(CUS_BILL_EXCH_NO) LIKE 'MJ-12032015-00000014' 
+		AND RTRIM(cus_bill_ext_no) LIKE '%' 
+		AND (    
+		       (  RTRIM(PAYER_ACC_NO) LIKE '%') 
+		       OR  
+		       (   RTRIM(MASTER_ACC_NO) LIKE '%') ) AND ( (  RTRIM(PAYER_ACC_NO) LIKE '%') OR  (   RTRIM(MASTER_ACC_NO) LIKE '%') ) 
+
+
+--------------------------------------------------------------------------------------
+
+				SELECT   cus_bil_exc_id, cus_bill_exch_no,  cus_bill_ext_no,  payer_reg_no,  payer_name,  payer_tax_number,  status,  payer_acc_no,  payer_cus_id, maturity_date 
+				FROM CUST_BILL_EXCH  
+				WHERE bank_sign = 'RB'  
+				AND RTRIM(STATUS) LIKE '%' 
+				AND RTRIM(PAYER_REG_NO) LIKE '%' 
+				AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' 
+				AND RTRIM(PAYER_NAME) LIKE '%' 
+				AND RTRIM(CUS_BILL_EXCH_NO) LIKE 'MJ-09032015-00000010' 
+
+				
+				AND RTRIM(cus_bill_ext_no) LIKE '%' 
+				AND ( (  RTRIM(PAYER_ACC_NO) LIKE '%') OR  (   RTRIM(MASTER_ACC_NO) LIKE '%') )  AND ( (  RTRIM(PAYER_ACC_NO) LIKE '%') OR  (   RTRIM(MASTER_ACC_NO) LIKE '%') );
+
+
+				SELECT   cus_bil_exc_id, cus_bill_exch_no,  cus_bill_ext_no,  payer_reg_no,  payer_name,  payer_tax_number,  status,  payer_acc_no,  payer_cus_id  
+				FROM CUST_BILL_EXCH  WHERE bank_sign = 'RB'  AND RTRIM(STATUS) LIKE '%' AND RTRIM(PAYER_REG_NO) LIKE '%' 
+				AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' AND RTRIM(PAYER_NAME) LIKE '%' AND RTRIM(CUS_BILL_EXCH_NO) LIKE 'MJ-09032015-00000010' 
+							AND RTRIM(cus_bill_ext_no) LIKE '%' 
+				
+				AND ( (  RTRIM(PAYER_ACC_NO) LIKE '%') OR  (   RTRIM(MASTER_ACC_NO) LIKE '%') )  AND ( (  RTRIM(PAYER_ACC_NO) LIKE '%') OR  (   RTRIM(MASTER_ACC_NO) LIKE '%') ) ;
+
+
+				
+   update CUST_BILL_EXCH set cus_bill_ext_no = null where cus_bil_exc_id = 3201891823;
+
+   commit;
+		
+
+----------------------------------------------------------------
+
+ 
+select cus_bil_exc_id, cus_bill_exch_no, payer_acc_no, master_acc_no, payment_method from CUST_BILL_EXCH where maturity_date = '2015-03-13' and status = 'N';
+
+update CUST_BILL_EXCH set payer_acc_no = null where cus_bil_exc_id in (3202031823, 3202070823);
+
+update CUST_BILL_EXCH set payer_acc_no = '1111111111' where cus_bil_exc_id in (3202071823);
+
+commit;
+----------------------------------------------------------------------------
+
+
+		SELECT   cus_bil_exc_id, cus_bill_exch_no,  cus_bill_ext_no,  payer_reg_no,  payer_name,  payer_tax_number,  status,  payer_acc_no,  payer_cus_id, payer_acc_no, master_acc_no
+		FROM CUST_BILL_EXCH  
+		WHERE bank_sign = 'RB'
+		AND cus_bill_exch_no = 'MJ-06032015-00000008'		  
+		AND RTRIM(STATUS) LIKE '%' 		
+		AND RTRIM(PAYER_REG_NO) LIKE '%' 		
+		AND RTRIM(PAYER_TAX_NUMBER) LIKE '%' 		
+		AND RTRIM(PAYER_NAME) LIKE '%' 				 
+		AND RTRIM(cus_bill_ext_no) LIKE '%'
+
+		
+		AND master_ACC_NO LIKE '%' or PAYER_ACC_NO LIKE '%';
+				 			
+		
+
+
+
+select * from CUST_BILL_EXCH  where cus_bill_exch_no like 'MJ-13032015-00000014';
+
+select * FROM cusacc_external where iban_acc_no like 'HR6924840081100147111' ;  -- 621713022
+
+select * from customer_account where iban_acc_no like 'HR6924840081100147111';
+
+select * from customer where cus_id = 822352;
+
+update customer  set address = 'Gavriloviæev trg 1' where cus_id = 822352; 
+
+--update cusacc_external set city = 'Petrinja' where cus_acc_ext_id = 621713022;
+-- update cusacc_external set address = 'Gavriloviæev trg 1' where cus_acc_ext_id = 621713022;
+
+commit;
+
+--------------------  Sidev
+
+select * from CUSTOMER where tax_number is  not null  and cus_typ_id = '1999';
+
+select * from customer_account;
+
+select * from batch_file_log order by recording_time desc;
+
+select * from batch_def where bat_def_id = 1688213003;
+
+select * from cust_bill_exch where cus_bill_exch_no like 'MJ-02032015-00000014';
+
+select * FROM customer_account;
+------------------------------------------------------------------------------
+
+					select * from cust_letter  where cus_let_typ_id = 529999 with ur;
+				                                                         
+
+					select * from cust_lett_delivery  where cus_let_id in (select cus_let_id from cust_letter
+				                                                          where cus_let_typ_id = 529999) with ur;
+
+				select * from cust_bill_exch;
+				                                                          
+				
+				select delivery_flag from CUST_LETT_DELIVERY
+				where cus_let_id in (select cus_let_id from cust_letter
+				where cus_let_typ_id = 529999) with ur;
+			
+		
+				select * from CUST_LETT_DELIVERY
+				where cus_let_id in (select cus_let_id from cust_letter
+				where cus_let_typ_id = 529999) with ur;
+
+				update CUST_LETT_DELIVERY set delivery_flag = '1'
+				where cus_let_id in (select cus_let_id from cust_letter
+				where cus_let_typ_id = 529999);
+
+				commit;
+
+
+
+-------------------------------------------
+
+SELECT cus_bil_exc_id, cus_bill_ext_no,cus_bill_exch_no,payer_cus_id,payer_tax_number,payer_reg_no,payer_name,payer_address,payer_place,payer_acc_no,master_acc_no,ben_iban,ben_cus_id,ben_tax_number,ben_reg_no,ben_name,ben_address,credit_ref_typ,credit_ref_no,debit_ref_typ,debit_ref_no,ext_int_flag,payment_method,amount,cur_id,maturity_date,issue_date,status,chg_stat_reason,paid_amount,collected_amount,order_trn,pay_ord_id,payment_amount,payment_date,order_trn_last,pay_ord_id_last,paym_amount_last,payment_date_last,recording_time,eve_id,use_id,recording_use_id,bank_sign,user_lock,ben_place FROM cust_bill_exch  WHERE maturity_date = '13.03.2015' AND status = 'A';
+
+select * from batch_log order by recording_time desc;
+
+
+select * from batch_log where bat_def_id = 7591478704 order by recording_time desc;
+
+------------------------------------
+
+  select * from BALANCE_ANNOUNCE;
+  
+  select * from BALANCE_ANNOUNCE where bal_ann_id  in (6483452797,1485756005,1398708747,1495126497,3004813247,3320711687,3322423397,3752404377,3752405807,3752407237,
+3939797797,4022571797,4043207797,4043208797,4043209797,4043210797,4043211797,4043212797,4047117797,4189937797,
+4736176797,4745820797,4766952797,4795871797,4800486797,4800519797,4800824797,4801640797,4801993797,4802172797,
+4802222797,4802244797,4802277797,4802546797,4802875797,4803020797,4803122797,4803163797,4804224797,4805074797,
+4805546797,4805650797,4805692797,4805731797,4806116797,4806151797,4807008797,4807085797,4807146797,4807312797,
+4807392797,4807568797,4807643797,4807810797,4808276797,4808481797,4808522797,4808558797,4808619797,4808669797,
+4808816797,4808908797,4808979797,4809041797,4809124797,4809537797,4810753797,4810800797,4810837797,4810876797,
+4818600797,4818625797,4823087797,4835038797,4845175797,4846522797,4847727797,4855077797,4855281797,4864731797,
+4864750797,4864797797,4865201797,4865993797,4866916797,4866966797,4942793797) with ur;
+
+select * from customer_account where cus_acc_id = 1240344823;  -- 3205006156
+
+select * from customer where cus_id = 1746739285; -- register no 2002737
+
+select * from cusacc_external;
+
+
+
+
+
+
+---------------- 
+	select *  from CUST_BILL_EXCH order by recording_time desc;
+
+   -- ok ovu mjenicu treba dekativirati - u status I
+   
+	select cus_bil_exc_id, cus_bill_exch_no,ext_int_flag, payer_cus_id, master_acc_no,payer_acc_no, amount, status, paid_amount, collected_amount, payment_method, maturity_date 
+	from CUST_BILL_EXCH  where cus_bill_exch_no like 'MJ-22012015-00000001' and ext_int_flag = '0' and maturity_date = current_date;
+ 
+     select cus_bil_exc_id, cus_bill_exch_no,payer_cus_id, master_acc_no,payer_acc_no, amount, status, paid_amount, collected_amount, payment_method,maturity_date  
+     from CUST_BILL_EXCH where status like 'I'  and  maturity_date = '07.04.2015' and ext_int_flag = '0' with ur;
+ 
+     select cus_bil_exc_id, cus_bill_exch_no,payer_cus_id, master_acc_no,payer_acc_no, amount, status, paid_amount, collected_amount, payment_method, maturity_date, ext_int_flag  
+     from CUST_BILL_EXCH where status like 'A'  and  maturity_date = '07.04.2015' with ur;
+
+-- za test azurirati podatke o mjenicama  za test ( brojeve racuna )
+
+
+
+----------------------------------------
+
+		   SELECT  *
+            
+            FROM    BANK_PRODUCT_TYPE
+            where ban_pro_typ_id = 23999 with ur; 
+
+            -------------------
+
+            SELECT  ACC_NUM_ID, ACC_NO, STATUS   
+                 
+                  FROM    ACCOUNT_NUMBER
+                   
+                 WHERE   BAN_REL_TYPE= '001'
+                      AND 
+                          AMO_TYPE = '600'
+                      AND 
+                          BAN_PRO_TYP_ID = 23999
+                      AND 
+                          PUR_CODE = '000000' 
+                      AND 
+                          ACC_NUM_TYPE like  'CUSTOMER'
+                      AND 
+                          CUS_ID = :cus_id
+                      AND 
+                          BANK_SIGN=:bank_sign
+
+            
+            WHERE   ban_pro_typ_id = :ban_pro_typ_id
+            AND     bank_sign = 'RB'
+  
+--------------------------------------------------------------------------------------------------------------
+
+  							SELECT  SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er,(SELECT  ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  WHERE   ba.cus_acc_id =  3147878823  AND   ba.cus_id = 26738352  AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  WHERE   cb.cus_acc_id = 3147878823   AND cb.cus_id = 26738352   AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   AND  '2015-04-07'  BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc with ur;
+
+			select * FROM CUSACC_BALANCE_LAST where cus_acc_id = 3147878823;
+
+
+select * FROM customer_account where ban_pro_typ_id = 6561936704;
+  						
+select * FROM customer_account where cus_acc_no like '1101975896';
+
+select * from bank_product_type  ;
+
+select * FROM BANK_RELATION_TYPE;
+
+select * FROM BANK_RELATION_TYPE where ban_rel_typ_id = 109999; -- SREDSTVA PO VIÐENJU PRAVNE OSOBE
+
+select * FROM BAN_PRO_AMO_TYPE where ban_pro_typ_id = 6561936704;
+
+
+
+  		SELECT  *
+          
+            FROM    BANK_PRODUCT_TYPE
+            WHERE   ban_pro_typ_id = 23999
+            AND     bank_sign = 'RB';
+
+
+				SELECT  parameter_value 
+              
+                FROM param_application pa, params_dictionary pd 
+                WHERE pd.eng_name='warn_or_deny_posting_for_balance' 
+                AND pd.par_dic_id = pa.par_dic_id 
+                AND pa.bank_sign = 'RB';
+
+                select * FROM turnover order by system_timestamp desc;
+
+                select * from account where account like '%80012%';
+
+                select * from TURN_CUSTOMER order by process_timestamp desc;
+
+----------------------------------------------- samo jednu mjenicu  - 56217326
+
+select *  from CUST_BILL_EXCH order by recording_time desc;
+
+SELECT *  
+FROM CUST_BILL_EXCH WHERE  cus_bil_exc_id in (56234326) with ur;
+
+SELECT cus_bil_exc_id, cus_bill_exch_no,payer_cus_id, master_acc_no,payer_acc_no, amount, status, paid_amount, collected_amount, payment_method,maturity_date, ben_iban  
+FROM CUST_BILL_EXCH WHERE  cus_bil_exc_id in (56437326, 56131326, 56278326, 56295326, 56296326, 56416326) with ur;
+
+update CUST_BILL_EXCH set maturity_date = '08.04.2015' where cus_bil_exc_id in (56234326);
+
+update CUST_BILL_EXCH set payer_acc_no = '1135000535' where cus_bil_exc_id in (56278326);
+
+update CUST_BILL_EXCH set maturity_date = '08.04.2015' where cus_bil_exc_id in (56131326);
+
+update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id in (56437326);
+
+
+update CUST_BILL_EXCH set collected_amount = null where cus_bil_exc_id in (56047326);
+
+
+commit;
+
+select * FROM turnover where tur_id = 128302335;
+
+select * FROM turnover order by system_timestamp desc;
+
+select * from CUSTOMER_ACCOUNT where cus_acc_no like '1135000535'; -- 3,147,774,823
+
+select * from CUSTOMER_ACCOUNT where cus_acc_id in( 3150996823, 3147774823);
+
+select * FROM CUSACC_BALANCE where cus_acc_id = 52577326;
+
+select * FROM CUSACC_BALANCE_LAST where cus_acc_id = 52577326; -- uplaceno 1500 -- raèun 1135000633
+
+select * FROM CUSACC_BALANCE_LAST where cus_acc_id = 3147774823;
+
+select * FROM CUSACC_BALANCE_LAST order by user_lock desc;
+
+select * FROM currency where cur_id = 63999;
+
+
+select * FROM TURN_CUSTOMER order by process_timestamp desc;
+
+------------------------------------------------------------
+				select * from CUSTOMER_ACCOUNT where cus_acc_id = 62589022;
+
+				select * from CUSTOMER_ACCOUNT where cus_acc_no like '1135000037'; 
+
+				SELECT dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.domestic_balance, valuta.code_num FROM (SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id  FROM  customer_account ca, banpro_param bp   WHERE  ca.cus_id = 26738352  AND ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, (SELECT SUM(tabl.balance) balance , SUM(tabl.overdraft_amount) overdraft_amount,  SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance,  tabl.cus_acc_id,  tabl.cur_id,  er.buy_rate_fc,  er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er, (SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  ba.cus_id = 26738352  AND ba.bank_sign = 'RB'  UNION ALL  SELECT   cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx  FROM  cusacc_balance_last cb WHERE  cb.cus_id = 26738352   AND cb.cus_acc_report = '1'  AND cb.avail_balance_flag = '1'  AND cb.bank_sign = 'RB') tabl WHERE  er.cur_id = tabl.cur_id  AND '2015-04-08' between er.date_from and er.date_until  GROUP BY  tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc  )stanja,  currency valuta  WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id   ORDER BY  CASE  WHEN stanja.cur_id = 63999 THEN 1  WHEN stanja.cur_id!=63999 THEN 2  END, valuta.code_num,  CASE   WHEN dozvoljeni_racuni.cus_acc_no = '1135000037' THEN 1   WHEN dozvoljeni_racuni.cus_acc_no != '1135000037' THEN 2  END,   dozvoljeni_racuni.cus_acc_no asc with ur;
+
+				SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  ba.cus_id = 26738352  AND ba.bank_sign = 'RB';
+
+				SELECT     ca.cus_acc_no, ca.cus_id ,  ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba, customer_account ca  WHERE  ba.cus_id = 26738352 AND ca.cus_id = ba.cus_id AND ca.cus_acc_no = '1135000037' AND ba.bank_sign = 'RB';
+
+				select * from customer_account;
+
+	----------------------------------------------------------------------------------------   test dohvata ugovorenog raèuna -------------------------------------
+
+		-- 	dohvaæam podatke za  3000 i 1135000633
+
+			SELECT	
+			SUM(tabl.balance) balance, 
+			SUM(tabl.overdraft_amount) AS overdraft_amount, 
+			SUM(tabl.reserved_amount) reserved_amount,  
+			SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance,
+			c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er,(SELECT  ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  WHERE   ba.cus_acc_id =  3165835823  AND   ba.cus_id = 26738352  AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  WHERE   cb.cus_acc_id = 3165835823   AND cb.cus_id = 26738352   AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   AND  '2015-04-08'  BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc with ur;
+
+		SELECT	SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er,(SELECT  ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  WHERE   ba.cus_acc_id =  3137830823  AND   ba.cus_id = 26738352  AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  WHERE   cb.cus_acc_id = 3137830823   AND cb.cus_id = 26738352   AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   AND  '2015-04-08'  BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc with ur;
+
+
+		select * from customer_account where cus_id = 26738352;
+
+
+   
+---------------------------------------
+
+			 SELECT  * from BANK;
+          
+            FROM    BANK_PRODUCT_TYPE
+            WHERE   ban_pro_typ_id = 6561936704
+            AND     bank_sign = 'RB';
+
+
+select *
+			 FROM TURNOVER_SCHEME ts, TURNOVER_DESC td
+                     WHERE  ts.tur_des_id = td.tur_des_id
+                      AND td.tra_typ_id = 86564327
+
+                      
+                      AND td.ord_no_tur = :ord_no_tur
+                      AND ban_pro_typ_id = null
+                      AND pro_typ_id = 42999
+                      AND filter = 'CUSACC'
+                     AND ts.bank_sign = 'RB'
+
+                     select *
+                    from ban_pro_amo_type bpat, bank_product_type bpt
+                    where bpt.ban_rel_type= '001'
+                    and bpat.pro_typ_id= 42999
+                    and bpat.amo_type= '623'
+
+                    
+                   -- and bpat.ban_pro_typ_id = null
+                    and current date < bpat.date_until
+                    and current date > bpat.date_from
+                    and bpt.bank_sign = 'RB';
+
+
+----------------------------------------------------
+
+select * from EVENT_TRX where tra_id = 48950335;
+
+select * from EVENT_TYPE where eve_typ_id = 86365327;
+
+
+select * from TURNOVER_SCHEME;
+
+
+SELECT cus_bil_exc_id, cus_bill_ext_no,cus_bill_exch_no,payer_cus_id,payer_tax_number,payer_reg_no,payer_name,payer_address,payer_place,payer_acc_no,master_acc_no,ben_iban,ben_cus_id,ben_tax_number,ben_reg_no,ben_name,ben_address,credit_ref_typ,credit_ref_no,debit_ref_typ,debit_ref_no,ext_int_flag,payment_method,amount,cur_id,maturity_date,issue_date,status,chg_stat_reason,paid_amount,collected_amount,order_trn,pay_ord_id,payment_amount,payment_date,order_trn_last,pay_ord_id_last,paym_amount_last,payment_date_last,recording_time,eve_id,use_id,recording_use_id,bank_sign,user_lock,ben_place FROM CUST_BILL_EXCH  WHERE  status LIKE 'A'  AND (amount > collected_amount or collected_amount is null)  AND maturity_date = '2015-03-27';
+
+SELECT cus_bil_exc_id, cus_bill_ext_no,cus_bill_exch_no,payer_cus_id,payer_tax_number,payer_reg_no,payer_name,payer_address,payer_place,payer_acc_no,master_acc_no,ben_iban,ben_cus_id,ben_tax_number,ben_reg_no,ben_name,ben_address,credit_ref_typ,credit_ref_no,debit_ref_typ,debit_ref_no,ext_int_flag,payment_method,amount,cur_id,maturity_date,issue_date,status,chg_stat_reason,paid_amount,collected_amount,order_trn,pay_ord_id,payment_amount,payment_date,order_trn_last,pay_ord_id_last,paym_amount_last,payment_date_last,recording_time,eve_id,use_id,recording_use_id,bank_sign,user_lock,ben_place FROM cust_bill_exch  WHERE maturity_date = '07.04.2015' AND status = 'A' with ur; 
+
+SELECT cus_bil_exc_id, cus_bill_ext_no,cus_bill_exch_no,payer_cus_id,payer_tax_number,payer_reg_no,payer_name,payer_address,payer_place,payer_acc_no,master_acc_no,ben_iban,ben_cus_id,ben_tax_number,ben_reg_no,ben_name,ben_address,credit_ref_typ,credit_ref_no,debit_ref_typ,debit_ref_no,ext_int_flag,payment_method,amount,cur_id,maturity_date,issue_date,status,chg_stat_reason,paid_amount,collected_amount,order_trn,pay_ord_id,payment_amount,payment_date,order_trn_last,pay_ord_id_last,paym_amount_last,payment_date_last,recording_time,eve_id,use_id,recording_use_id,bank_sign,user_lock,ben_place FROM cust_bill_exch  WHERE maturity_date = '2015-04-07' AND status = 'A' with ur; 
+
+
+select * from turnover order by system_timestamp desc;
+
+select * from CUST_BILL_EXCH where status like 'N'  and  maturity_date = '07.04.2015'
+
+select *  from CUST_BILL_EXCH where status like 'I'  and  maturity_date = '07.04.2015' ;
+
+select * from CUST_BILL_EXCH where status like 'A'  and  maturity_date = '07.04.2015' and ext_int_flag = '0';
+
+select * from CUST_BILL_EXCH where  maturity_date = '27.03.2015' and ext_int_flag = '0';
+
+ update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id in (56243326);
+
+update CUST_BILL_EXCH set maturity_date = '07.04.2015' where cus_bil_exc_id in (3162312823,3163422823,3163655823,3163864823,3186219823,3186296823,3186321823,3193447823,3193453823,3201887823,3201891823,3202020823);
+
+update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id in (3162312823,3163422823,3163655823,3163864823,3186219823,3186296823,3186321823,3193447823,3193453823,3201887823,3201891823,3202020823);
+
+update CUST_BILL_EXCH set collected_amount = null where cus_bil_exc_id in (3162312823,3163422823,3163655823,3163864823,3186219823,3186296823,3186321823,3193447823,3193453823,3201887823,3201891823,3202020823);
+
+
+commit;
+
+select * from CUST_BILL_EXCH where cus_bill_exch_no like 'MJ-12032015-00000013';
+
+select * from CUST_BILL_EXCH where status like 'A'  and  maturity_date > '01.03.2015';
+
+SELECT cus_bil_exc_id, cus_bill_ext_no,cus_bill_exch_no,payer_cus_id,payer_tax_number,payer_reg_no,payer_name,payer_address,payer_place,payer_acc_no,master_acc_no,ben_iban,ben_cus_id,ben_tax_number,ben_reg_no,ben_name,ben_address,credit_ref_typ,credit_ref_no,debit_ref_typ,debit_ref_no,ext_int_flag,payment_method,amount,cur_id,maturity_date,issue_date,status,chg_stat_reason,paid_amount,collected_amount,order_trn,pay_ord_id,payment_amount,payment_date,order_trn_last,pay_ord_id_last,paym_amount_last,payment_date_last,recording_time,eve_id,use_id,recording_use_id,bank_sign,user_lock,ben_place FROM cust_bill_exch  WHERE maturity_date = '2015-03-10' AND status = 'A';
+
+
+select * FROM customer_account where iban_acc_no like 'HR0724840083205002152';
+
+------------------------------------------------------------------------------
+
+		select * from customer_account  WHERE   cus_id = 39309275;
+
+
+			SELECT
+                    ca.cus_acc_id,
+                    ca.cus_acc_no,
+                    ca.cus_acc_name,
+                    ca.cus_id,
+                    c.code      codeCust,
+                    c.register_no       register_noCust,
+                    c.name      nameCust,
+                    ca.org_uni_id,
+                    ou.code     codeOrgUni,
+                    ou.name     nameOrgUni,
+                    ca.ban_pro_typ_id,
+                    bpt.code        ban_pro_typ_code,
+                    bpt.name        ban_pro_typ_name,
+                    ca.pro_cat_id,
+                    pc.pro_cat_code,
+                    pc.pro_cat_name,
+                    ca.cus_acc_status,
+                    scv.sys_code_desc       cus_acc_status_dsc,
+                    ca.contract_no,
+                    ca.pur_code,
+                    ca.ban_rel_typ_id,
+                    brt.ban_rel_type,
+                    brt.ban_rel_type_name,
+                    ca.eve_id,
+                    c.tax_number
+                FROM    
+                    customer c, bank_product_type bpt, system_code_value scv, 
+                    bank_relation_type brt, customer_account ca
+                LEFT OUTER JOIN product_category pc
+                ON 
+                    ca.pro_cat_id = pc.pro_cat_id
+                LEFT OUTER JOIN organization_unit ou
+                ON 
+                    ca.org_uni_id = ou.org_uni_id
+                WHERE
+                    ca.cus_id = c.cus_id
+                AND
+                    ca.ban_pro_typ_id = bpt.ban_pro_typ_id
+                AND
+                    ca.ban_rel_typ_id = brt.ban_rel_typ_id
+                AND
+                    ca.cus_acc_status = scv.sys_code_value
+                AND
+                    scv.sys_cod_id = 'cus_acc_status'
+                AND 
+                    ca.cus_id = 39309275
+              --  AND
+                  --  RTRIM(ca.cus_acc_no) LIKE :(cus_acc_no)
+                AND
+                    ca.cus_acc_no LIKE '11%'
+                AND 
+                    ca.bank_sign = 'RB'
+                ORDER BY
+                    ca.cus_acc_no
+
+-------------------------------------------------------
+
+select * from turnover order by process_timestamp desc;
+
+
+SELECT dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.domestic_balance, valuta.code_num FROM (SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id  FROM  customer_account ca, banpro_param bp   WHERE  ca.cus_id = 26738352  AND ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, (SELECT SUM(tabl.balance) balance , SUM(tabl.overdraft_amount) overdraft_amount,  SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance,  tabl.cus_acc_id,  tabl.cur_id,  er.buy_rate_fc,  er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er, (SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  ba.cus_id = 26738352  AND ba.bank_sign = 'RB'  UNION ALL  SELECT   cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx  FROM  cusacc_balance_last cb WHERE  cb.cus_id = 26738352   AND cb.cus_acc_report = '1'  AND cb.avail_balance_flag = '1'  AND cb.bank_sign = 'RB') tabl WHERE  er.cur_id = tabl.cur_id  AND '2015-03-12' between er.date_from and er.date_until  GROUP BY  tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc  )stanja,  currency valuta  WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id;
+
+
+ORDER BY  CASE  WHEN stanja.cur_id = 63999 THEN 1  WHEN stanja.cur_id!=63999 THEN 2  END, valuta.code_num,  CASE   WHEN dozvoljeni_racuni.cus_acc_no = '1112223331' THEN 1   WHEN dozvoljeni_racuni.cus_acc_no != '1112223331' THEN 2  END,   dozvoljeni_racuni.cus_acc_no asc;
+
+SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id  FROM  customer_account ca, banpro_param bp   WHERE   ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1';
+
+select * from customer_account where cus_acc_id = 62780022;
+
+select * from customer_account where cus_id = 417352;
+
+select * FROM customer_account where cus_acc_no like '%11%' and ban_pro_typ_id = '6561936704' ;
+
+
+
+
+
+select * from customer_account where cus_id = 2044064705 and cus_acc_no = '3205007044' ;
+
+select * from customer_account where cus_acc_id = 3147878823;
+
+select * from cusacc_currency where cus_acc_id = 3147878823; -- 2 valute 
+
+select * from customer_account where cus_id = 4844340705;
+
+select * from customer_account where cus_acc_id = 1843271;
+
+select * from customer where cus_id = 4844340705; -- 3000 register no
+
+select * FROM  cusacc_balance_last  WHERE   cus_id = 26738352  ;
+
+select * FROM  cusacc_balance_last  WHERE cus_acc_id = 3165835823; -- 
+
+select * FROM customer_account where ban_pro_typ_id = 6561936704;
+
+select * FROM customer_account where ban_pro_typ_id = 6561936704 and cus_id = 26738352;
+
+---------------------------------------------------------------------------
+
+		SELECT  
+				SUM(tabl.overdraft_amount) overdraft_amount, 
+				SUM(tabl.reserved_amount) reserved_amount,  
+				SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance, 
+				c.code_num, 
+				tabl.cur_id, 
+				er.buy_rate_fc,
+				er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount))domestic_balance
+				
+		FROM  
+			EXCHANGE_RATE er,
+			
+			( SELECT  cb.balance,  ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  
+					WHERE   
+					ba.cus_acc_id =  3147878823  AND  
+					ba.cus_id = 26738352  
+					AND  ba.bank_sign = 'RB' 
+		    UNION ALL  
+		    SELECT cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  
+				WHERE   
+				cb.cus_acc_id = 3147878823  AND 
+		cb.cus_id = 26738352   
+				AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,
+		currency c
+		
+		WHERE 
+				c.cur_id = tabl.cur_id   
+				AND er.cur_id = tabl.cur_id   
+				AND  '02.03.2015'  BETWEEN er.date_from AND er.date_until   
+	 GROUP BY 
+	 	c.code_num,tabl.cur_id,er.buy_rate_fc   
+	 ORDER BY 
+	 	CASE WHEN tabl.cur_id = 63999 THEN 1 
+	 	    WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc;
+
+	 	   
+--------------------------------------------------------------------------------------------------------------------------------
+
+				SELECT  cb.balance,  ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  
+					WHERE   
+					ba.cus_acc_id =  3147878823  AND  
+					ba.cus_id = 26738352  
+					AND  ba.bank_sign = 'RB'  with ur;
+
+
+				SELECT  cb.balance,  ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb   where ba.cur_id not in ( 63999);
+
+				-- cus_acc_id = 79679603 -- 64999
+
+				select * from customer_account where cus_acc_id = 79679603;
+
+				select * from currency where cur_id = 64999;
+
+
+		------------------------------------------------------------------------------  ispravljeni dohvat - ako nije ugovoren raèun za naplatu  -- OK
+
+			SELECT  
+				SUM(tabl.overdraft_amount) overdraft_amount, 
+				SUM(tabl.reserved_amount) reserved_amount,  
+				SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance, 
+				c.code_num, 
+				tabl.cur_id, 
+				er.buy_rate_fc,
+				er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount))domestic_balance  
+		FROM  
+			EXCHANGE_RATE er,
+			(SELECT    ba.cus_acc_id, 0 balance , ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  
+					WHERE   ba.cus_acc_id =  1843271  
+					AND   ba.cus_id = 2206904251  
+					AND  ba.bank_sign = 'RB' 
+		    UNION ALL  
+		    SELECT  cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  
+				WHERE   cb.cus_acc_id = 1843271  
+				AND cb.cus_id = 2206904251   
+				AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,
+		currency c   
+		WHERE 
+				c.cur_id = tabl.cur_id   
+				AND er.cur_id = tabl.cur_id   
+				AND  '11.03.2015'  BETWEEN er.date_from AND er.date_until   
+	 GROUP BY 
+	 	c.code_num,tabl.cur_id,er.buy_rate_fc   
+	 ORDER BY 
+	 	CASE WHEN tabl.cur_id = 63999 THEN 1 
+	 	    WHEN tabl.cur_id != 63999 THEN 2 END, 	 
+		c.code_num asc
+
+		------------------------------------------------------------------------------------------------------------------
+			select * from CUST_BILL_EXCH order by recording_time desc;
+
+			
+
+	 	    select * from customer_account where cus_acc_id = 1843271; -- tekuæi raèun 3205001787
+
+	 	    select * from customer where cus_id = 26738352;
+
+	 	    select * from cusacc_balance_last where cus_acc_id = 1843271 and avail_balance_flag = '1'  ;
+
+
+	 	     SELECT  *  FROM   cusacc_balance_last cb,  balance_announce ba  
+				WHERE   cb.cus_acc_id = 1843271 
+				AND  cb.cus_acc_id = ba.cus_acc_id
+				AND cb.cus_id = 2206904251   
+				AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB';
+
+
+		-------------------   test dohvata
+		select * from cusacc_balance where cus_acc_id in (
+SELECT cus_Acc_id FROM customer_account where ban_pro_typ_id = 6561936704) 
+and cus_Acc_id = 52577326
+and avail_balance_flag = '1' order by balance_date desc with ur;
+
+select * from customer_account where cus_acc_id = 52577326;
+
+select * from 
+		
+		----
+
+		
+
+
+
+		SELECT a.account FROM SIDEV.account_scheme a, SIDEV.bank_product_type b WHERE b.ban_pro_typ_id =6561936704 AND a.ban_rel_type = b.ban_rel_type AND a.amo_type ='600' AND a.eco_sec = '01' AND term_code =  '00' AND '2015-04-07' between a.date_from and a.date_to AND '2015-04-07' between b.date_from and b.date_until AND a.pro_cat_id is null AND a.bank_sign='RB'
+
+		SELECT * FROM SIDEV.account_scheme a, SIDEV.bank_product_type b 
+		WHERE b.ban_pro_typ_id =  6561936704 
+		AND a.ban_rel_type = b.ban_rel_type 
+		--AND a.amo_type ='600' 
+		AND a.eco_sec = '01' 
+		AND term_code =  '00' 
+		AND '2015-04-07' between a.date_from and a.date_to AND '2015-04-07' between b.date_from and b.date_until AND a.pro_cat_id is null AND a.bank_sign='RB'
+
+		SELECT  SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er,(SELECT  cb.balance,  ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  WHERE   ba.cus_acc_id =  3152368823  AND   ba.cus_id = 327352  AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  WHERE   cb.cus_acc_id = 3152368823   AND cb.cus_id = 327352   AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   AND  '11.03.2015'  BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc 
+
+			
+
+			
+		select * from customer where cus_id = 2206904251; -- MIK IVA ima brdo love 2001890 - zbog rezervacija?
+
+		select * FROM customer_account where cus_id = 26738352 and  ban_pro_Typ_id = 6561936704 ;
+
+		select * from balance_announce where cus_id = 2206904251;
+
+		select * from CUSACC_BALANCE where cur_id = 64999 and cus_id = 26738352;
+
+		
+		select * FROM bank_product_type where BAN_PRO_TYP_ID = 6561936704;
+		
+
+		select * from BANK_PRODUCT_TYPE;
+
+			select * from BANK_PRODUCT_TYPE where ban_pro_Typ_id = 6561936704 ; -- CMA 
+
+			select * from BANK_PRODUCT_TYPE where ban_pro_Typ_id = 6561936704  ; -- CMA 
+
+			 select * from customer where cus_id = 4844340705;
+			
+
+			select * FROM BANK_RELATION_TYPE where ban_rel_type like '001';
+
+			select * FROM customer_account where ban_pro_Typ_id = 6561936704 ;
+
+			 select * from customer where cus_id = 26738352;
+
+			select * FROM customer_account  where cus_acc_id = 3147878823; -- 1502000064
+
+			select * from cusacc_currency where cus_acc_id = 3147878823; -- 49999 i 50999
+
+			select * from currency where cur_id in (49999, 50999); -- AUD i CAD 
+
+			select * from balance_announce where cus_acc_id IN (52577326,52606326,52635326,53409326,53426326,56132326,56149326,3098117823,3137534823,3137560823,3137709823,
+		3137719823,3137742823,3137830823,3137875823,3137886823,3137893823,3137898823,3137903823,3137908823,3142396823,
+		3147774823,3147786823,3147806823,3147878823,3147926823,3148051823,3148122823,3148171823,3148187823,3148326823,
+	3148347823,3148354823,3148682823,3148707823,3148841823,3149116823,3149189823,3149233823,3149351823,3149471823,
+	3149699823,3149712823,3149735823,3149750823,3149792823,3149807823,3149825823,3149838823,3149853823,3149868823,
+	3149885823,3149907823,3149926823,3149945823,3149996823,3150025823,3150076823,3150141823,3150960823,3150996823,
+	3151041823,3151136823,3151157823,3151221823,3151279823,3151350823,3151462823,3151527823,3151563823,3151658823,
+	3151859823,3152368823,3152389823,3152431823,3152460823,3152882823,3153147823,3153181823,3154437823,3161160823,
+	3162023823,3162048823,3162325823,3163115823,3164796823,3165835823,3165903823,3165921823,3165938823,3166166823,
+	3184298823);
+
+			
+
+			select * from 
+		----------------------------------------------------------------------------------
+
+		SELECT cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  
+		WHERE   cb.cus_acc_id = 62780022;  
+
+		select * from balance_announce  where cus_acc_id = 62780022;
+
+		select * from currency where cur_id in (61999,64999,60999, 63999);
+
+
+		select * from cusacc_balance_last where cus_acc_id = 62780022;
+
+		select * from cusacc_balance_last where cus_acc_id = 62780022 and cur_id = 60999;
+
+
+        --- 
+        select * from customer_account where cus_acc_id = 3098117823;
+
+		select * from customer_account where cus_acc_no like '1500000001';
+
+		select * FROM balance_announce  where cus_acc_id = 3098117823;
+
+		select * FROM cusacc_balance_last  where cus_acc_id = 3098117823;
+			
+
+		SELECT cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  , cb.cur_id
+		FROM   cusacc_balance_last cb,  balance_announce ba;
+
+			SELECT cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  , cb.cur_id
+		FROM   cusacc_balance_last cb,  balance_announce ba
+		where  cb.cus_acc_id = 3098117823;
+
+			SELECT cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  , cb.cur_id, ca.cus_acc_no
+		FROM   cusacc_balance_last cb,  balance_announce ba, customer_account ca
+		where  cb.cus_id = 26738352 
+		     and ca.cus_id = cb.cus_id ;
+
+		select * from customer_account where cus_acc_id = 1423103823;
+
+		
+
+		select * from customer_account where cus_id = 26738352;
+
+			SELECT *
+		FROM   cusacc_balance_last cb,  balance_announce ba
+		where  ;
+
+		------------------  dohvat svih racuna -----------
+
+		SELECT SUM(tabl.overdraft_amount) overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount))domestic_balance  FROM  EXCHANGE_RATE er,
+		(SELECT  cb.balance,  ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  
+		WHERE   ba.cus_acc_id =  3148171823  
+		AND   ba.cus_id = 26738352  
+		AND  ba.bank_sign = 'RB'  UNION ALL  SELECT cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  
+		WHERE   cb.cus_acc_id = 3148171823  
+		AND cb.cus_id = 26738352   
+		AND cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   
+		AND  '07.04.2015'  
+		BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc;
+
+		
+			select * from cusacc_balance_last;
+
+		SELECT cd.cus_acc_id, SUM(tabl.overdraft_amount) overdraft_amount, SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.overdraft_amount-tabl.reserved_amount))domestic_balance  FROM  EXCHANGE_RATE er,
+		(SELECT cd.cus_acc_id,  cb.balance,  ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM   balance_announce ba , cusacc_balance_last cb  
+		WHERE  
+		 ba.bank_sign = 'RB'  UNION ALL  SELECT cd.cus_acc_id,  cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM   cusacc_balance_last cb,  balance_announce ba  
+		WHERE   
+		 cb.cus_acc_report = '1'   AND cb.avail_balance_flag = '1'   AND cb.bank_sign = 'RB' ) tabl,       currency c   WHERE c.cur_id = tabl.cur_id   AND er.cur_id = tabl.cur_id   
+		AND  '07.04.2015'  
+		BETWEEN er.date_from AND er.date_until   GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc   ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,  c.code_num asc;
+
+		----------------------------------------------------
+
+	  cus_acc_id
+		62780022
+
+		select * FROM customer_account where cus_acc_id = 62780022 ;
+
+		select * FROM balance_announce;
+
+		select * FROM balance_announce where cus_id = 26738352;
+
+ -----------------------    primjer SQL-a koji radi i dohvaca podatke za - ali fali master_acc_no
+				SELECT 
+                    dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.domestic_balance, valuta.code_num 
+                    FROM 
+                        (SELECT 
+                               ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id 
+                        FROM 
+                                customer_account ca, banpro_param bp 
+                         WHERE 
+                             ca.cus_id = 2206904251    --2206904251   -- id komitenta dužnika 
+                            AND ca.ban_pro_typ_id = bp.ban_pro_typ_id 
+                             AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, 
+                         (SELECT 
+                                 SUM(tabl.balance) balance ,
+                                 SUM(tabl.overdraft_amount) overdraft_amount, 
+                                 SUM(tabl.reserved_amount) reserved_amount, 
+                                 SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, 
+                                 tabl.cus_acc_id, 
+                                 tabl.cur_id, 
+                                 er.buy_rate_fc, 
+                                 er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance         
+                         FROM 
+                                EXCHANGE_RATE er,                                   
+                             (SELECT  
+                                      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx 
+                                   FROM 
+                                    balance_announce ba 
+                             WHERE 
+                                 ba.cus_id = 2206904251 --2206904251   --2206904251 ---id komitenta dužnika
+                                AND ba.bank_sign = 'RB'                   
+                            UNION ALL                       
+                            SELECT
+                                cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx 
+                            FROM 
+                                cusacc_balance_last cb                        
+                            WHERE 
+                                 cb.cus_id = 2206904251 --2206904251  "--2206904251 ---id komitenta dužnika
+                                AND cb.cus_acc_report = '1' 
+                                 AND cb.avail_balance_flag = '1' 
+                                 AND cb.bank_sign = 'RB') tabl 
+                    
+                         WHERE             
+                         er.cur_id = tabl.cur_id            
+                        AND '2015-03-11' between er.date_from and er.date_until -- '2015-02-25'
+                    GROUP BY 
+                    tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc 
+                    )stanja, 
+                    currency valuta 
+            WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id
+            ORDER BY 
+            	CASE
+				WHEN stanja.cur_id = 63999 THEN 1
+				WHEN stanja.cur_id!=63999 THEN 2
+				END,
+					valuta.code_num,
+			CASE
+				WHEN dozvoljeni_racuni.cus_acc_no = '3205001787' THEN 1
+				WHEN dozvoljeni_racuni.cus_acc_no != '3205001787' THEN 2
+			END,
+				dozvoljeni_racuni.cus_acc_no asc;
+
+
+ ---------------------------------------------------------------
+   			SELECT 
+                    dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.domestic_balance, valuta.code_num 
+                    FROM 
+                        (SELECT 
+                               ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id 
+                        FROM 
+                                customer_account ca, banpro_param bp 
+                         WHERE 
+                             ca.cus_id = 26738352    --2206904251   -- id komitenta dužnika 
+                            AND ca.ban_pro_typ_id = bp.ban_pro_typ_id 
+                             AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, 
+                         (SELECT 
+                                 SUM(tabl.balance) balance ,
+                                 SUM(tabl.overdraft_amount) overdraft_amount, 
+                                 SUM(tabl.reserved_amount) reserved_amount, 
+                                 SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, 
+                                 tabl.cus_acc_id, 
+                                 tabl.cur_id, 
+                                 er.buy_rate_fc, 
+                                 er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance         
+                         FROM 
+                                EXCHANGE_RATE er,                                   
+                             (SELECT  
+                                      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx 
+                                   FROM 
+                                    balance_announce ba 
+                             WHERE 
+                                 ba.cus_id = 26738352 --2206904251   --2206904251 ---id komitenta dužnika
+                                AND ba.bank_sign = 'RB'                   
+                            UNION ALL                       
+                            SELECT
+                                cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx 
+                            FROM 
+                                cusacc_balance_last cb                        
+                            WHERE 
+                                 cb.cus_id = 26738352 --2206904251  "--2206904251 ---id komitenta dužnika
+                                AND cb.cus_acc_report = '1' 
+                                 AND cb.avail_balance_flag = '1' 
+                                 AND cb.bank_sign = 'RB') tabl 
+                    
+                         WHERE             
+                         er.cur_id = tabl.cur_id            
+                        AND '2015-03-11' between er.date_from and er.date_until -- '2015-02-25'
+                    GROUP BY 
+                    tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc 
+                    )stanja, 
+                    currency valuta 
+            WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id
+
+
+
+            
+            ORDER BY 
+            	CASE
+				WHEN stanja.cur_id = 63999 THEN 1
+				WHEN stanja.cur_id!=63999 THEN 2
+				END,
+					valuta.code_num,
+			CASE
+				WHEN dozvoljeni_racuni.cus_acc_no = '3205001787' THEN 1
+				WHEN dozvoljeni_racuni.cus_acc_no != '3205001787' THEN 2
+			END,
+				dozvoljeni_racuni.cus_acc_no asc;
+ -----------
+
+
+ --------- SQL 2 iz obrade:
+
+ 
+
+SELECT
+dozvoljeni_racuni.cus_acc_no,
+stanja.balance,
+stanja.cur_id ,
+stanja.domestic_balance,
+valuta.code_num
+FROM (SELECT ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id FROM customer_account ca, banpro_param bp WHERE ca.cus_id = 2206904251 AND ca.ban_pro_typ_id = bp.ban_pro_typ_id AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni,
+(SELECT SUM(tabl.balance) balance , SUM(tabl.overdraft_amount) overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, tabl.cus_acc_id, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE ba.cus_id = 2206904251 AND ba.bank_sign = 'RB' UNION ALL SELECT cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx FROM cusacc_balance_last cb WHERE cb.cus_id = 2206904251 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' AND cb.bank_sign = 'RB') tabl WHERE er.cur_id = tabl.cur_id AND '2015-02-25' between er.date_from and er.date_until GROUP BY tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc )stanja,
+currency valuta
+WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id
+AND valuta.cur_id = stanja.cur_id;
+
+----------------------------------------------------------------------------   SQL sa dodanim racunom -----------   
+ --- ovaj SQL ne dohvati ništa za ove podatke
+
+			SELECT dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.domestic_balance, valuta.code_num FROM (SELECT  ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id  FROM  customer_account ca, banpro_param bp   WHERE  ca.cus_id = 26738352  AND ca.ban_pro_typ_id = bp.ban_pro_typ_id  AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, (SELECT SUM(tabl.balance) balance , SUM(tabl.overdraft_amount) overdraft_amount,  SUM(tabl.reserved_amount) reserved_amount,  SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance,  tabl.cus_acc_id,  tabl.cur_id,  er.buy_rate_fc,  er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance  FROM  EXCHANGE_RATE er, (SELECT      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM  balance_announce ba  WHERE  ba.cus_id = 26738352  AND ba.bank_sign = 'RB'  UNION ALL  SELECT   cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx  FROM  cusacc_balance_last cb WHERE  cb.cus_id = 26738352   AND cb.cus_acc_report = '1'  AND cb.avail_balance_flag = '1'  AND cb.bank_sign = 'RB') tabl WHERE  er.cur_id = tabl.cur_id  AND '2015-03-11' between er.date_from and er.date_until  GROUP BY  tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc  )stanja,  currency valuta  WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id   ORDER BY  CASE  WHEN stanja.cur_id = 63999 THEN 1  WHEN stanja.cur_id!=63999 THEN 2  END, valuta.code_num,  CASE   WHEN dozvoljeni_racuni.cus_acc_no = 1101975896 THEN 1   WHEN dozvoljeni_racuni.cus_acc_no != 1101975896 THEN 2  END,   dozvoljeni_racuni.cus_acc_no asc; 
+
+-----------------------------------------------------------------------------------------------------    
+
+			SELECT 
+                    dozvoljeni_racuni.cus_acc_no, stanja.balance, stanja.cur_id , stanja.domestic_balance, valuta.code_num 
+                    FROM 
+                        (SELECT 
+                               ca.cus_acc_no, ca.cus_acc_id, ca.ban_pro_typ_id 
+                        FROM 
+                                customer_account ca, banpro_param bp 
+                         WHERE 
+                             ca.cus_id = 2206904251    --2206904251   -- id komitenta dužnika 
+                            AND ca.ban_pro_typ_id = bp.ban_pro_typ_id 
+                             AND bp.p_contract_id like 'bill_of_exchange  ' and bp.par_value = '1') dozvoljeni_racuni, 
+                         (SELECT 
+                                 SUM(tabl.balance) balance ,
+                                 SUM(tabl.overdraft_amount) overdraft_amount, 
+                                 SUM(tabl.reserved_amount) reserved_amount, 
+                                 SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, 
+                                 tabl.cus_acc_id, 
+                                 tabl.cur_id, 
+                                 er.buy_rate_fc, 
+                                 er.buy_rate_fc*(SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance         
+                         FROM 
+                                EXCHANGE_RATE er,                                   
+                             (SELECT  
+                                      ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx 
+                                   FROM 
+                                    balance_announce ba 
+                             WHERE 
+                                 ba.cus_id = 2206904251 --2206904251   --2206904251 ---id komitenta dužnika
+                                AND ba.bank_sign = 'RB'                   
+                            UNION ALL                       
+                            SELECT
+                                cb.cus_acc_id,cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx,0 ann_outgoing_trx 
+                            FROM 
+                                cusacc_balance_last cb                        
+                            WHERE 
+                                 cb.cus_id = 2206904251 --2206904251  "--2206904251 ---id komitenta dužnika
+                                AND cb.cus_acc_report = '1' 
+                                 AND cb.avail_balance_flag = '1' 
+                                 AND cb.bank_sign = 'RB') tabl 
+                    
+                         WHERE             
+                         er.cur_id = tabl.cur_id            
+                        AND '2015-03-11' between er.date_from and er.date_until -- '2015-02-25'
+                    GROUP BY 
+                    tabl.cus_acc_id,tabl.cur_id,er.buy_rate_fc 
+                    )stanja, 
+                    currency valuta 
+            WHERE dozvoljeni_racuni.cus_acc_id = stanja.cus_acc_id and valuta.cur_id = stanja.cur_id
+            ORDER BY 
+            	CASE
+				WHEN stanja.cur_id = 63999 THEN 1
+				WHEN stanja.cur_id!=63999 THEN 2
+				END,
+					valuta.code_num,
+			CASE
+				WHEN dozvoljeni_racuni.cus_acc_no = '3205001787' THEN 1
+				WHEN dozvoljeni_racuni.cus_acc_no != '3205001787' THEN 2
+			END,
+				dozvoljeni_racuni.cus_acc_no asc;
+
+				
+--------------------------------------------------------------------------------  CR 16646 - Dorada rokovnika
+
+  -- cf54
+
+  select * from due_term_table;
+
+  select  * FROM bank_relation_type;
+
+SELECT DUE_TER_TAB_ID, INV_HEA_ID, CUS_LET_ID, TUR_ID, CUS_ID, CUS_ORG_UNI_ID, CUS_CODE, REGISTER_NO, DOMICIL, TURNOVER_REFERENCE, ACCOUNT,DUE_TERM_TABLE.BAN_REL_TYPE, AMO_TYPE, BAN_PRO_TYP_ID, PRO_TYP_ID, CUS_ACC_ID, CUS_ACC_NO, ACC_NUM_ID, TUR_TYP_ID, TURNOVER_DESC, PROCESS_DATE, VALUE_DATE, MATURITY_DATE, DUE_TER_TAB_CUR_ID, DUE_DEBIT_AMO, DUE_CREDIT_AMO, REST_DUE_DEB_AMO, REST_DUE_CRED_AMO, LAST_MODIFIC_TIME, RECORDING_TIME, DUE_TERM_TABLE.BANK_SIGN, DUE_TERM_TABLE.USER_LOCK, DUE_CLO_CNT, INVOICE_NO,LAST_PAY_DATE, PAY_CUS_ID, VAT_INVOICE_NO  
+FROM DUE_TERM_TABLE, BANK_RELATION_TYPE  
+where DUE_TERM_TABLE.BAN_REL_TYPE = BANK_RELATION_TYPE.BAN_REL_TYPE AND BANK_RELATION_TYPE.MODULE_NAME = 'RET' AND  CUS_ID = 411848251 AND  (REST_DUE_DEB_AMO <> 0 OR REST_DUE_CRED_AMO <> 0)  AND  DUE_TERM_TABLE.BANK_SIGN = 'RB'  ORDER BY REGISTER_NO ASC, MATURITY_DATE DESC, PRO_TYP_ID ASC 
+  
+
+SELECT  BANK_RELATION_TYPE.BAN_REL_TYPE, DUE_TER_TAB_ID, INV_HEA_ID, CUS_LET_ID, TUR_ID, CUS_ID, CUS_ORG_UNI_ID, CUS_CODE, REGISTER_NO, DOMICIL, TURNOVER_REFERENCE, ACCOUNT,DUE_TERM_TABLE.BAN_REL_TYPE, AMO_TYPE, BAN_PRO_TYP_ID, PRO_TYP_ID, CUS_ACC_ID, CUS_ACC_NO, ACC_NUM_ID, TUR_TYP_ID, TURNOVER_DESC, PROCESS_DATE, VALUE_DATE, MATURITY_DATE, DUE_TER_TAB_CUR_ID, DUE_DEBIT_AMO, DUE_CREDIT_AMO, REST_DUE_DEB_AMO, REST_DUE_CRED_AMO, LAST_MODIFIC_TIME, RECORDING_TIME, DUE_TERM_TABLE.BANK_SIGN, DUE_TERM_TABLE.USER_LOCK, DUE_CLO_CNT, INVOICE_NO,LAST_PAY_DATE, PAY_CUS_ID, VAT_INVOICE_NO
+FROM DUE_TERM_TABLE, BANK_RELATION_TYPE
+where DUE_TERM_TABLE.BAN_REL_TYPE = BANK_RELATION_TYPE.BAN_REL_TYPE 
+AND BANK_RELATION_TYPE.MODULE_NAME = 'RET' AND  (REST_DUE_DEB_AMO <> 0 OR REST_DUE_CRED_AMO <> 0)  
+AND BAN_PRO_TYP_ID = 790664005
+AND  DUE_TERM_TABLE.BANK_SIGN = 'RB'  ORDER BY REGISTER_NO ASC, MATURITY_DATE DESC, PRO_TYP_ID ASC  with ur;
+
+
+select * FROM bank_product_type where ban_pro_typ_id = 790664005;
+
+AND BANK_RELATION_TYPE.BAN_REL_TYPE like '912'
+   --AND BANK_PRODUCT_TYPE.CODE = '931'
+
+select * FROM bank_product_type;
+
+select * FROM bank_product_type where ban_rel_type like '899';
+
+select * FROM bank_product_type where ban_rel_type like '917';
+   
+select * FROM bank_product_type where ban_rel_type like '914';
+
+select * FROM bank_product_type;
+--------------------------------------------------------------------------------------------
+select *  from bank_product_type where code = '931' with ur;
+
+
+select *  from bank_product_type where code = '931' with ur;
+
+
+
+
+SELECT DUE_TER_TAB_ID, INV_HEA_ID, CUS_LET_ID, TUR_ID, CUS_ID, CUS_ORG_UNI_ID, CUS_CODE, REGISTER_NO, DOMICIL, TURNOVER_REFERENCE, ACCOUNT,DUE_TERM_TABLE.BAN_REL_TYPE, AMO_TYPE, BAN_PRO_TYP_ID, PRO_TYP_ID, CUS_ACC_ID, CUS_ACC_NO, ACC_NUM_ID, TUR_TYP_ID, TURNOVER_DESC, PROCESS_DATE, VALUE_DATE, MATURITY_DATE, DUE_TER_TAB_CUR_ID, DUE_DEBIT_AMO, DUE_CREDIT_AMO, REST_DUE_DEB_AMO, REST_DUE_CRED_AMO, LAST_MODIFIC_TIME, RECORDING_TIME, DUE_TERM_TABLE.BANK_SIGN, DUE_TERM_TABLE.USER_LOCK, DUE_CLO_CNT, INVOICE_NO,LAST_PAY_DATE, PAY_CUS_ID, VAT_INVOICE_NO FROM SIDEV.DUE_TERM_TABLE, BANK_RELATION_TYPE  
+where 
+DUE_TERM_TABLE.BAN_REL_TYPE = BANK_RELATION_TYPE.BAN_REL_TYPE 
+AND BANK_RELATION_TYPE.MODULE_NAME = '' 
+AND  MATURITY_DATE >= '01.01.2015'  
+AND  MATURITY_DATE <= '01.04.2015' 
+AND  (REST_DUE_DEB_AMO <> 0 OR REST_DUE_CRED_AMO <> 0)  
+AND  DUE_TERM_TABLE.BANK_SIGN = 'RB'  
+ORDER BY REGISTER_NO ASC, MATURITY_DATE DESC, PRO_TYP_ID ASC with ur;
+
+
+
+
+SELECT DUE_TER_TAB_ID, INV_HEA_ID, CUS_LET_ID, TUR_ID, CUS_ID, CUS_ORG_UNI_ID, CUS_CODE, REGISTER_NO, DOMICIL, TURNOVER_REFERENCE, ACCOUNT,DUE_TERM_TABLE.BAN_REL_TYPE, AMO_TYPE, BAN_PRO_TYP_ID, PRO_TYP_ID, CUS_ACC_ID, CUS_ACC_NO, ACC_NUM_ID, TUR_TYP_ID, TURNOVER_DESC, PROCESS_DATE, VALUE_DATE, MATURITY_DATE, DUE_TER_TAB_CUR_ID, DUE_DEBIT_AMO, DUE_CREDIT_AMO, REST_DUE_DEB_AMO, REST_DUE_CRED_AMO, LAST_MODIFIC_TIME, RECORDING_TIME, DUE_TERM_TABLE.BANK_SIGN, DUE_TERM_TABLE.USER_LOCK, DUE_CLO_CNT, INVOICE_NO,LAST_PAY_DATE, PAY_CUS_ID, VAT_INVOICE_NO 
+FROM SIDEV.DUE_TERM_TABLE, BANK_RELATION_TYPE  
+where DUE_TERM_TABLE.BAN_REL_TYPE = BANK_RELATION_TYPE.BAN_REL_TYPE AND BANK_RELATION_TYPE.MODULE_NAME = 'PAY' 
+AND  MATURITY_DATE >= '01.01.2015'  AND  MATURITY_DATE <= '01.04.2015'  
+AND  (REST_DUE_DEB_AMO <> 0 OR REST_DUE_CRED_AMO <> 0)  with ur;
+
+
+AND  BAN_PRO_TYP_ID = 790661005  
+
+select * FROM bank_product_type where BAN_PRO_TYP_ID = 6561936704;
+
+AND  DUE_TERM_TABLE.BANK_SIGN = 'RB'  ORDER BY REGISTER_NO ASC, MATURITY_DATE DESC, PRO_TYP_ID ASC with ur;
+
+select * FROM batch_log order by recording_time desc;
+
+select * FROM batch_log where bat_def_id = 7591478704 order by recording_time desc;
+
+
+
+
+

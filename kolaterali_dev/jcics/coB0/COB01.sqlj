@@ -1,0 +1,91 @@
+package hr.vestigo.modules.collateral.jcics.coB0;
+
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+import java.sql.SQLException;
+
+import sqlj.runtime.ref.*;
+import hr.vestigo.framework.remote.transaction.*;   
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+
+public class COB01 extends RemoteTransaction { 
+
+    
+public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB0/COB01.sqlj,v 1.2 2017/11/29 09:46:18 hrazst Exp $";
+    
+    public DeclCOB0 decl = null;
+    
+    public COB01 (DeclCOB0 decl) {
+        this.decl = decl;
+    }
+    public void  execute(TransactionContext tc) throws Exception {
+        System.out.println("execute");
+        ConnCtx ctx = tc.getContext(); 
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        
+        // prvo provjeriti da li postoji u bazi aktivni procjenitelj
+        int broj = 0;           
+        try {
+            #sql [ctx] {SELECT count(*) 
+                        INTO: broj
+                        FROM estimator                        
+                        WHERE EST_CUS_ID = :(decl.EST_CUS_ID)
+                        AND :(decl.CollEstimatorDialog_txtDateFrom) BETWEEN date_from AND date_until
+                };          
+                tc.debug ( "...broj: " + broj);
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......COB01.sqlj select from estimator SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......COB01.sqlj select from estimator SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......COB01.sqlj select from estimator SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction COB01: Error inserting into estimator! ","err411a", null);
+        }
+        if(broj > 0){
+            throw new VestigoTMException(1, "Transaction COB01: Error inserting into estimator! ","CollMsgErr01", null);
+        }   
+        
+        //generator id-a za modul Collateral
+        YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+        java.math.BigDecimal collaterall_id = id_generator.getNewId();
+        //insert u tablicu estimator        
+        try{    
+            
+            #sql [ctx]{  insert into ESTIMATOR (
+                                                EST_ID, 
+                                                EST_CUS_ID, 
+                                                EST_COMP_CUS_ID, 
+                                                EST_TYPE, 
+                                                DATE_FROM,  
+                                                DATE_UNTIL,
+                                                USE_OPEN_ID,                                                 
+                                                OPENING_TS, 
+                                                USER_LOCK,
+                                                est_internal)
+                            values (:collaterall_id, 
+                            :(decl.EST_CUS_ID), 
+                            :(decl.EST_COMP_CUS_ID),
+                            :(decl.CollEstimatorDialog_txtEstimatorTypeCode),
+                            :(decl.CollEstimatorDialog_txtDateFrom), 
+                            :(decl.CollEstimatorDialog_txtDateUntil),
+                            :(decl.use_id),                             
+                            current timestamp, 
+                            current_timestamp,
+                            :(decl.CollEstimatorDialog_txtEstiminatorInternal)
+                    )
+                    };
+                    
+        }catch(java.sql.SQLException se){
+                tc.debug ( "......COB01.sqlj insert into inserting estimator SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......COB01.sqlj insert into inserting estimator SQL SQLState " + se.getSQLState());
+                tc.debug ( "......COB01.sqlj insert into inserting estimator SQL Message " + se.getMessage());
+                throw new VestigoTMException(1, "Transaction COB01: Error inserting estimator! ","err411a", null);
+        }
+    }
+    
+}

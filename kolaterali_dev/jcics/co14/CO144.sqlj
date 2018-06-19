@@ -1,0 +1,169 @@
+package hr.vestigo.modules.collateral.jcics.co14;
+
+
+import hr.vestigo.framework.remote.transaction.*;
+
+/**
+ * CO144 
+ *  	
+ */
+
+ 
+
+public class CO144 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co14/CO144.sqlj,v 1.2 2006/05/16 12:32:06 hrazst Exp $";
+	public DeclCO14 decl = null;
+	
+	public CO144 (DeclCO14 decl) {
+		this.decl = decl;
+	}
+		 
+	public void execute(TransactionContext tc) throws Exception {
+		
+			ConnCtx ctx = tc.getContext();
+			
+			java.sql.Date today = null;
+	        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+	        long timeT = calendar.getTime().getTime();
+	        today = new java.sql.Date(timeT);
+			java.sql.Date yesterday = backDay(today,1);	
+			
+			sqlj.runtime.ExecutionContext exCtx = new sqlj.runtime.ExecutionContext();		
+	
+			#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+			
+        //set date_until and use_id
+			try{	
+				   
+				#sql [ctx, exCtx]{ 
+			    	DELETE FROM REV_REG_COEF_RE
+						WHERE
+			    		rev_re_id =:(decl.revregcoefredialogdeletem.REV_RE_ID)
+			    		AND user_lock =:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_UserLockNF)  
+			    	};
+			    	if (exCtx.getUpdateCount() == 0) {
+						throw new VestigoTMException(1,"Transaction CO143: Error deleting regional-location mark in table REV_REG_COEF_RE becouse of user_lock","erruptzst2", null);
+					}
+				}catch(java.sql.SQLException se){
+						tc.debug ( "......CO133.sqlj delete from political_map SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO133.sqlj delete from political_map SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO133.sqlj delete from political_map SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO133: Error deleting row in coll_owners! ","err411a", null);
+				}
+				try{	
+			    	#sql [ctx]{	INSERT INTO REV_REG_COEF_RE_A
+			    					          	(rev_re_id,
+			    						  	 	rev_re_code,
+			    						 	 	rev_re_name,
+			    								rev_re_place,
+			    								rev_re_county,
+			    								rev_re_district,
+			    								rev_re_resi_quar,
+			    								rev_re_coef,
+			    								rev_date_from,
+			    								rev_date_unti,
+			    								rev_act_noact,
+			    								rev_spec_stat,
+			    								use_open_id,
+			    								use_id,
+												opening_ts,
+												user_lock,
+												eve_id,
+												bank_sign
+			    								) 
+			    			VALUES( :(decl.revregcoefredialogdeletem.REV_RE_ID),
+                					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtCodeB),
+                					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtNameB),
+                					:(decl.revregcoefredialogdeletem.REV_RE_PLACE_B),
+                					:(decl.revregcoefredialogdeletem.REV_RE_COUNTY_B),
+                					:(decl.revregcoefredialogdeletem.REV_RE_DISTRICT_B),
+			    					:(decl.revregcoefredialogdeletem.REV_RE_RESI_QUAR_B),
+			    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtCoefB),
+			    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtDateFromB),
+			    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtDateUntilB),
+			    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtActB),
+			    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtSpecStatB),
+			    					:(decl.revregcoefredialogdeletem.USE_OPEN_ID_B),
+									:(decl.revregcoefredialogdeletem.USE_ID_B),
+			    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtOpeningTsNF),
+			    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_UserLockNF),
+			    					:(decl.revregcoefredialogdeletem.EVE_ID_B),
+			    					:(tc.getBankSign())
+									)
+         		        	};
+         		        	
+			}catch(java.sql.SQLException se){
+						tc.debug ( "......CO142.sqlj insert into coll_owners SQL ErrorCode " + se.getErrorCode());
+						tc.debug ( "......CO142.sqlj insert into coll_owners SQL SQLState " + se.getSQLState());
+						tc.debug ( "......CO142.sqlj insert into coll_owners SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction CO142: Error inserting coll_owners! ","err411a", null);
+			}
+			try{	
+		    	#sql [ctx]{	INSERT INTO REV_REG_COEF_RE_A
+		    					          	(rev_re_id,
+		    						  	 	rev_re_code,
+		    						 	 	rev_re_name,
+		    								rev_re_place,
+		    								rev_re_county,
+		    								rev_re_district,
+		    								rev_re_resi_quar,
+		    								rev_re_coef,
+		    								rev_date_from,
+		    								rev_date_unti,
+		    								rev_act_noact,
+		    								rev_spec_stat,
+		    								use_open_id,
+		    								use_id,
+											opening_ts,
+											user_lock,
+											eve_id,
+											bank_sign
+		    								) 
+		    			VALUES( :(decl.revregcoefredialogdeletem.REV_RE_ID),
+            					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtCodeB),
+            					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtNameB),
+            					:(decl.revregcoefredialogdeletem.REV_RE_PLACE_B),
+            					:(decl.revregcoefredialogdeletem.REV_RE_COUNTY_B),
+            					:(decl.revregcoefredialogdeletem.REV_RE_DISTRICT_B),
+		    					:(decl.revregcoefredialogdeletem.REV_RE_RESI_QUAR_B),
+		    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtCoefB),
+		    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtDateFromB),
+		    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtDateUntilB),
+		    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtActB),
+		    					'0D',  
+		    					:(decl.revregcoefredialogdeletem.USE_OPEN_ID_B),
+								:(decl.revregcoefredialogdeletem.use_id),
+		    					:(decl.revregcoefredialogdeletem.RevRegCoefReDialog_txtOpeningTsNF),
+		    					current timestamp,
+		    					:(decl.revregcoefredialogdeletem.EVE_ID_B),
+		    					:(tc.getBankSign())
+		    					)
+     		        	};
+     		        	
+				}catch(java.sql.SQLException se){
+							tc.debug ( "......CO142.sqlj insert into coll_owners SQL ErrorCode " + se.getErrorCode());
+							tc.debug ( "......CO142.sqlj insert into coll_owners SQL SQLState " + se.getSQLState());
+							tc.debug ( "......CO142.sqlj insert into coll_owners SQL Message " + se.getMessage());
+							throw new VestigoTMException(1, "Transaction CO142: Error inserting coll_owners! ","err411a", null);
+				}				
+				
+		}//execute
+	
+	 // metoda vraca datum za dan koji je za argNumOfDays dana bio prije danasnjeg dana	
+	 public java.sql.Date backDay(java.sql.Date argNow, int argNumOfDays) {
+
+	        java.util.GregorianCalendar util_date = new java.util.GregorianCalendar();
+
+	        util_date.setTime(argNow);
+	        int day = util_date.get(java.util.GregorianCalendar.DAY_OF_MONTH);
+
+	        util_date.set(java.util.GregorianCalendar.DAY_OF_MONTH, day - argNumOfDays);
+	        int year = util_date.get(java.util.GregorianCalendar.YEAR);
+	        int month = util_date.get(java.util.GregorianCalendar.MONTH) + 1;
+	        int d_new = util_date.get(java.util.GregorianCalendar.DAY_OF_MONTH);
+	        String z_pom = year + "-" + month + "-" + d_new;
+	        java.sql.Date novo3 = java.sql.Date.valueOf(z_pom);
+	        return novo3;
+	}
+}	
+			

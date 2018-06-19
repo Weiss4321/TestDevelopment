@@ -1,0 +1,339 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from customer_account;
+
+
+
+
+select * from batch_log where bat_deF_ID = '1617844003' ORDER BY recording_time desc;
+
+	select * from customer_account where cus_acc_no =  '1135000004'; -- IBM
+
+ SELECT SUM(tabl.balance) balance, SUM(tabl.overdraft_amount) AS overdraft_amount, SUM(tabl.reserved_amount) reserved_amount, SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance, c.code_num, tabl.cur_id, er.buy_rate_fc, er.buy_rate_fc * ( SUM( tabl.balance + tabl.overdraft_amount-tabl.reserved_amount)) domestic_balance FROM EXCHANGE_RATE er, (SELECT ba.cus_acc_id, 0 balance, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE 
+ ba.cus_acc_id = 3137830823 AND ba.cus_id = 26738352 AND ba.bank_sign = 'RB' 
+ UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id, 0 overdraft_amount, 0 reserved_amount, 0 ann_incoming_trx, 0 ann_outgoing_trx FROM cusacc_balance_last cb 
+ WHERE cb.cus_acc_id = 3137830823 AND cb.cus_id = 26738352 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' 
+ AND cb.bank_sign = 'RB' ) tabl, currency c WHERE c.cur_id = tabl.cur_id AND er.cur_id = tabl.cur_id AND '04.01.2016' 
+ BETWEEN er.date_from AND er.date_until GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END, c.code_num asc with ur
+ 
+
+	select * from 	CUST_BILL_EXCH order by user_lock desc;
+	
+ 	select cus_bil_exc_id, cus_bill_exch_no, payer_name, ben_name,ben_iban, ext_int_flag, status, paid_amount, collected_amount, order_trn from CUST_BILL_EXCH order by user_lock desc;
+
+ 	update CUST_BILL_EXCH set status = 'A' where cus_bil_exc_id = 670532326;
+
+ 	update CUST_BILL_EXCH set paid_amount = null, collected_amount = null where cus_bil_exc_id = 497881326;
+
+	commit;
+
+
+	select * from batch_log where bat_def_id = 7591478704 ORDER BY recording_time desc;
+
+	update batch_log set exec_status = '1' where   bat_log_id = 653500327;
+
+	commit;
+
+
+	select * from PROCEDURE_TYPE where pro_typ_id IN (42999, 36999)   with ur;
+
+	select * from BANK_PRODUCT_TYPE
+
+
+
+	select * from batch_log where bat_def_id = 1617844003 ORDER BY recording_time desc;
+
+	update batch_log set exec_status = '1' where   bat_log_id = 656162327;
+
+	commit;
+
+
+	----------------------------------------------------------------------------------------------------------------------
+	
+	SET CURRENT_SCHEMA = 'SIP'
+
+select * from customer_account;
+
+
+		 
+                SELECT
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id                                                       
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc,
+                        customer_account ca
+                    WHERE
+                    tc.tur_id = t.tur_id
+                    AND ca.cus_acc_id = 825837522
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = ca.cus_acc_id 
+                     AND t.process_timestamp >= '2015-12-20 17:17:31.296'
+                    AND t.process_timestamp <= tc.process_timestamp                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+                    ----------------------------------------
+
+				   SELECT
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                   
+                       tc.process_timestamp,
+                       t.cur_id                                                       
+                    FROM
+                        turnover t   ,           
+                        turn_customer tc,
+                        customer_account ca
+                    WHERE
+                    tc.tur_id = t.tur_id
+                    AND ca.cus_acc_id = 825837522
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = ca.cus_acc_id 
+                     AND t.process_timestamp >= '2015-12-20 17:17:31.296'
+                    AND t.process_timestamp <= tc.process_timestamp                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+
+
+
+                    ----------------------------------------------------
+
+
+
+                    SELECT
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id                                                       
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc,
+                        customer_account ca
+                    WHERE
+                    tc.tur_id = t.tur_id
+                    AND ca.cus_acc_id = 826026522
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = ca.cus_acc_id 
+                     AND t.process_timestamp >= '2016-01-04 17:17:44.781'
+                    AND t.process_timestamp <= tc.process_timestamp                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+                  select * from batch_log where bat_deF_ID = '1617844003' ORDER BY recording_time desc;
+
+                  select * from customer_account where cus_acc_no = '';
+
+
+				  SELECT               
+                    cur_id,
+                    balance                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 825494522
+                   AND pro_typ_id IN (42999, 36999) 
+
+
+				select * from PROCEDURE_TYPE where pro_typ_id IN (42999, 36999)   with ur;
+
+
+				select * from PROCEDURE_TYPE;
+
+
+
+				------------------------------------------------------------------------------------
+
+
+
+				  SELECT
+				  t.tur_id,
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id,
+                       t.pay_ord_id                                                       
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc,
+                        customer_account ca
+                    WHERE
+                    tc.tur_id = t.tur_id
+                    AND ca.cus_acc_id = 826026522
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = ca.cus_acc_id 
+                     AND t.process_timestamp >= '2016-01-04 17:17:44.781'
+                    AND t.process_timestamp <= tc.process_timestamp                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+			-----------------------------------
+				  SELECT
+				  t.tur_id,
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id,
+                       t.pay_ord_id                                                       
+                    FROM
+                        turnover t    join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc,
+                        customer_account ca
+                    WHERE
+                    tc.tur_id = t.tur_id
+                    AND ca.cus_acc_id = 826026522
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = ca.cus_acc_id 
+                     AND t.process_timestamp >= '2016-01-04 17:17:44.781'
+                    AND t.process_timestamp <= tc.process_timestamp                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+                    ------------------------------------------------------------
+
+
+                    
+
+
+
+
+			-----------------------------------
+
+
+
+                    SELECT 
+                        po.source_code
+                    FROM
+                      turnover t,
+                      payment_order po
+                   WHERE
+                      t.pay_ord_id = po.pay_ord_id
+                      AND t.tur_id  = 2307790867321    
+
+			--------------------------
+
+			select * from payment_order;
+
+
+
+			--------------------------------------  test novog dohvata
+
+				  SELECT
+				  t.tur_id,
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id,
+                       t.pay_ord_id                                                       
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc,
+                        customer_account ca
+                    WHERE
+                    tc.tur_id = t.tur_id
+                    AND ca.cus_acc_id = 826068522
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = ca.cus_acc_id 
+                     AND t.process_timestamp >= '2016-01-01 17:18:55.843'
+                    AND t.process_timestamp <= tc.process_timestamp                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+			-----------------------------------
+				  SELECT
+				  t.tur_id,
+                       t.debit_amount,
+                       t.credit_amount,
+                       t.fc_debit_amount,
+                       t.fc_credit_amount,
+                       po.source_code,
+                       tc.process_timestamp,
+                       t.cur_id,
+                       t.pay_ord_id                                                       
+                    FROM
+                        turnover t   left outer join payment_order po on t.pay_ord_id = po.pay_ord_id ,           
+                        turn_customer tc,
+                        customer_account ca
+                    WHERE
+                    tc.tur_id = t.tur_id
+                    AND po.source_code = 'O'
+                    AND ca.cus_acc_id = 826495522
+                    AND t.pro_typ_id IN (42999, 36999)                     
+                    AND tc.cus_acc_id = ca.cus_acc_id 
+                     AND t.process_timestamp >= '2015-12-01 10:27:57.619343'
+                    AND t.process_timestamp <= tc.process_timestamp                                            
+                    ORDER BY tc.process_timestamp ASC  with ur 
+
+
+                    --------------------------  prijava 22261 - dohvaceno je samo stanje u EUR
+
+                     SELECT               
+                    cur_id,
+                    balance,
+                    pro_typ_id                
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 825494522
+                   AND pro_typ_id IN (42999, 36999)  
+
+				select * from procedure_type where pro_typ_id in( 36999, 42999); -- glavnica deviznog depozita i kunskog
+
+				select * from procedure_type where name like 'Glavnica%';
+
+				select * from AMOUNT_TYPE;
+
+
+			select * from customer_account where cus_acc_no = '1100010928';
+				
+                     SELECT               
+                  *           
+               FROM
+                   cusacc_balance_last
+               WHERE
+                   cus_acc_id = 825494522
+                   AND   pro_typ_id in( 36999, 42999)
+
+                   	
+                     SELECT               
+                  *           
+               FROM
+                   cusacc_balance
+               WHERE
+                   cus_acc_id = 825494522
+                   AND   pro_typ_id in( 36999, 42999)
+
+                        SELECT               
+                  *           
+               FROM
+                   cusacc_balance
+               WHERE
+                   cus_acc_id = 825494522
+                   AND amo_type IN ('600', '623')  
+
+		----------------------------------------------------------------------------------------------------------------------------
+
+
+      		
+	
+	

@@ -1,0 +1,419 @@
+package hr.vestigo.modules.collateral.batch.bo26;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.customer.common.yky0.YKY00;
+
+import hr.vestigo.modules.rba.util.TimeCounter;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.HashMap;
+
+
+/**
+ * @author 
+          _______  _______  _______  _______ _________
+|\     /|(  ____ )(  ___  )/ ___   )(  ____ \\__   __/
+| )   ( || (    )|| (   ) |\/   )  || (    \/   ) (
+| (___) || (____)|| (___) |    /   )| (_____    | |
+|  ___  ||     __)|  ___  |   /   / (_____  )   | |
+| (   ) || (\ (   | (   ) |  /   /        ) |   | |
+| )   ( || ) \ \__| )   ( | /   (_/\/\____) |   | |
+|/     \||/   \__/|/     \|(_______/\_______)   )_(
+
+ *
+ * TODO To change the template for this generated type comment go to
+ * Window - Preferences - Java - Code Style - Code Templates
+ */
+
+public class BO261 {
+    
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo26/BO261.sqlj,v 1.7 2017/03/22 10:31:56 hrazst Exp $";
+
+    private BatchContext bc = null;
+    private ConnCtx ctx = null;
+    private ConnCtx ctx1 = null;
+    private BigDecimal eve_id = null;    
+
+    #sql iterator IteratorRevaPom with (holdability = true) ( 
+            String col_num,
+            String valuta,
+            BigDecimal new_value,
+            BigDecimal proc_perc,
+            Timestamp user_lock
+        ); 
+    
+    #sql iterator IteratorSysCodeValue (String sys_code_value, String sys_code_desc);
+    
+    public BO261(BatchContext bc) {
+        this.bc = bc;
+       
+        try {            
+            this.ctx = bc.getContext();
+            this.ctx1 = new ConnCtx(bc.getNewConnection());
+       }
+        catch (SQLException e) {
+            bc.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+    
+    public void insertIntoEvent() throws Exception{
+        bc.debug("sqlj insertIntoColProc");       
+         
+        try{
+            
+            YXYB0 eve1 = new YXYB0(bc);
+            YXYD0 genId = new YXYD0(ctx);           
+            
+            //generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+            this.eve_id = genId.getNewId();
+        
+            HashMap event = new HashMap();
+            event.put("eve_id",this.eve_id);
+            event.put("eve_typ_id", new BigDecimal("2514279003"));
+            event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+            event.put("cmnt", "bo26: Revalorizacija kolaterala."); 
+            event.put("use_id", bc.getUserID());
+            event.put("ext_event_code", null);
+            event.put("ext_event_num", null); 
+            event.put("bank_sign", bc.getBankSign());
+            bc.debug("eve_id " + event.get("eve_id"));
+
+            eve1.insertEvent(event);            
+            bc.debug("sqlj insertIntoColProc gotov");
+            bc.updateEveID(this.eve_id);        
+      
+      } catch(Exception e){
+          throw e;
+      }
+    } 
+    
+    public BigDecimal getEveId(){
+        return this.eve_id;
+    }  
+    /** Metoda dohvaca col_pro_id za dani datum, process type i status.<br>
+     * @param processDate
+     * @param procType
+     * @param status
+     * @return colProcId
+     * @throws Exception
+     */
+    public BigDecimal getColProcId(Date revaDate,String procType, String status) throws Exception{
+        BigDecimal colProcId=null;
+        
+        bc.debug("getColProcId za datum:"+revaDate+" i vrstu obrade=" + procType);
+        try{   
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx]{
+                    SELECT col_pro_id
+                    INTO :colProcId
+                    FROM col_proc
+                    WHERE value_date=:revaDate
+                    AND   proc_type=:procType
+                    AND   proc_status=:status
+                  };
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                return null;    
+            }
+            bc.debug("Greska u getColProcId za datum:"+revaDate+" i vrstu obrade=" + procType);
+            throw sqle;  
+        } 
+        bc.debug("getColProcId za datum:"+revaDate+" i vrstu obrade=" + procType+" zavrsio uspjesno.");
+        return colProcId;           
+    }   
+    
+    /**Zapis pocetka obrade u COL_PROC tablicu. 
+     * @param revaDate
+     * @return
+     * @throws Exception
+     */    
+    public BigDecimal insertIntoColProc(Date revaDate) throws Exception{
+        bc.debug("sqlj insertIntoColProc."); 
+        BigDecimal coll_id=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+             
+            //generator id-a za modul Collateral
+            YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+            coll_id = id_generator.getNewId();
+            
+            #sql [ctx]{ INSERT INTO COL_PROC 
+                    (
+                        COL_PRO_ID,
+                        PROC_DATE,
+                        VALUE_DATE,
+                        PROC_TYPE,
+                        PROC_WAY,
+                        PROC_STATUS,
+                        COL_NUMBER,
+                        PROC_TS,
+                        ORG_UNI_ID,
+                        USE_ID,
+                        USER_LOCK
+                    ) 
+                    VALUES( 
+                        :coll_id,
+                        current date,
+                        :revaDate,
+                        'R',
+                        'A',
+                        '0',
+                        0,
+                        null,
+                        53253,
+                        1,
+                        current timestamp
+                    )
+            };  
+            
+        }catch(SQLException sqle){
+            bc.debug("insertIntoColProc=" + sqle.getErrorCode());
+            bc.debug("insertIntoColProc=" + sqle.getSQLState());
+            sqle.printStackTrace();
+        }catch(Exception e1){
+            bc.debug("insertIntoColProc");
+            bc.debug(e1.toString());
+        }        
+        bc.debug("sqlj insertIntoColProc gotov.");
+        return coll_id;        
+    } 
+    
+    /** Dohvacanje broja obradenih zapisa
+     * @param colProId - id obrade
+     * @param colNumber - broj obradenih zapisa
+     * @throws Exception
+     */
+    public BigDecimal getNumberOfRowsFromColProc(BigDecimal colProId) throws Exception{
+        bc.debug("sqlj getNumberOfRowsFromColProc."); 
+        BigDecimal colNo=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+            
+            #sql [ctx]{ SELECT count(*)
+                        INTO :colNo
+                        FROM col_proc
+                        WHERE col_pro_id=:colProId                        
+            };  
+            
+        }catch(Exception e){
+            bc.debug("ERROR: getNumberOfRowsFromColProc");
+            bc.debug(e.toString());
+            throw e;
+        }        
+        bc.debug("sqlj getNumberOfRowsFromColProc gotov."); 
+        
+        return colNo;
+    } 
+    
+    
+    /** Update zapisa o zavrsetku kolateral obrade u tablicu col_proc.
+     * @param colProId - id obrade
+     * @param colNumber - broj obradenih zapisa
+     * @throws Exception
+     */
+    public void updateColProc(BigDecimal colProId, BigDecimal colNumber) throws Exception{
+        bc.debug("sqlj updateIntoColProc."); 
+    
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+            
+            #sql [ctx]{ UPDATE COL_PROC 
+                    SET
+                        PROC_STATUS='1',
+                        COL_NUMBER=:colNumber,
+                        PROC_TS=current timestamp
+                    WHERE
+                        col_pro_id=:colProId
+            };  
+            
+        }catch(SQLException sqle){
+            bc.debug("updateIntoColProc=" + sqle.getErrorCode());
+            bc.debug("updateIntoColProc=" + sqle.getSQLState());
+            sqle.printStackTrace();
+        }catch(Exception e1){
+            bc.debug("updateIntoColProc");
+            bc.debug(e1.toString());
+        }        
+        bc.debug("sqlj updateIntoColProc gotov.");      
+    } 
+    
+    
+    /**Dohvaca iterator u kojem su pohranjeni svi podaci o revalorizaciji collaterala
+     * @return
+     * @throws SQLException
+     */
+    public IteratorRevaPom fatchRevaPomData(Date revaData) throws SQLException{
+        IteratorRevaPom iterator_pom = null;
+        
+        try{
+            #sql [ctx1] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx1] iterator_pom={
+                    SELECT col_num, valuta, new_value, proc_perc, user_lock
+                    FROM reva_pom
+                    WHERE col_num NOT IN(
+                            SELECT col_num 
+                            FROM col_turnover ct
+                            INNER JOIN col_proc cp ON (ct.col_pro_id=cp.col_pro_id)
+                            WHERE   proc_type='R'   
+                            AND     cp.value_date=:revaData
+                        ) 
+                };
+        }catch(SQLException sqle){
+            sqle.printStackTrace();
+            throw sqle;
+        }
+        return iterator_pom;        
+    } 
+    
+    /** Metoda dohvaca potrebne podatke jednog kolaterala.<br>
+     * @param String col_num collaterala
+     * @return BO26CollHeadData.CollHeadDataToProcess
+     * @throws Exception
+     */
+    public BO26CollHeadData.CollHeadDataToProcess getOneCollateralData(String col_num) throws Exception{
+        BO26CollHeadData o=new BO26CollHeadData();
+        BO26CollHeadData.CollHeadDataToProcess oneData=o.new CollHeadDataToProcess();
+        
+        bc.debug("getOneCollateralData za col_num:"+col_num);
+        try{   
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};  
+            #sql [ctx]{
+                    SELECT  col_hea_id,
+                            col_type_id,
+                            real_est_nomi_valu, 
+                            real_est_nomi_date, 
+                            real_est_nm_cur_id,
+                            collateral_status,
+                            code_char,
+                            reva_date_am
+                    INTO 
+                            :(oneData.col_hea_id),
+                            :(oneData.col_typ_id),
+                            :(oneData.real_est_nomi_value),
+                            :(oneData.real_est_nomi_date),
+                            :(oneData.real_est_nm_cur_id),
+                            :(oneData.collateral_status),
+                            :(oneData.cur_code),
+                            :(oneData.reva_date_am)
+                    FROM
+                        coll_head a
+                    INNER JOIN currency b ON (a.real_est_nm_cur_id = b.cur_id)
+                    WHERE a.col_num = :(col_num)
+                    };
+        }catch(SQLException sqle){
+            if(sqle.getErrorCode()==100){
+                return null;    
+            }
+            bc.debug("Greska u getOneCollateralData za col_num="+ col_num);
+            throw sqle;  
+        } 
+        bc.debug("getOneCollateralData za col_num:"+col_num+" zavrsio uspjesno.");
+        return oneData;           
+    }
+    
+    /** Metoda radi update podataka u tablici coll_head.<br>
+     * @param id collateral-a (BigDecimal), objekt koji sadrzi podatke za updatanje(BO26CollHeadData.CollHeadDataProcessed)
+     * @throws Exception
+     */
+    public void updateOneCollateralData(BigDecimal col_hea_id, BO26CollHeadData.CollHeadDataProcessed dataProcessed) throws Exception{
+        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+        //use_id=:(use_id), user_lock=current timestamp
+        bc.debug("updateOneCollateralData za col_hea_id:"+col_hea_id);
+        try{   
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};  
+            #sql [ctx]{
+                    UPDATE coll_head
+                    SET 
+                        real_est_nomi_valu=:(dataProcessed.real_est_nomi_value), 
+                        real_est_nomi_date=:(dataProcessed.real_est_nomi_date), 
+                        reva_coef=:(dataProcessed.reva_coef),
+                        reva_date=:(dataProcessed.reva_date),
+                        reva_date_am=:(dataProcessed.reva_date_am),
+                        reva_bvalue=:(dataProcessed.reva_bvalue),
+                        reva_bdate=:(dataProcessed.reva_bdate),
+                        reva_bdate_am=:(dataProcessed.reva_bdate_am),
+                        CHG_NOM_VAL_PROC_TS = current timestamp
+                    WHERE col_hea_id = :(col_hea_id)
+                    };
+        }catch(SQLException sqle){   
+            bc.debug("Greska u updateOneCollateralData za col_hea_id="+ col_hea_id + " za podatke: "+dataProcessed.toString());
+            throw sqle;  
+        } 
+        bc.debug("updateOneCollateralData za col_hea_id:"+col_hea_id+" zavrsio uspjesno.");
+    }
+        
+    /**Zapis obrade o jednom colateralu u COL_TURNOVER tablicu. 
+     * @param revaDate
+     * @return
+     * @throws Exception
+     */    
+    public void insertIntoColTurnover(BO26CollHeadData.ColTurnoverData dataColTurnover) throws Exception{
+        bc.debug("sqlj insertIntoColTurnover."); 
+        BigDecimal coll_id=null;
+        
+        try{ 
+            #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+             
+            //generator id-a za modul Collateral
+            YOY00 id_generator = new YOY00(ctx);            //COLLATERAL_IDN
+            coll_id = id_generator.getNewId();
+            
+            #sql [ctx]{ INSERT INTO COL_TURNOVER 
+                    (
+                        COL_TUR_ID,
+                        COL_PRO_ID,
+                        COL_HEA_ID,
+                        COLL_TYPE_ID,
+                        COL_SUB_ID,
+                        AMOUNT,
+                        AMOUNT_PROC,
+                        AMORT_AGE,
+                        PROC_PERC,
+                        DATE_FROM,
+                        DATE_UNTIL,
+                        PROC_PERIOD,
+                        PROC_STATUS,
+                        COL_NUM
+                    ) 
+                    VALUES( 
+                        :coll_id,
+                        :(dataColTurnover.col_pro_id),
+                        :(dataColTurnover.col_hea_id),
+                        :(dataColTurnover.coll_type_id),    
+                        :(dataColTurnover.col_sub_id),
+                        :(dataColTurnover.amount),
+                        :(dataColTurnover.amount_proc),
+                        :(dataColTurnover.amort_age),
+                        :(dataColTurnover.proc_perc),
+                        :(dataColTurnover.date_from),
+                        :(dataColTurnover.date_until),
+                        :(dataColTurnover.proc_period),
+                        :(dataColTurnover.proc_status),
+                        :(dataColTurnover.col_num)
+                    )
+            }; 
+        }catch(SQLException sqle){
+            bc.debug("ERROR: insertIntoColTurnover errCode=" + sqle.getErrorCode());
+            bc.debug("ERROR: insertIntoColTurnover sqlState=" + sqle.getSQLState());
+            bc.debug("ERROR: insertIntoColTurnover za podatke=" + dataColTurnover.toString());
+            sqle.printStackTrace();
+        }catch(Exception e1){
+            bc.debug("ERROR: insertIntoColTurnover.");
+            bc.debug(e1.toString());
+            bc.debug("ERROR: insertIntoColTurnover za podatke=" + dataColTurnover.toString());            
+        }        
+        bc.debug("sqlj insertIntoColTurnover gotov.");     
+    } 
+    
+    
+    
+
+}

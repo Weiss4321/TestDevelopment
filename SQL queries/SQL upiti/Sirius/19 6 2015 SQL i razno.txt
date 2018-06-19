@@ -1,0 +1,251 @@
+
+
+								Preknjiženje po domicilu
+[12:59:55] Nikola  Cvitaš: 		(272350005,272356005,272357005,272366005)
+[13:00:04] Nikola  Cvitaš: 		Preknjiženje	 po sketoru
+[13:00:14] Nikola  Cvitaš: 		(272350005,272356005,272357005,272366005)
+
+
+Preknjiženje glavnog dužnika
+[13:04:25] Nikola  Cvitaš:  BigDecimal REPOSTING_TUR_TYP_DEBIT = new BigDecimal("272350005");
+    BigDecimal REPOSTING_TUR_TYP_DEBIT_REV = new BigDecimal("272356005");
+    BigDecimal REPOSTING_TUR_TYP_CREDIT = new BigDecimal("272357005");
+    BigDecimal REPOSTING_TUR_TYP_CREDIT_REV = new BigDecimal("272366005");
+	
+	
+
+
+Dohvat amo_typeova za glavnicu
+
+#sql[connCtx] amoTypeIter = {
+                   SELECT
+                       amo_type
+                   FROM
+                       ban_pro_amo_type
+                   WHERE
+                           avail_balance_flag = '1'
+                       AND ban_pro_typ_id = :(ban_pro_typ_id)
+                       AND date_from <= CURRENT DATE AND date_until >= CURRENT DATE
+               };
+
+
+select pro_typ_id from ban_pro_amo_type where amo_type = :(amo_type) and ban_pro_typ_id = :(ban_pro_typ_id)
+
+
+Samo kod depozita imas vise od jednog pro_typ_id-a i amo_type-a, ali to nema veze uzmi sve sto ide na ta konta
+
+
+//Treba dodati i OR dio koji gleda da je racun zatvoren u zadanom razdoblju koji je parametriziran (postoji vec u obradama za RET)    -- Fizićke osobe   PAY - Pravne osobe
+
+
+
+
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+			SELECT *
+                      
+                       FROM system_code_value                
+                       WHERE sys_cod_id = 'fis_pay_code' with ur;
+
+
+select * from vat_report_head;
+
+select * from vat_report_item;
+
+
+select * from VAT_REPORT_HEAD  order by recording_time desc;
+
+
+select * from VAT_REPORT_item  order by user_lock desc;
+
+
+		---------   obrada bfZE   ---   
+
+
+		SELECT
+            t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,
+            ca.cus_acc_no,
+            cr.register_no
+        FROM
+            turnover t,
+            turn_customer tc,
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = :(process_date)
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')
+        AND t.process_date > :(dateFrom) AND t.process_date < :(dateUntil)
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C', 'E')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND  (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' ) 
+        AND  c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND  c.basel_cus_type = '20' ;
+
+
+
+		select * from event;
+
+
+		select * from event where eve_typ_id = 332237327 order by sys_timestamp desc;  --  bfZE
+
+		select * from event where eve_typ_id = 344529327 order by sys_timestamp desc;  --  bfZF
+
+		
+
+		
+		
+
+		  SELECT 
+                    MAX(value_date)              
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 332237327 
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL with ur;
+
+                    update event set value_date = '2015-01-01' where eve_id = 401014327;
+
+                    commit;
+		
+
+select * from VAT_REPORT_HEAD where vat_rep_hea_id = 329319335;
+
+
+select * from batch_log order by user_lock desc;
+
+select * from batch_def where bat_def_id = 3185194874;
+
+
+select * from customer;
+
+
+select * from customer_subtype;
+
+select * from organization_unit;
+
+
+		select * from batch_def where bat_def_id = 6549426704; -- bl22
+
+			select * from batch_log  where bat_def_id = 6549426704 order by user_lock desc;
+
+
+			----  bfZE 
+
+       SELECT
+            t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,
+            ca.cus_acc_no,
+            cr.register_no
+        FROM
+            turnover t,
+            turn_customer tc,
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '2015-06-19'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')
+        AND t.process_date > '2015-01-01' AND t.process_date < '2015-06-18'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('N', 'C', 'X')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        
+        AND  c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND  c.basel_cus_type = '20' 
+        AND  t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005)
+
+
+
+		-- Dohvat amo_typeova za glavnicu za CMA =6561936704
+
+
+                   SELECT
+                       amo_type
+                   FROM
+                       ban_pro_amo_type
+                   WHERE
+                           avail_balance_flag = '1'
+                       AND ban_pro_typ_id =6561936704
+                       AND date_from <= CURRENT_DATE AND date_until >= CURRENT_DATE with ur;
+
+
+                       
+                   SELECT
+                     *
+                   FROM
+                       ban_pro_amo_type
+                   WHERE
+                           avail_balance_flag = '1'
+                       AND ban_pro_typ_id =6561936704
+                       AND date_from <= CURRENT_DATE AND date_until >= CURRENT_DATE with ur;
+               
+
+
+select pro_typ_id from ban_pro_amo_type where amo_type = :(amo_type) and ban_pro_typ_id = :(ban_pro_typ_id)
+
+
+----Samo kod depozita imas vise od jednog pro_typ_id-a i amo_type-a, ali to nema veze uzmi sve sto ide na ta konta
+
+
+
+			 SELECT 
+                    MAX(value_date) 
+                
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 344529327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+
+
+                    	 SELECT 
+                    MAX(value_date) 
+                
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 332237327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+			
+
+		select * from turnover_type where tur_typ_id in (272350005,272356005,272357005,272366005);
+
+
+		select * from turnover_type where tur_typ_id in (272350005,272356005,272357005,272366005);
+
+
+			select * from bank_product_type;  -- CMA 6561936704
+
+
+			select * from customer_account;
+
+			select * from customer_account where ban_pro_typ_id = 6561936704;
+
+
+
+			
+
+		

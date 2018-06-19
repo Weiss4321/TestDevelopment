@@ -1,0 +1,588 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+select * from income_subtype;
+
+select * from bank_product_type;
+
+select * from rbhr_gpc_prod_sch;   --- - kodovi 
+
+select * from rbhr_gpc_prod_sch where gpc_code like  'CA0300' and RBHR_CODE like '006-07010400';   -- ban_pro_typ_id = 790,662,005
+
+
+
+select * from customer_account;
+
+select * from customer_account where iban_acc_no like 'HR3024840081105882356' with ur;  --- dohvaæam jedan od raèuna 
+
+------ svi ostali raèuni iz prijave
+select * from customer_account where iban_acc_no like 'HR2424840081100452113' with ur;   -- ban_pro_typ_id 23999
+select * from customer_account where iban_acc_no like 'HR8824840081105759674' with ur;  -- ban_pro_typ_id 23999
+select * from customer_account where iban_acc_no like 'HR3024840081105882356' with ur;  -- ban_pro_typ_id 23999
+
+select * from bank_product_type where  ban_pro_typ_id = '23999' ;  -- 800 Redovan devizni raèun  pravne osobe 
+
+
+
+select BAN_PRO_TYP_ID, pur_sub_id, pro_cat_id from customer_account where iban_acc_no like 'HR3024840081105882356' with ur;  --- dohvaæam jedan od raèuna 
+
+select * from bank_product_type where code = '800';  -- Redovan devizni raèun  pravne osobe   -- ban_pro_typ_id = 23999, abn_rel_type = 001,  pur_id = 6999
+
+---- sa kojim atributima sve napadamo tablicu rbhr_gpc_prod_sch  ili Tablica služi za povezivanje Sirius proizvoda (ali ne samo proizvoda veæ i nižu razradu od proizvoda ) na GPC i RBHR DWH šifre
+
+select * from rbhr_gpc_prod_sch where ban_pro_typ_id = 23999;   --- - kodovi po ban_pro_typ_id-u  -- nema
+---- za 800 
+
+select * from rbhr_gpc_prod_sch where ban_pro_typ_id = 790662005; 
+
+select * from bank_product_type where ban_pro_typ_id = 790662005;  --- to je vrsta proizvoda devizni raèun CODE - 941 a ne 800 redovan devizni raèun
+
+select * from bank_product_type where   code  = '941' ;   --- ban_pro_typ_id = 790662005
+
+
+ ------ SQL iz commona YNZC0.sqlj   --- za navedene parametre nema dohvata podataka  --- 
+
+			SELECT
+                    RBH_GPC_PRO_SCH_ID,
+                    BAN_PRO_TYP_ID,
+                    PUR_SUB_ID,
+                    PRO_CAT_ID,
+                    PRO_MEM_BIN_CLA_ID,
+                    OVE_TYP_ID,
+                    GPC_CODE,
+                    RBHR_CODE,
+                    BANK_SIGN,
+                    USER_LOCK
+                FROM
+                    RBHR_GPC_PROD_SCH
+                WHERE
+                    (BAN_PRO_TYP_ID = '790662005' OR BAN_PRO_TYP_ID IS NULL)      --- 	ID proizvoda - iz bank_product_type_code
+                  AND (PUR_SUB_ID = null OR PUR_SUB_ID IS NULL)                  --- ID poslovne namjene     -- iz customer account
+                   AND (PRO_CAT_ID = '3999' OR PRO_CAT_ID IS NULL)                  --- ID knjigovtsvene namjene  -- iz customer account
+                    AND PRO_MEM_BIN_CLA_ID IS NULL
+                    AND OVE_TYP_ID IS NULL
+                    AND BANK_SIGN = 'RB'
+ 
+--------------------------------------------
+
+	SELECT
+                    RBH_GPC_PRO_SCH_ID,
+                    BAN_PRO_TYP_ID,
+                    PUR_SUB_ID,
+                    PRO_CAT_ID,
+                    PRO_MEM_BIN_CLA_ID,
+                    OVE_TYP_ID,
+                    GPC_CODE,
+                    RBHR_CODE,
+                    BANK_SIGN,
+                    USER_LOCK
+                FROM
+                    RBHR_GPC_PROD_SCH
+                WHERE
+                    (BAN_PRO_TYP_ID = '23999' OR BAN_PRO_TYP_ID IS NULL)      --- 	ID proizvoda - iz bank_product_type_code
+                  --AND (PUR_SUB_ID = null OR PUR_SUB_ID IS NULL)                  --- ID poslovne namjene     -- iz customer account
+                  -- AND (PRO_CAT_ID = '3999' OR PRO_CAT_ID IS NULL)                  --- ID knjigovtsvene namjene  -- iz customer account
+                    AND PRO_MEM_BIN_CLA_ID IS NULL
+                    AND OVE_TYP_ID IS NULL
+                    AND BANK_SIGN = 'RB'
+
+
+-----------------------------------
+-- prijava 5817
+
+select * from customer;
+
+select * from customer where register_no = 4867;
+
+select * from income_item;
+
+--- sumnjivi raèuni 025566197 i 
+
+SELECT * FROM CUSTOMER_account;
+
+
+
+SELECT * FROM CUSTOMER_account where iban_acc_no like '23900011100019224';
+
+select * from batch_log where bat_def_id = 6253448704;
+
+
+
+---- bfr4
+
+select * from batch_log where bat_def_id = 6266762704; --7.11.2013
+
+-- bfR3
+
+select * from batch_log where bat_def_id = 6259167704; --7.11.2013
+
+
+select * from event WHERE
+                     eve_typ_id = 6266764704;
+
+			SELECT      -- 6.11.2013
+                 MAX(value_date)                  
+                 FROM 
+                     event 
+                 WHERE
+                     eve_typ_id = 6266764704
+                     AND value_date IS NOT NULL
+                     AND ext_event_num IS NOT NULL
+
+                     SELECT      -- 6.11.2013
+                 MAX(value_date)                  
+                 FROM 
+                     event 
+                 WHERE
+                     eve_typ_id = 6259192704
+                     AND value_date IS NOT NULL
+                     AND ext_event_num IS NOT NULL
+
+
+select * from event where eve_typ_id = 6259192704;
+
+--- EVE_TYP_ID_BFR3 = new BigDecimal("6259192704");    
+
+                    --- bfR3 za situaciju kada je broj dana kašnjenja definiran
+
+  				SELECT
+                        ex.tra_id,
+                        ex.tra_typ_id,
+                        ca.cus_acc_id,
+                        ca.cus_acc_no,
+                        ca.old_cus_acc_no,
+                        ca.iban_acc_no,
+                        ca.cus_acc_name,
+                        ca.org_uni_id,
+                        ca.currency_type,
+                        ca.acc_cur_id,
+                        ca.opening_date,
+                        ca.closing_date,
+                        ca.cus_acc_status,
+                        ca.chg_stat_reason,
+                        ca.chg_stat_date,
+                        ca.warn_note_status,
+                        ca.law_block_status,
+                        ca.collection_status,
+                        ca.court_proc_status,
+                        ci.cus_id,
+                        ci.code cus_code,
+                        ci.register_no,
+                        ci.name,
+                        ci.surname,
+                        ci.pay_list_flag,
+                        cl.nnb_no_days,
+                        cl.nnb_date,
+                        cl.absorbing_status,
+                        cl.abs_status_date,
+                        cl.process_date cl_process_date,
+                        t.tur_id,
+                        t.eve_id,
+                        t.value_date,
+                        t.process_date,
+                        t.process_timestamp,
+                        t.cur_id,
+                        t.fc_debit_amount,
+                        t.fc_credit_amount,
+                        t.debit_amount,
+                        t.credit_amount,
+                        t.turnover_desc,
+                        tt.tur_typ_id,
+                        tt.code tt_code,
+                        tt.name tt_name,
+                        tt.reg_income
+                    FROM
+                        turn_customer tc
+                        INNER JOIN turnover t ON tc.tur_id = t.tur_id
+                        INNER JOIN event_trx ex ON t.tra_id = ex.tra_id
+                        INNER JOIN turnover_type tt ON t.tur_typ_id = tt.tur_typ_id
+                        INNER JOIN customer_account ca ON tc.cus_acc_id = ca.cus_acc_id                
+                        INNER JOIN citizen ci ON ca.cus_id = ci.cus_id
+                        LEFT OUTER JOIN counter_list cl ON ( 
+                                ca.cus_acc_id = cl.cus_acc_id 
+                                AND cl.pro_met_code = 'HNB' 
+                                AND cl.process_date = :dateUntil )
+                    WHERE
+                        ca.ban_pro_typ_id = 790661005
+                        AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                        AND ( (ca.cus_acc_status <> 'I') OR (ca.cus_acc_status = 'I' AND chg_stat_date >= '28.10.2013') )
+                        AND ca.bank_sign = 'RB'
+                        AND (ci.pay_list_flag = '1' OR cl.nnb_no_days >= :nnbNoDays)                      
+                        AND tc.process_date >= '28.10.2013'
+                        AND tc.process_date <= '27.10.2013'
+                        AND t.credit_amount <> 0
+                        AND t.tur_typ_id NOT IN (
+                                203992005, 203991005, 203990005, 203989005,     /* Prometi preknjizenja */
+                                272350005, 272356005, 272357005, 272366005,     /* Prometi preknjizenja po po domicilu, sektoru i komitentu */
+                                1561010887, 1561012317, 1561039487, 1561040917, 1561055217, 1561070947, 1561128147, 1561129577, 1561133867, 1561135297, 1901718005, 1901719005,     /* Rezervacije */
+                                3718517667, 3850379797,     /* Prijenosi na utuzeno potrazivanje */
+                                3850379797)                 /* Preknjizenje duga po utuzenim */
+                        AND (ex.tra_typ_id <> 1426436003   /* Kamate za Opci nalog */
+                                OR t.tur_typ_id NOT IN (120348005, 120362005, 867912005, 867916005, 867920005, 867924005, 867928005, 
+                                                        984509005, 984719005, 984722005, 984723005, 989237005, 1173130005, 989239005, 984721005,
+                                                        4020407797, 4020408797, 4034626797, 4034629797, 4034630797, 4034632797, 4034660797))                     
+                        AND ex.tra_typ_id NOT IN (
+                                4680657704, 4680661704, 4670626704, 4680665704, 4680669704, 4680673704,
+                                1685855003, 1685858003, 1685861003, 1685880003, 1685883003, 1685886003, 1685900003, 1685903003, 1685906003,
+                                1700949003, 1700984003, 1700987003, 1701043003, 1701046003, 1701049003, 1700952003, 1700955003, 1700981003)     /* Kamate */
+                      AND (ca.cus_acc_status <> 'W'
+                                       OR t.tur_typ_id NOT IN(3994573797,3994572797))     /*  Prometi rasknjiženja i storna rasknjiženja za priljeve po WO raèunu */
+                      AND gl_flag IN ('2','4')   /* 2 - poslano u eksternu glavnu knjigu,  4 - verificirani prometi i smiju iæi u eksternu glavnu knjigu */
+                    ORDER BY
+                        ca.cus_acc_no,
+                        t.process_timestamp
+
+
+
+--------------------------------------  bfr4
+
+select * from batch_log  where bat_def_id = 6266762704;
+
+select * from event where eve_typ_id = 6266764704 ;
+
+
+--update 
+
+--- SQL upit za bfR4 koji bi trebao dohvatiti 
+
+
+update batch_log set iban_or_acc_no = 'HR2924840083205006121' and iban = 'HR2924840083205006121';
+
+commit;
+
+
+
+--------------------------------------  bfr3
+
+
+select * from batch_log  where bat_def_id = 6259167704;
+
+select * from event where eve_typ_id = 6259192704 ;	
+
+update batch_log set EXEC_STATUS = '0'  where bat_log_id = 6504950704;
+
+commit;
+
+
+--------------------------------- bfR4 
+
+select * from batch_log  where bat_def_id = 6266762704;
+
+
+
+
+
+
+			---- periodDateFrom - EVE_TYP_ID - 6266764704
+			SELECT 
+                   *              
+                  FROM 
+                      event 
+                  WHERE
+                      eve_typ_id = 6259192704
+                      AND value_date IS NOT NULL
+                      AND ext_event_num IS NOT NULL
+
+
+		
+			---- periodDateUntil - EVE_TYP_ID_BFR3 - 6266764704
+			SELECT 
+                   *                
+                  FROM 
+                      event 
+                  WHERE
+                      eve_typ_id = 6259192704
+                      AND value_date IS NOT NULL
+                      AND ext_event_num IS NOT NULL
+
+
+--- 1. Naštimati podatke da obrada bfR4 dohvati iste podatke kao i juèer, ali onda mora biti puštena prije bfR3 - unazad mjesec dana
+
+ --  prvo puštamo bfR4  -   sa ulaznim argumentima koji trebaju dohvatiti podatke ako ih ima - upit trenutno ništa ne dohvaæa
+
+
+ 		  		SELECT
+                        ex.tra_id,
+                        ex.tra_typ_id,
+                        ca.cus_acc_id,
+                        ca.cus_acc_no,
+                        ca.old_cus_acc_no,
+                        ca.iban_acc_no,
+                        ca.cus_acc_name,
+                        ca.org_uni_id,
+                        ca.currency_type,
+                        ca.acc_cur_id,
+                        ca.opening_date,
+                        ca.closing_date,
+                        ca.cus_acc_status,
+                        ca.chg_stat_reason,
+                        ca.chg_stat_date,
+                        ca.warn_note_status,
+                        ca.law_block_status,
+                        ca.collection_status,
+                        ca.court_proc_status,
+                        ci.cus_id,
+                        ci.code cus_code,
+                        ci.register_no,
+                        ci.name,
+                        ci.surname,
+                        ci.pay_list_flag,
+                        cl.nnb_no_days,
+                        cl.nnb_date,
+                        cl.absorbing_status,
+                        cl.abs_status_date,
+                        cl.process_date cl_process_date,
+                        t.tur_id,
+                        t.eve_id,
+                        t.value_date,
+                        t.process_date,
+                        t.process_timestamp,
+                        t.cur_id,
+                        t.fc_debit_amount,
+                        t.fc_credit_amount,
+                        t.debit_amount,
+                        t.credit_amount,
+                        t.turnover_desc,
+                        tt.tur_typ_id,
+                        tt.code tt_code,
+                        tt.name tt_name,
+                        tt.reg_income
+                    FROM
+                        turn_customer tc
+                        INNER JOIN turnover t ON tc.tur_id = t.tur_id
+                        INNER JOIN event_trx ex ON t.tra_id = ex.tra_id
+                        INNER JOIN turnover_type tt ON t.tur_typ_id = tt.tur_typ_id
+                        INNER JOIN customer_account ca ON tc.cus_acc_id = ca.cus_acc_id                
+                        INNER JOIN citizen ci ON ca.cus_id = ci.cus_id
+                        LEFT OUTER JOIN counter_list cl ON ( 
+                                ca.cus_acc_id = cl.cus_acc_id 
+                                AND cl.pro_met_code = 'HNB' 
+                                AND cl.process_date = '27.11.2013' )
+                    WHERE
+                        ca.ban_pro_typ_id = 790661005
+                        AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                        AND ( (ca.cus_acc_status <> 'I') OR (ca.cus_acc_status = 'I' AND chg_stat_date >='28.09.2013') )
+                        AND ca.bank_sign = 'RB'
+                        AND (ci.pay_list_flag = '1' OR cl.nnb_no_days >= 5)                      
+                        AND tc.process_date >= '28.10.2013'
+                        AND tc.process_date <= '27.11.2013'
+                        AND t.credit_amount <> 0
+                        AND t.tur_typ_id NOT IN (
+                                203992005, 203991005, 203990005, 203989005,     /* Prometi preknjizenja */
+                                272350005, 272356005, 272357005, 272366005,     /* Prometi preknjizenja po po domicilu, sektoru i komitentu */
+                                1561010887, 1561012317, 1561039487, 1561040917, 1561055217, 1561070947, 1561128147, 1561129577, 1561133867, 1561135297, 1901718005, 1901719005,     /* Rezervacije */
+                                3718517667, 3850379797,     /* Prijenosi na utuzeno potrazivanje */
+                                3850379797)                 /* Preknjizenje duga po utuzenim */
+                        AND (ex.tra_typ_id <> 1426436003   /* Kamate za Opci nalog */
+                                OR t.tur_typ_id NOT IN (120348005, 120362005, 867912005, 867916005, 867920005, 867924005, 867928005, 
+                                                        984509005, 984719005, 984722005, 984723005, 989237005, 1173130005, 989239005, 984721005,
+                                                        4020407797, 4020408797, 4034626797, 4034629797, 4034630797, 4034632797, 4034660797))                     
+                        AND ex.tra_typ_id NOT IN (
+                                4680657704, 4680661704, 4670626704, 4680665704, 4680669704, 4680673704,
+                                1685855003, 1685858003, 1685861003, 1685880003, 1685883003, 1685886003, 1685900003, 1685903003, 1685906003,
+                                1700949003, 1700984003, 1700987003, 1701043003, 1701046003, 1701049003, 1700952003, 1700955003, 1700981003)     /* Kamate */
+                      AND (ca.cus_acc_status <> 'W'
+                                       OR t.tur_typ_id NOT IN(3994573797,3994572797))     /*  Prometi rasknjiženja i storna rasknjiženja za priljeve po WO raèunu */
+                      AND gl_flag IN ('2','4')   /* 2 - poslano u eksternu glavnu knjigu,  4 - verificirani prometi i smiju iæi u eksternu glavnu knjigu */
+                    ORDER BY
+                        ca.cus_acc_no,
+                        t.process_timestamp;
+
+ 
+-----------------------------------------  zatim puštanje bfR3
+
+  			SELECT
+                    ca.cus_acc_id,
+                    ca.cus_acc_no,
+                    ca.old_cus_acc_no,
+                    ca.iban_acc_no,
+                    ca.cus_acc_name,
+                    ca.org_uni_id,
+                    ca.currency_type,
+                    ca.acc_cur_id,
+                    ca.opening_date,
+                    ca.closing_date,
+                    ca.cus_acc_status,
+                    ca.chg_stat_reason,
+                    ca.chg_stat_date,
+                    ca.warn_note_status,
+                    ca.law_block_status,
+                    ca.collection_status,
+                    ca.court_proc_status,
+                    ca.distraint_flag,
+                    ca.ban_rel_typ_id,
+                    ca.ban_pro_typ_id,
+                    ca.pur_sub_id,
+                    ca.pro_cat_id,
+                    ci1.cus_id,
+                    ci1.code cus_code,
+                    ci1.register_no,
+                    ci1.name,
+                    ci1.surname,
+                    cl.nnb_no_days,
+                    cl.nnb_date,
+                    cl.absorbing_status,
+                    cl.abs_status_date,
+                    cl.process_date cl_process_date
+                FROM
+                    citizen ci1,
+                    customer_account ca
+                        LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = :(process_date)
+                WHERE 
+                    ca.cus_id = ci1.cus_id
+                    AND (ci1.pay_list_flag = '1' OR cl.nnb_no_days >= :(nnb_no_days))
+                    AND ca.ban_pro_typ_id = :(ban_pro_typ_id)
+                    AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                    AND ca.opening_date <= :(process_date)
+                    AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= :(process_date))) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= :(minClosingDate)) ) )
+                    AND ca.org_uni_id = :(org_uni_id)
+                    AND ca.bank_sign = 'RB'
+                ORDER BY
+                    ca.cus_acc_id,
+                    cl.nnb_no_days desc
+
+   -----------------------------------------------
+
+   SELECT
+                  org_uni_id,
+                  code
+              FROM
+                  organization_unit
+
+
+select * from bank_product_type;
+
+
+
+  
+    ---------------------     puštanje bfR3 prvi put
+
+    
+		SELECT
+                    ca.cus_acc_id,
+                    ca.cus_acc_no,
+                    ca.old_cus_acc_no,
+                    ca.iban_acc_no,
+                    ca.cus_acc_name,
+                    ca.org_uni_id,
+                    ca.currency_type,
+                    ca.acc_cur_id,
+                    ca.opening_date,
+                    ca.closing_date,
+                    ca.cus_acc_status,
+                    ca.chg_stat_reason,
+                    ca.chg_stat_date,
+                    ca.warn_note_status,
+                    ca.law_block_status,
+                    ca.collection_status,
+                    ca.court_proc_status,
+                    ca.distraint_flag,
+                    ca.ban_rel_typ_id,
+                    ca.ban_pro_typ_id,
+                    ca.pur_sub_id,
+                    ca.pro_cat_id,
+                    ci1.cus_id,
+                    ci1.code cus_code,
+                    ci1.register_no,
+                    ci1.name,
+                    ci1.surname,
+                    cl.nnb_no_days,
+                    cl.nnb_date,
+                    cl.absorbing_status,
+                    cl.abs_status_date,
+                    cl.process_date cl_process_date
+                FROM
+                    citizen ci1,
+                    customer_account ca
+                        LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '28.11.2013'
+                WHERE 
+                    ca.cus_id = ci1.cus_id
+                    AND (ci1.pay_list_flag = '1' OR cl.nnb_no_days >= 5)
+                    AND ca.ban_pro_typ_id = '790661005'
+                    AND ca.cus_acc_status NOT IN ('X', 'C', 'E')
+                    AND ca.opening_date <= '28.11.2013'
+                    AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '28.10.2013')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '28.10.2013') ) )
+                    AND ca.org_uni_id IN (5635826003,3236281003,3236271003,3236261003,3236250003,1707954003,1707953003,1707952003,1707951003,1707950003,
+1707949003,1707948003,1617337003,1617336003,373580303,348326303,321418303,192672503,148547503,49998503,
+49997503,49996503,37873503,28137203,20274203,20273203,20272203,20271203,20270203,20269203,20268203,20267203,
+20266203,20265203,20264203,20263203,20262203,20261203,20260203,20259203,20258203,20257203,20256203,20255203,
+20254203,20253203,20252203,20251203,20250203,20249203,20248203,20247203,20246203,20245203,20244203,20243203,
+20241203,20240203,20239203,20238203,20237203,20236203,20235203,20234203,20233203,20232203,20231203,20230203,
+20229203,20228203,20227203,20226203,20225203,20224203,20223203,20222203,20220203,20218203,20216203,20215203,
+20214203,20213203,20212203,19961003,19901003,1995003,1919003,1622003,1558003,1550003,1548003,1540003,
+1322003,1321003,1177003,1172003,1171003,1136003,1067003,1066003,1065003,1064003,1063003,1062003,1061003,
+1059003,1036003,1035003,1034003,1033003,1032003,53253,52253,51253,50253,49253,48253,47253,46253,45253,
+44253,43253,42253,41253,40253,39253,38253,37253,36253,35253,34253,33253,32253,31253,30253,28253,27253,
+26253,25253,24253,23253,22253,21253,20253,19253,18253,17253,16253,15253,14253,13253,12253,11253,10253,
+9553,9253,8253,6253,5253,4253,3253,1253)
+                    AND ca.bank_sign = 'RB'
+                ORDER BY
+                    ca.cus_acc_id,
+                    cl.nnb_no_days desc
+
+
+--------------------- bfr4 test
+
+select * from event where eve_typ_id = 6266764704;
+
+select * from event where eve_id = 6389456704 and eve_typ_id = 6266764704;
+
+
+update event set value_date = null  where eve_id = 6389456704 and eve_typ_id = 6266764704;
+
+commit;
+
+
+--------------------- bfr3 test
+
+select * from event where eve_typ_id = 6259192704;
+
+select * from event where eve_id = 6389453704 and eve_typ_id = 6259192704;
+
+
+update event set value_date = null  where eve_id = 6389453704 and eve_typ_id = 6259192704;
+
+commit;
+
+
+
+  --------------------------------- napraviti update event tablice  za Produkciju
+
+--- bfR4
+update event set value_date = null  where eve_id = 1466534803003 and eve_typ_id = 6266764704;
+
+--- bfR3
+update event set value_date = null  where eve_id = 1466534618003 and eve_typ_id = 6259192704;
+
+commit;
+  
+
+			---- periodDateFrom - EVE_TYP_ID - 6266764704
+			SELECT 
+                   *              
+                  FROM 
+                      event 
+                  WHERE
+                      eve_typ_id = 6259192704
+                      AND value_date IS NOT NULL
+                      AND ext_event_num IS NOT NULL
+
+
+
+
+		
+			---- periodDateUntil - EVE_TYP_ID_BFR3 - 6266764704
+			SELECT 
+                   *                
+                  FROM 
+                      event 
+                  WHERE
+                      eve_typ_id = 6259192704
+                      AND value_date IS NOT NULL
+                      AND ext_event_num IS NOT NULL
+
+
+
+

@@ -1,0 +1,142 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+              
+ 
+  
+ 
+#sql iterator IterGuarantee (
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String guar_type ,      
+							String guar_name ,
+							String guar_curr ,
+							BigDecimal guar_amount ,
+							String guar_issu,
+							java.sql.Date guar_from,
+							java.sql.Date guar_unti	,
+							String status  ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id        						
+                   );	
+
+public class CO049 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO049.sqlj,v 1.4 2006/05/08 13:27:58 hramkr Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterGuarantee iterGuarantee = null;
+	
+	public CO049 (DeclCO04 decl) { 
+		this.decl = decl;
+	} 
+	 
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.collguarantlistmapping.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		if(decl.collguarantlistmapping.CUS_ID == null ){
+			#sql [ctx] iterGuarantee = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									ct.coll_type_code as guar_type, ct.coll_type_name as guar_name,  
+									cu.code_char as guar_curr, ch.real_est_nomi_valu as guar_amount,
+									cols.guar_issuer as guar_issu, cols.guar_datn_from as guar_from,
+									cols.guar_datn_unti as guar_unti, ch.real_est_status as status,
+									cols.col_gua_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id 
+							FROM
+									coll_head ch, coll_guarantee cols , collateral_type ct, currency cu
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		ch.col_type_id = ct.coll_type_id
+							AND		ch.real_est_nm_cur_id = cu.cur_id
+						ORDER BY	2
+							
+			};
+		 
+		} 
+		  
+ 		
+		if(decl.collguarantlistmapping.CUS_ID != null ){
+			#sql [ctx] iterGuarantee = {
+
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num,                 
+									ct.coll_type_code as guar_type, ct.coll_type_name as guar_name,  
+									cu.code_char as guar_curr, ch.real_est_nomi_valu as guar_amount,
+									cols.guar_issuer as guar_issu, cols.guar_datn_from as guar_from,
+									cols.guar_datn_unti as guar_unti, ch.real_est_status as status, 
+									cols.col_gua_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id 
+							FROM
+									coll_head ch, coll_guarantee cols , collateral_type ct, currency cu
+							WHERE   ch.cus_id = :(decl.collguarantlistmapping.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id   
+							AND		ch.col_type_id = ct.coll_type_id
+							AND		ch.real_est_nm_cur_id = cu.cur_id
+						ORDER BY	2
+							 
+			};
+		 
+		}    
+	
+		  
+	}
+	
+	public boolean next() throws Exception {
+		return iterGuarantee.next(); 
+	}
+    
+	public void close() {
+		if(iterGuarantee!=null) {
+			try {
+				iterGuarantee.close();
+			} catch (Exception ignored) {}
+		}
+	} 
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterGuarantee.col_num());	
+		row.add(iterGuarantee.guar_type());	
+		row.add(iterGuarantee.guar_name());
+		row.add(iterGuarantee.guar_curr()); 
+		row.add(iterGuarantee.guar_amount());
+		row.add(iterGuarantee.guar_issu()); 
+		row.add(iterGuarantee.guar_from());	
+		row.add(iterGuarantee.guar_unti());
+		row.add(iterGuarantee.status());  
+
+		row1.add(iterGuarantee.col_hea_id());
+		row1.add(iterGuarantee.col_res_id());
+		row1.add(iterGuarantee.real_est_nm_cur_id());
+		
+		decl.collguarantlistmapping.tblCollGuarant.addRow(row,row1);
+		
+//		decl.collguarantlistmapping.tblCollGuarant.addRow(row,iterGuarantee.col_hea_id());   	
+		
+	}
+	
+}
+
+
+ 					

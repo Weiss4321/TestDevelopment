@@ -1,0 +1,284 @@
+package hr.vestigo.modules.collateral.jcics.co27;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.SQLJScrollableRemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+
+
+   
+ 
+
+#sql iterator CusExpCollIter2 ( BigDecimal col_pro_id,
+								String register_no,
+								BigDecimal cus_acc_id,	
+								String cus_acc_no,
+								Date cover_date,
+							    String code_num,
+								BigDecimal exposure_balance,
+								BigDecimal exp_fc_amount,
+								BigDecimal exp_percent,
+								BigDecimal broj
+								  );	
+
+
+
+public class CO273 extends SQLJScrollableRemoteTransaction{
+    
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co27/CO273.sqlj,v 1.17 2014/06/11 08:26:31 hrakis Exp $";
+	
+    public DeclCO27 decl = null;
+	
+ 
+	private CusExpCollIter2 iter2 = null; 
+	
+//	private BigDecimal col_hea_id = null;
+	private BigDecimal cus_acc_id = null;
+	private BigDecimal cus_id = null;
+//	private BigDecimal oneAmount = new BigDecimal("1.00");
+	
+    public CO273(DeclCO27 decl){
+        this.decl = decl;
+    }
+
+    /**
+     *
+     */ 
+ 
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        setLevel(decl.cusaccexpcollqbe2mapping.ActionListLevel);
+		setFetchSize(TransactionContext.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+// 1. col_hea_id, cus_acc_id, cus_id 
+		
+			//col_hea_id = decl.cusaccexpcollqbemapping.COL_HEA_ID;
+			cus_acc_id = decl.cusaccexpcollqbe2mapping.CUS_ACC_ID;
+			cus_id = decl.cusaccexpcollqbe2mapping.CUS_ID;
+		
+			//tc.debug("col_hea_id" + col_hea_id);
+			tc.debug("cus_acc_id" + cus_acc_id);
+			tc.debug("cus_id" + cus_id);
+// exposure_blance treba u kn			
+			
+			
+			if (cus_acc_id == null && cus_id == null ) {
+				tc.debug("1 .tu sam ");
+				#sql [ctx] iter2 = {
+						SELECT	
+								d.col_pro_id as col_pro_id,
+								c.register_no as register_no,		
+								b.cus_acc_id as cus_acc_id,
+								a.cus_acc_no as cus_acc_no,
+								b.cover_date as cover_date,
+								e.code_num as code_num,
+								b.exp_balance_hrk as exposure_balance,
+								sum(b.exp_coll_amount) as exp_fc_amount,
+								sum(b.exp_percent) as exp_percent,
+								count(*) as broj
+						FROM	
+								col_proc d,
+								cusacc_exp_coll b,
+								cusacc_exposure a,
+								customer c,
+								currency e
+						WHERE  	
+								d.value_date = (select MAX(g.value_date) from col_proc g where g.proc_type = 'P' ) and
+								d.proc_type = 'P' and
+								d.col_pro_id = b.col_pro_id and
+								b.col_hea_id is not null and
+                                b.cov_priority is not null and
+								b.cus_acc_id = a.cus_acc_id and
+								b.cus_id = c.cus_id and
+								b.exp_cur_id = e.cur_id
+					GROUP BY
+								d.col_pro_id,c.register_no,b.cus_acc_id,a.cus_acc_no,b.cover_date,e.code_num,b.exp_balance_hrk		
+
+
+
+						};		
+		  		
+			}   
+
+			else if ( cus_acc_id != null && cus_id == null ) {
+				tc.debug("2 .tu sam ");
+				#sql [ctx] iter2 = {
+						SELECT	
+								d.col_pro_id as col_pro_id,
+								c.register_no as register_no,		
+								b.cus_acc_id as cus_acc_id,
+								a.cus_acc_no as cus_acc_no,
+								b.cover_date as cover_date,
+								e.code_num as code_num,
+								b.exp_balance_hrk as exposure_balance,
+								sum(b.exp_coll_amount) as exp_fc_amount,
+								sum(b.exp_percent) as exp_percent,
+								count(*) as broj
+						FROM	
+								col_proc d,
+								cusacc_exp_coll b,
+								cusacc_exposure a,
+								customer c,
+								currency e
+						WHERE  	
+								d.value_date = (select MAX(g.value_date) from col_proc g where g.proc_type = 'P' ) and
+								d.proc_type = 'P' and
+								d.col_pro_id = b.col_pro_id and
+								b.cus_acc_id = :(cus_acc_id) and
+								b.col_hea_id is not null and
+                                b.cov_priority is not null and
+								b.cus_acc_id = a.cus_acc_id and
+								b.cus_id = c.cus_id and
+								b.exp_cur_id = e.cur_id
+					GROUP BY
+								d.col_pro_id,c.register_no,b.cus_acc_id,a.cus_acc_no,b.cover_date,e.code_num,b.exp_balance_hrk		
+				
+						};
+				
+			} 
+			else if ( cus_acc_id == null && cus_id != null ) {
+				tc.debug("3 .tu sam ");
+				#sql [ctx] iter2 = {
+						SELECT	
+								d.col_pro_id as col_pro_id,
+								c.register_no as register_no,		
+								b.cus_acc_id as cus_acc_id,
+								a.cus_acc_no as cus_acc_no,
+								b.cover_date as cover_date,
+								e.code_num as code_num,
+								b.exp_balance_hrk as exposure_balance,
+								sum(b.exp_coll_amount) as exp_fc_amount,
+								sum(b.exp_percent) as exp_percent,
+								count(*) as broj
+						FROM	
+								col_proc d,
+								cusacc_exp_coll b,
+								cusacc_exposure a,
+								customer c,
+								currency e
+						WHERE  	
+								d.value_date = (select MAX(g.value_date) from col_proc g where g.proc_type = 'P' ) and
+								d.proc_type = 'P' and
+								d.col_pro_id = b.col_pro_id and
+								b.cus_id = :(cus_id) and
+								b.col_hea_id is not null and
+                                b.cov_priority is not null and
+								b.cus_acc_id = a.cus_acc_id and
+								b.cus_id = c.cus_id and
+								b.exp_cur_id = e.cur_id
+					GROUP BY
+								d.col_pro_id,c.register_no,b.cus_acc_id,a.cus_acc_no,b.cover_date,e.code_num,b.exp_balance_hrk		
+
+
+							};			 					
+				
+			} else if ( cus_acc_id != null && cus_id != null) {
+				tc.debug("4 .tu sam ");
+				#sql [ctx] iter2 = {
+						SELECT
+								d.col_pro_id as col_pro_id,	
+								c.register_no as register_no,		
+								b.cus_acc_id as cus_acc_id,
+								a.cus_acc_no as cus_acc_no,
+								b.cover_date as cover_date,
+								e.code_num as code_num,
+								b.exp_balance_hrk as exposure_balance,
+								sum(b.exp_coll_amount) as exp_fc_amount,
+								sum(b.exp_percent) as exp_percent,
+								count(*) as broj
+						FROM	
+								col_proc d,
+								cusacc_exp_coll b,
+								cusacc_exposure a,
+								customer c,
+								currency e
+						WHERE  	
+								d.value_date = (select MAX(g.value_date) from col_proc g where g.proc_type = 'P' ) and
+								d.proc_type = 'P' and
+								d.col_pro_id = b.col_pro_id and
+								b.cus_id = :(cus_id) and
+								b.cus_acc_id = :(cus_acc_id) and
+								b.col_hea_id is not null and
+                                b.cov_priority is not null and
+								b.cus_acc_id = a.cus_acc_id and
+								b.cus_id = c.cus_id and
+								b.exp_cur_id = e.cur_id
+					GROUP BY
+								d.col_pro_id,c.register_no,b.cus_acc_id,a.cus_acc_no,b.cover_date,e.code_num,b.exp_balance_hrk				  	
+
+						};							
+			}
+
+  
+    }  
+  
+    public boolean next() throws Exception {
+        return iter2.next();
+    }
+ 
+    public void close() {
+        if(iter2!=null) {
+			try {
+				iter2.close();
+			} catch (Exception ignored) {}
+		}
+    }
+     
+    public void populateRowData() throws Exception {
+        Vector row = new Vector();
+		Vector hiddenRow = new Vector();
+//		BigDecimal balance = new BigDecimal("0.00");
+		//BigDecimal amount = new BigDecimal("0.00");
+		//BigDecimal percent = new BigDecimal("0.00");
+		//BigDecimal one_hundred = new BigDecimal("100.00");
+		
+		//atributi koji se prikazuju u listi
+		
+		row.add(iter2.register_no());
+		
+			
+		row.add(iter2.cus_acc_no());
+		row.add(iter2.cover_date());
+		row.add(iter2.code_num());		
+		
+//		balance = iter2.exposure_balance().divide(oneAmount, 2, BigDecimal.ROUND_HALF_UP);
+				
+//		row.add(balance);		
+		row.add(iter2.exposure_balance());
+		row.add(iter2.exp_fc_amount());
+  
+// izracunati postotak pokrivenosti 
+		
+		//amount = iter2.coll_fc_amount();
+		//balance = iter2.exposure_balance();
+		
+		//percent = amount.multiply(one_hundred);
+		//percent = percent.divide(balance, 2, BigDecimal.ROUND_HALF_UP);
+		
+		
+		row.add(iter2.exp_percent());
+		
+ 
+		 
+		row.add(iter2.broj());      
+		
+		 
+		//skriveni atributi
+		  
+		hiddenRow.add(iter2.cus_acc_id());
+		hiddenRow.add(iter2.cover_date());
+		hiddenRow.add(iter2.col_pro_id());
+		
+		decl.cusaccexpcollqbe2mapping.tblCusaccExpColl.addRow(row,hiddenRow);
+
+    }
+    
+    
+    
+}

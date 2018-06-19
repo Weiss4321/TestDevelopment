@@ -1,0 +1,200 @@
+package hr.vestigo.modules.collateral.jcics.co13;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Date;
+import hr.vestigo.modules.rba.util.DateUtils;
+ 
+//COLL_OWNERS OWNERS LIST
+/**
+ * CO001 class selects all data about OWNERS of one COLLATERAL  
+ * from table COLL_OWNERS	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+#sql iterator Iter131a ( BigDecimal coll_own_id,
+        String register_no ,
+        BigDecimal cus_id,
+        String part_id, 
+        String code,
+        String name_cus,
+        String open_name,
+        String open_login,
+        String chg_name,
+        String chg_login,
+        java.sql.Timestamp user_lock_open,
+        java.sql.Timestamp user_lock,
+        java.sql.Date date_from,
+        java.sql.Date date_until,
+        String prvi,
+        String drugi,
+        BigDecimal own_num,
+        String num_of_estate,
+        String num_of_estate_dsc,
+        BigDecimal cus_typ_id,
+        String main_owner,
+        BigDecimal statement_owner_id,
+        String statement_owner_register_no,
+        String statement_owner_name,
+        String oib,
+        String statement_owner_oib
+     ); 
+
+public class CO131 extends SQLJScrollableRemoteTransaction {
+	 
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co13/CO131.sqlj,v 1.21 2012/03/30 09:05:29 hramkr Exp $";
+	
+	public DeclCO13 decl = null;
+	
+	private Iter131a iter131a = null;
+	
+	private Date datum = DateUtils.createDateFromString("31.12.9999");
+	private Date datum_do = null;
+	private int flag = 1;
+	
+	public CO131 (DeclCO13 decl) {
+		this.decl = decl;
+
+	}
+	 
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		#sql [ctx] iter131a = {
+					SELECT  collo.coll_own_id as coll_own_id, 
+		                    custo.register_no as register_no,
+							collo.cus_id as cus_id, 
+		                    (rtrim(collo.part_id) concat  '/' concat rtrim(collo.part_id2)) as part_id, 
+							custo.code as code,
+		                    custo.tax_number as oib,
+							custo.name as name_cus, 
+		                    custo.cus_typ_id,
+							user_open.user_name as open_name, 
+		                    user_open.login as open_login,
+							user_chg.user_name as chg_name, 
+		                    user_chg.login as chg_login,
+							collo.opening_ts as user_lock_open, 
+		                    collo.user_lock as user_lock,
+							collo.date_from as date_from, 
+		                    collo.date_until as date_until,
+							rtrim(collo.part_id) as prvi, rtrim(collo.part_id2) as drugi,
+							collo.own_num as own_num,
+		                    collo.num_of_estate as num_of_estate,
+		                    sys_cod_val.sys_code_desc as num_of_estate_dsc,
+		                    collo.main_owner as main_owner,
+		                    collo.statement_owner_id as statement_owner_id,
+		                    cit.register_no as statement_owner_register_no,
+		                    cit.name as statement_owner_name,
+		                    cit.tax_number as statement_owner_oib
+		                    
+				FROM coll_owner collo 
+					LEFT OUTER JOIN customer custo ON collo.cus_id = custo.cus_id
+		            LEFT OUTER JOIN customer cit ON collo.statement_owner_id = cit.cus_id
+					INNER JOIN app_user user_open  ON user_open.use_id = collo.use_open_id
+					INNER JOIN app_user user_chg  ON user_chg.use_id = collo.use_id
+                    LEFT OUTER JOIN system_code_value sys_cod_val ON 
+		                        (sys_cod_val.sys_code_value = collo.num_of_estate and sys_cod_val.sys_cod_id = 'num_of_real_estate')
+					WHERE  collo.col_hea_id = :(decl.CollOwners_COL_HEA_ID)
+
+				};
+		
+//		AND current date BETWEEN collo.date_from and collo.date_until		
+	}
+	
+	public boolean next() throws Exception {
+		return iter131a.next();
+	}
+    
+	public void close() {
+		if(iter131a!=null) {
+			try {
+			    iter131a.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+  	
+	public void populateRowData() throws Exception {
+    	String notCommitento ="NIJE KOMITENT";
+		Vector row = new Vector();
+		Vector hiddenRow = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		
+		//prikazuju se u tablici
+		row.add(iter131a.register_no());      // 0
+	    row.add(iter131a.oib());              // 1
+		row.add(iter131a.name_cus());         // 2
+		row.add(iter131a.part_id());          // 3
+		
+		// buduci u tbl nema statusa, moram postaviti status iz datuma do kad vrijedi zapis		
+		// ako je date_until <> 9999-12-31 - neaktivan vlasnik, inace aktivan
+		
+		datum_do = iter131a.date_until();
+		flag = DateUtils.whoIsOlder(datum_do, datum);
+		if (flag == 0) {
+			row.add("A");
+		} else {
+			row.add("N");
+		} 
+       
+		row.add(iter131a.num_of_estate());
+		row.add(iter131a.main_owner());
+		
+		
+		
+		
+		//skriveno
+		//0
+		hiddenRow.add(iter131a.coll_own_id());
+		//1
+		hiddenRow.add(iter131a.cus_id());
+		//2
+		hiddenRow.add(iter131a.code());
+		//3
+		hiddenRow.add(iter131a.open_login());					
+		//4
+		hiddenRow.add(iter131a.open_name());
+		//5
+		hiddenRow.add(iter131a.chg_login());
+		//6
+		hiddenRow.add(iter131a.chg_name());
+		//7
+		hiddenRow.add(iter131a.user_lock_open());
+		//8
+		hiddenRow.add(iter131a.user_lock());
+		
+		//datum od kada do kada vrijedi zapis
+		//9
+		hiddenRow.add(iter131a.date_from());
+		//10
+		hiddenRow.add(iter131a.date_until());
+		//11
+		hiddenRow.add(iter131a.prvi());
+		//12
+		hiddenRow.add(iter131a.drugi());
+		//13
+		hiddenRow.add(iter131a.own_num());
+	    //14
+        hiddenRow.add(iter131a.num_of_estate_dsc());
+        //15
+        hiddenRow.add(iter131a.cus_typ_id());
+        //16
+        hiddenRow.add(iter131a.statement_owner_id());
+        //17
+        hiddenRow.add(iter131a.statement_owner_register_no());
+        //18
+        hiddenRow.add(iter131a.statement_owner_name());
+        // 19
+        hiddenRow.add(iter131a.statement_owner_oib());
+        
+		decl.tblCollOwners.addRow(row,hiddenRow);
+	}
+}
+  
+

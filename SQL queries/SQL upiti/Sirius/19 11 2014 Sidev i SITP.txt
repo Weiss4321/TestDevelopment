@@ -1,0 +1,94 @@
+SET CURRENT_SCHEMA = 'SITP'
+
+select * from CUSTOMER where cus_typ_id = '1999';
+
+select * from CUSTOMER where tax_number is  not null  and cus_typ_id = '1999';
+
+select * from customer_account where iban_acc_no is not null and cus_id = '2068058605';
+
+select * from customer_account where iban_acc_no is not null;
+
+
+select * from CUSTOMER where cus_id = '10788480605'; 
+
+select * from customer_account where iban_acc_no is not null and cus_id = '1716073551'; 
+
+select * from customer_type;
+
+select * from distraint_item;
+
+
+
+
+----------------------------
+
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+select * from citizen where EMPLOYEE_FLAG = '1'
+
+select * from payment_order;
+
+select * from CUST_BILL_EXCH;
+
+--------------------  Sidev
+
+select * from CUSTOMER where tax_number is  not null  and cus_typ_id = '1999';
+
+select * from customer_account;
+
+
+
+
+--------------------------------------  Obrada bfZ7 - 
+
+SELECT
+--SUM(tabl.balance) balance,
+SUM(tabl.overdraft_amount) overdraft_amount,
+SUM(tabl.reserved_amount) reserved_amount,
+SUM(tabl.overdraft_amount-tabl.reserved_amount) avail_balance,
+c.code_num,
+tabl.cur_id,
+er.buy_rate_fc,
+er.buy_rate_fc * (
+   SUM( tabl.overdraft_amount-tabl.reserved_amount)
+)
+domestic_balance
+FROM EXCHANGE_RATE er,
+       (SELECT 
+       	    cb.balance,  ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx 
+       FROM 
+       	balance_announce ba , cusacc_balance_last cb
+       WHERE 
+       	ba.cus_acc_id =  1843271 
+       	AND ba.cus_id = 2206904251 
+       	AND ba.bank_sign = 'RB' 
+       	UNION ALL SELECT 
+       		cb.balance, cb.cus_acc_id, cb.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx 
+          FROM cusacc_balance_last cb,  balance_announce ba
+		WHERE 
+		cb.cus_acc_id = 1843271  
+		AND cb.cus_id = 2206904251 
+		AND cb.cus_acc_report = '1' 
+		AND cb.avail_balance_flag = '1' 
+		AND cb.bank_sign = 'RB' ) tabl,
+          currency c
+      WHERE c.cur_id = tabl.cur_id
+	AND er.cur_id = tabl.cur_id
+	AND '19.11.2014' BETWEEN er.date_from AND er.date_until
+	GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc	
+	ORDER BY CASE WHEN tabl.cur_id = 63999 THEN 1 WHEN tabl.cur_id != 63999 THEN 2 END,
+c.code_num asc;
+
+-------------------------------------------------- SQL dio po dio
+
+SELECT    ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx  FROM balance_announce ba;
+
+SELECT * FROM balance_announce ba;
+
+		SELECT 
+       		cb.cus_acc_id, cb.balance, cb.cur_id,
+          	ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx 
+          FROM cusacc_balance_last cb, balance_announce ba;
+
+	select * FROM currency where code_num = '191';	

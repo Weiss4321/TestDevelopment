@@ -1,0 +1,192 @@
+package hr.vestigo.modules.collateral.batch.bo27;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO271
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo27/BO271.sqlj,v 1.4 2017/04/25 11:33:38 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator Iter with (holdability = true) (String cus_acc_no, String pkr_col_typ, BigDecimal exp_coll_amount);
+
+    public BO271(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	BigDecimal eve_id = null;
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("2529258003"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Podloga iz kolateral modula za PKR rezervacije");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+	
+	/**
+	 * Metoda koja vraæa datum zadnjeg RBA ponderiranog izraèuna pokrivenosti bez rezanja na iznos izloženosti.
+	*/
+	public Date selectMaxValueDate()
+	{
+		Date value_date = null;
+		try 
+		{
+			#sql [connCtx] {
+				SELECT MAX(value_date) 
+		        INTO :(value_date)
+				FROM col_proc
+				WHERE proc_type = 'PU' 
+		        AND proc_status = '1'
+			};
+		    if (value_date == null)
+		    {
+		        batchContext.error("U bazi podataka ne postoji nijedan RBA ponderirani izracun pokrivenosti bez rezanja na iznos izlozenosti!", new String[]{});
+		    }
+		}
+		catch(SQLException ex) 
+		{
+			batchContext.error("Greska kod dohvacanja makismalnog datuma iz tablice COL_PROC!", ex);
+		}
+		return value_date;
+	}
+	
+	/**
+	 * Metoda koja vraæa ID obrade za zadani datum. 
+	*/
+	public BigDecimal selectColProId(Date value_date)
+	{
+		BigDecimal col_pro_id = null;
+		try 
+		{
+			#sql [connCtx] {
+				SELECT col_pro_id 
+		        INTO :(col_pro_id)
+				FROM col_proc
+				WHERE value_date = :(value_date)
+				AND proc_type = 'PU'
+		        AND proc_status = '1'
+			};
+		}
+		catch(SQLException ex) 
+		{
+			batchContext.error("Greska kod dohvacanja ID obrade iz tablice COL_PROC!", ex);
+		}
+		return col_pro_id;
+	}
+	
+	/**
+	 * Metoda koja vraæa datum zadnjeg puštanja ove vrste obrade.
+	 * Ako do sada obrada nije puštana, metoda vraæa datum 9999-12-31.
+	*/	
+	public Date selectDwhStatusDate()
+	{
+		Date date = null;
+		try {
+			#sql [connCtx] {
+				SELECT datum INTO :date
+				FROM dwh_status
+				WHERE obrada='bo27' AND status='1'
+			};
+		}
+		catch(SQLException ex) {
+			if(ex.getErrorCode() == 100)
+			{
+				date = Date.valueOf("9999-12-31");
+			}
+			else
+			{
+				batchContext.error("Greska kod dohvacanja datuma iz tablice DWH_STATUS!", ex);
+			}
+		}
+		return date;
+	}
+
+	public Iter selectData(BigDecimal col_pro_id)
+	{
+		Iter iter = null;
+		try {
+			#sql [connCtx] iter = {
+				SELECT 
+					f.cus_acc_no AS cus_acc_no,
+					e.pkr_col_typ AS pkr_col_typ,
+					SUM(b.exp_coll_amount) AS exp_coll_amount
+				FROM 
+					cusacc_exp_coll b,
+					coll_head c,
+					customer d,
+					cusacc_exposure f,
+					cm_to_pkr_col_typ e
+				WHERE 
+					b.col_pro_id = :col_pro_id AND
+					b.col_hea_id = c.col_hea_id AND
+					b.cus_id = d.cus_id AND
+					b.cus_acc_id = f.cus_acc_id AND
+					c.col_type_id = e.col_typ_id AND
+					d.cus_typ_id IN (1999,1998)
+				GROUP BY f.cus_acc_no, e.pkr_col_typ 
+			};
+		}
+		catch(SQLException ex) {
+			batchContext.error("Greska kod dohvacanja plasmana!", ex);
+		}
+		return iter;
+	}
+	
+	public boolean updateDwhStatus(Date value_date)
+	{
+		try {
+			#sql [connCtx] {
+				UPDATE dwh_status
+				SET datum=:value_date, status='1'
+				WHERE obrada='bo27'
+			};
+		}
+		catch(SQLException ex) {
+			batchContext.error("Greska kod evidentiranja u tablicu DWH_STATUS!", ex);
+			return false;
+		}
+		return true;
+	}
+}

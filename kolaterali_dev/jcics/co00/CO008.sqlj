@@ -1,0 +1,77 @@
+package hr.vestigo.modules.collateral.jcics.co00;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//
+
+/**
+ *  CO008.sqlj
+ *  This transaction fetch new values from coll_head for coll_hf_prior 
+ *  
+ */
+
+public class CO008 extends RemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co00/CO008.sqlj,v 1.4 2017/07/19 08:04:22 hrazst Exp $";
+
+	public DeclCO00 decl = null;
+
+	public CO008 (DeclCO00 decl) {
+		this.decl = decl;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+			ConnCtx ctx = tc.getContext();
+			tc.debug("decl.redfetchval.RealEstate_COL_HEA_ID    		" + decl.redfetchval.RealEstate_COL_HEA_ID); 
+			tc.debug("decl.redfetchval.RealEstate_txtHfsValue    		" + decl.redfetchval.RealEstate_txtHfsValue);  
+			tc.debug("decl.redfetchval.RealEstate_txtHfsValueDate       " + decl.redfetchval.RealEstate_txtHfsValueDate);  
+			tc.debug("decl.redfetchval.RealEstate_txtHfsValueLastOne    " + decl.redfetchval.RealEstate_txtHfsValueLastOne);  
+			tc.debug("decl.redfetchval.RealEstate_txtHfsDateLastOne     " + decl.redfetchval.RealEstate_txtHfsDateLastOne); 
+			tc.debug("decl.redfetchval.RealEstate_txtThirdRightInNom    " + decl.redfetchval.RealEstate_txtThirdRightInNom);  
+			tc.debug("decl.redfetchval.RealEstate_txtThirdRightDate     " + decl.redfetchval.RealEstate_txtThirdRightDate);  
+			tc.debug("decl.redfetchval.RealEstate_txtThRightLastToDate  " + decl.redfetchval.RealEstate_txtThRightLastToDate);
+			
+			try{ 
+				#sql[ctx] { 
+					SELECT                   
+						hfs_value,           
+						hfs_value_date ,     
+						hfs_value_last_one,  
+						hfs_date_last_one ,  
+		                third_right_nom ,    
+						third_right_date ,   
+						thi_date_last_unt    
+                                      
+					   INTO                                                
+                        :(decl.redfetchval.RealEstate_txtHfsValue),           
+						:(decl.redfetchval.RealEstate_txtHfsValueDate),       
+						:(decl.redfetchval.RealEstate_txtHfsValueLastOne),    
+						:(decl.redfetchval.RealEstate_txtHfsDateLastOne),     
+                        :(decl.redfetchval.RealEstate_txtThirdRightInNom),    
+						:(decl.redfetchval.RealEstate_txtThirdRightDate),     
+						:(decl.redfetchval.RealEstate_txtThRightLastToDate) 
+					FROM  coll_head                                                  
+					WHERE col_hea_id = :(decl.redfetchval.RealEstate_COL_HEA_ID)
+				};
+			} catch(java.sql.SQLException e){
+				tc.debug (".......CO008.sqlj ..... Select from  coll_head unsuccessful.");
+				tc.debug ( "......CO008.sqlj Select from  coll_head  SQL ErrorCode " + e.getErrorCode());
+				tc.debug ( "......CO007.sqlj Select from  coll_head  SQL SQLState " + e.getSQLState());
+				tc.debug ( "......CO007.sqlj Select from  coll_head   SQL Message " + e.getMessage());
+				
+				e.printStackTrace();
+				if (e.getErrorCode()!=100) 
+					throw e;
+			}
+			
+			tc.debug("decl.redfetchval.RealEstate_txtHfsValue    		" + decl.redfetchval.RealEstate_txtHfsValue  );  
+			tc.debug("decl.redfetchval.RealEstate_txtHfsValueDate       " + decl.redfetchval.RealEstate_txtHfsValueDate );  
+			tc.debug("decl.redfetchval.RealEstate_txtHfsValueLastOne          	" + decl.redfetchval.RealEstate_txtHfsValueLastOne );  
+			tc.debug("decl.redfetchval.RealEstate_txtHfsDateLastOne       	" + decl.redfetchval.RealEstate_txtHfsDateLastOne ); 
+			tc.debug("decl.redfetchval.RealEstate_txtThirdRightInNom        	" + decl.redfetchval.RealEstate_txtThirdRightInNom  );  
+			tc.debug("decl.redfetchval.RealEstate_txtThirdRightDate       	" + decl.redfetchval.RealEstate_txtThirdRightDate );  
+			tc.debug("decl.redfetchval.RealEstate_txtThRightLastToDate          	" + decl.redfetchval.RealEstate_txtThRightLastToDate   );  
+	}
+}

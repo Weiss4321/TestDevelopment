@@ -1,0 +1,196 @@
+package hr.vestigo.modules.collateral.batch.bo43;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO431
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo43/BO431.sqlj,v 1.4 2012/03/02 10:10:45 hramkr Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator CollIterator with (holdability = true)( 
+		String col_num,
+		String coll_type_name,
+		String isin,
+		String owner_id,
+		String owner_name,
+		BigDecimal num_of_sec,
+		BigDecimal nominal_amount,
+		String valuta,
+		BigDecimal market_value,
+		String cus_acc_no,
+		String request_no,
+		String cust_id,
+		String cust_name
+    );
+
+    public BO431(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	/**
+	 * Metoda ubacuje zapis u EVENT tablicu.
+	 * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+	 */
+    public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	BigDecimal eve_id = null;
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("31512912"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Izvješæe za rekonsilijaciju");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+    /**
+    * Metoda koja dohvaæa podatke o aktivnim VRP kolateralima.
+	* @param load_date Datum za koji se želi izvješæe
+	* @return Iterator. Ako je došlo do greške, vraæa null.
+	*/
+    public CollIterator selectCollaterals(Date load_date, String indArchiva)
+	{
+		CollIterator iter = null;
+		try
+		{
+		    if (indArchiva.equalsIgnoreCase("N")) {
+		        #sql [connCtx] iter = {
+				SELECT DISTINCT
+					a.col_num AS col_num,
+					j.coll_type_name AS coll_type_name,
+					x.isin AS isin,
+					ccc.register_no AS owner_id,
+					ccc.name AS owner_name,
+					b.num_of_sec AS num_of_sec,
+					b.nominal_amount AS nominal_amount,
+					f.code_char AS valuta,
+					a.real_est_nomi_valu AS market_value,
+					d.acc_no AS cus_acc_no,
+					d.request_no AS request_no,
+					cc.register_no AS cust_id,
+					cc.name AS cust_name
+				FROM
+					coll_head_d a,
+					coll_vrp b LEFT OUTER JOIN coll_in2 x ON b.col_in2_id = x.col_in2_id,
+					coll_hf_prior_d c,
+					loan_beneficiary_d d,
+					customer cc,
+					currency f,
+					collateral_type j,
+					coll_owner e,
+					customer ccc
+				WHERE
+					:(load_date) between a.load_date_from and a.load_date_until and
+					a.col_cat_id IN (613223,619223,622223,627223,629223) AND
+					a.collateral_status IN ('0','1','2','3') AND
+					a.col_hea_id = b.col_hea_id AND
+					b.col_hea_id = c.hf_coll_head_id AND
+					:(load_date) between c.load_date_from and c.load_date_until and
+					c.hf_status = 'A' AND
+					c.coll_hf_prior_id = d.coll_hf_prior_id AND
+					:(load_date) between d.load_date_from and d.load_date_until and
+					d.status = 'A' AND
+					d.cus_id = cc.cus_id AND
+					a.real_est_nm_cur_id = f.cur_id AND
+					a.col_type_id = j.coll_type_id AND
+					a.col_hea_id = e.col_hea_id AND
+					e.date_until = '9999-12-31' AND
+					e.cus_id = ccc.cus_id
+				ORDER BY col_num
+				WITH UR
+		        };
+		    } else {
+	            #sql [connCtx] iter = {
+	                    SELECT DISTINCT
+	                        a.col_num AS col_num,
+	                        j.coll_type_name AS coll_type_name,
+	                        x.isin AS isin,
+	                        ccc.register_no AS owner_id,
+	                        ccc.name AS owner_name,
+	                        b.num_of_sec AS num_of_sec,
+	                        b.nominal_amount AS nominal_amount,
+	                        f.code_char AS valuta,
+	                        a.real_est_nomi_valu AS market_value,
+	                        d.acc_no AS cus_acc_no,
+	                        d.request_no AS request_no,
+	                        cc.register_no AS cust_id,
+	                        cc.name AS cust_name
+	                    FROM
+	                        coll_head_d_a a,
+	                        coll_vrp b LEFT OUTER JOIN coll_in2 x ON b.col_in2_id = x.col_in2_id,
+	                        coll_hf_prior_d_a c,
+	                        loan_benef_d_a d,
+	                        customer cc,
+	                        currency f,
+	                        collateral_type j,
+	                        coll_owner e,
+	                        customer ccc
+	                    WHERE
+	                        a.load_date = :(load_date) and
+	                        a.col_cat_id IN (613223,619223,622223,627223,629223) AND
+	                        a.collateral_status IN ('0','1','2','3') AND
+	                        a.col_hea_id = b.col_hea_id AND
+	                        b.col_hea_id = c.hf_coll_head_id AND
+	                        c.load_date = :(load_date) and
+	                        c.hf_status = 'A' AND
+	                        c.coll_hf_prior_id = d.coll_hf_prior_id AND
+	                        d.load_date = :(load_date) and
+	                        d.status = 'A' AND
+	                        d.cus_id = cc.cus_id AND
+	                        a.real_est_nm_cur_id = f.cur_id AND
+	                        a.col_type_id = j.coll_type_id AND
+	                        a.col_hea_id = e.col_hea_id AND
+	                        e.date_until = '9999-12-31' AND
+	                        e.cus_id = ccc.cus_id
+	                    ORDER BY col_num
+	                    WITH UR
+	                };		        
+		    }
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja kolaterala!", ex);
+		}
+		return iter;
+	}
+}

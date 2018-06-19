@@ -1,0 +1,61 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from payment_order;
+
+select * from CUST_BILL_EXCH;
+
+select pay_ord_id, order_trn, status  from CUST_BILL_EXCH where cus_bil_exc_id = 3093978823; -- ništa nije popunjeno
+
+update CUST_BILL_EXCH SET status = 'N' WHERE cus_bil_exc_id = 3093978823;  -- 3093978823 i 3093938823
+
+commit;
+
+select * from customer_account;
+
+select * from batch_log where bat_def_id = 6259167704 order by recording_time desc ;
+
+
+
+select * from cusacc_risk;
+
+select * from customer where cus_id = 466543251;
+
+select * from customer_account where cus_acc_id = 198051022;
+
+
+ 			SELECT
+                    cr.cus_ris_id,
+                    cr.cus_acc_id,
+                    cr.ris_ind_typ_id,
+                    cr.risk_indic_value,
+                    cr.risk_reason,
+                    cr.risk_date,  
+                    cr.loan_acc_no,
+                    cr.loan_cus_id,
+                    cr.date_from,
+                    cr.date_until,
+                    cr.eve_id,
+                    cr.use_id,
+                    cr.bank_sign,
+                    cr.user_lock,
+                    cr.limit_date_from,
+                    cr.limit_date_until
+                FROM 
+                    cusacc_risk cr
+
+                    
+                WHERE
+                    cr.cus_acc_id = 198051022;
+
+---------------------------------------------------------------------------------------------
+select * from cusacc_risk where cus_acc_id = 198051022;
+
+                    
+                AND 
+                    cr.ris_ind_typ_id = :(ris_ind_typ_id)
+                AND 
+                    :(valueDateFrom) <= cr.limit_date_until
+                AND
+                    :(valueDateUntil) >= cr.limit_date_from 
+                AND :(valueDate) BETWEEN cr.date_from AND cr.date_until
+                ORDER BY cr.limit_date_from

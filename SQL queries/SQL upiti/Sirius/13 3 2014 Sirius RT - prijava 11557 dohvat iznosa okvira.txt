@@ -1,0 +1,39 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+			SELECT
+                    AMOUNT             
+                FROM
+                    CUSACC_AMOUNT
+                WHERE
+				P_CONTRACT_ID = 'frame_amonut'
+
+				
+			SELECT
+                    AMOUNT             
+                FROM
+                    CUSACC_AMOUNT
+
+ ----------------------------    kompletni upit -- sada dohvaća ispravno iznos
+			 SELECT
+                    AMOUNT 
+            
+                FROM
+                    CUSACC_AMOUNT
+                WHERE
+                    CUS_ACC_ID = 115057257522
+                    --AND CUR_ID = :(cur_id)
+                    AND P_CONTRACT_ID = 'frame_amount'
+                   -- AND DATE_FROM <= :(date)
+                   -- AND DATE_UNTIL >= :(date)   
+
+                
+			SELECT
+                   *            
+                FROM
+                    CUSACC_AMOUNT
+                WHERE
+				P_CONTRACT_ID = 'frame_amount'    
+
+	select * from customer_account;
+
+	select * from customer_account where cus_acc_no = '6000027395'; 	-- devizni okvir  cus_id = 

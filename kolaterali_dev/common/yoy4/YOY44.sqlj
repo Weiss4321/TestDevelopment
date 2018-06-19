@@ -1,0 +1,385 @@
+package hr.vestigo.modules.collateral.common.yoy4;
+
+import java.sql.SQLException;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.*;
+
+   
+
+public class YOY44 {
+  
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoy4/YOY44.sqlj,v 1.12 2014/11/12 14:13:48 hrazst Exp $";
+
+	private String bank_sign=null;
+	private ConnCtx ctx=null;
+	private RemoteContext rc=null;
+	private CollHeadInsertData chd=null;
+	   
+	  
+	public YOY44(RemoteContext rc, CollHeadInsertData chd) throws Exception {		
+		this.ctx = rc.getContext();
+		this.bank_sign = rc.getBankSign();
+		this.rc=rc;
+		this.chd=chd;
+	}  
+	  
+	public void insertIntoCollHeadArh() throws Exception{
+		System.out.println("AKCIJA COLL_HEAD_A" + chd.action);
+
+
+		rc.debug("chd.COL_HEA_ID : "+chd.COL_HEA_ID);
+		rc.debug("chd.COL_HEA_ID_ARH : "+chd.COL_HEA_ID_ARH);		
+		rc.debug("chd.Coll_txtCode : "+chd.Coll_txtCode);
+
+		rc.debug ( ".........COL_TYPE_ID   " + chd.COL_TYPE_ID); 
+
+		rc.debug ( ".........REAL_EST_EUSE_ID" + chd.REAL_EST_EUSE_ID);                    		
+		System.out.println ( ".........Coll_txtEstnValu" + chd.Coll_txtEstnValu);                   
+		rc.debug ( ".........Coll_txtEstnDate2" + chd.Coll_txtEstnDate);                
+		rc.debug ( ".........Coll_txtDatnFrom" + chd.Coll_txtDatnFrom);                   
+		rc.debug ( ".........Coll_txtDatnUnti" + chd.Coll_txtDatnUnti);                   
+							 
+		System.out.println ( ".........Coll_txtNomiValu" + chd.Coll_txtNomiValu);                   		
+		rc.debug ( ".........Coll_txtNomiDate" + chd.Coll_txtNomiDate);
+	 
+		rc.debug ( ".........REAL_EST_NM_CUR_ID" + chd.REAL_EST_NM_CUR_ID); 
+	 
+		rc.debug ( ".........Coll_txtComDoc" + chd.Coll_txtComDoc);                             		                                      
+	                          		                                      
+		rc.debug ( ".........Coll_txtDateToDoc" +  chd.Coll_txtDateToDoc);                         		                                      
+	                   	                            
+	 
+		rc.debug ( ".........Coll_txtDateFrom" + chd.Coll_txtDateFrom);                   	                         
+		rc.debug ( ".........Coll_txtDateUnti" +  chd.Coll_txtDateUnti);     
+		
+		rc.debug ( ".........Coll_txtDateToLop" + chd.Coll_txtDateToLop);                   	                         
+		rc.debug ( ".........Coll_txtDateRecLop" +  chd.Coll_txtDateRecLop);     
+		rc.debug ( ".........Coll_txtRecLop" +  chd.Coll_txtRecLop);     
+		
+	  
+		rc.debug ( ".........STATUS" + chd.STATUS);                      		                          
+		rc.debug ( ".........SPEC_STATUS" +chd.SPEC_STATUS);   
+		rc.debug ( ".........USE_OPEN_ID" + chd.USE_OPEN_ID);
+		rc.debug ( ".........USE_ID" + chd.USE_ID);
+		rc.debug ( ".........Coll_txtOpeningTs" + chd.Coll_txtOpeningTs);
+		rc.debug ( ".........Coll_txtUserLock" + chd.Coll_txtUserLock);
+
+		rc.debug ( ".........(rc.getBankSign())" + this.bank_sign);			
+			
+			
+    
+			  
+		if (chd.action.equalsIgnoreCase("I")) {
+			System.out.println( ".........INSERT U COLL_HEAD_A   " + chd.COL_HEA_ID);  
+	        //INSERT INTO coll_head		
+			try{	 
+				
+				#sql [ctx]{
+					INSERT INTO coll_head_a
+							(	
+							 col_hea_id, 
+							 col_type_id,
+							 col_num,
+							 col_desc, 
+							 real_est_euse_id, 
+							 real_est_estn_valu, 
+							 real_est_estn_date,
+							 real_est_datn_from,
+							 real_est_datn_unti, 
+							 real_est_nomi_desc,
+							 real_est_nomi_valu,
+							 real_est_nomi_date,
+							 real_est_liqu_valu,
+							 real_est_liqu_date,
+							 real_est_bptc_valu,
+							 real_est_bptc_date,
+							 real_est_nm_cur_id,
+							 cus_id, 
+							 coll_cus_id,
+							 date_to_lop,
+							 date_rec_lop,
+							 rec_lop,
+							 com_doc,
+							 missing_doc,
+							 date_to_doc,
+							 date_rec_doc,
+							 reva_coef, 	
+							 reva_date,
+							 reva_date_am,
+							 reva_bvalue,  
+							 reva_bdate,
+							 reva_bdate_am,
+							 amort_age,
+							 amort_per_cal_id,
+							 amort_val_cal,
+							 nepo_value,
+							 nepo_date, 	
+							 nepo_per_cal,
+							 third_right,
+							 third_right_cur_id,
+							 third_right_nom,
+							 third_right_date, 	
+							 hfs_value,
+							 hfs_value_date,
+							 hfs_value_last_one,
+							 hfs_date_last_one,
+							 weigh_value,
+							 weigh_date,
+							 weigh_bvalue,
+							 weigh_bdate,
+							 sum_limit_val,
+							 sum_limit_dat,
+							 sum_part_val,
+							 sum_part_dat,
+							 avail_value,
+							 avail_per_cal,
+							 avail_date,
+							 inspol_ind,
+							 col_place,
+							 col_county,
+							 col_district,
+							 col_resi_quar,
+							 coll_mvp_ponder,
+							 coll_hnb_ponder,	
+							 coll_rzb_ponder,	 	
+							 real_est_date_from,
+							 real_est_date_unti,
+							 real_est_add_data,
+							 real_est_status,
+							 real_est_spec_stat,
+							 use_open_id,   
+							 use_id,        
+							 opening_ts,    
+							 user_lock,     
+							 eve_id,        
+							 bank_sign,
+							 eligibility,
+							 acum_buy_value,
+							 origin_org_uni_id,
+							 org_uni_id,
+						 	 use_id_ver,          
+						 	 use_id_aut,          
+						 	 verification_ts,     
+						 	 autorization_ts,     
+							 mortgage_status,
+                             collateral_status,
+                             workflow_indic,
+                             cover_indic,
+						 	 ver_send_ts,        
+                             basic_data_status, 
+                             coll_data_status,
+                             col_cat_id,
+						     use_id_ver_snd,     
+							 financial_flag,
+							 rba_eligibility,
+							 law_eligibility,
+							 rba_elig_dsc,
+							 number,
+							 b1_eligibility,
+							 b2_irb_elig) 
+					VALUES( :(chd.COL_HEA_ID),    													                                                
+							:(chd.COL_TYPE_ID),  
+							:(chd.Coll_txtCode), 
+							:(chd.Coll_txtDesc),  
+							:(chd.REAL_EST_EUSE_ID),                     		
+							:(chd.Coll_txtEstnValu),                   
+							:(chd.Coll_txtEstnDate),                   
+							:(chd.Coll_txtDatnFrom),                    
+							:(chd.Coll_txtDatnUnti),                   
+							:(chd.Coll_txtNomiDesc), 
+							:(chd.Coll_txtNomiValu),                   		
+							:(chd.Coll_txtNomiDate), 
+							:(chd.Coll_txtLiquValu),                   		
+							:(chd.Coll_txtLiquDate),                   		
+							:(chd.Coll_txtBptcValu),                   		
+							:(chd.Coll_txtBptcDate), 
+							:(chd.REAL_EST_NM_CUR_ID), 
+							:(chd.CUS_ID),   
+							:(chd.COLL_CUS_ID),   
+							:(chd.Coll_txtDateToLop),   
+							:(chd.Coll_txtDateRecLop), 
+							:(chd.Coll_txtRecLop), 
+							:(chd.Coll_txtComDoc),                              		                                      
+							:(chd.Coll_txtMissingDoc),                          		                                      
+							:(chd.Coll_txtDateToDoc),                          		                                      
+							:(chd.Coll_txtDateRecDoc), 
+							:(chd.Coll_txtRevaCoefMan),                        		                                   
+							:(chd.Coll_txtRevaDate),                            		                                           
+							:(chd.Coll_txtRevaDateAM),                         		                                         
+							:(chd.Coll_txtRevaBValue),                          		                                          
+							:(chd.Coll_txtRevaBDate),                           		
+							:(chd.Coll_txtRevaBDateAM),                        	     
+							:(chd.Coll_txtAmortAge),                            	    
+							:(chd.AMORT_PER_CAL_ID),                        	                            
+							:(chd.Coll_txtAmortValCal),  
+							:(chd.Coll_txtNepoValue),                           	                            
+							:(chd.Coll_txtNepoDate),                            	                            
+							:(chd.Coll_txtNepoPerCal), 
+							:(chd.Coll_txtThirdRight),                          	                            
+							:(chd.THIRD_RIGHT_CUR_ID),                   	                            
+							:(chd.Coll_txtThirdRightInNom),                      		                                         
+							:(chd.Coll_txtThirdRightDate),                    	                                                        		                                         
+							:(chd.Coll_txtHfsValue),                           	                                                        		                                         
+							:(chd.Coll_txtHfsValueDate),                         		                                         
+							:(chd.Coll_txtHfsValueLastOne),                      		                                         
+							:(chd.Coll_txtHfsDateLastOne),     
+							:(chd.Coll_txtAcouValue),                            		                                         
+							:(chd.Coll_txtAcouDate),                          
+							:(chd.Coll_txtAcouBValue),                        
+							:(chd.Coll_txtAcouBDate),  
+							:(chd.Coll_txtSumLimitVal),                                                     
+							:(chd.Coll_txtSumLimitDat),                                                       
+							:(chd.Coll_txtSumPartVal),                                                         
+							:(chd.Coll_txtSumPartDat), 
+							:(chd.Coll_txtAvailValue),                                                       
+							:(chd.Coll_txtAvailPerCal),                                                       
+							:(chd.Coll_txtAvailDate),  
+							:(chd.INSPOL_IND),  
+							:(chd.COL_PLACE), 
+							:(chd.COL_COUNTY), 
+							:(chd.COL_DISTRICT), 
+							:(chd.COL_RESI_QUAR), 
+							:(chd.Coll_txtCollMvpPonder), 
+							:(chd.Coll_txtCollHnbPonder), 
+							:(chd.Coll_txtCollRzbPonder),  
+							:(chd.Coll_txtDateFrom),                   	                         
+							:(chd.Coll_txtDateUnti),                   	 
+							:(chd.Coll_txtAddData),  
+							:(chd.STATUS),                      		                          
+							:(chd.SPEC_STATUS),  
+							:(chd.USE_OPEN_ID),
+							:(chd.USE_ID),
+							:(chd.Coll_txtOpeningTs),
+							:(chd.USER_LOCK),
+							:(chd.EVE_ID),
+							:(bank_sign), 
+							:(chd.Coll_txtEligibility),
+							:(chd.Coll_txtAcumBuyValue),
+							:(chd.ORIGIN_ORG_UNI_ID),
+ 						    :(chd.ORG_UNI_ID),
+							:(chd.USE_ID_VER),
+							:(chd.USE_ID_AUT),
+							:(chd.VERIFICATION_TS),
+							:(chd.AUTORIZATION_TS),
+						    :(chd.MORTGAGE_STATUS),
+						    :(chd.COLLATERAL_STATUS), 
+						    :(chd.WORKFLOW_INDIC),
+						    :(chd.COVER_INDIC),
+							:(chd.VER_SEND_TS),
+						    :(chd.BASIC_DATA_STATUS),
+						    :(chd.COLL_DATA_STATUS),
+						    :(chd.COL_CAT_ID),
+							:(chd.USE_ID_VER_SND),
+							:(chd.FINANCIAL_FLAG),
+							:(chd.ColRba_txtEligibility),
+							:(chd.KolLow_txtEligibility),
+							:(chd.Kol_txtRbaEligDsc),
+                            :(chd.Coll_txtNumOf),
+							:(chd.Coll_txtB1Eligibility),
+							:(chd.Coll_txtB2IRBEligibility))
+						};
+  
+				}catch(java.sql.SQLException se){
+						rc.debug ( "......YOY44.sqlj insert into coll_head_a SQL ErrorCode " + se.getErrorCode());
+						rc.debug ( "......YOY44.sqlj insert into coll_head_a SQL SQLState " + se.getSQLState());
+						rc.debug ( "......YOY44.sqlj insert into coll_head_a SQL Message " + se.getMessage());
+						throw new VestigoTMException(1, "Transaction YOY44: Error inserting coll_head_a! ","err411a", null);
+
+				}
+
+		} else if (chd.action.equalsIgnoreCase("U")) {
+// update tabele COLL_HEAD_A
+			System.out.println( ".........UPDATE U COLL_HEAD_A   " + chd.COL_HEA_ID_ARH);  
+			try{	
+				  
+				#sql [ctx]{ 
+					UPDATE coll_head_a
+						SET  col_desc = 			:(chd.Coll_txtDesc), 
+							 real_est_euse_id = 	:(chd.REAL_EST_EUSE_ID), 
+							 real_est_estn_valu = 	:(chd.Coll_txtEstnValu), 
+							 real_est_estn_date = 	:(chd.Coll_txtEstnDate),
+							 real_est_datn_from = 	:(chd.Coll_txtDatnFrom),
+							 real_est_datn_unti = 	:(chd.Coll_txtDatnUnti), 
+							 real_est_nomi_desc = 	:(chd.Coll_txtNomiDesc),
+							 real_est_nomi_valu = 	:(chd.Coll_txtNomiValu),
+							 real_est_nomi_date = 	:(chd.Coll_txtNomiDate),
+							 real_est_liqu_valu = 	:(chd.Coll_txtLiquValu),
+							 real_est_liqu_date = 	:(chd.Coll_txtLiquDate),
+							 real_est_bptc_valu = 	:(chd.Coll_txtBptcValu),
+							 real_est_bptc_date = 	:(chd.Coll_txtBptcDate),
+							 real_est_nm_cur_id = 	:(chd.REAL_EST_NM_CUR_ID),
+							 cus_id = 				:(chd.CUS_ID), 
+							 coll_cus_id = 			:(chd.COLL_CUS_ID),
+							 date_to_lop = 			:(chd.Coll_txtDateToLop),
+							 date_rec_lop = 		:(chd.Coll_txtDateRecLop),
+							 rec_lop =				:(chd.Coll_txtRecLop),
+							 com_doc = 				:(chd.Coll_txtComDoc),
+							 missing_doc = 			:(chd.Coll_txtMissingDoc),
+							 date_to_doc = 			:(chd.Coll_txtDateToDoc),
+							 date_rec_doc = 		:(chd.Coll_txtDateRecDoc),
+							 reva_coef = 			:(chd.Coll_txtRevaCoefMan), 	
+							 reva_date = 			:(chd.Coll_txtRevaDate),
+							 reva_date_am = 		:(chd.Coll_txtRevaDateAM), 
+							 reva_bvalue = 			:(chd.Coll_txtRevaBValue),
+							 reva_bdate = 			:(chd.Coll_txtRevaBDate),
+							 reva_bdate_am = 		:(chd.Coll_txtRevaBDateAM),
+							 amort_age = 			:(chd.Coll_txtAmortAge),
+							 amort_per_cal_id = 	:(chd.AMORT_PER_CAL_ID),
+							 amort_val_cal = 		:(chd.Coll_txtAmortValCal),
+							 nepo_value = 			:(chd.Coll_txtNepoValue),
+							 nepo_date = 			:(chd.Coll_txtNepoDate), 	
+							 nepo_per_cal = 		:(chd.Coll_txtNepoPerCal),
+ 
+							 weigh_value =			:(chd.Coll_txtAcouValue),
+							 weigh_date = 			:(chd.Coll_txtAcouDate),
+							 weigh_bvalue =			:(chd.Coll_txtAcouBValue),
+							 weigh_bdate =			:(chd.Coll_txtAcouBDate),
+							 sum_limit_val = 		:(chd.Coll_txtSumLimitVal),
+							 sum_limit_dat = 		:(chd.Coll_txtSumLimitDat),
+							 sum_part_val = 		:(chd.Coll_txtSumPartVal),
+							 sum_part_dat =			:(chd.Coll_txtSumPartDat),
+							 avail_value =			:(chd.Coll_txtAvailValue),
+							 avail_per_cal = 		:(chd.Coll_txtAvailPerCal),
+							 avail_date = 			:(chd.Coll_txtAvailDate),
+							 inspol_ind =			:(chd.INSPOL_IND),
+							 col_place = 			:(chd.COL_PLACE),
+							 col_county =			:(chd.COL_COUNTY),
+							 col_district = 		:(chd.COL_DISTRICT),
+							 col_resi_quar =		:(chd.COL_RESI_QUAR),
+							 coll_mvp_ponder = 		:(chd.Coll_txtCollMvpPonder),
+							 coll_hnb_ponder =		:(chd.Coll_txtCollHnbPonder),	
+							 coll_rzb_ponder =		:(chd.Coll_txtCollRzbPonder),	 	
+							 real_est_date_from = 	:(chd.Coll_txtDateFrom),
+							 real_est_date_unti =	:(chd.Coll_txtDateUnti),
+							 real_est_add_data =	:(chd.Coll_txtAddData),
+							 use_id = 				:(chd.USE_ID),        
+							 user_lock =			:(chd.USER_LOCK),
+							 eligibility =			:(chd.Coll_txtEligibility),
+							 acum_buy_value =		:(chd.Coll_txtAcumBuyValue),
+							 org_uni_id = 			:(chd.ORG_UNI_ID),
+							 basic_data_status=		:(chd.BASIC_DATA_STATUS),
+							 mortgage_status =		:(chd.MORTGAGE_STATUS),
+                             cover_indic =			:(chd.COVER_INDIC),
+                             coll_data_status =		:(chd.COLL_DATA_STATUS),
+						 	 rba_eligibility =		:(chd.ColRba_txtEligibility),
+						 	 law_eligibility =		:(chd.KolLow_txtEligibility),
+							 rba_elig_dsc = 		:(chd.Kol_txtRbaEligDsc),
+							 number			=		:(chd.Coll_txtNumOf),
+							 b1_eligibility =		:(chd.Coll_txtB1Eligibility),
+						     b2_irb_elig = 			:(chd.Coll_txtB2IRBEligibility)
+					WHERE col_hea_id = :(chd.COL_HEA_ID_ARH)
+					AND
+							date(user_lock) = current date 
+						}; 
+			} catch(SQLException e) {
+				if (e.getErrorCode()!=100) throw e;
+				else {
+					throw new VestigoTMException(1, "YOY43 - Cannot change, user_lock!", "errclt7", null);				
+				}
+			}				
+		}  
+	}  
+	
+}
+ 

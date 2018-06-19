@@ -1,0 +1,94 @@
+package hr.vestigo.modules.collateral.jcics.coA0;
+
+import java.math.*;
+import java.util.*;
+
+import hr.vestigo.framework.remote.transaction.*;
+import java.sql.Timestamp;
+import java.sql.Date;
+
+  
+#sql iterator Iter5 (
+                    BigDecimal col_hea_id,
+                    Date process_date,
+                    String code_char,
+                    BigDecimal wca_amount,
+                    BigDecimal mcv_amount,
+                    BigDecimal ponder_value,
+                    BigDecimal other_mrtg, 
+                    String nd_eligibility
+                    );
+  
+   
+public class COA05 extends SQLJScrollableRemoteTransaction {
+    
+    public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA0/COA05.sqlj,v 1.2 2014/10/07 10:54:19 hrazst Exp $";
+    public DeclCOA0 decl = null;
+    private Iter5 iter=null;
+    
+    public COA05 (DeclCOA0 decl) {
+        this.decl = decl;
+    } 
+       
+           
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        
+        setLevel(decl.wcalistmap.ActionListLevel);
+        setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+        ConnCtx connCtx0 = tc.getContext();
+        
+        #sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        tc.info("dohvat svih pondera za kolateral.... col_hea_id: "+decl.wcalistmap.Mvp_col_hea_id);
+        BigDecimal col_hea_id = decl.wcalistmap.Mvp_col_hea_id;        
+        #sql [connCtx0] iter = {
+                                SELECT
+                                        a.col_hea_id as col_hea_id,
+                                        a.process_date as process_date,
+                                        b.code_char as code_char,
+                                        a.wca_amount as wca_amount,
+                                        a.mcv_amount as mcv_amount,
+                                        a.ponder_value as ponder_value,
+                                        a.other_mrtg as other_mrtg,
+                                        a.nd_eligibility as nd_eligibility
+                                FROM    wca_history a left outer join currency b on a.cur_id = b.cur_id
+                                WHERE
+                                        a.col_hea_id = :(col_hea_id)
+                                ORDER BY
+                                        a.process_date desc
+                                WITH UR
+                };
+        
+    }
+    
+    public boolean next() throws Exception {
+        return iter.next();
+    }  
+    
+    public void close() {
+        if(iter!=null) {
+            try {
+                iter.close();
+            } catch (Exception ignored) {}
+        }
+    }
+ 
+    
+    public void populateRowData() throws Exception {
+                    
+        Vector row=new Vector();
+        row.add(iter.process_date());  
+        row.add(iter.code_char());
+        row.add(iter.wca_amount());
+        row.add(iter.mcv_amount());
+        row.add(iter.ponder_value());
+        row.add(iter.other_mrtg());
+        row.add(iter.nd_eligibility());
+        
+        Vector unique = new Vector();
+        unique.add(iter.col_hea_id());
+        
+        decl.wcalistmap.tblWCAList.addRow(row,unique);
+        
+
+    }
+}

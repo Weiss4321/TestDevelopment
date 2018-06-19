@@ -1,0 +1,50 @@
+package hr.vestigo.modules.collateral.jcics.co06;
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+ 
+import java.sql.Date;
+import java.sql.SQLException;
+import hr.vestigo.modules.collateral.common.yoyE.*;
+ 
+     
+public class CO06C extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co06/CO06C.sqlj,v 1.1 2014/03/31 09:10:42 hrazst Exp $";
+    private DeclCO06 decl = null;
+
+    public CO06C(DeclCO06 decl) { 
+        this.decl = decl;
+    }  
+        
+    public void execute(TransactionContext tc) throws Exception {
+
+        String account=decl.cashdepexceptionaccountcheckmapping.Coll_txtDepAcc;
+        tc.debug ( "CO06C account = " + account);
+        int count=0;
+        ConnCtx ctx = tc.getContext(); 
+        
+        try{
+
+            #sql [ctx] {
+                        SELECT 
+                            count(*)    
+                        INTO 
+                            :count     
+                        FROM CASHDEP_EXCEPTION a 
+                        WHERE a.date_until = '9999-12-31' 
+                        AND a.cde_account = :account
+                        WITH UR
+            };     
+        }catch(SQLException se){            
+            tc.debug ( "......CO06C.sqlj check cashdep exception account = " + account);
+            tc.debug ( "......CO06C.sqlj check cashdep exception account SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO06C.sqlj check cashdep exception account SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO06C.sqlj check cashdep exception account SQL Message " + se.getMessage());
+            se.printStackTrace();
+            throw new VestigoTMException(1, "Transaction CO06B: Error selecting coll_cesija ","err411a", null);
+        } 
+        if(count==0) decl.cashdepexceptionaccountcheckmapping.IsCashDepExceptionAccount=false;
+        else decl.cashdepexceptionaccountcheckmapping.IsCashDepExceptionAccount=true;        
+    }      
+} 
+  

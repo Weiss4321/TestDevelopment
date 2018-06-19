@@ -1,0 +1,107 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+select * from payment_order;
+
+select * from CUST_BILL_EXCH;
+
+update CUST_BILL_EXCH set maturity_date = '2014-11-12' where cus_bil_exc_id in (3093980823);
+
+commit;
+
+
+            SELECT
+                    cus_bil_exc_id,
+                    cus_bill_exch_no,
+                    cus_bill_ext_no,
+                    payer_cus_id,
+                    payer_tax_number,
+                    payer_reg_no,
+                    payer_name,
+                    payer_address,
+                    payer_place,
+                    payer_acc_no,
+                    master_acc_no,
+                    ben_iban,
+                    ben_cus_id,
+                    ben_tax_number,
+                    ben_reg_no,
+                    ben_name,
+                    ben_address,
+                    credit_ref_typ,
+                    credit_ref_no,
+                    debit_ref_typ,
+                    debit_ref_no,
+                    ext_int_flag,
+                    payment_method,
+                    amount,
+                    cur_id,
+                    maturity_date,
+                    issue_date,
+                    status,
+                    chg_stat_reason,
+                    paid_amount,
+                    collected_amount,
+                    order_trn,
+                    pay_ord_id,
+                    payment_amount,
+                    payment_date,
+                    order_trn_last,
+                    pay_ord_id_last,
+                    paym_amount_last,
+                    payment_date_last,
+                    recording_time,
+                    eve_id,
+                    use_id,
+                    recording_use_id,
+                    bank_sign,
+                    user_lock                
+                FROM 
+                    cust_bill_exch 
+                WHERE  
+                    maturity_date = current_date;
+
+
+------------------------------------------------------------------------------------------------------------
+
+
+SELECT
+SUM(tabl.balance) balance,
+SUM(tabl.overdraft_amount) overdraft_amount,
+SUM(tabl.reserved_amount) reserved_amount,
+SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount) avail_balance,
+c.code_num,
+tabl.cur_id,
+er.buy_rate_fc,
+er.buy_rate_fc*
+(
+   SUM(tabl.balance+tabl.overdraft_amount-tabl.reserved_amount)
+)
+domestic_balance
+FROM EXCHANGE_RATE er,
+(SELECT ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM balance_announce ba WHERE ba.cus_acc_id =  1843271 AND ba.cus_id = 2206904251 AND ba.bank_sign = 'RB' UNION ALL SELECT cb.cus_acc_id, cb.balance, cb.cur_id,
+ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx FROM cusacc_balance_last cb
+WHERE cb.cus_acc_id = 1843271  AND cb.cus_id = 2206904251 AND cb.cus_acc_report = '1' AND cb.avail_balance_flag = '1' AND cb.bank_sign = 'RB' ) tabl,
+currency c
+WHERE c.cur_id = tabl.cur_id
+AND er.cur_id = tabl.cur_id
+AND process_date between er.date_from
+and er.date_until
+
+
+GROUP BY c.code_num,tabl.cur_id,er.buy_rate_fc
+ORDER BY CASE WHEN tabl.cur_id = cur_id mjenice THEN 1 WHEN tabl.cur_id!=cur_id mjenice THEN 2 END,
+c.code_num asc;
+
+--------------------------------
+SELECT ba.cus_acc_id, ba.cur_id, ba.overdraft_amount, ba.reserved_amount, ba.ann_incoming_trx,ba.ann_outgoing_trx 
+FROM balance_announce ba WHERE ba.cus_acc_id =  1843271 AND ba.cus_id = 2206904251 AND ba.bank_sign = 'RB';
+
+----------------------------------------------------------------------------
+
+select * from balance_announce;
+
+select * from customer_account;
+
+
+
+select * from cusacc_balance_last where cus_acc_id =  1843271;                    

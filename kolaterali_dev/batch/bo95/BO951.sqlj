@@ -1,0 +1,140 @@
+package hr.vestigo.modules.collateral.batch.bo95;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy6.GCTCData;
+
+import java.sql.Date;
+import java.sql.SQLException;
+
+import java.math.BigDecimal;
+
+
+public class BO951
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo95/BO951.sqlj,v 1.5 2017/03/22 10:32:02 hrazst Exp $";
+    
+    private BatchContext batchContext; 
+    private ConnCtx connCtx;
+
+    #sql iterator CollateralIterator with (holdability = true)( 
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_cat_id,
+        BigDecimal col_type_id,
+        BigDecimal col_sub_id,
+        BigDecimal col_gro_id,
+        BigDecimal gctc_id,
+        BigDecimal endorsement_type_id,
+        BigDecimal object_type_id,
+        BigDecimal property_type_id
+    );
+    
+    
+    public BO951(BatchContext batchContext) throws Exception
+    {
+        this.batchContext = batchContext;
+        this.connCtx = batchContext.getContext();
+    }
+    
+    
+    /**
+     * Metoda dohvaæa kolaterale koji ulaze u obradu.
+     * @return iterator s podacima
+     */
+    public CollateralIterator selectCollaterals() throws Exception
+    {
+        CollateralIterator iter = null;
+        try
+        {
+            batchContext.startStopWatch("BO951.selectCollaterals");
+            #sql [connCtx] iter = {
+                SELECT  
+                    ch.col_hea_id          AS col_hea_id, 
+                    ch.col_num             AS col_num,
+                    ch.col_cat_id          AS col_cat_id,
+                    ch.col_type_id         AS col_type_id,
+                    podvrs.col_sub_id      AS col_sub_id,
+                    podgr.col_gro_id       AS col_gro_id,
+                    ch.gctc_id             AS gctc_id,
+                    ch.endorsement_type_id AS endorsement_type_id,
+                    ch.object_type_id      AS object_type_id,
+                    ch.property_type_id    AS property_type_id
+                FROM coll_head ch
+                LEFT OUTER JOIN (
+                    SELECT 
+                        col_hea_id,
+                        real_est_type   AS col_sub_id
+                    FROM coll_restate
+                    UNION
+                    SELECT
+                        col_hea_id,
+                        veh_group_id    AS col_sub_id
+                    FROM coll_vehicle
+                    UNION
+                    SELECT
+                        col_hea_id,
+                        ves_typ_id      AS col_sub_id
+                        FROM coll_vessel
+                    UNION
+                    SELECT
+                        col_hea_id,
+                        mov_typ_id      AS col_sub_id
+                    FROM coll_movable 
+                ) podvrs on (ch.col_hea_id = podvrs.col_hea_id)
+                LEFT OUTER JOIN (
+                    SELECT 
+                        col_hea_id,
+                        re_sub_type_id AS col_gro_id
+                    FROM coll_restate
+                    UNION
+                    SELECT
+                        col_hea_id,
+                        veh_subgr_id   AS col_gro_id
+                    FROM coll_vehicle
+                ) podgr ON (ch.col_hea_id = podgr.col_hea_id)
+                WHERE ch.collateral_status IN ('0','1','2','3')
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Dogodila se nepredvidjena greska kod dohvata kolaterala za azuriranje!", ex);
+            throw ex;
+        }
+        finally
+        {
+            batchContext.stopStopWatch("BO951.selectCollaterals");
+        }
+        return iter;
+    }
+
+     
+    public void updateCollHead(GCTCData data, BigDecimal col_hea_id, String col_num) throws Exception 
+    {
+        batchContext.startStopWatch("BO951.updateCollHead");
+        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+        //use_id=:(use_id), user_lock=current timestamp         
+        try
+        { 
+            #sql [connCtx]{
+                UPDATE  
+                    coll_head 
+                SET     
+                    gctc_id = :(data.gctc_id),
+                    endorsement_type_id = :(data.endorsement_type_id),
+                    object_type_id = :(data.object_type_id),
+                    property_type_id = :(data.property_type_id),
+                    CHG_NOM_VAL_PROC_TS = current timestamp
+                WHERE
+                    col_hea_id = :(col_hea_id) 
+            };    
+        }
+        catch(SQLException ex)
+        {
+            throw ex;
+        }
+        batchContext.stopStopWatch("BO951.updateCollHead");
+    }
+}

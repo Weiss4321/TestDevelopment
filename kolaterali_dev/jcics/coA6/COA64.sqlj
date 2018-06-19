@@ -1,0 +1,73 @@
+package hr.vestigo.modules.collateral.jcics.coA6;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;   
+
+  
+public class COA64 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA6/COA64.sqlj,v 1.3 2013/04/18 10:25:14 hramkr Exp $";
+
+    public DeclCOA6 decl;
+    
+    public COA64(DeclCOA6 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        try
+        {    
+             
+            #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+        
+            #sql [ctx]
+            {
+                SELECT distinct
+                    a.cas_exc_id,
+                    a.cde_account,
+                    a.status,
+                    a.date_from,
+                    a.date_until,
+                    a.user_lock,
+                    a.use_id,
+                    b.login,
+                    b.user_name,
+                    d.register_no,
+                    d.name
+                INTO
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtCas_Exc_Id),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtCus_Acc_No),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtStatus),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtDateFrom),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtDateUntil),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtUserLock),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtUseId),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtUserLogin),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtUserName),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtRegisterNo),
+                    :(decl.collcashdepexceptiondetailm.CollCashDepExceptionDialog_txtName)
+                FROM
+                    cashdep_exception a inner join app_user b on a.use_id = b.use_id
+                    left outer join coll_cashdep c on a.cde_account = c.cde_account
+                    left outer join coll_owner e on c.col_hea_id = e.col_hea_id
+                    left outer join customer d on e.cus_id = d.cus_id
+                WHERE
+                    a.cas_exc_id = :(decl.collcashdepexceptiondetailm.cas_exc_id)
+            };  
+         }  
+        catch(SQLException ex)
+        {
+                if (tc.getSQLExHandler().isEmptyRowset(ex)) {
+                    throw new VestigoTMException(1, "Transaction COA66: Error select cashdep owner!","wrnclt187", null);
+                } 
+                else 
+                    throw new VestigoTMException(1, "Transaction COA66: Error select cashdep owner!","err411a", null);
+        }
+    } 
+} 

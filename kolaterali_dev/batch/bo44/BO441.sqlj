@@ -1,0 +1,526 @@
+package hr.vestigo.modules.collateral.batch.bo44;
+
+import java.sql.*;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+
+
+public class BO441
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo44/BO441.sqlj,v 1.16 2016/09/13 11:00:43 hrakis Exp $";
+    
+    private BatchContext batchContext;
+    private ConnCtx connCtx;
+    
+    #sql iterator PolicyIterator with (holdability = true)( 
+		BigDecimal ip_id,
+		String b2asset_class,
+		String oj_code,
+		String oj_name,
+		String col_num,
+		String collateral_status, 
+		String ip_code,
+		String ic_name, 
+		Date valid_until,
+		Date paid_from, 
+		Date paid_until,
+		String osiguranik,
+		String valuta,
+		BigDecimal osigurana_svota,
+		String status_police,
+		String ip_spec_stat,
+		String spec_stat,
+		String id_ugovaratelja,
+		String ugovaratelj,
+		String id_korisnika,
+		String korisnik,
+        String module_code,
+		String plasman,
+		String dwh_status, 
+		String status_u_modulu
+    );
+
+    #sql iterator CollateralPolicyIterator with (holdability = true)( 
+        BigDecimal ip_id,
+        String b2asset_class,
+        String oj_code,
+        String oj_name,
+        String col_num,
+        String collateral_status, 
+        String ip_code,
+        String ic_name, 
+        String osig_reg_no,
+        String osiguranik,
+        Date valid_until,
+        Date paid_from, 
+        Date paid_until,
+        String valuta,
+        BigDecimal osigurana_svota,
+        BigDecimal akum_amount,
+        String status_police,
+        String ip_spec_stat,
+        String spec_stat,
+        String id_ugovaratelja,
+        String ugovaratelj,
+        String id_korisnika,
+        String korisnik,
+        String module_code,
+        String plasman,
+        String dwh_status, 
+        String status_u_modulu
+    );
+    
+    #sql iterator PolicyIteratorShort with (holdability = true)( 
+        BigDecimal ip_id,
+        String col_num,
+        String ip_code,
+        String ic_name, 
+        Date valid_until,
+        Date paid_from, 
+        Date paid_until,
+        String id_osiguranika,
+        String osiguranik,
+        String valuta,
+        BigDecimal osigurana_svota,
+        String status_police,
+        String ip_spec_stat,
+        String spec_stat,
+        String module_code,
+        String status_u_modulu,
+        String dwh_status,
+        BigDecimal use_id
+    );
+    
+
+    public BO441(BatchContext batchContext)
+    {
+        this.batchContext = batchContext;
+        try {
+            this.connCtx = batchContext.getContext();
+        }
+        catch (SQLException e) {
+            batchContext.debug("Nema connCtx u podtransakciji!");
+        }
+    }
+	
+	/**
+	 * Metoda ubacuje zapis u EVENT tablicu.
+	 * @return EVE_ID ubaèenog zapisa ili null ako se dogodila greška.
+	 */
+    public BigDecimal insertIntoEvent()
+	{
+        try
+        {
+        	BigDecimal eve_id = null;
+        	YXYB0 eve1 = new YXYB0(batchContext);
+        	YXYD0 genId = new YXYD0(connCtx);
+
+        	batchContext.beginTransaction();
+        	eve_id = genId.getNewId();
+
+        	HashMap event = new HashMap();
+        	event.put("eve_id", eve_id);
+        	event.put("eve_typ_id", new BigDecimal("41568673"));
+        	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+        	event.put("cmnt", "Izvješæe o policama");
+        	event.put("use_id", batchContext.getUserID());
+        	event.put("ext_event_code", null);
+        	event.put("ext_event_num", null);
+        	event.put("bank_sign", batchContext.getBankSign());
+        	batchContext.debug("eve_id" + event.get("eve_id"));
+
+        	eve1.insertEvent(event);
+        	batchContext.commitTransaction();
+        	batchContext.updateEveID(eve_id);
+        	return eve_id;
+        }
+        catch(Exception ex)
+        {
+            batchContext.error("Greska pri insertiranju u event tablicu!", ex);
+            return null;
+        }
+    }
+
+    
+    /**
+    * Metoda koja dohvaæa sve aktivne kolaterale koji imaju police osiguranja imovine i sve njihove police.
+	* @param org_uni_id ID organizacijske jedinice kojoj pripada plasman vezan za kolateral. Ako je null, uzimaju se svi.
+	* @param client_type Vrsta klijenta. "P" za pravne osobe ili "F" za fizièke osobe. Ako je null, uzimaju se svi.
+	* @return Iterator. Ako je došlo do greške, vraæa null.
+	*/
+    public PolicyIterator selectPolicies(BigDecimal org_uni_id, String client_type)
+	{
+		int filterByOrgUnit = 0;
+		if(org_uni_id != null) filterByOrgUnit = 1;
+		
+		int filterByClientType = 0;
+		if("P".equals(client_type)) filterByClientType = 1;
+		else if("F".equals(client_type)) filterByClientType = 2;
+    	
+    	PolicyIterator iter = null;
+		try
+		{
+			#sql [connCtx] iter = {
+				SELECT DISTINCT
+					b.ip_id 			AS ip_id,
+					f.b2asset_class 	AS b2asset_class,
+					i.code 				AS oj_code,
+					i.name 				AS oj_name,
+					a.col_num 			AS col_num,
+					a.collateral_status	AS collateral_status, 
+					b.ip_code			AS ip_code,
+					c.ic_name			AS ic_name, 
+					b.ip_date_sec_val	AS valid_until,
+					b.ip_vali_from		AS paid_from, 
+					b.ip_vali_until		AS paid_until,
+					cc.name				AS osiguranik,
+					h.code_char			AS valuta,
+					b.ip_secu_val		AS osigurana_svota,
+					b.ip_act_noact		AS status_police,
+					b.ip_spec_stat		AS ip_spec_stat,
+					j.sys_code_desc		AS spec_stat,
+					ccc.register_no		AS id_ugovaratelja,
+					ccc.name			AS ugovaratelj,
+					g.register_no		AS id_korisnika,
+					g.name				AS korisnik,
+                    f.module_code       AS module_code,
+					f.cus_acc_no		AS plasman,
+					f.cus_acc_status	AS dwh_status, 
+					f.cus_acc_orig_st	AS status_u_modulu
+				FROM
+					coll_head a,
+					insurance_policy b LEFT OUTER JOIN customer ccc ON b.ip_contractor = ccc.cus_id,
+					insurance_policy bb LEFT OUTER JOIN customer cc ON bb.ip_pol_holder = cc.cus_id, 
+					insu_company c, 
+					coll_hf_prior d,
+					loan_beneficiary e,
+					cusacc_exposure f,
+					customer g,
+					currency h,
+					organization_unit i,
+					system_code_value j
+				WHERE
+					a.col_hea_id = b.col_hea_id AND
+					b.ip_id = bb.ip_id AND
+					a.collateral_status IN ('0','1','2','3') AND
+					b.ip_ic_id = c.ic_id AND
+					a.col_hea_id = d.hf_coll_head_id AND
+					d.hf_status = 'A' AND
+					d.coll_hf_prior_id = e.coll_hf_prior_id AND
+					e.status = 'A' AND
+					(e.la_acc_id = f.cus_acc_id OR e.acc_no = f.cus_acc_no OR e.request_no = f.request_no) AND
+					(:filterByOrgUnit = 0 OR f.org_uni_id = :org_uni_id) AND					
+					(:filterByClientType = 0 OR (:filterByClientType = 1 AND f.b2asset_class NOT IN ('1','36')) OR (:filterByClientType = 2 AND f.b2asset_class IN ('1','36'))) AND
+					f.cus_id = g.cus_id AND
+					b.ip_cur_id = h.cur_id AND
+					f.org_uni_id = i.org_uni_id AND
+					b.ip_spec_stat = j.sys_code_value AND
+					j.sys_cod_id = 'clt_pol_spec_st'
+				ORDER BY 5, 11 DESC, 1
+				WITH UR
+			};
+		}
+		catch(SQLException ex)
+		{
+			batchContext.error("Greska kod dohvacanja polica!", ex);
+		}
+		return iter;
+	}
+    
+    /**
+     * Metoda koja dohvaæa sve aktivne kolaterale koji imaju police osiguranja imovine i sve njihove police.
+     * Nema polica kojima je "Datum važenja do" istekao prije više od 6 mjeseci.
+     * @param org_uni_id ID organizacijske jedinice kojoj pripada plasman vezan za kolateral. Ako je null, uzimaju se svi.
+     * @param client_type Vrsta klijenta. "P" za pravne osobe ili "F" za fizièke osobe. Ako je null, uzimaju se svi.
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+     public PolicyIteratorShort selectPoliciesShort(BigDecimal org_uni_id, String client_type)
+     {
+         int filterByOrgUnit = 0;
+         if(org_uni_id != null) filterByOrgUnit = 1;
+         
+         int filterByClientType = 0;
+         if("P".equals(client_type)) filterByClientType = 1;
+         else if("F".equals(client_type)) filterByClientType = 2;
+         
+         PolicyIteratorShort iter = null;
+         try
+         {
+             #sql [connCtx] iter = {
+                 SELECT DISTINCT
+                     b.ip_id             AS ip_id,
+                     a.col_num           AS col_num,
+                     b.ip_code           AS ip_code,
+                     c.ic_name           AS ic_name, 
+                     b.ip_date_sec_val   AS valid_until,
+                     b.ip_vali_from      AS paid_from, 
+                     b.ip_vali_until     AS paid_until,
+                     cc.register_no      AS id_osiguranika,
+                     cc.name             AS osiguranik,
+                     h.code_char         AS valuta,
+                     b.ip_secu_val       AS osigurana_svota,
+                     b.ip_act_noact      AS status_police,
+                     b.ip_spec_stat      AS ip_spec_stat,
+                     j.sys_code_desc     AS spec_stat,
+                     f.module_code       AS module_code,
+                     f.cus_acc_orig_st   AS status_u_modulu,
+                     f.cus_acc_status    AS dwh_status,
+                     g.rsm_use_id        AS use_id
+                 FROM
+                     coll_head a,
+                     insurance_policy b LEFT OUTER JOIN customer ccc ON b.ip_contractor = ccc.cus_id,
+                     insurance_policy bb LEFT OUTER JOIN customer cc ON bb.ip_pol_holder = cc.cus_id, 
+                     insu_company c, 
+                     coll_hf_prior d,
+                     loan_beneficiary e,
+                     cusacc_exposure f,
+                     customer g,
+                     currency h,
+                     organization_unit i,
+                     system_code_value j
+                 WHERE
+                     a.col_hea_id = b.col_hea_id AND
+                     b.ip_id = bb.ip_id AND
+                     a.collateral_status IN ('0','1','2','3') AND
+                     b.ip_ic_id = c.ic_id AND
+                     a.col_hea_id = d.hf_coll_head_id AND
+                     d.hf_status = 'A' AND
+                     d.coll_hf_prior_id = e.coll_hf_prior_id AND
+                     e.status = 'A' AND
+                     (e.la_acc_id = f.cus_acc_id OR e.acc_no = f.cus_acc_no OR e.request_no = f.request_no) AND
+                     (:filterByOrgUnit = 0 OR f.org_uni_id = :org_uni_id) AND                    
+                     (:filterByClientType = 0 OR (:filterByClientType = 1 AND f.b2asset_class NOT IN ('1','36')) OR (:filterByClientType = 2 AND f.b2asset_class IN ('1','36'))) AND
+                     f.cus_id = g.cus_id AND
+                     b.ip_cur_id = h.cur_id AND
+                     f.org_uni_id = i.org_uni_id AND
+                     b.ip_spec_stat = j.sys_code_value AND
+                     j.sys_cod_id = 'clt_pol_spec_st'
+                 ORDER BY a.col_num, b.ip_vali_until desc, b.ip_id 
+                 WITH UR
+             };
+         }
+         catch(SQLException ex)
+         {
+             batchContext.error("Greska kod dohvacanja polica!", ex);
+         }
+         return iter;
+     }
+     
+     
+     public void selectAppUser(CollData data) throws SQLException
+     {
+         try
+         {
+             #sql[connCtx] {
+                 SELECT 
+                     b.login, 
+                     b.user_name, 
+                     d.code, 
+                     d.name
+                 INTO 
+                     :(data.referent_login),
+                     :(data.referent_name),
+                     :(data.referent_org_code),
+                     :(data.referent_org_name)
+                 FROM app_user b 
+                 LEFT OUTER JOIN user_signing c ON b.use_id = c.use_id
+                 LEFT OUTER JOIN organization_unit d ON c.org_uni_id = d.org_uni_id
+                 WHERE b.use_id = :(data.use_id)
+                 AND c.default_flag = 'D'
+                 FETCH FIRST ROW ONLY
+                 WITH UR
+             };
+         }
+         catch (SQLException ex)
+         {
+             if (batchContext.getSQLExHandler().isEmptyRowset(ex))
+             {
+                 try
+                 {
+                     #sql[connCtx] {
+                         SELECT 
+                             b.login, 
+                             b.user_name, 
+                             d.code, 
+                             d.name
+                         INTO 
+                             :(data.referent_login),
+                             :(data.referent_name),
+                             :(data.referent_org_code),
+                             :(data.referent_org_name)
+                         FROM app_user b 
+                         LEFT OUTER JOIN user_signing c ON b.use_id = c.use_id
+                         LEFT OUTER JOIN organization_unit d ON c.org_uni_id = d.org_uni_id
+                         WHERE b.use_id = :(data.use_id)
+                         FETCH FIRST ROW ONLY
+                         WITH UR
+                     };
+                 }
+                 catch (SQLException ex2)
+                 {
+                     if (!batchContext.getSQLExHandler().isEmptyRowset(ex2))
+                     {
+                         batchContext.error("Dogodila se nepredvidjena greska kod dohvata podataka o referentu (USE_ID=" + data.use_id + ")!", ex2);
+                         throw ex;
+                     }
+                 }
+             }
+             else
+             {
+                 batchContext.error("Dogodila se nepredvidjena greska kod dohvata podataka o referentu (USE_ID=" + data.use_id + ")!", ex);
+                 throw ex;
+             }
+         }
+     }
+
+    
+    /**
+    * Metoda koja dohvaæa podatke o policama osiguranja koje su kolaterali.
+    * @return Iterator. Ako je došlo do greške, vraæa null.
+    */
+    public CollateralPolicyIterator selectCollateralPolicies()
+    {
+        CollateralPolicyIterator iter = null;
+        try
+        {
+            #sql [connCtx] iter = {
+                SELECT DISTINCT
+                    b.col_ins_id        AS ip_id,
+                    f.b2asset_class     AS b2asset_class,
+                    i.code              AS oj_code,
+                    i.name              AS oj_name,
+                    a.col_num           AS col_num,
+                    a.collateral_status AS collateral_status, 
+                    b.ip_code           AS ip_code,
+                    c.ic_name           AS ic_name, 
+                    cc.register_no      AS osig_reg_no,
+                    cc.name             AS osiguranik,
+                    b.ip_valid_until    AS valid_until,
+                    b.ip_paid_from      AS paid_from, 
+                    b.ip_paid_until     AS paid_until,
+                    h.code_char         AS valuta,
+                    b.ip_nom_value      AS osigurana_svota,
+                    a.real_est_nomi_valu AS akum_amount,
+                    b.ip_status         AS status_police,
+                    b.ip_spec_stat      AS ip_spec_stat,
+                    j.sys_code_desc     AS spec_stat,
+                    ccc.register_no     AS id_ugovaratelja,
+                    ccc.name            AS ugovaratelj,
+                    g.register_no       AS id_korisnika,
+                    g.name              AS korisnik,
+                    f.module_code       AS module_code,
+                    f.cus_acc_no        AS plasman,
+                    f.cus_acc_status    AS dwh_status, 
+                    f.cus_acc_orig_st   AS status_u_modulu
+                FROM
+                    coll_head a,
+                    coll_inspolicy b LEFT OUTER JOIN system_code_value j ON (b.ip_spec_stat = j.sys_code_value AND j.sys_cod_id = 'clt_pol_spec_st'),
+                    insu_company c, 
+                    loan_beneficiary e,
+                    cusacc_exposure f,
+                    customer g,
+                    currency h,
+                    organization_unit i,
+                    customer cc,
+                    customer ccc
+                WHERE
+                    a.col_hea_id = b.col_hea_id AND
+                    a.collateral_status IN ('0','1','2','3') AND
+                    b.ip_cus_id = c.ic_id AND
+                    a.col_hea_id = e.col_hea_id AND
+                    e.status = 'A' AND
+                    (e.la_acc_id = f.cus_acc_id OR e.acc_no = f.cus_acc_no OR e.request_no = f.request_no) AND
+                    f.cus_id = g.cus_id AND
+                    b.ip_nom_cur_id = h.cur_id AND
+                    f.org_uni_id = i.org_uni_id AND
+                    b.ins_cus_id = cc.cus_id AND
+                    b.con_cus_id = ccc.cus_id  
+                ORDER BY 5, 13 DESC
+                WITH UR
+            };
+        }
+        catch(SQLException ex)
+        {
+            batchContext.error("Greska kod dohvacanja polica koje su kolaterali!", ex);
+        }
+        return iter;
+    }
+
+    /**
+     * Metoda koja dohvaæa podatke o policama osiguranja koje su NEAKTIVNI kolaterali.
+     * @return Iterator. Ako je došlo do greške, vraæa null.
+     */
+     public CollateralPolicyIterator selectInactiveCollateralPolicies()
+     {
+         CollateralPolicyIterator iter = null;
+         try
+         {
+             #sql [connCtx] iter = {
+                 SELECT DISTINCT
+                     b.col_ins_id        AS ip_id,
+                     f.b2asset_class     AS b2asset_class,
+                     i.code              AS oj_code,
+                     i.name              AS oj_name,
+                     a.col_num           AS col_num,
+                     a.collateral_status AS collateral_status, 
+                     b.ip_code           AS ip_code,
+                     c.ic_name           AS ic_name, 
+                     cc.register_no      AS osig_reg_no,
+                     cc.name             AS osiguranik,
+                     b.ip_valid_until    AS valid_until,
+                     b.ip_paid_from      AS paid_from, 
+                     b.ip_paid_until     AS paid_until,
+                     h.code_char         AS valuta,
+                     b.ip_nom_value      AS osigurana_svota,
+                     a.real_est_nomi_valu AS akum_amount,
+                     b.ip_status         AS status_police,
+                     b.ip_spec_stat      AS ip_spec_stat,
+                     j.sys_code_desc     AS spec_stat,
+                     ccc.register_no     AS id_ugovaratelja,
+                     ccc.name            AS ugovaratelj,
+                     g.register_no       AS id_korisnika,
+                     g.name              AS korisnik,
+                     f.module_code       AS module_code,
+                     f.cus_acc_no        AS plasman,
+                     f.cus_acc_status    AS dwh_status, 
+                     f.cus_acc_orig_st   AS status_u_modulu
+                 FROM
+                     coll_head a,
+                     coll_inspolicy b LEFT OUTER JOIN system_code_value j ON (b.ip_spec_stat = j.sys_code_value AND j.sys_cod_id = 'clt_pol_spec_st'),
+                     insu_company c, 
+                     loan_beneficiary e,
+                     cusacc_exposure f,
+                     customer g,
+                     currency h,
+                     organization_unit i,
+                     customer cc,
+                     customer ccc
+                 WHERE
+                     a.col_hea_id = b.col_hea_id AND
+                     a.collateral_status IN ('N') AND
+                     b.ip_cus_id = c.ic_id AND
+                     a.col_hea_id = e.col_hea_id AND
+                     e.status = 'A' AND
+                     (e.la_acc_id = f.cus_acc_id OR e.acc_no = f.cus_acc_no OR e.request_no = f.request_no) AND
+                     f.cus_id = g.cus_id AND
+                     b.ip_nom_cur_id = h.cur_id AND
+                     f.org_uni_id = i.org_uni_id AND
+                     b.ins_cus_id = cc.cus_id AND
+                     b.con_cus_id = ccc.cus_id  
+                 ORDER BY 5, 13 DESC
+                 WITH UR
+             };
+         }
+         catch(SQLException ex)
+         {
+             batchContext.error("Greska kod dohvacanja polica koje su NEAKTIVNI kolaterali!", ex);
+         }
+         return iter;
+     }
+}

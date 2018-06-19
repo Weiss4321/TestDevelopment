@@ -1,0 +1,253 @@
+package hr.vestigo.modules.collateral.jcics.co21;
+
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
+import hr.vestigo.framework.common.TableData;
+
+public class CO218 extends RemoteTransaction {
+// akcija vrati collateral u obradu
+// insert u tbl. COLL_LIST_Q sloga za akciju VRATI U OBRADU
+// update statusa collaterala, ostalih statusa na pocetne prema parametrizaciji, workflow indikatora
+	
+// VRACA SVE PREDMETE IZ PRETHODNOG QBE (u table-u) odabranom referentu u odabranoj org. jedinici
+// treba napraviti update org_uni_id i use_id u tbl. COLL_HEAD	
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co21/CO218.sqlj,v 1.3 2016/12/06 09:03:09 hrazst Exp $";
+	 
+	private DeclCO21 d = null;
+
+	private Date CURR_DATE = null;
+	private Timestamp CREATE_DATE_TIME = null;
+	private CollListQData plq=new CollListQData();   	
+	public CO218(DeclCO21 d) {
+		this.d = d;
+	}
+	
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+		
+		#sql[ctx] { 
+			SELECT current date, current timestamp 
+			INTO :(CURR_DATE), :(CREATE_DATE_TIME)
+			FROM sysibm.sysdummy1 
+		};		
+		YOY60 YOY60=new YOY60(tc);
+		
+		HashMap selected=d.collsndbackall.listSelected;
+		//ako je lista selektiranih popunjena znaci da su kolaterali za vracanje dosli sa liste aktivnih koji su selektirani klikom na checkbox
+		//tako da ce se oni varatiti, a ako nije popunjena onda je kliknut gumb vrati sve i onda se vracaju kolaterali iz TableData-e tako da se zato 
+		//prebacuju u listu selektiranih, jer se po njoj iterira
+		if(selected==null || selected.size()==0){
+	        TableData tab_input =  d.collsndbackall.tblColWorkList;
+	        Vector data = tab_input.getUnique();
+	        for (int i = 0; i < tab_input.getUnique().size(); i++) {
+	            Vector row_in = (Vector) data.elementAt(i);
+	            selected.put((BigDecimal) row_in.elementAt(0),(Timestamp) row_in.elementAt(7));
+	        }
+		}
+		java.util.Iterator keys= selected.keySet().iterator();		
+		int i=0;
+		while (keys.hasNext()) {
+		    i++;
+			reset_obj(tc);
+			BigDecimal col_hea_id =(BigDecimal) keys.next();
+			Timestamp user_lock =(Timestamp) selected.get(col_hea_id);
+ 
+			tc.info("CO218 -> Vracam col_hea_id=" + col_hea_id + ", user_lock="+user_lock);		    
+	
+			String mortgage_status = "";
+			String collateral_status = "";
+			String workflow_indic= "";
+			String cover_indic= "";
+			String basic_data_status= "";
+			String coll_data_status= "";
+
+			String mortgage_flag = "";
+			String cover_flag = "";
+			String coll_data_flag ="";
+			
+// citam retke iz tabele i za svaki:
+// 1. dohvatim parametrizaciju iz COLLATERAL_TYPE
+// 2. zovem common za insert tijeka obrade
+// 3. update sloga (org.jed., user) u tbl. COLL_HEAD		
+		
+			#sql[ctx]{
+					SELECT
+							a.mortgage_status,
+							a.collateral_status,
+							a.workflow_indic,
+							a.cover_indic, 
+							a.basic_data_status,
+							a.coll_data_status,
+							b.mortgage_flag,
+							b.cover_flag,
+							b.coll_data_flag
+					INTO
+							:(mortgage_status),
+							:(collateral_status),
+							:(workflow_indic),
+							:(cover_indic),
+							:(basic_data_status),
+							:(coll_data_status),
+							:(mortgage_flag),
+							:(cover_flag),
+							:(coll_data_flag)
+					FROM
+							coll_head a, collateral_type b
+					WHERE
+							a.col_hea_id=:(col_hea_id)
+					AND 	
+							a.collateral_status=:(d.collsndbackall.source_status)
+					AND
+							a.col_type_id = b.coll_type_id
+			};  
+ 
+			tc.info("RB: " + i + "...COLL_HEA_ID:...." + col_hea_id);
+			tc.info("USER LOCK:...." + user_lock);
+			
+			tc.info("BASIC_DATA_STATUS:...." + basic_data_status);
+			tc.info("WORKFLOW_INDIC:...." + workflow_indic);				
+			tc.info("SOURCE_COLLATERAL_STATUS:...." + d.collsndbackall.source_status);		
+			tc.info("MORTGAGE_STATUS...." + mortgage_status);
+			tc.info("COVER_INDIC:...." + cover_indic); 
+			tc.info("COLL_DATA_STATUS:...." + coll_data_status);
+		
+			tc.info("MORTGAGE_FLAG...." + mortgage_flag);
+			tc.info("COVER_FLAG:...." + cover_flag);
+			tc.info("COLL_DATA_FLAG:...." + coll_data_flag);
+		
+			tc.info("PORUKA .....:" + d.collsndbackall.poruka);				
+	
+ 
+			plq.col_hea_id=col_hea_id;	
+			plq.status="1";
+			plq.income_time = CREATE_DATE_TIME;
+			plq.use_id=d.collsndbackall.use_id;	
+			plq.release_time = CREATE_DATE_TIME;
+			plq.cmnt=d.collsndbackall.CollListQ_txaCmnt;
+			plq.action_type=d.collsndbackall.action_type;		 
+			plq.org_uni_id = d.collsndbackall.org_uni_id;
+			plq.source_list = d.collsndbackall.source_list;
+			plq.status_source_list = "1";
+			plq.target_list = d.collsndbackall.target_list;
+			plq.status_target_list = "0";
+		  
+			plq.target_list_use_id = d.collsndbackall.use_id_asg;
+			plq.target_list_org_uni_id = d.collsndbackall.org_uni_id_asg;
+    
+			tc.info("COL_HEA_ID .....:" + col_hea_id);
+			tc.info("STATUS......:"+plq.status);
+			tc.info("INCOME_TIME ....."+plq.income_time);
+			tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+			tc.info("USE_ID....."+plq.use_id);
+			tc.info("RELEASE TIME .....:" + plq.release_time);
+			tc.info("CMNT......:"+plq.cmnt);
+			tc.info("ACTION_TYPE ....."+plq.action_type);
+			tc.info("SOURCE_LIST .....:" + plq.source_list);
+			tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		
+			tc.info("TARGET_LIST ....."+plq.target_list);
+			tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+			tc.info("ORG_UNI_ID_TARGET....."+plq.target_list_org_uni_id);
+			tc.info("USE_ID_TARGET....."+plq.target_list_use_id);		
+		 
+			YOY60.update_insert_CollListQ(plq); 
+		
+			// napraviti update statusa		
+
+			collateral_status = d.collsndbackall.proc_status;  // 0 - collateral je vracen u unos
+			basic_data_status = "0";
+			workflow_indic = d.collsndbackall.workflow_indic;
+// ostale statuse staviti na "0" osim ako parametrizacijom nije definirano da se ne unose (X)
+		
+			if (mortgage_flag.equalsIgnoreCase("X"))
+				mortgage_status = "X";
+			else 
+				mortgage_status = "0";
+		
+			if (cover_flag.equalsIgnoreCase("X"))
+				cover_indic = "X";
+			else 
+				cover_indic = "0";
+		
+			if (coll_data_flag.equalsIgnoreCase("X"))
+				coll_data_status = "X";
+			else 
+				coll_data_status = "0";
+
+			tc.info("NEW_COLLATERAL_STATUS:...." + d.collsndbackall.proc_status);		
+		
+			tc.info("BASIC_DATA_STATUS_NEW:...." + basic_data_status);		
+			tc.info("COLL_DATA_STATUS_NEW:...." + coll_data_status);		
+			tc.info("MORTGAGE_STATUS_NEW...." + mortgage_status);		 		
+			tc.info("COVER_INDIC_NEW:...." + cover_indic);		
+			tc.info("WORKFLOW_INDIC:...." + workflow_indic);					
+		
+			#sql[ctx]{
+					UPDATE
+							coll_head 
+					SET
+							use_id = :(d.collsndbackall.use_id_asg),
+							org_uni_id = :(d.collsndbackall.org_uni_id_asg),
+							collateral_status = :(collateral_status),
+							workflow_indic = :(workflow_indic),
+							mortgage_status = :(mortgage_status),
+							cover_indic = :(cover_indic), 
+							basic_data_status = :(basic_data_status),
+							coll_data_status = :(coll_data_status),
+			                user_lock = current timestamp
+					WHERE
+							col_hea_id=:(col_hea_id)
+
+					AND		user_lock=:(user_lock) 
+
+					AND
+							collateral_status=:(d.collsndbackall.source_status)
+					
+			};
+    
+		}
+	}  
+	
+	public void reset_obj(TransactionContext tc) {
+		
+		tc.info("Usao u metodu reset_object - RESETIRAM OBJEKT");
+		
+		plq.col_hea_id=null;	
+		plq.status=null;
+		plq.income_time = null;
+		plq.use_id=null;	
+		plq.release_time = null;
+		plq.cmnt=null;
+		plq.action_type=null;	 
+		plq.org_uni_id = null;
+		plq.source_list = null;
+		plq.status_source_list = null;
+		plq.target_list = null;
+		plq.status_target_list = null;
+		plq.target_list_use_id = null;
+		plq.target_list_org_uni_id = null;
+		
+	}
+	
+	  
+  
+}
+
+

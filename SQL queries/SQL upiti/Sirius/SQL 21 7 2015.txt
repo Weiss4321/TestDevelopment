@@ -1,0 +1,1508 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+
+		select * from customer_account where cus_acc_no = '3211514388' -- cus_acc_id = 114980003
+
+		  SELECT 
+               balance, 
+               balance_date, 
+               pro_typ_id 
+           FROM 
+               cusacc_balance_last 
+           WHERE 
+                  cus_acc_id  =  114980003
+               AND cur_id  = 63999
+               AND pro_typ_id IN (8271662797,465655665,465640665,31598005,3850367797,3994565797,3994566797,209338005,3994569797,8575214797,8274194797,8274196797,8577426797,8577427797,3850368797, 8274195797) with ur;
+
+		select * from procedure_type where pro_typ_id in (8274195797);
+
+		  SELECT 
+               balance, 
+               balance_date, 
+               pro_typ_id 
+           FROM 
+               cusacc_balance_last 
+           WHERE 
+                  cus_acc_id  =  114980003
+               AND cur_id  = 63999
+               AND pro_typ_id IN (3994569797,465640665,8577427797,8575214797  ) with ur;
+
+		
+
+                overdueBalance =  yfym0.getCusAccBalanceUsingProTypIdList(cusAccIter.cus_acc_id(), cusAccIter.cus_id(), domCurId, dateForProcessing,  new BigDecimal("8271662797"), new BigDecimal("465655665"),new BigDecimal("465640665"),new BigDecimal("31598005"),new BigDecimal("3850367797"),
+                        new BigDecimal("3994565797"),new BigDecimal("3994566797"),new BigDecimal("209338005"), new BigDecimal("3994569797"),new BigDecimal("8575214797"),new BigDecimal("8274194797"),new BigDecimal("8274196797"),new BigDecimal("8577426797"),new BigDecimal("8577427797"), new BigDecimal("3850368797")    );                
+                bc.stopStopWatch("BFR31.yfym0.getCusAccBalanceUsingProTypIdList overdueBalance");
+
+
+
+
+				 SELECT
+          *
+
+        FROM
+            turnover t,
+            turn_customer tc,
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '19.07.2015'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')
+        AND t.process_date > '01.07.2015' AND t.process_date < '21.07.2015'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' )
+        AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND c.basel_cus_type = '20'      
+        AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005)
+        AND bp.p_contract_id = 'send_to_comdebts  ' 
+        AND bp.par_value = '1'
+        AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign = 'RB'  with ur;
+
+
+
+
+				 SELECT
+            t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no
+
+        FROM
+            turnover t,
+            turn_customer tc,
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = :(process_date)
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')
+        AND t.process_date > :(dateFrom) AND t.process_date < :(dateUntil)
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' )
+        AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND c.basel_cus_type = '20' 
+        AND ca.org_uni_id = :(org_uni_id)
+        AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005)
+        AND bp.p_contract_id = 'send_to_comdebts  ' 
+        AND bp.par_value = '1'
+        AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign = :(bankSign)
+
+
+
+		  SELECT                 
+              *
+               FROM 
+                   event 
+               WHERE
+                   eve_typ_id = 332237327
+                   AND value_date IS NOT NULL
+                   AND ext_event_num IS NOT NULL
+
+
+
+			-- bfZE datoteka uplata pravnih osoba
+
+			SELECT * FROM turnover t, turn_customer tc, customer_account ca LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '20.07.2015' 
+			LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id 
+			LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id 
+			LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id 
+			LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id 
+			WHERE tc.tur_id = t.tur_id 
+			AND t.gl_flag IN ('2', '4') 
+			AND t.process_date > '19.01.2015' AND t.process_date < '20.07.2015' 
+			AND tc.cus_acc_id = ca.cus_acc_id 
+			AND ca.cus_acc_status NOT IN ('I', 'X', 'C') 
+			AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00) 
+			AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' ) 
+			AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN') 
+			AND c.basel_cus_type = '20' 
+			AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005) 
+			AND bp.p_contract_id = 'send_to_comdebts ' 
+			AND bp.par_value = '1' AND ca.p_sch_id = bp.p_sch_id 
+			AND ca.bank_sign = 'RB' with ur
+
+
+					select * FROM PARAM_APPLICATION  where par_dic_id = 442789327 order by user_lock desc;
+
+
+						select * FROM PARAM_APPLICATION order by user_lock desc;
+
+						select * FROM PARAM_APPLICATION  where par_dic_id = 442789327;
+
+						select * FROM PARAMS_DICTIONARY where par_dic_id = 442789327
+
+
+
+						 SELECT 
+                    MAX(value_date) 
+              
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 332237327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL   -- BFZE0
+
+                    			 SELECT 
+                    MAX(value_date) 
+              
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 344529327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL   -- BFZF0
+
+
+				select eve_id, cmnt, value_date, eve_typ_id from event where eve_typ_id = 344529327 order by sys_timestamp desc;  
+
+				select eve_id, cmnt, value_date, eve_typ_id from event where eve_typ_id = 332237327 order by sys_timestamp desc;  -- BFZE0
+
+					select * from event where eve_typ_id = 332237327 and value_date is not null;
+
+			--	update event set value_date = '01.06.2015' where  eve_typ_id  = 332237327 and eve_id in (1267820915303, 1267820545303,1267820398303 );
+
+
+					commit;
+
+
+
+				    SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   c.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date,
+                   c.cus_id,
+                   org.code
+           FROM
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '19.07.2015')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X') 
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+                AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <='19.07.2015'
+                AND ( 
+                        ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '19.07.2015') )
+                            OR 
+                        ( ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '20.01.2015' ) )
+                    )
+                AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= '5'  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+            
+        UNION ALL
+
+          SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date,
+                   c.cus_id,
+                   org.code
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date =  '20.07.2015')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '20.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '20.07.2015') )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >='20.01.2015') ) ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= '5' )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1' with ur;
+             
+
+				
+
+
+			select * from customer_account where cus_acc_no in( '1135001419', '1135001371', '1135001234', '1135000012');
+
+			select * from customer where cus_id in ( 21787103551, 352247259551 ,9852251,  13517251 );
+
+  --- bfZE
+				
+	SELECT
+            t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no
+
+        FROM
+            turnover t,
+            turn_customer tc,
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '20.07.2015'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')
+        AND t.process_date >'01.06.2015' AND t.process_date < '21.07.2015'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' OR cl.nnb_no_days >= '5')
+        AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND c.basel_cus_type = '20'       
+        AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005)
+        AND bp.p_contract_id = 'send_to_comdebts  ' 
+        AND bp.par_value = '1'
+        AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign ='RB'  with ur;
+					
+
+
+			  SELECT 
+                
+             *
+               FROM 
+                   event 
+               WHERE
+                   eve_typ_id =  332237327
+                   AND value_date IS NOT NULL
+                   AND ext_event_num IS NOT NULL
+
+
+                   select * from customer_account where cus_acc_no = '1135001371' with ur;
+
+
+                     SELECT  
+                    c.register_no,
+                    cprt.role_type                   
+                FROM 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt, CUSTOMER_PERSON cp, CUSTOMER c
+                 WHERE 
+                    cpr.cus_id = 352247259551
+                    AND cpr.cus_per_id = cp.cus_per_id
+                    AND cp.person_cus_id = c.cus_id
+                    AND cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+                    AND cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+                    AND cpr.DATE_FROM <= '19.07.2015'
+                    AND cpr.DATE_UNTIL >= '19.07.2015'               
+                    ORDER BY cprt.role_type desc
+
+                   
+			
+                    			 SELECT 
+                    MAX(value_date) 
+                    from
+                    event 
+                WHERE
+                    eve_typ_id = 332237327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL   -- BFZE0  -- uplate
+
+                    			 SELECT 
+                    MAX(value_date) 
+              
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 344529327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL   -- BFZF0  -- stanja 
+
+
+				select eve_id, cmnt, value_date, eve_typ_id from event where eve_typ_id = 344529327 order by sys_timestamp desc;  -- bFZF stanja
+
+				select eve_id, cmnt, value_date, eve_typ_id from event where eve_typ_id = 332237327 order by sys_timestamp desc;  -- BFZE0 uplate
+
+				  update event set value_date = '01.06.2015' where  eve_typ_id  = 344529327 and eve_id in (1267822015303,1267813497303,1267748109303);
+
+
+						commit;
+						
+						
+						
+                   
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+			  SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   c.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CUSTOMER c,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id        AND cl.process_date =   '13.07.2015')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X') 
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+                AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) ) OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '01.01.2015') ) )
+                AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= 5  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+		UNION ALL
+		  SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id      AND cl.process_date =   '13.07.2015')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >='01.01.2015') ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= 5 )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1'
+                with ur;
+				
+				
+				
+				
+				
+				SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   c.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CUSTOMER c,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id        AND cl.process_date =   '13.07.2015')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X') 
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+                AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) ) OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '14.05.2015') ) )
+                AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= 5  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+		UNION ALL
+		  SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date 
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id      AND cl.process_date =   '13.07.2015')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '13.07.2015'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '13.07.2015')) )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >='14.05.2015') ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= 5 )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1'
+                with ur
+
+
+
+                select * from PARAM_APPLICATION;
+
+				--insert into PARAM_APPLICATION values (NEXTVAL FOR COREAPP_SEQ, null, 442789327, '5' , null, null, 'RB', current_timestamp );
+
+				select * from user_code_value;
+
+
+				   SELECT
+                USE_CODE_VALUE
+          
+            FROM
+                user_code_value
+            WHERE
+                USE_COD_ID  = 'com_debts_period'
+
+                SELECT
+                REL_PER_TYP_ID,
+                CODE
+            FROM
+                REL_PERSON_TYPE
+
+
+				    select   crp.CUS_REL_PER_ID,
+                crp.REL_PER_TYP_ID,
+                c.REGISTER_NO 
+                from 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt
+					where 
+					cpr.cus_id = :(cus_id)
+					and cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+					and cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+					  AND crp.DATE_FROM <= :(process_date)
+                           AND crp.DATE_UNTIL >= :(process_date)
+
+
+
+				          
+				    select   *
+                from 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt
+                          
+				    select   cpr.CUS_PER_ROL_ID
+                from 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt
+					where 
+					cpr.cus_id = 619193
+					and cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+					and cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+					 AND cpr.DATE_FROM <= '15.07.2015'
+                         AND cpr.DATE_UNTIL >= '15.07.2015'
+
+
+		select * from 
+                                  
+				    select   cprt.role_type
+                from 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt
+					where 
+					cpr.cus_id = 4690251
+					and cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+					and cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+					 AND cpr.DATE_FROM <= '15.01.2000'
+                         AND cpr.DATE_UNTIL >= '15.07.2015'
+					order by cprt.role_type
+
+
+
+					 SELECT
+                  *
+              
+                FROM
+                    trx_announce
+                WHERE
+                   
+                    ann_trx_tblname = 'BLUEDIAMOND_MQMSG'
+                   
+                    --and cus_acc_id = 131776022
+                    and ann_type = '0'
+
+
+                    select * FROM LIMIT_HISTORY
+
+
+				SELECT * FROM procedure_type where pro_typ_id IN(29367005,29368005)
+
+				select * FROM CUSACC_OVERDRAFT
+
+				select * FROM LIMIT_HISTORY
+
+				select * from OVERDRAFT_TYPE
+
+				select * from DUE_TERM_TABLE
+
+				
+				
+
+                    
+
+
+                         
+
+
+			select * FROM COMB_VALUES where comb_val_value = 'com_debts_role'
+
+			select * FROM COMB_DEF
+
+			select * FROM batch_log where bat_def_id = 344447327 order by recording_time desc
+
+		SELECT
+                  *
+                 
+                 FROM
+                     COMB_DEF                 
+                     WHERE
+                     COMB_NAME = 'com_debts_role' 
+                     AND
+                    BANK_SIGN='RB'
+                    AND
+                    current_date BETWEEN DATE_FROM AND DATE_UNTIL
+
+					update batch_log set exec_status = 'D' where bat_log_id = 452465327
+
+					
+					 SELECT
+                    ann_amount,
+                    cur_id                
+                FROM
+                    trx_announce
+                WHERE
+                    cus_acc_id = 3151279823                 
+                    AND ann_trx_tblname = 'BLUEDIAMOND_MQMSG'
+
+
+
+			select overdraft_no, overdraft_subno, overdraft_status, contract_amount, available_amount, opening_date, closing_date, maturity_date, cus_ove_id  from cusacc_overdraft 
+		where cus_acc_id = 182171326
+    AND overdraft_subno = '000'
+    AND overdraft_status <> 'X'
+    AND closing_date = 
+(
+    select max(closing_date) from cusacc_overdraft
+    where cus_acc_id = 182171326
+        AND overdraft_subno = '000'
+        AND overdraft_status <> 'X'
+)
+
+
+				     
+
+            select *  from cusacc_overdraft 
+        where cus_acc_id = 138545553
+    AND overdraft_subno = '000'
+    AND overdraft_status <> 'X'
+    AND closing_date = 
+(
+    select max(closing_date) from cusacc_overdraft
+    where cus_acc_id = 138545553
+        AND overdraft_subno = '000'
+        AND overdraft_status <> 'X'
+)
+
+
+
+				    select overdraft_no, cus_ove_id,ove_typ_id  from cusacc_overdraft 
+        where cus_acc_id = 138545553
+    AND overdraft_subno = '000'
+    AND overdraft_status <> 'X'
+    AND closing_date = 
+(
+    select max(closing_date) from cusacc_overdraft
+    where cus_acc_id = 138545553
+        AND overdraft_subno = '000'
+        AND overdraft_status <> 'X'
+)
+				
+
+			select max(overdraft_subno) from cusacc_overdraft
+    			where cus_acc_id = 138545553
+        AND overdraft_no = '012000033509'     -- Ovo je iz upita za polje 12
+        AND overdraft_status <> 'X'
+
+
+
+			select ove_typ_id,overdraft_status, closing_date, opening_date, maturity_date, available_amount, contract_amount from cusacc_overdraft
+   where  cus_acc_id = 138545553
+        AND overdraft_no = '012000033509'
+        AND overdraft_subno = '000'  --Ovo je iz polja  13
+        AND overdraft_status <> 'X'
+
+
+
+		
+            select overdraft_no, cus_ove_id, ove_typ_id  from cusacc_overdraft 
+        where cus_acc_id = 182171326
+    AND overdraft_subno = '000'
+    AND overdraft_status <> 'X'
+    AND closing_date = 
+	(
+    select max(closing_date) from cusacc_overdraft
+    where cus_acc_id = 182171326
+        AND overdraft_subno = '000'
+        AND overdraft_status <> 'X'
+	)
+
+
+			select * from limit_history
+			where cus_acc_id = 182171326
+
+			select * from OVERDRAFT_TYPE
+
+			
+				and ove_typ_id = ;
+
+
+                    184146326
+
+
+                 SELECT 
+                         *
+                   
+                    FROM 
+                         limit_history
+                    WHERE 
+                         cus_acc_id = 182171326
+                    AND ove_typ_id = 6426157610
+
+
+
+			 SELECT
+                NNB_NO_DAYS,
+                ABSORBING_STATUS
+          
+            FROM
+                COUNTER_LIST cl
+            WHERE
+                    cl.CUS_ACC_ID = 3149351823
+                AND cl.PRO_MET_CODE = 'RI'
+               
+
+SELECT  
+                                cb.cus_acc_id , 
+                                cb.cus_id, 
+                                cb.pro_typ_id, 
+                                cb.cur_id, 
+                                cb.balance, 
+                                cb.balance_date,
+                                cb.user_lock
+                          FROM 
+                                cusacc_balance cb
+                          WHERE  
+                                cb.cus_acc_id = 182205326
+                          AND   cb.balance_date = (
+                                                    SELECT MAX(cb1.balance_date) FROM cusacc_balance cb1 
+                                                     WHERE cb1.acc_num_id = cb.acc_num_id
+                                                     AND cb1.cur_id = cb.cur_id
+                                                     AND cb1.balance_date < '2015-07-15'
+                                                     )
+                                                     with ur
+
+select * from cusacc_balance where cus_acc_id = 182205326
+
+select * from customer_account where cus_acc_no = '1135001664'
+
+
+			select value_date  from due_term_table where rest_due_deb_amo <> '0' and ;
+
+			select *  from due_term_table where rest_due_deb_amo > '0'  and cus_acc_id = 186181326;
+
+			select min(value_date)  from due_term_table where rest_due_deb_amo > '0'  and cus_acc_id = 68942022
+
+			select max(value_date)  from due_term_table where rest_due_deb_amo > '0'  and cus_acc_id = 68942022
+
+			select *  from due_term_table where rest_due_deb_amo > '0' and  pro_typ_id = 44999 and cus_acc_id = 186181326;
+
+
+			select * from procedure_type where pro_typ_id = 44999;
+
+
+			SELECT  
+                    
+                    cprt.role_type
+                    
+                FROM 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt
+                 WHERE 
+                    cpr.cus_id = :(cus_id)
+                    AND cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+                    AND cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+                    AND cpr.DATE_FROM <= :(process_date)
+                    AND cpr.DATE_UNTIL >= :(process_date)
+                    ORDER BY cprt.role_type desc
+
+
+				SELECT  
+                    
+                  *
+                    
+                FROM 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt
+                 WHERE 
+                  
+                    cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+                    AND cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+
+
+			SELECT  
+                    c.register_no,
+                    cprt.role_type                   
+                FROM 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt, CUSTOMER_PERSON cp, CUSTOMER c
+                 WHERE 
+                    cpr.cus_id = :(cus_id)
+                    AND cpr.cus_per_id = cp.cus_per_id
+                    AND cp.person_cus_id = c.cus_id
+                    AND cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+                    AND cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+                    AND cpr.DATE_FROM <= :(process_date)
+                    AND cpr.DATE_UNTIL >= :(process_date)                    
+                    ORDER BY cprt.role_type desc
+			
+                SELECT  
+                    c.register_no,
+                    cprt.role_type                   
+                FROM 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt, CUSTOMER_PERSON cp, CUSTOMER c
+                 WHERE 
+                    cpr.cus_id = 327352
+                    AND cpr.cus_per_id = cp.cus_per_id
+                    AND cp.person_cus_id = c.cus_id
+                    AND cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+                    AND cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+                    AND cpr.DATE_FROM <='2015-07-15'
+                    AND cpr.DATE_UNTIL >= '2015-07-15'                
+                    ORDER BY cprt.role_type desc
+
+
+			select * from CUSTOMER_PERSON where cus_id =619193
+
+			select * from CUSTOMER_account where cus_acc_no  = '1135000107'
+
+			1135000480
+			
+
+			select * from customer_account  where cus_id =619193
+
+
+					select min(value_date)  from due_term_table where rest_due_deb_amo > '0'  and cus_acc_id = 68942022 and 
+
+
+				select min(value_date) from due_term_table where pro_typ_id in (99999999)  and cus_acc_id = 68942022  
+
+				select * FROM procedure_type where name like '%commit%';
+
+				select * FROM procedure_type where name like '%kamat%';
+
+
+				select * FROM procedure_type where pro_typ_code like '640'; 
+
+				select * FROM procedure_type where pro_typ_code in( 'M02', 'K07', 'K41'); 
+
+				
+					select * FROM procedure_type where name like '%naknada%';
+
+
+						 new BigDecimal("3994569797"),new BigDecimal("465640665"), new BigDecimal("8577427797")
+
+							select * FROM procedure_type where pro_typ_id in( 77777777); 
+
+
+
+
+							
+							
+					
+		select * from customer_account where cus_acc_status like 'WO';
+
+
+		igDecimal("3850368797"),new BigDecimal("8271662797") )).ab
+
+
+		select * from customer_account where cus_acc_no like '1135000262' with ur;
+
+
+
+
+
+				 SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   c.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date,
+                   c.cus_id,
+                   org.code
+           FROM
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                LEGAL_ENTITY le,
+                BANPRO_PARAM bp,
+                customer_account ca                
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '2015-07-15')                             
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X') 
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.cus_id = le.cus_id  
+                AND ca.cus_id = c.cus_id   
+                AND  ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id        
+                AND ca.opening_date <= '2015-07-15'
+                AND ( 
+                        ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '2015-07-15') )
+                            OR 
+                        ( ca.cus_acc_status = 'I' AND ca.chg_stat_date >= '2015-05-16'  ) )
+                    )
+                AND  (le.pay_list_flag='1'  OR cl.nnb_no_days >= '2'  )
+                AND  c.basel_cus_type = '20' 
+                AND bp.p_contract_id = 'send_to_comdebts  ' 
+                AND bp.par_value = '1'
+                
+            
+
+        UNION ALL
+
+          SELECT
+                   ca.cus_acc_id,
+                   ca.cus_acc_no,
+                   ca.old_cus_acc_no,
+                   ca.iban_acc_no,
+                   ca.cus_acc_name,
+                   ca.org_uni_id,
+                   ca.currency_type,
+                   ca.acc_cur_id,
+                   ca.opening_date,
+                   ca.closing_date,
+                   ca.cus_acc_status,
+                   ca.chg_stat_reason,
+                   ca.chg_stat_date,
+                   ca.warn_note_status,
+                   ca.law_block_status,
+                   ca.collection_status,
+                   ca.court_proc_status,
+                   ca.distraint_flag,
+                   ca.ban_rel_typ_id,
+                   ca.ban_pro_typ_id,
+                   ca.pur_sub_id,
+                   ca.pro_cat_id,               
+                   cr.register_no,
+                   cl.nnb_no_days,
+                   cl.nnb_date,
+                   cl.absorbing_status,
+                   cl.abs_status_date,
+                   cl.process_date,
+                   c.cus_id,
+                   org.code
+           FROM
+                CRAFTSMAN cr,
+                CUSTOMER c,
+                ORGANIZATION_UNIT org,
+                BANPRO_PARAM bp,
+                customer_account ca 
+                LEFT OUTER JOIN counter_list cl ON (cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date =  '2015-07-15')               
+          WHERE  
+                ca.cus_acc_status NOT IN ('N', 'C', 'X')
+                AND ca.org_uni_id = org.org_uni_id
+                AND ca.pur_sub_id = bp.pur_sub_id 
+                AND ca.ban_pro_typ_id = bp.ban_pro_typ_id
+                AND ca.p_sch_id = bp.p_sch_id 
+                AND ca.cus_id = cr.cus_id
+                AND ca.cus_id = c.cus_id
+                AND ca.opening_date <= '2015-07-15'
+                AND ( ( ca.cus_acc_status <> 'I' AND ((ca.closing_date IS NULL) OR (ca.closing_date >= '2015-07-15') )
+                        OR ( (ca.cus_acc_status = 'I' AND ca.chg_stat_date >='2015-05-16') ) ) )
+                AND  (cr.pay_list_flag='1' OR cl.nnb_no_days >= '2' )
+                AND  c.basel_cus_type = '20' 
+                AND  bp.p_contract_id = 'send_to_comdebts  '
+                AND bp.par_value = '1'
+              
+
+
+
+		
+
+		
+		BigDecimal("465655665"),new BigDecimal("8274194797"),new BigDecimal("8274196797"), new BigDecimal("8577426797")
+
+		select * FROM procedure_type where pro_typ_id in( 465655665,8274194797, 8274196797, 8577426797 ); 
+
+
+		select * FROM procedure_type where pro_typ_id in( 3850368797,8271662797); 
+
+
+
+				select * from CUSTOMER_account where cus_acc_no  = '1135000480'
+
+
+select * from customer_account where cus_acc_no = '1135000107'
+
+		select * from customer where  cus_id = 327352;
+
+
+			
+			SELECT  
+                    c.register_no,
+                    cprt.role_type                   
+                FROM 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt, CUSTOMER_PERSON cp, CUSTOMER c
+                 WHERE 
+                    cpr.cus_id = 327352
+                    AND cpr.cus_per_id = cp.cus_per_id
+                    AND cp.person_cus_id = c.cus_id
+                    AND cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+                    AND cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+
+                    
+                    AND cpr.DATE_FROM <= :(process_date)
+                    AND cpr.DATE_UNTIL >= :(process_date)                    
+                    ORDER BY cprt.role_type desc
+
+
+					
+			SELECT  
+                  *                  
+                FROM 
+                cust_pers_role cpr, CUST_PERS_ROLE_TYP cprt, CUSTOMER_PERSON cp, CUSTOMER c
+                 WHERE 
+                    cpr.cus_id = 327352
+                    AND cpr.cus_per_id = cp.cus_per_id
+                    AND cp.person_cus_id = c.cus_id
+                    AND cpr.cus_per_rol_typ_id = cprt.cus_per_rol_typ_id
+                    AND cprt.role_type  in  ('CONTACTPERSON', 'REPRESENTOWNER', 'REPRESENTFREEPROF')
+		
+
+select * from cusacc_balance where cus_acc_id = 3154437823
+
+update cusacc_balance set balance_date = '2015-07-01' where cusacc_bal_id = 30999
+
+		select * from CUSTOMER_ACCOUNT   where cus_acc_no = '1135000480';
+
+
+
+		 SELECT 
+                    MAX(value_date) 
+             
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = :eveTypId
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+
+
+
+                    select * from batch_log where bat_def_id = 332214327 order by recording_time desc ;
+
+
+					 SELECT 
+                  *
+             
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 344529327 order by sys_timestamp desc;
+
+
+                    
+					 SELECT 
+                  *
+             
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 332237327 order by sys_timestamp desc;
+
+                    
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+
+                    
+			select * from batch_def 
+
+
+			 SELECT 
+                    MAX(value_date) 
+               
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 344529327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+
+
+                     SELECT 
+                 *
+               
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 344529327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+
+                    update event set value_date = '01.01.2015' where eve_id = 463304327;
+
+                    commit;
+		
+
+		
+
+INSERT INTO CUSACC_BALANCE
+(CUSACC_BAL_ID,CUS_ACC_ID,ACC_NUM_ID,CUS_ID,ACCOUNT,BAN_REL_TYPE,AMO_TYPE,PRO_TYP_ID,AVAIL_BALANCE_FLAG,CUS_ACC_REPORT,BALANCE_DATE,CUR_ID,DEBIT_TOTAL,CREDIT_TOTAL,BALANCE,ORD_NO,BANK_SIGN,USER_LOCK,CUS_ORG_UNI_ID,CUS_SUB_ACC_ID,CUS_SUB_ACC_TBL,CLAUSE_BALANCE) 
+VALUES (NEXTVAL FOR FINANCIAL_SEQ,3154437823,903360005,327352,'5001171   ','001','M02',3850368797,'1','1',{d '2015-07-01'},63999,-500.00,22193.88,21953.88,1,'RB',{ts '2015-07-16 16:11:02.837242'},null,null,null,0.00);
+
+
+
+					 SELECT 
+                   *
+              
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 332237327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+				
+
+		select * from turnover;
+
+			     SELECT 
+            *
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 6266764704
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL
+
+
+		
+
+						 SELECT 
+                    MAX(value_date) 
+              
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 332237327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL   -- BFZE0  -- uplate
+
+                    			 SELECT 
+                    MAX(value_date) 
+              
+                FROM 
+                    event 
+                WHERE
+                    eve_typ_id = 344529327
+                    AND value_date IS NOT NULL
+                    AND ext_event_num IS NOT NULL   -- BFZF0  -- stanja 
+
+
+				select eve_id, cmnt, value_date, eve_typ_id from event where eve_typ_id = 344529327 order by sys_timestamp desc;  -- bfze
+
+				select eve_id, cmnt, value_date, eve_typ_id from event where eve_typ_id = 332237327 order by sys_timestamp desc;  -- BFZE0
+
+					select * from event where eve_typ_id = 332237327 and value_date is not null;
+
+				  update event set value_date = '01.06.2015' where  eve_typ_id  = 332237327 and eve_id in (472826327)
+
+
+
+						commit;
+
+
+				  
+				--  update event set value_date = '01.06.2015' where eve_id in	(465524327,465520327,465503327,465397327 , 463304327  ) and  eve_typ_id  = 344529327;
+
+				
+
+
+				   -- update event set value_date = '01.06.2015' where eve_id in	  (465590327,465586327,465581327,465568327,465500327) and  eve_typ_id  = 332237327;
+
+				  commit;
+
+			
+
+				  commit;
+
+
+
+
+				  select * from event where eve_typ_id = 332237327 order by sys_timestamp desc;   -- bfZE
+
+
+		  t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no
+		
+
+	SELECT
+          t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no
+        FROM                
+		   turnover t,
+		   turn_customer tc,        
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '2015-07-17'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id                    
+        WHERE
+          t.tur_id = tc.tur_id 
+        and  t.gl_flag IN ('2', '4')
+        AND t.process_date >= '2015-06-24' AND t.process_date <= '2015-06-24'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND  (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' )
+        AND  c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND  c.basel_cus_type = '20'       
+        AND  t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005)
+        AND  bp.p_contract_id = 'send_to_comdebts  ' 
+        AND bp.par_value = '1'
+        AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign = 'RB'
+
+					
+				  select * from BANPRO_PARAM_sch where  p_sch_id in (194212326,3096972823,3096971823);
+		
+				  select * from BANPRO_PARAM where p_sch_id in (194212326,3096972823,3096971823);
+
+
+
+				  select * from customer_account where cus_acc_no = '1135001621'
+
+     select * from nnb_list  where ban_pro_Typ_id = 6561936704;
+
+
+				  SELECT num_rec_limit FROM income_type WHERE inc_typ_code LIKE '02';
+
+				    SELECT * FROM income_type
+
+
+				    select * from customer_account where 
+
+
+
+				      SELECT 
+               balance, 
+               balance_date, 
+               pro_typ_id 
+           FROM 
+               cusacc_balance_last 
+           WHERE 
+                cur_id  = 63999
+               AND pro_typ_id IN (8271662797,465655665,465640665,31598005,3850367797,3994565797,3994566797,209338005,3994569797,8575214797,8274194797,8274196797,8577426797,8577427797,3850368797, 8274195797) with ur;
+
+
+
+				select * from customer_account where cus_acc_no like '3205008029';
+				
+               		      SELECT 
+               balance, 
+               balance_date, 
+               pro_typ_id,
+               cus_acc_id 
+           FROM 
+               cusacc_balance_last 
+           WHERE 
+               cus_acc_id = 57193326
+               and cur_id  = 63999
+               AND pro_typ_id IN (8274195797) with ur;
+
+		select * from procedure_type where pro_typ_id in (8274195797, 31598005);
+
+
+
+ 			select * FROM PARAM_APPLICATION  where par_dic_id = 442789327 order by user_lock desc;
+
+ 		
+ 
+ 			select * FROM PARAMS_DICTIONARY where par_dic_id = 442789327
+
+
+
+ 				select * FROM PARAM_APPLICATION order by user_lock desc;
+
+
+
+ 				   SELECT
+                    pa.parameter_value
+             
+                FROM 
+                    param_application pa 
+                    INNER JOIN params_dictionary pd ON pa.par_dic_id = pd.par_dic_id
+                WHERE
+                    pd.name = 'DPD_MIN_PO'
+
+
+
+  -- bfZE u 16:42 puštanje
+
+           SELECT
+            t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no
+
+        FROM
+            turnover t,
+            turn_customer tc,
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '2015-07-20'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')
+        AND t.process_date > '2015-06-02' AND t.process_date < '2015-07-17'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' OR cl.nnb_no_days >='5')
+        AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND c.basel_cus_type = '20' 
+     
+        AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005)
+        AND bp.p_contract_id = 'send_to_comdebts  ' 
+        AND bp.par_value = '1'
+        AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign = 'RB'
+
+        -----------
+
+        select * from customer_account where cus_acc_no like '1135000107'
+
+        select * from turnover where cus_id = 327352 and system_timestamp > '01.06.2015';
+
+        
+ 			
+				
+									
+                

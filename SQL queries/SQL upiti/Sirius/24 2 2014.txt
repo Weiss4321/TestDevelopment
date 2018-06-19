@@ -1,0 +1,74 @@
+SET CURRENT_SCHEMA = 'SIDEV';
+
+select * from batch_log;
+
+select * from batch_log where bat_def_id = 6253448704 order by recording_time desc;
+
+
+			 SELECT
+                    pa.parameter_value             
+                FROM
+                    param_application pa
+                    INNER JOIN params_dictionary pd ON pa.par_dic_id = pd.par_dic_id
+                WHERE
+                    pd.name = 'interface_flag'
+
+---------------------------------------------------------------------------- bfR2 - ---
+
+	SELECT
+                ca.cus_acc_id,
+                ca.ban_pro_typ_id,
+                ca.ban_rel_typ_id,
+                ca.old_cus_acc_no,
+                ca.cus_acc_no,
+                ca.iban_acc_no,
+                ca.cus_acc_name,
+                ca.org_uni_id,
+                ca.currency_type,
+                ca.acc_cur_id,
+                ca.opening_date,
+                ca.closing_date,
+                ca.cus_acc_status,
+                ca.chg_stat_reason,
+                ca.chg_stat_date,
+                ca.warn_note_status,
+                ca.law_block_status,
+                ca.collection_status,
+                ca.court_proc_status,
+                ca.pur_sub_id,
+                ca.pro_cat_id,
+                ca.ove_typ_id,
+                bpt.code bank_product_type_code,
+                c.cus_id,
+                c.code cus_code,
+                c.register_no,
+                c.name
+            FROM
+                customer_account ca,
+                bank_product_type bpt,
+                customer c
+                LEFT OUTER JOIN LEGAL_ENTITY le ON c.cus_id = le.cus_id
+                LEFT OUTER JOIN CRAFTSMAN cr ON c.cus_id = cr.cus_id
+            WHERE
+                ca.ban_pro_typ_id = bpt.ban_pro_typ_id
+                AND ca.cus_id = c.cus_id
+                AND ca.cus_acc_status NOT IN ('I', 'X', 'C', 'E')
+                --AND ca.org_uni_id = :(orgUniId)
+               ---- AND ca.opening_date <= :date
+                --AND ( ca.closing_date IS NULL OR ca.closing_date >= :(date) )
+                AND ca.bank_sign = 'RB'
+                AND ca.ban_pro_typ_id IN (24999, 37722005, 795985005, 795986005, 23999, 2245837003, 2245840003, 4662964704, 4662965704, 4662968704, 4662969704, 4662970704, 4662971704, 4662972704, 4662979704, 4663049704, 4663050704, 4663051704, 4663053704, 4663054704, 4663057704, 4663058704, 4663060704, 4663061704, 4663063704, 4663064704, 4663065704, 4663066704, 4663068704, 4663069704, 4663071704)
+                --AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1')
+                AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+                AND c.basel_cus_type = '20';
+
+
+------------------------
+select * from customer_account where cus_acc_no = '2500030094';
+
+
+select * from cusacc_balance  where cus_acc_no = '2500030094';
+
+
+select login from app_user where login like "vu00301";
+                

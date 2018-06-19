@@ -1,0 +1,95 @@
+package hr.vestigo.modules.collateral.jcics.coA6;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;   
+import hr.vestigo.modules.collateral.common.yoy0.*;
+
+  
+public class COA62 extends RemoteTransaction
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA6/COA62.sqlj,v 1.2 2010/12/14 11:44:13 hramkr Exp $";
+
+    public DeclCOA6 decl;
+    
+    public COA62(DeclCOA6 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+        int broj = 0;
+        try
+        {
+            #sql[ctx] { 
+                SELECT count(*)
+                  INTO :broj
+                  FROM cashdep_exception
+                 WHERE cde_account = :(decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtCus_Acc_No)
+            };                              
+        }
+        catch(Exception ex)
+        {
+           throw new VestigoTMException(1, "Transaction COA62: Error select sysibm.sysdummy1","err411a", null);
+        }
+        
+        if (broj > 0){
+            throw new VestigoTMException(1, "Transaction CO062: Error inserting into cashdep_exception! ","wrnclt173", null);
+        }           
+          
+        Timestamp current_timestamp = null;
+        try 
+        {
+            #sql[ctx] { 
+                SELECT current timestamp 
+                INTO :current_timestamp
+                FROM sysibm.sysdummy1
+            };                  
+        }
+        catch(Exception ex)
+        {
+           throw new VestigoTMException(1, "Transaction COA62: Error select sysibm.sysdummy1","err411a", null);
+        }
+        decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtUserLock = current_timestamp;
+        try
+        {
+            YOY00 id_generator = new YOY00(ctx);
+            BigDecimal id = id_generator.getNewId();
+            
+
+       
+            #sql [ctx]
+            {
+                INSERT INTO cashdep_exception (
+                    cas_exc_id,
+                    cde_account,
+                    status,
+                    date_from,
+                    date_until,
+                    use_id,
+                    user_lock
+                )
+                VALUES (
+                    :id, 
+                    :(decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtCus_Acc_No), 
+                    :(decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtStatus),
+                    :(decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtDateFrom),
+                    :(decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtDateUntil),
+                    :(decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtUseId),
+                    :(decl.collcashdepexceptioninsertm.CollCashDepExceptionDialog_txtUserLock)
+                 )
+            };
+         }
+         catch(Exception ex)
+         {
+            throw new VestigoTMException(1, "Transaction COA62: Error inserting cashdep partije!","err411a", null);
+         }
+          
+    }
+}

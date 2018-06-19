@@ -1,0 +1,94 @@
+package hr.vestigo.modules.collateral.jcics.coB3;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+import hr.vestigo.framework.remote.transaction.*;   
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+
+public class COB32 extends RemoteTransaction{
+    
+public DeclCOB3 decl = null;
+    
+    public COB32 (DeclCOB3 decl) {
+        this.decl = decl;    
+    }
+    public void  execute(TransactionContext tc) throws Exception {
+        ConnCtx ctx = tc.getContext(); 
+        
+        #sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        try{            
+            #sql [ctx] {
+                    SELECT distinct cgt.col_gcm_typ_id, cgtm.col_gcm_typ_map_id, ct.COLL_TYPE_ID,
+                    cc.col_cat_id, cgtm.COL_SUB_ID, cgtm.COL_GRO_ID,
+                    cgt.map_code, cgt.name as naziv_stavke, cgt.code as sifra_stavke,                 
+                    cc.code as kat_sifra, cc.name as kat_naziv, ct.coll_type_code as tip_sifra, ct.coll_type_name as tip_naziv, 
+                    case 
+                    when cgtm.col_cat_id in (618223) and cgtm.col_sub_id = ret.real_es_type_id THEN ret.REAL_ES_TYPE_CODE
+                    when cgtm.col_cat_id in (624223) and cgtm.col_sub_id = vg.veh_gro_id THEN vg.veh_gro_code
+                    when cgtm.col_cat_id= 621223 and cgtm.col_sub_id = mt.mov_typ_id THEN mt.mov_typ_code
+                    when cgtm.col_cat_id= 620223 and cgtm.col_sub_id = vt.ves_typ_id THEN vt.ves_code
+                    END as vrsta_sifra,
+                    case 
+                    when cgtm.col_cat_id in (618223) and cgtm.col_sub_id = ret.real_es_type_id THEN ret.REAL_ES_TYPE_DESC
+                    when cgtm.col_cat_id in (624223) and cgtm.col_sub_id = vg.veh_gro_id THEN vg.veh_gro_desc 
+                    when cgtm.col_cat_id= 621223 and cgtm.col_sub_id = mt.mov_typ_id THEN mt.mov_typ_dsc
+                    when cgtm.col_cat_id= 620223 and cgtm.col_sub_id = vt.ves_typ_id THEN vt.VES_DSC
+                    END as vrsta_naziv, 
+                    case 
+                    when cgtm.col_cat_id= 618223 and cgtm.col_gro_id = rst.RE_SUB_TYPE_ID THEN rst.RE_SUB_TYPE_CODE
+                    when cgtm.col_cat_id= 624223 and cgtm.col_gro_id = vs.VEH_SUB_ID THEN vs.VEH_SUB_CODE
+                    END as podvrsta_sifra,
+                    case 
+                    when cgtm.col_cat_id= 618223 and cgtm.col_gro_id = rst.RE_SUB_TYPE_ID THEN rst.RE_SUB_TYPE_DESC
+                    when cgtm.col_cat_id= 624223 and cgtm.col_gro_id = vs.VEH_SUB_ID THEN vs.VEH_SUB_DESC
+                    END as podvrsta_naziv
+                    INTO    
+                            :(decl.collmappingdialogdetailsmapping.COL_GCM_TYP_ID),
+                            :(decl.collmappingdialogdetailsmapping.COL_GCM_TYP_MAP_ID),
+                            :(decl.collmappingdialogdetailsmapping.COL_TYP_ID),
+                            :(decl.collmappingdialogdetailsmapping.COL_CAT_ID),
+                            :(decl.collmappingdialogdetailsmapping.COL_SUB_ID),
+                            :(decl.collmappingdialogdetailsmapping.COL_GRO_ID),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtMapCode),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtName),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtCode),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtCollateralCategoryCode),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtCollateralCategoryName),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtCollateralTypeCode),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtCollateralTypeName),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_ColSubCode),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_ColSubName),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtColGroCode),
+                            :(decl.collmappingdialogdetailsmapping.CollMappingDialog_txtColGroName)
+                    FROM coll_gcm_type cgt 
+                    INNER JOIN coll_gcm_type_map cgtm on cgt.col_gcm_typ_id = cgtm.col_gcm_typ_id
+                    INNER JOIN coll_category cc on cc.col_cat_id = cgtm.col_cat_id
+                    left join COLLATERAL_TYPE ct on ct.coll_type_id = cgtm.col_typ_id
+                    LEFT JOIN VEHICLE_GROUP vg on cgtm.col_typ_id = vg.coll_type_id and cgtm.col_sub_id = vg.veh_gro_id
+                    LEFT JOIN movable_type mt on cgtm.col_typ_id = mt.col_typ_id and cgtm.col_sub_id = mt.mov_typ_id
+                    LEFT JOIN VESSEL_TYPE vt on cgtm.col_sub_id = vt.ves_typ_id
+                    left join VEHICLE_SUBGROUP vs on vs.VEH_SUB_ID = cgtm.col_gro_id
+                    left join RE_SUB_TYPE rst on rst.RE_SUB_TYPE_ID = cgtm.col_gro_id
+                    LEFT OUTER JOIN REAL_ESTATE_TYPE ret on cgtm.col_typ_id = ret.coll_type_id and cgtm.col_sub_id = ret.real_es_type_id                                              
+                        WHERE cgt.col_gcm_typ_id = :(decl.collmappingdialogdetailsmapping.COL_GCM_TYP_ID) and 
+                                cgtm.col_gcm_typ_map_id = :(decl.collmappingdialogdetailsmapping.COL_GCM_TYP_MAP_ID)
+                };                                                         
+                                                                                                                                  
+        }catch(java.sql.SQLException se){
+            //tc.debug ( "......COB22.sqlj  SQLException   decl.collpolmapregiondialogdetailsmapping.POL_REGION_MAP_ID     " + decl.collmappingdialogdetailsmapping.col_gcm_typ_map_id.txt_col_gcm_typ_map_id);
+            throw new VestigoTMException(1, "Transaction COB32: Error selecting from  ! ","errclt1", null);
+        }
+    }
+
+}

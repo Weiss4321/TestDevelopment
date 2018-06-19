@@ -1,0 +1,257 @@
+package hr.vestigo.modules.collateral.common.yoyB;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Vector;
+
+import hr.vestigo.framework.remote.RemoteContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.data.CollateralInsuranceInstrumentData;
+import hr.vestigo.modules.collateral.common.interfaces.CollateralInsuranceInstrument;
+
+
+#sql iterator CollateralIterator (	
+	String org_uni_code,
+	String cus_acc_no,
+	String col_typ_code,
+	String col_typ_name,
+	String priority,
+	BigDecimal col_hea_id,
+    String col_num,
+	BigDecimal col_cat_id,
+	BigDecimal col_amount,
+	String col_cur_num,
+	BigDecimal hf_amount,
+	String hf_cur_num,
+	Date hf_date_from,
+	Date hf_date_until
+	);
+
+public class YOYB0 implements CollateralInsuranceInstrument{
+	
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/common/yoyB/YOYB0.sqlj,v 1.7 2008/12/11 12:49:05 hraamh Exp $";
+	
+	private ConnCtx connCtx;
+	private RemoteContext rc;
+	private HashSet col_cat_id_set=null;
+	
+	public YOYB0(){
+		col_cat_id_set= new HashSet();
+		col_cat_id_set.add(new BigDecimal("625223"));
+	}
+	
+	//Konstruktor za klasu YOYB0
+	public YOYB0(RemoteContext rc) throws SQLException {
+		this.rc = rc;
+		this.connCtx = rc.getContext();
+		col_cat_id_set= new HashSet();
+		col_cat_id_set.add(new BigDecimal("625223"));
+	}
+	
+	
+	public void setContext(RemoteContext context) throws Exception{
+		this.rc = context;
+		this.connCtx = context.getContext();
+	}
+	
+	public Vector getCollaterals(String cus_acc_no) throws Exception{
+		Vector result= new Vector();
+		CollateralIterator collateralIter=null;
+		
+		#sql [connCtx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		#sql [connCtx] collateralIter = {
+				select f.code as org_uni_code,
+           		a.cus_acc_no as cus_acc_no,
+           		e.code as col_typ_code,
+           		e.name as col_typ_name,
+           		c.hf_priority as priority,
+           		d.col_hea_id  as col_hea_id,
+		        d.col_num as col_num,
+				d.col_cat_id as col_cat_id,
+           		d.real_est_nomi_valu as col_amount, 
+           		g.code_num as col_cur_num,
+           		c.amount_ref as hf_amount,
+           		h.code_num as hf_cur_num,
+           		c.hf_date_hfc_from as hf_date_from,
+           		c.hf_date_hfc_until as hf_date_until
+
+			from CUSACC_EXPOSURE a,
+         		LOAN_BENEFICIARY b,
+         		COLL_HF_PRIOR c,
+         		COLL_HEAD d, 
+         		COLL_CATEGORY e,
+         		ORGANIZATION_UNIT f,
+         		CURRENCY g,
+         		CURRENCY h
+
+			where
+         		a.cus_acc_no =:(cus_acc_no) and
+        		(a.cus_acc_no = b.acc_no or a.request_no = b.request_no) and
+         		b.status = 'A' and
+         		b.coll_hf_prior_id = c.coll_hf_prior_id and
+         		c.hf_status = 'A' and
+         		c.hf_coll_head_id = d.col_hea_id and
+         		d.collateral_status in ('0','1','2','3') and
+         		d.col_cat_id = e.col_cat_id and
+         		a.org_uni_id = f.org_uni_id and
+         		d.real_est_nm_cur_id = g.cur_id and
+         		c.cur_id_ref = h.cur_id 
+         
+			UNION
+
+			select f.code as org_uni_code,
+           		a.cus_acc_no as cus_acc_no,
+           		e.code as col_typ_code,
+           		e.name as col_typ_name,
+           		'1' as priority,
+           		d.col_hea_id  as col_hea_id,
+		        d.col_num as col_num,
+				d.col_cat_id as col_cat_id,
+           		d.real_est_nomi_valu as col_amount, 
+           		g.code_num as col_cur_num,
+           		d.real_est_nomi_valu  as hf_amount,
+           		g.code_num as hf_cur_num,
+           		'1900-01-01' as hf_date_from,
+           		'1900-01-01' as hf_date_until
+
+			from CUSACC_EXPOSURE a,
+         		LOAN_BENEFICIARY b,
+         		COLL_HEAD d, 
+         		COLL_CATEGORY e,
+         		ORGANIZATION_UNIT f,
+         		CURRENCY g
+
+			where
+         		a.cus_acc_no = :(cus_acc_no) and
+        		(a.cus_acc_no = b.acc_no or 
+         		a.request_no = b.request_no) and
+         		b.status = 'A' and
+         		b.col_hea_id = d.col_hea_id and
+         		d.col_cat_id = e.col_cat_id and
+         		a.org_uni_id = f.org_uni_id and
+         		d.real_est_nm_cur_id = g.cur_id 
+						
+			};
+		
+		 if(collateralIter!=null){        	
+			while(collateralIter.next()){
+				CollateralInsuranceInstrumentData data= extractIterData(collateralIter);
+				result.add(data);				
+			}
+		 }		
+		return result;
+	}
+	
+	private CollateralInsuranceInstrumentData extractIterData(CollateralIterator collateralIter) throws Exception{
+		CollateralInsuranceInstrumentData result= new CollateralInsuranceInstrumentData();
+		
+		result.org_uni_code =collateralIter.org_uni_code();
+		result.product_code=getProductCode(collateralIter.cus_acc_no());
+		result.cus_acc_no =getFormatedAccountNo(collateralIter.cus_acc_no());
+        result.col_num=collateralIter.col_num();
+		result.col_typ_code =collateralIter.col_typ_code();
+		result.col_typ_name =collateralIter.col_typ_name();
+		result.priority =collateralIter.priority();
+		result.col_amount =collateralIter.col_amount();
+		result.col_cur_num =collateralIter.col_cur_num();
+		result.amount =collateralIter.hf_amount();
+		result.amount_cur_num =collateralIter.hf_cur_num();
+		if((collateralIter.hf_date_from()!=null)&&(Date.valueOf("1900-01-01").compareTo(collateralIter.hf_date_from())<0)){
+			result.hf_date_from =collateralIter.hf_date_from();
+		}
+		if((collateralIter.hf_date_until()!=null)&&(Date.valueOf("1900-01-01").compareTo(collateralIter.hf_date_until())<0)){
+			result.hf_date_until =collateralIter.hf_date_until();
+		}
+		if(hasRole(collateralIter.col_cat_id())){
+			result.role=getRole(collateralIter.col_hea_id());
+		}
+		return result;
+	}
+	
+	private boolean hasRole(BigDecimal col_cat_id){
+		return this.col_cat_id_set.contains(col_cat_id);
+	}
+	
+	
+	private String getRole(BigDecimal col_hea_id) throws SQLException{
+		String role=null;
+		try{
+			#sql [connCtx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+			
+			#sql[connCtx]{
+				select b.use_code_value  
+				into: (role)
+				from 
+					coll_loanstock a, 
+					user_code_value b 
+				where 
+					a.col_hea_id=:(col_hea_id) and 
+					a.role_id= b.use_cod_val_id
+			};
+		}catch(SQLException e){
+			rc.debug(".....YOYB0.sqlj getRole        Message  : " + e.getMessage());
+			rc.debug(".....YOYB0.sqlj getRole      Error code : " + e.getErrorCode());
+			rc.debug(".....YOYB0.sqlj getRole        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+			if(e.getErrorCode() == 100){
+				role = null;
+			}else{
+				throw(e);
+			}
+		}
+		return role;
+	}
+	
+	private String getProductCode(String cus_acc_no) throws Exception{
+		String result=null;
+		if(cus_acc_no!=null){
+			if((cus_acc_no.length()==13)&&(cus_acc_no.charAt(3)=='-')&&(cus_acc_no.charAt(6)=='-')){
+				result=cus_acc_no.substring(4, 6);
+			}else{
+				try{
+					#sql [connCtx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+					
+					#sql[connCtx]{
+						select 
+							RTRIM(a.code) 
+						into
+							:(result)
+						from 
+							bank_product_type a ,
+							customer_account b
+						where
+							b.cus_acc_no=:(cus_acc_no) and
+							b.ban_pro_typ_id = a.ban_pro_typ_id
+					};
+				}catch(SQLException e){
+					rc.debug(".....YOYB0.sqlj getProductCode        Message  : " + e.getMessage());
+					rc.debug(".....YOYB0.sqlj getProductCode      Error code : " + e.getErrorCode());
+					rc.debug(".....YOYB0.sqlj getProductCode        SQLState : " + e.getSQLState());
+					e.printStackTrace();
+					if(e.getErrorCode() == 100){
+						result = null;
+					}else{
+						throw(e);
+					}
+				}	
+			}
+		}
+		return result;
+	}
+    
+    private String getFormatedAccountNo(String acc_no) throws Exception{
+        int start_pos=acc_no.lastIndexOf("-");        
+        if(start_pos==-1){
+            return acc_no;
+        }else{
+            return acc_no.substring(start_pos+1);
+        }
+    }
+	
+	
+	
+}

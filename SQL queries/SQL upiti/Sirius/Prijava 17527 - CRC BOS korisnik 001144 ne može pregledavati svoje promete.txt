@@ -1,0 +1,49 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+select * from app_user;
+
+select * from app_user where use_id = 31503; -- gro_id 6414982704
+
+select * from USER_GROUP  where gro_id = 6414982704;  -- code = Nap_KRRef 
+
+select * from role where rol_id = 1667410003; -- 
+
+select * from role where rol_id in ( );
+
+ -- 1,614,830,003 col
+
+select * from menu;
+
+select * from MENU_ACTION;
+
+select * from MENU_ACTION where men_act_id = 1657960003; -- newscreen(RCRCAccount,scrBOSBegin)          
+
+select * from MENU_ACTION_ROLE;
+
+select * from MENU_ACTION_ROLE where men_act_id = 1657960003; -- 0 - puna ovlast
+
+select * from role where rol_id in (999, 1667410003); -- 999  administratorska rola     i      1667410003    Tester niže ovlasti            
+
+select * from MENU_ACTION_ROLE 
+                              
+
+
+select * from MENU_ACTION where menu_action like 'newscreen(RCRC%'; -- men_act_id = 1657960003
+
+
+
+
+
+
+SET CURRENT_SCHEMA = 'SIP'
+
+          	
+			select * from cp_mask_data;
+
+			select count(*)  from cp_mask_data;
+
+			select * from user_mask_data;
+
+			select count(*)  from user_mask_data;
+
+			select * from cp_mask_data where acc_no like  '3200003953';

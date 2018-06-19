@@ -1,0 +1,67 @@
+package hr.vestigo.modules.collateral.jcics.coB2;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import java.sql.*;
+
+import sqlj.runtime.ref.*;
+import hr.vestigo.framework.remote.transaction.*;   
+
+//ovo u import OBAVEZNO (tako mora biti po naredenju)
+import hr.vestigo.modules.collateral.common.yoy0.*;
+import hr.vestigo.modules.coreapp.common.yxyB.*;
+
+public class COB23 extends RemoteTransaction { 
+
+    
+public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coB2/COB23.sqlj,v 1.2 2015/12/04 07:45:01 hraziv Exp $";
+    
+    public DeclCOB2 decl = null;
+    
+    public COB23 (DeclCOB2 decl) {
+        this.decl = decl;        
+    }
+    public void  execute(TransactionContext tc) throws Exception {
+        tc.debug("execute");
+        ConnCtx ctx = tc.getContext(); 
+        #sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};
+                
+        // prvo provjeriti da li postoji u bazi aktivni procjenitelj
+        int broj = 0;           
+        try {
+            #sql [ctx] {SELECT count(*) 
+                        INTO: broj
+                        FROM POL_REGION_MAP                        
+                        WHERE POL_REGION_MAP_ID = :(decl.collpolregionmapclosemapping.POL_REGION_MAP_ID)
+                        AND CURRENT DATE BETWEEN date_from AND date_until
+                };          
+                tc.debug ( "...broj: " + broj);
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction COB23: Error update into POL_REGION_MAP! ","err411a", null);
+        }
+        if(broj == 0){
+            throw new VestigoTMException(1, "Transaction COB23: Error update into POL_REGION_MAP! ","CollMsgErr02", null);
+        } 
+        
+        try {
+            #sql [ctx]{
+                        UPDATE POL_REGION_MAP SET DATE_UNTIL = CURRENT DATE - 1 DAY
+                        WHERE POL_REGION_MAP_ID = :(decl.collpolregionmapclosemapping.POL_REGION_MAP_ID)                        
+                };          
+                tc.debug ( "...broj: " + broj);
+        } catch (java.sql.SQLException  sqle) {
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL ErrorCode " + sqle.getErrorCode());
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL SQLState " + sqle.getSQLState());
+            tc.debug ( "......COB23.sqlj select from POL_REGION_MAP SQL Message " + sqle.getMessage());
+            throw new VestigoTMException(1, "Transaction COB23: Error update into POL_REGION_MAP! ","err411a", null);
+        }     
+    }    
+}

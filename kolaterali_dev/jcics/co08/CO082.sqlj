@@ -1,0 +1,134 @@
+package hr.vestigo.modules.collateral.jcics.co08;
+
+//DIALOG LOAN_ACCOUNT on screen LoanAccountDialog
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+
+ 
+public class CO082 extends RemoteTransaction {
+ 	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co08/CO082.sqlj,v 1.13 2006/02/04 08:50:46 hrasia Exp $";
+	private DeclCO08 decl = null;
+		
+	
+	public CO082(DeclCO08 decl) {
+		this.decl = decl;
+	}
+
+	public void execute(TransactionContext tc) throws Exception {
+
+		tc.debug ( "......CO082.sqlj     DIALOG LOAN_ACCOUNT on screen LoanAccountDialog ");
+		tc.debug ( "......CO082.sqlj     decl.loanaccountdialogmapping.LA_ACC_ID " + decl.loanaccountdialogmapping.LA_ACC_ID);
+		tc.debug ( "......CO082.sqlj     decl.loanaccountdialogmapping.CUS_ID " + decl.loanaccountdialogmapping.CUS_ID);
+		
+		ConnCtx ctx = tc.getContext(); 
+		#sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		
+		
+		try{			
+			#sql [ctx] {SELECT 	
+						loac.acc_no,
+						loac.module_loan,
+						scv1.sys_code_value,
+						scv1.sys_code_desc,
+						loac.loan_type,
+						scv2.sys_code_value,
+						scv2.sys_code_desc,
+						loac.amount,
+						loac.cur_id,
+						curlo.code_char,
+						loac.cur_id_ref,
+						curlf.code_char,
+						loac.exc_rat_ref,
+						loac.exc_rat_ref_date,
+						loac.start_date,
+						loac.year_lo_gu,   
+						loac.month_lo_gu,  
+						loac.day_lo_gu,    
+						loac.payed_date,
+						loac.balance,
+						loac.balance_date,
+						loac.balance_ref,
+						loac.balance_b,
+						loac.balance_bdate,
+						loac.balance_bref,
+						cust.name,
+						loac.la_date_from,
+						loac.la_date_until,
+						loac.use_open_id,
+						opeus.login, 
+						opeus.user_name ,
+						loac.use_id,
+						chaus.login,
+						chaus.user_name,
+						loac.opening_ts,
+						loac.user_lock  
+        	 INTO
+				  									:(decl.loanaccountdialogmapping.LoanAccountDialog_txtAccNo),
+													:(decl.loanaccountdialogmapping.MODULE_LOAN), 	 
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtModuleLoanCode),  	
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtModuleLoanName), 	 
+													:(decl.loanaccountdialogmapping.LOAN_TYPE),  	
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtLoanTypeCode),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtLoanTypeName),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtAmount),	
+													:(decl.loanaccountdialogmapping.CUR_ID),  	
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtCurIdCodeC),	
+													:(decl.loanaccountdialogmapping.CUR_ID_REF ),	
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtCurIdRefCodeC),  
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtExcRatRef ),                   
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtExcRatRefDate ),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtStartDate ),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtYearLoGu),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtMonthLoGu),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtDayLoGu),
+                  									:(decl.loanaccountdialogmapping.LoanAccountDialog_txtPayedDate ),  
+      												:(decl.loanaccountdialogmapping.LoanAccountDialog_txtBalance ),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtBalanceDate ),                  
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtBalanceRef ),    
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtBalanceB ),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtBalanceBDate) ,
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtBalanceBRef ),
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtColaCusIdUseOwnerName),
+				   									:(decl.loanaccountdialogmapping.LoanAccountDialog_txtLaDateFrom  ),                           
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtLaDateUntil ),  
+													:(decl.loanaccountdialogmapping.USE_OPEN_ID ), 	
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtUseOpenIdLogin), 
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtUseOpenIdName ),
+													:(decl.loanaccountdialogmapping.USE_ID ),	
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtUseIdLogin ),                
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtUseIdName ),                 
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtOpeningTs ),	
+													:(decl.loanaccountdialogmapping.LoanAccountDialog_txtUserLock )
+				
+				     	
+			FROM 	loan_account loac 	
+			
+			INNER JOIN currency curlo 		  ON loac.cur_id = curlo.cur_id
+			INNER JOIN app_user opeus		  ON loac.use_open_id = opeus.use_id
+			INNER JOIN app_user chaus         ON loac.use_id = chaus.use_id
+			INNER JOIN customer cust		  ON loac.cus_id = cust.cus_id
+			LEFT OUTER JOIN system_code_value scv1 ON loac.module_loan = scv1.sys_cod_val_id 
+			LEFT OUTER JOIN system_code_value scv2 ON loac.loan_type = scv2.sys_cod_val_id 
+			LEFT OUTER JOIN currency curlf    ON  loac.cur_id_ref = curlf.cur_id
+			WHERE  	loac.la_acc_id = :(decl.loanaccountdialogmapping.LA_ACC_ID)
+			 AND 	loac.cus_id = :(decl.loanaccountdialogmapping.CUS_ID)
+            	  };              									
+			
+		}catch(java.sql.SQLException se){
+			
+			tc.debug ( "......CO082.sqlj select from loan_account SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO082.sqlj select from loan_account SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO082.sqlj select from loan_account SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO082: Error selecting loan_account! ","err411a", null);
+		}
+				                    
+
+	}
+	
+}
+

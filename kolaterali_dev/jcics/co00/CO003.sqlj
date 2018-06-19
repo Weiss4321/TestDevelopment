@@ -1,0 +1,1079 @@
+package hr.vestigo.modules.collateral.jcics.co00;
+
+import java.sql.Date;
+import java.sql.SQLData;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+import hr.vestigo.modules.collateral.common.yoy6.CalculationData;
+import hr.vestigo.modules.collateral.common.yoy6.CurrencyData;
+import hr.vestigo.modules.collateral.common.yoy6.GCTCData;
+import hr.vestigo.modules.collateral.common.yoy6.PoliticalMapData;
+import hr.vestigo.modules.collateral.common.yoy6.UserData;
+import hr.vestigo.modules.collateral.common.yoy6.YOY63;
+import hr.vestigo.modules.collateral.common.yoy6.YOY64;
+
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+
+import hr.vestigo.modules.collateral.common.yoyE.*;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.rba.util.DateUtils;
+
+import hr.vestigo.framework.remote.transaction.*;
+/**
+ * CO003 class select data from REAL_ESTATE and show detail of one fetched row  
+ *      
+ */  
+#sql iterator Iter3 (
+        String ip_activ_and_pay
+        );
+   
+ 
+public class CO003 extends RemoteTransaction {
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co00/CO003.sqlj,v 1.77 2017/12/21 14:04:08 hrazst Exp $";
+    public DeclCO00 decl = null;
+    
+    Timestamp OpeningTs = null;
+    Timestamp UserLock = null;
+    TransactionContext tc=null;
+    
+    public CO003 (DeclCO00 decl) {
+        this.decl = decl;
+    }
+    
+    public void execute(TransactionContext tc) throws Exception {
+        this.tc=tc;
+        YOYE0 yoye0 = new YOYE0(tc); 
+        YOYE0Data kolData = new YOYE0Data();
+        YOY63 SQLhelper = new YOY63(tc);
+        
+        Iter3 iter3=null;   
+        ConnCtx ctx = tc.getContext();
+        
+        Date todaySQLDate = null;
+        java.util.GregorianCalendar calendar = new java.util.GregorianCalendar();
+        long timeT = calendar.getTime().getTime();
+        todaySQLDate = new java.sql.Date(timeT);
+        
+       
+        #sql [ctx]{SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+        //FBPr200014054 - Površina èestice  
+        try{
+            #sql [ctx]  {SELECT
+                                    col_res_id,
+                                    real_est_type,
+                                    rb_est_nom_val,
+                                    rb_est_nom_dat,
+                                    rl_est_nom_val,
+                                    rl_est_nom_dat,
+                                    real_est_sqrm2,
+                                    real_est_pricm2,
+                                    real_est_court_id,
+                                    real_est_cada_munc,
+                                    real_est_land_regn,
+                                    real_est_land_part,
+                                    real_est_pdesc,
+                                    byear,
+                                    ryear,
+                                    street,
+                                    housenr,
+                                    reva_re_coef_id,
+                                    original_val,
+                                    orig_val_date,
+                                    building_val,
+                                    build_val_date,
+                                    pol_map_id_ad,
+                                    pos_off_id_ad,
+                                    coown,                          
+                                    real_est_land_sub,  
+                                    re_cada_munc_st,        
+                                    re_land_part_st,
+                                    build_perm_ind,
+                                    new_build_val ,
+                                    re_sub_type_id ,
+                                    purpose ,
+                                    build_perm ,
+                                    legality,
+                                    estimate_cus_id,
+                                    buy_sell_value, 
+                                    land_sqrm2,
+                                    real_est_rate,
+
+                                    constr_right,
+                                    con_rig_land_regn,
+                                    con_rig_date_to,
+
+                                    real_est_comment,
+                                    proj_fin,
+                                    real_est_fut_value,
+                                    contract_date,
+                                    floor,
+                                    total_floors,
+                                    lift
+                        INTO
+                                    :(decl.reddetmap.RealEstate_COL_RES_ID),
+                                    :(decl.reddetmap.RealEstate_REAL_EST_TYPE),
+                                    :(decl.reddetmap.RealEstate_txtRbEstNomVal),
+                                    :(decl.reddetmap.RealEstate_txtRbEstNomDat),
+                                    :(decl.reddetmap.RealEstate_txtRlEstNomVal),
+                                    :(decl.reddetmap.RealEstate_txtRlEstNomDat),
+                                    :(decl.reddetmap.RealEstate_txtSqrm2),
+                                    :(decl.reddetmap.RealEstate_txtPricem2),
+                                    :(decl.reddetmap.RealEstate_REAL_EST_COURT_ID),
+                                    :(decl.reddetmap.RealEstate_REAL_EST_CADA_MUNC),
+                                    :(decl.reddetmap.RealEstate_txtRealEstLandRegn),
+                                    :(decl.reddetmap.RealEstate_txtRealEstLandPart),                                    
+                                    :(decl.reddetmap.RealEstate_txtRealEstPdesc),
+                                    :(decl.reddetmap.RealEstate_txtByear),
+                                    :(decl.reddetmap.RealEstate_txtRyear),
+                                    :(decl.reddetmap.RealEstate_txtStreet),
+                                    :(decl.reddetmap.RealEstate_txtHousenr),                                    
+                                    :(decl.reddetmap.RealEstate_REVA_RE_COEF_ID),
+                                    :(decl.reddetmap.RealEstate_txtOriginalVal),
+                                    :(decl.reddetmap.RealEstate_txtOrigValDate),
+                                    :(decl.reddetmap.RealEstate_txtBuildingVal),
+                                    :(decl.reddetmap.RealEstate_txtBuildValDate),
+                                    :(decl.reddetmap.RealEstate_POL_MAP_ID_AD),
+                                    :(decl.reddetmap.RealEstate_POS_OFF_ID_AD),
+                                    :(decl.reddetmap.RealEstate_txtCoown),
+                                    :(decl.reddetmap.RealEstate_txtRealEstLandSub),
+                                    :(decl.reddetmap.RealEstate_RE_CADA_MUNC_ST),
+                                    :(decl.reddetmap.RealEstate_txtReLandPartST),
+                                    :(decl.reddetmap.RealEstate_txtBuildPermInd),
+                                    :(decl.reddetmap.RealEstate_txtNewBuildVal),
+                                    :(decl.reddetmap.RealEstate_RE_SUB_TYPE_ID),
+                                    :(decl.reddetmap.purpose_id),
+                                    :(decl.reddetmap.Kol_txtBuildPerm),
+                                    :(decl.reddetmap.Kol_txtLegality),
+                                    :(decl.reddetmap.RealEstate_RCEstimateId),
+                                    :(decl.reddetmap.RealEstate_txtBuySelValue),
+                                    :(decl.reddetmap.RealEstate_txtSqrLand),
+                                    :(decl.reddetmap.RealEstate_txtOcjenaNekretnineCode), 
+
+                                    :(decl.reddetmap.RealEstate_txtConstructionRight),
+                                    :(decl.reddetmap.RealEstate_txtZKConstructionRight),
+                                    :(decl.reddetmap.RealEstate_txtConstructionRightDateTo),
+
+                                    :(decl.reddetmap.RealEstate_txtRealEstateRemark),
+                                    :(decl.reddetmap.RealEstate_txtBuildProjectFinanc),
+                                    :(decl.reddetmap.RealEstate_txtFutureValueAmount),
+                                    :(decl.reddetmap.RealEstate_txtBuySelValueDate),
+                                    :(decl.reddetmap.RealEstate_txtFloor),
+                                    :(decl.reddetmap.RealEstate_txtTotalFloors),
+                                    :(decl.reddetmap.RealEstate_txtLift)
+                    FROM  coll_restate 
+                                WHERE col_hea_id =:(decl.reddetmap.RealEstate_COL_HEA_ID)
+                }; 
+        }catch(java.sql.SQLException se) {
+                tc.debug ( "ERROR SELECT iz coll_restate ULAZNI PARAMETAR");
+                tc.debug ( "decl.reddetmap.RealEstate_COL_RES_ID=" + decl.reddetmap.RealEstate_COL_RES_ID);             
+                this.ispisDeclVarijabli();
+                tc.debug ( "......CO003.sqlj select from coll_restate SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from coll_restate SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from coll_restate SQL Message " + se.getMessage());
+                se.printStackTrace();
+            if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }
+        this.ispisDeclVarijabli();      
+            
+        if(decl.reddetmap.purpose_id != null){  
+            String[] values= SQLhelper.getUserCodeValue(decl.reddetmap.purpose_id);
+            decl.reddetmap.Coll_txtRePurpose = values[0];
+            decl.reddetmap.Coll_txtRePurposeDsc = values[1];            
+        }       
+        
+        if(decl.reddetmap.RealEstate_POL_MAP_ID_AD != null){
+            PoliticalMapData data=SQLhelper.getPoliticalMapData(decl.reddetmap.RealEstate_POL_MAP_ID_AD); 
+            decl.reddetmap.RealEstate_txtPlacePostCode=data.code;
+            decl.reddetmap.RealEstate_txtPlacePostName=data.name;
+        }
+            
+        if(decl.reddetmap.RealEstate_POS_OFF_ID_AD != null){
+            try{
+                #sql [ctx]  {SELECT postal_code, pos_off_name
+                             INTO :(decl.reddetmap.RealEstate_txtPostNr), :(decl.reddetmap.RealEstate_txtPostName)
+                            FROM  post_office
+                            WHERE pos_off_id =:(decl.reddetmap.RealEstate_POS_OFF_ID_AD)
+                }; 
+            }catch(java.sql.SQLException se) {
+                    tc.debug ( "......CO003.sqlj select from post_office SQL ErrorCode " + se.getErrorCode());
+                    tc.debug ( "......CO003.sqlj select from post_office SQL SQLState " + se.getSQLState());
+                    tc.debug ( "......CO003.sqlj select from post_office SQL Message " + se.getMessage());
+                    se.printStackTrace();                   
+            }
+        }   
+
+        try{
+                #sql [ctx]  {
+                            SELECT real_es_type_code, real_es_type_desc
+                            INTO :(decl.reddetmap.RealEstate_txtTypeCode), :(decl.reddetmap.RealEstate_txtTypeDesc)
+                            FROM  real_estate_type
+                            WHERE real_es_type_id =:(decl.reddetmap.RealEstate_REAL_EST_TYPE)
+                }; 
+        }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from real_estate_type SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from real_estate_type SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from real_estate_type SQL Message " + se.getMessage());
+                se.printStackTrace();
+            if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }
+
+        try{
+                #sql [ctx]  {
+                        SELECT co_code, co_name
+                        INTO :(decl.reddetmap.RealEstate_txtCoCode), :(decl.reddetmap.RealEstate_txtCoName)
+                        FROM coll_court
+                        WHERE co_id =:(decl.reddetmap.RealEstate_REAL_EST_COURT_ID)
+                }; 
+        }catch(java.sql.SQLException se) {
+            tc.debug ( "......CO003.sqlj select from coll_court SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO003.sqlj select from coll_court SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO003.sqlj select from coll_court SQL Message " + se.getMessage());
+            se.printStackTrace();
+            if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }
+                            
+        try{
+                #sql [ctx]  {
+                            SELECT code, name
+                            INTO :(decl.reddetmap.RealEstate_txtCadaMuncCode), :(decl.reddetmap.RealEstate_txtCadaMuncName)
+                            FROM cadastre_map
+                            WHERE cad_map_id =:(decl.reddetmap.RealEstate_REAL_EST_CADA_MUNC)
+                }; 
+        }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from cadastre_map SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from cadastre_map SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from cadastre_map SQL Message " + se.getMessage());
+                se.printStackTrace();
+            if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }
+
+        if(decl.reddetmap.RealEstate_RE_CADA_MUNC_ST != null){
+            try{
+                    #sql [ctx]  {
+                            SELECT code, name
+                            INTO :(decl.reddetmap.RealEstate_txtCadaMuncCodeST), :(decl.reddetmap.RealEstate_txtCadaMuncNameST )
+                            FROM cadastre_map
+                            WHERE cad_map_id =:(decl.reddetmap.RealEstate_RE_CADA_MUNC_ST)
+                    }; 
+            }catch(java.sql.SQLException se) {
+                    tc.debug ( "......CO003.sqlj select from cadastre_map SQL ErrorCode " + se.getErrorCode());
+                    tc.debug ( "......CO003.sqlj select from cadastre_map SQL SQLState " + se.getSQLState());
+                    tc.debug ( "......CO003.sqlj select from cadastre_map SQL Message " + se.getMessage());
+                    se.printStackTrace();               
+            }
+        }
+        if(decl.reddetmap.RealEstate_RE_SUB_TYPE_ID != null){
+            try{
+                    #sql [ctx]  {
+                            SELECT re_sub_type_code, re_sub_type_desc
+                            INTO :(decl.reddetmap.RealEstate_txtReSubTypeCode), :(decl.reddetmap.RealEstate_txtReSubTypeDesc )
+                            FROM re_sub_type
+                            WHERE re_sub_type_id =:(decl.reddetmap.RealEstate_RE_SUB_TYPE_ID)
+                    }; 
+            }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from re_sub_type SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from re_sub_type SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from re_sub_type SQL Message " + se.getMessage());
+                se.printStackTrace();                   
+            }
+        }
+
+        if(decl.reddetmap.RealEstate_RCEstimateId != null){
+            try{
+                #sql [ctx]  {SELECT register_no, name, tax_number
+                            INTO :(decl.reddetmap.RealEstate_txtEUseIdLoginRC),
+                                 :(decl.reddetmap.RealEstate_txtEUseIdNameRC),
+                                 :(decl.reddetmap.RealEstate_txtEUseIdRCOIB)
+                            FROM  customer  
+                            WHERE cus_id =:(decl.reddetmap.RealEstate_RCEstimateId)
+                        }; 
+            }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from customer RealEstate_RCEstimateId SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from customer RealEstate_RCEstimateId SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from customer RealEstate_RCEstimateId SQL Message " + se.getMessage());
+                se.printStackTrace();
+                if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                    throw new VestigoTMException(1,"No data found!", "err012", null);
+                else 
+                    throw se;
+            }
+        }       
+        
+        //SELECT FROM COLL_HEAD
+        try{
+                #sql [ctx]  {SELECT
+                                coh.col_type_id,
+                                coh.col_num,
+                                coh.col_desc,
+                                coh.real_est_euse_id,
+                                coh.real_est_estn_valu,
+                                coh.real_est_estn_date,
+                                coh.real_est_datn_from,
+                                coh.real_est_datn_unti,
+                                coh.real_est_nomi_desc,
+                                coh.real_est_nomi_valu,
+                                coh.real_est_nomi_date,
+                                coh.real_est_liqu_valu,
+                                coh.real_est_liqu_date,
+                                coh.real_est_bptc_valu,
+                                coh.real_est_bptc_date,
+                                coh.real_est_nm_cur_id,
+                                coh.date_to_lop,   
+                                coh.date_rec_lop,  
+                                coh.rec_lop,       
+                                coh.com_doc ,
+                                coh.missing_doc,     
+                                coh.date_to_doc,     
+                                coh.date_rec_doc,    
+                                coh.reva_coef ,
+                                coh.reva_date,                
+                                coh.reva_date_am,           
+                                coh.reva_bvalue,                
+                                coh.reva_bdate,         
+                                coh.reva_bdate_am,          
+                                coh.amort_age,          
+                                coh.amort_per_cal_id,   
+                                coh.amort_val_cal,     
+                                coh.nepo_value,        
+                                coh.nepo_date,         
+                                coh.nepo_per_cal,      
+                                coh.third_right,       
+                                coh.third_right_cur_id,
+                                coh.third_right_nom,   
+                                coh.third_right_date,  
+                                coh.hfs_value,         
+                                coh.hfs_value_date,    
+                                coh.hfs_value_last_one,
+                                coh.hfs_date_last_one, 
+                                coh.weigh_value,        
+                                coh.weigh_date,         
+                                coh.weigh_bvalue,       
+                                coh.weigh_bdate,        
+                                coh.sum_limit_val,     
+                                coh.sum_limit_dat,     
+                                coh.sum_part_val,      
+                                coh.sum_part_dat,      
+                                coh.avail_value,       
+                                coh.avail_per_cal,     
+                                coh.avail_date,        
+                                coh.inspol_ind,        
+                                coh.col_place,         
+                                coh.col_county,        
+                                coh.col_district,      
+                                coh.col_resi_quar,     
+                                coh.coll_mvp_ponder,   
+                                coh.coll_hnb_ponder,   
+                                coh.coll_rzb_ponder,   
+                                coh.real_est_date_from,
+                                coh.real_est_date_unti,
+                                coh.real_est_add_data, 
+                                coh.use_open_id,       
+                                coh.use_id,            
+                                coh.opening_ts,        
+                                coh.user_lock ,
+                                coh.user_lock,
+                                coh.real_est_status ,
+                                coh.real_est_spec_stat,
+                                coh.eligibility,
+                                coh.acum_buy_value,                 
+                                coh.origin_org_uni_id,          
+                                coh.org_uni_id,                         
+                                coh.use_id_ver,                         
+                                coh.use_id_aut,                         
+                                coh.verification_ts,                
+                                coh.autorization_ts,                
+                                coh.mortgage_status,                
+                                coh.collateral_status,          
+                                coh.workflow_indic,                 
+                                coh.cover_indic,                        
+                                coh.ver_send_ts,                        
+                                coh.basic_data_status,          
+                                coh.coll_data_status,               
+                                coh.use_id_ver_snd,     
+                                coh.col_cat_id,
+                                coh.financial_flag  ,
+                                coh.thi_date_last_unt,
+                                coh.rba_eligibility,
+                                coh.law_eligibility,
+                                coh.rba_elig_dsc,
+                                coh.b1_eligibility,
+                                coh.b2_irb_elig,
+                                coh.nd_eligibility,
+                                coh.crm_hnb,
+                                    
+                                coh.used_in_recovery,
+                                coh.part_of_complex,
+                                coh.recovery_proc_stat,
+                                coh.kind_of_recovery,
+                                coh.full_amount,
+                                coh.full_amount_cur_id,
+                                coh.recovery_amount,
+                                coh.recovery_cur_id,                                
+                                coh.recovery_date,
+                                coh.recovery_rate,   
+                                coh.recovery_comment,
+                                
+                                coh.b2_irb_insag_elig,
+                                coh.b2_hnb_insag_elig,
+                                coh.use_id_co,
+                                coh.chg_nom_val_proc_ts,
+                                coh.real_est_nom_type,
+                                coh.prec_exec_est,
+                                coh.correct_value,
+                                coh.respect_deadline,
+                                coh.prof_to_rba,
+                                coh.prof_to_client,
+                                coh.col_eco_life,
+                                coh.real_est_estn_int,
+                                coh.est_type,
+                                coh.met_est_1,
+                                coh.met_est_2,
+                                coh.coll_risk,
+                                coh.non_ins_reason,
+                                coh.ins_cov_coll,
+                                coh.contract_type,
+                                realization_amount,
+                                realization_cur_id,
+                                realization_date,
+                                realization_kind,
+                                realization_cost,
+                                realization_cost_cur_id, 
+                                for_sale,
+                                for_sale_date,
+                                takeover_from_bank
+
+                                INTO
+
+                                :(decl.reddetmap.RealEstate_COL_TYPE_ID),
+                                :(decl.reddetmap.RealEstate_txtCode),
+                                :(decl.reddetmap.RealEstate_txtDesc),
+                                :(decl.reddetmap.RealEstate_REAL_EST_EUSE_ID),
+                                :(decl.reddetmap.RealEstate_txtEstnValu),
+                                :(decl.reddetmap.RealEstate_txtEstnDate),
+                                :(decl.reddetmap.RealEstate_txtDatnFrom),
+                                :(decl.reddetmap.RealEstate_txtDatnUnti),
+                                :(decl.reddetmap.RealEstate_txtEstnMarkDesc),
+                                :(decl.reddetmap.RealEstate_txtNomiValu),
+                                :(decl.reddetmap.RealEstate_txtNomiDate),
+                                :(decl.reddetmap.RealEstate_txtLiquValu),
+                                :(decl.reddetmap.RealEstate_txtLiquDate),
+                                :(decl.reddetmap.RealEstate_txtBptcValu),
+                                :(decl.reddetmap.RealEstate_txtBptcDate),
+                                :(decl.reddetmap.RealEstate_REAL_EST_NM_CUR_ID),
+                                :(decl.reddetmap.RealEstate_txtDateToLop),   
+                                :(decl.reddetmap.RealEstate_txtDateRecLop),  
+                                :(decl.reddetmap.RealEstate_txtRecLop),      
+                                :(decl.reddetmap.RealEstate_txtComDoc),
+                                :(decl.reddetmap.RealEstate_txtMissingDoc),    
+                                :(decl.reddetmap.RealEstate_txtDateToDoc),     
+                                :(decl.reddetmap.RealEstate_txtDateRecDoc),    
+                                :(decl.reddetmap.RealEstate_txtRevaCoef),
+                                :(decl.reddetmap.RealEstate_txtRevaDate),       
+                                :(decl.reddetmap.RealEstate_txtRevaDateAM),     
+                                :(decl.reddetmap.RealEstate_txtRevaBValue),     
+                                :(decl.reddetmap.RealEstate_txtRevaBDate),      
+                                :(decl.reddetmap.RealEstate_txtRevaBDateAM),    
+                                :(decl.reddetmap.RealEstate_txtAmortAge),       
+                                :(decl.reddetmap.RealEstate_AMORT_PER_CAL_ID),             
+                                :(decl.reddetmap.RealEstate_txtAmortValCal),    
+                                :(decl.reddetmap.RealEstate_txtNepoValue),      
+                                :(decl.reddetmap.RealEstate_txtNepoDate),       
+                                :(decl.reddetmap.RealEstate_txtNepoPerCal),     
+                                :(decl.reddetmap.RealEstate_txtThirdRight),     
+                                :(decl.reddetmap.RealEstate_THIRD_RIGHT_CUR_ID),           
+                                :(decl.reddetmap.RealEstate_txtThirdRightInNom),
+                                :(decl.reddetmap.RealEstate_txtThirdRightDate), 
+                                :(decl.reddetmap.RealEstate_txtHfsValue),       
+                                :(decl.reddetmap.RealEstate_txtHfsValueDate),   
+                                :(decl.reddetmap.RealEstate_txtHfsValueLastOne),
+                                :(decl.reddetmap.RealEstate_txtHfsDateLastOne), 
+                                :(decl.reddetmap.RealEstate_txtWeighValue),      
+                                :(decl.reddetmap.RealEstate_txtWeighDate),       
+                                :(decl.reddetmap.RealEstate_txtWeighBValue),     
+                                :(decl.reddetmap.RealEstate_txtWeighBDate),      
+                                :(decl.reddetmap.RealEstate_txtSumLimitVal),    
+                                :(decl.reddetmap.RealEstate_txtSumLimitDat),    
+                                :(decl.reddetmap.RealEstate_txtSumPartVal),     
+                                :(decl.reddetmap.RealEstate_txtSumPartDat),     
+                                :(decl.reddetmap.RealEstate_txtAvailValue),     
+                                :(decl.reddetmap.RealEstate_txtAvailPerCal),    
+                                :(decl.reddetmap.RealEstate_txtAvailDate),      
+                                :(decl.reddetmap.RealEstate_txtInspolInd),      
+                                :(decl.reddetmap.RealEstate_COL_PLACE),                    
+                                :(decl.reddetmap.RealEstate_COL_COUNTY),                   
+                                :(decl.reddetmap.RealEstate_COL_DISTRICT),                 
+                                :(decl.reddetmap.RealEstate_COL_RESI_QUAR),                
+                                :(decl.reddetmap.RealEstate_txtCollMvpPonder),  
+                                :(decl.reddetmap.RealEstate_txtCollHnbPonder),  
+                                :(decl.reddetmap.RealEstate_txtCollRzbPonder),  
+                                :(decl.reddetmap.RealEstate_txtRealEsDateFrom), 
+                                :(decl.reddetmap.RealEstate_txtRealEsDateUnti), 
+                                :(decl.reddetmap.RealEstate_txtAddData),        
+                                :(decl.reddetmap.RealEstate_USE_OPEN_ID),                  
+                                :(decl.reddetmap.RealEstate_USE_ID),                       
+                                :(decl.reddetmap.RealEstate_txtOpeningTs),      
+                                :(decl.reddetmap.RealEstate_txtUserLock),
+                                :(decl.reddetmap.RealEstate_USER_LOCK),
+                                :(decl.reddetmap.RealEstate_txtRealEstStatus),
+                                :(decl.reddetmap.RealEstate_txtRealEstSpecStat),        
+                                :(decl.reddetmap.RealEstate_txtEligibility),
+                                :(decl.reddetmap.RealEstate_AcumBuyValue),        
+                                :(decl.reddetmap.RealEstate_ORIGIN_ORG_UNI_ID),        
+                                :(decl.reddetmap.RealEstate_ORG_UNI_ID ),        
+                                :(decl.reddetmap.RealEstate_USE_ID_VER ),        
+                                :(decl.reddetmap.RealEstate_USE_ID_AUT ),        
+                                :(decl.reddetmap.RealEstate_VERIFICATION_TS ),        
+                                :(decl.reddetmap.RealEstate_AUTORIZATION_TS ),        
+                                :(decl.reddetmap.RealEstate_MortgageStatus ),        
+                                :(decl.reddetmap.RealEstate_CollateralStatus),        
+                                :(decl.reddetmap.RealEstate_WorkflowIndic),        
+                                :(decl.reddetmap.RealEstate_CoverIndic),        
+                                :(decl.reddetmap.RealEstate_VER_SEND_TS),        
+                                :(decl.reddetmap.RealEstate_BasicDataStatus),        
+                                :(decl.reddetmap.RealEstate_CollDataStatus),        
+                                :(decl.reddetmap.RealEstate_USE_ID_VER_SND),    
+                                :(decl.reddetmap.RealEstate_COL_CAT_ID),
+                                :(decl.reddetmap.RealEstate_FinancialFlag) ,
+                                :(decl.reddetmap.RealEstate_txtThRightLastToDate),
+                                :(decl.reddetmap.ColRba_txtEligibility1),
+                                :(decl.reddetmap.ColLow_txtEligibility),
+                                :(decl.reddetmap.Kol_txtRbaEligDsc1),
+                                :(decl.reddetmap.Coll_txtB1Eligibility1),
+                                :(decl.reddetmap.Coll_txtB2IRBEligibility1),
+                                :(decl.reddetmap.Coll_txtNDEligibility_Re),
+                                :(decl.reddetmap.Kol_txtCRMHnb_REstate),
+
+                                :(decl.reddetmap.Coll_txtUsedInRecovery), 
+                                :(decl.reddetmap.Coll_txtPartOfComplex),
+                                :(decl.reddetmap.Coll_txtRecoveryProcStat),
+                                :(decl.reddetmap.Coll_txtKindOfRecoveryCode),
+                                :(decl.reddetmap.Coll_txtFullAmountRecovery),
+                                :(decl.reddetmap.CUR_ID_FULL_AMOUNT),
+                                :(decl.reddetmap.Coll_txtRecoveryAmount),
+                                :(decl.reddetmap.CUR_ID_RECOVERY_AMOUNT),
+                                :(decl.reddetmap.Coll_txtRecoveryDate),
+                                :(decl.reddetmap.Coll_txtRecoveryRate),
+                                :(decl.reddetmap.Coll_txtRecoveryComment),
+
+                                :(decl.reddetmap.RealEstate_txtB2IRB),
+                                :(decl.reddetmap.RealEstate_txtB2HNB),
+                                :(decl.reddetmap.USE_ID_CO),
+                                :(decl.reddetmap.RealEstate_txtProccessingTimestamp),
+                                :(decl.reddetmap.RealEstate_txtTypeTVCode),
+                                :(decl.reddetmap.RealEstate_txtAccuracyEstimatesCode),
+                                :(decl.reddetmap.RealEstate_txtFairnessValuesCode),
+                                :(decl.reddetmap.RealEstate_txtDeadLinesCode),
+                                :(decl.reddetmap.RealEstate_txtProfByRBACode),
+                                :(decl.reddetmap.RealEstate_txtProfByClientCode),
+                                :(decl.reddetmap.Coll_txtEconomicLife),
+                                :(decl.reddetmap.RealEstate_txtInternalValuer),
+                                :(decl.reddetmap.EST_TYPE_CODE),
+                                :(decl.reddetmap.RealEstate_txtAssessmentMethod1Code),
+                                :(decl.reddetmap.RealEstate_txtAssessmentMethod2Code),
+                                :(decl.reddetmap.RealEstate_txtRiskCode),
+                                :(decl.reddetmap.RealEstate_txtNonInsReasoneCode),
+                                :(decl.reddetmap.RealEstate_txtInsTotalCoverCode),
+                                :(decl.reddetmap.RealEstate_txtContractTypeCode),
+                                :(decl.reddetmap.Coll_txtRealizationAmount),
+                                :(decl.reddetmap.CUR_ID_REALIZATION_AMOUNT),
+                                :(decl.reddetmap.Coll_txtRealizationDate),
+                                :(decl.reddetmap.Coll_txtKindOfRealization),
+                                :(decl.reddetmap.Coll_txtCostRealization),
+                                :(decl.reddetmap.REALIZATION_COST_CUR_ID),
+                                :(decl.reddetmap.Coll_txtForSale),
+                                :(decl.reddetmap.Coll_txtForSaleDate),
+                                :(decl.reddetmap.Coll_txtTakeOverBank) 
+                            FROM  coll_head  coh
+                            WHERE coh.col_hea_id =:(decl.reddetmap.RealEstate_COL_HEA_ID)
+                }; 
+        }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from engine_type SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from engine_type SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from engine_type SQL Message " + se.getMessage());
+                se.printStackTrace();
+            if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }
+              
+        // racunam stvarnu cijenu m2
+        BigDecimal nominal_amount = decl.reddetmap.RealEstate_txtNomiValu;
+        BigDecimal povrsina = decl.reddetmap.RealEstate_txtSqrm2;
+
+        if(nominal_amount != null && povrsina != null){
+            if (povrsina.compareTo(new java.math.BigDecimal("0.00")) != 0) {
+                decl.reddetmap.RealEstate_txtPricem2 = nominal_amount.divide(povrsina,2,BigDecimal.ROUND_HALF_UP);
+            }
+        }
+        
+        if(decl.reddetmap.RealEstate_COL_COUNTY != null){
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_COL_COUNTY " + decl.reddetmap.RealEstate_COL_COUNTY);
+            PoliticalMapData data=SQLhelper.getPoliticalMapData(decl.reddetmap.RealEstate_COL_COUNTY);  
+            decl.reddetmap.RealEstate_txtRevReCountyCode = data.code;
+            decl.reddetmap.RealEstate_txtRevReCounty = data.name;            
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevReCountyCode " + decl.reddetmap.RealEstate_txtRevReCountyCode);
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevReCounty " + decl.reddetmap.RealEstate_txtRevReCounty);
+        }
+        
+        if(decl.reddetmap.RealEstate_COL_PLACE != null){
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_COL_PLACE " + decl.reddetmap.RealEstate_COL_PLACE);
+            PoliticalMapData data=SQLhelper.getPoliticalMapData(decl.reddetmap.RealEstate_COL_PLACE);
+            decl.reddetmap.RealEstate_txtRevRePlaceCode=data.code;
+            decl.reddetmap.RealEstate_txtRevRePlace=data.name;
+            decl.reddetmap.RealEstate_txtRegion=data.region;
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevRePlaceCode " + decl.reddetmap.RealEstate_txtRevRePlaceCode);
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevRePlace " + decl.reddetmap.RealEstate_txtRevRePlace);
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRegion " + decl.reddetmap.RealEstate_txtRegion); 
+        }
+        
+        if(decl.reddetmap.RealEstate_COL_DISTRICT != null){
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_COL_DISTRICT " + decl.reddetmap.RealEstate_COL_DISTRICT);
+            PoliticalMapData data=SQLhelper.getPoliticalMapData(decl.reddetmap.RealEstate_COL_DISTRICT);
+            decl.reddetmap.RealEstate_txtRevReDistrictCode=data.code;
+            decl.reddetmap.RealEstate_txtRevReDistrict=data.name;
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevReDistrictCode " + decl.reddetmap.RealEstate_txtRevReDistrictCode);
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevReDistrict " + decl.reddetmap.RealEstate_txtRevReDistrict);
+        }
+        
+        if(decl.reddetmap.RealEstate_COL_RESI_QUAR != null){
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_COL_RESI_QUAR " + decl.reddetmap.RealEstate_COL_RESI_QUAR);
+            PoliticalMapData data=SQLhelper.getPoliticalMapData(decl.reddetmap.RealEstate_COL_RESI_QUAR);
+            decl.reddetmap.RealEstate_txtRevReResiQuarCode=data.code;
+            decl.reddetmap.RealEstate_txtRevReResiQuar=data.name;
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevReResiQuarCode " + decl.reddetmap.RealEstate_txtRevReResiQuarCode);
+            tc.debug ( ".....CO003.sqlj decl.reddetmap.RealEstate_txtRevReResiQuar " + decl.reddetmap.RealEstate_txtRevReResiQuar);
+        }
+        //Vrsta tržišne vrijednosti
+        
+        if(decl.reddetmap.RealEstate_txtTypeTVCode != null && !decl.reddetmap.RealEstate_txtTypeTVCode.trim().equals("")){
+            tc.debug ( "......CO003.sqlj RealEstate_txtTypeTVCode " + decl.reddetmap.RealEstate_txtTypeTVCode);
+            String opis = SQLhelper.getSystemCodeDescription("coll_RealEstNomTyp", decl.reddetmap.RealEstate_txtTypeTVCode);                  
+            decl.reddetmap.RealEstate_txtTypeTV = opis;
+            tc.debug ( "......CO003.sqlj RealEstate_txtTypeTV " + decl.reddetmap.RealEstate_txtTypeTV);                
+        }
+        // B2 prihvatljivost
+        if(decl.reddetmap.RealEstate_txtEligibility != null && !decl.reddetmap.RealEstate_txtEligibility.trim().equals("")){
+            tc.debug ( "......CO003.sqlj RealEstate_txtEligibility " + decl.reddetmap.RealEstate_txtEligibility);
+            String opisPrihv = SQLhelper.getSystemCodeDescription("clt_eligib", decl.reddetmap.RealEstate_txtEligibility);                      
+            decl.reddetmap.RealEstate_txtEligDesc = opisPrihv;
+            tc.debug ( "......CO003.sqlj txtEligDesc " + decl.reddetmap.RealEstate_txtEligDesc);                
+        }
+        
+        // misljenje pravne sluzbe
+        if(decl.reddetmap.ColLow_txtEligibility != null &&  (!decl.reddetmap.ColLow_txtEligibility.trim().equals(""))){
+            tc.debug ( "......CO003.sqlj ColLow_txtEligibility " + decl.reddetmap.ColLow_txtEligibility);
+            String opisPrihv = SQLhelper.getSystemCodeDescription("clt_eligib", decl.reddetmap.ColLow_txtEligibility);                          
+            decl.reddetmap.ColLow_txtEligDesc = opisPrihv;
+            tc.debug ( "......CO003.sqlj ColLow_txtEligDesc " + decl.reddetmap.ColLow_txtEligDesc);
+        }           
+
+        // RBA prihvatljivost
+        if(decl.reddetmap.ColRba_txtEligibility1 != null &&  (!decl.reddetmap.ColRba_txtEligibility1.trim().equals(""))){
+            tc.debug ( "......CO003.sqlj ColRBA_txtEligibility1 " + decl.reddetmap.ColRba_txtEligibility1);             
+            String opisPrihv = SQLhelper.getSystemCodeDescription("clt_rba_eligib", decl.reddetmap.ColRba_txtEligibility1);                         
+            decl.reddetmap.ColRba_txtEligDesc1 = opisPrihv;
+            tc.debug ( "......CO003.sqlj ColRba_txtEligibility1 " + decl.reddetmap.ColRba_txtEligDesc1);                
+        }           
+             
+        // B1 prihvatljivost
+        if(decl.reddetmap.Coll_txtB1Eligibility1 != null && (!decl.reddetmap.Coll_txtB1Eligibility1.trim().equals(""))){
+            tc.debug ( "......CO003.sqlj Coll_txtB1EligDesc1 " + decl.reddetmap.Coll_txtB1EligDesc1);
+            String opisPrihv = SQLhelper.getSystemCodeDescription("clt_eligib", decl.reddetmap.Coll_txtB1Eligibility1);         
+            decl.reddetmap.Coll_txtB1EligDesc1 = opisPrihv;
+            tc.debug ( "......CO003.sqlj txtEligDesc " + decl.reddetmap.Coll_txtB1EligDesc1);
+        }
+        
+        // B2 IRB prihvatljivost            
+        if(decl.reddetmap.Coll_txtB2IRBEligibility1 != null && (!decl.reddetmap.Coll_txtB2IRBEligibility1.trim().equals(""))){
+            tc.debug ( "......CO003.sqlj Coll_txtB2IRBEligibility1 " + decl.reddetmap.Coll_txtB2IRBEligibility1);
+            String opisPrihv = SQLhelper.getSystemCodeDescription("clt_eligib", decl.reddetmap.Coll_txtB2IRBEligibility1);
+            decl.reddetmap.Coll_txtB2IRBEligDesc1 = opisPrihv;
+            tc.debug ( "......CO003.sqlj txtEligDesc " + decl.reddetmap.Coll_txtB2IRBEligDesc1);
+        }                   
+        
+        // ND prihvatljivost  
+        if(decl.reddetmap.Coll_txtNDEligibility_Re != null && (!decl.reddetmap.Coll_txtNDEligibility_Re.trim().equals(""))){
+            tc.debug ( "......CO003.sqlj Coll_txtNDEligibility_Re " + decl.reddetmap.Coll_txtNDEligibility_Re);
+            String opisPrihv = SQLhelper.getSystemCodeDescription("clt_eligib", decl.reddetmap.Coll_txtNDEligibility_Re);
+            decl.reddetmap.Coll_txtNDEligDesc_Re = opisPrihv;
+            tc.debug ( "......CO003.sqlj Coll_txtNDEligDesc_Re " + decl.reddetmap.Coll_txtNDEligDesc_Re);
+        } 
+        
+        // dohvat opisa procjene - RealEstate_txtEstnMarkDesc
+        if(decl.reddetmap.RealEstate_txtEstnMarkDesc != null && (!decl.reddetmap.RealEstate_txtEstnMarkDesc.trim().equals(""))){
+            tc.debug ( "......CO003.sqlj RealEstate_txtEstnMarkDesc " + decl.reddetmap.RealEstate_txtEstnMarkDesc);
+            String estnCode = SQLhelper.getSystemCodeValue("kol_evaluation_typ", decl.reddetmap.RealEstate_txtEstnMarkDesc);
+            decl.reddetmap.RealEstate_txtEstnMark = estnCode;
+            tc.debug ( "......CO003.sqlj txtEligDesc " + decl.reddetmap.RealEstate_txtEstnMark);
+        } 
+        
+        // Ocjena nekretnine
+        if(decl.reddetmap.RealEstate_txtOcjenaNekretnineCode != null && !decl.reddetmap.RealEstate_txtOcjenaNekretnineCode.trim().equals("")){
+            tc.debug ( "......CO003.sqlj RealEstate_txtOcjenaNekretnineCode " + decl.reddetmap.RealEstate_txtOcjenaNekretnineCode);             
+            String opisOcjeneNekretnine = SQLhelper.getSystemCodeDescription("coll_grade", decl.reddetmap.RealEstate_txtOcjenaNekretnineCode); 
+            decl.reddetmap.RealEstate_txtOcjenaNekretnineDesc = opisOcjeneNekretnine;
+            tc.debug ( "......CO003.sqlj RealEstate_txtOcjenaNekretnineDesc " + decl.reddetmap.RealEstate_txtOcjenaNekretnineDesc);                
+        }
+        
+        if(decl.reddetmap.EST_TYPE_CODE != null && !decl.reddetmap.EST_TYPE_CODE.trim().equals("")){
+            tc.debug ( "......CO003.sqlj EST_TYPE_CODE " + decl.reddetmap.EST_TYPE_CODE);             
+            String opis = SQLhelper.getSystemCodeDescription("est_type", decl.reddetmap.EST_TYPE_CODE); 
+            decl.reddetmap.RealEstate_txtTypelValuer = opis;
+            tc.debug ( "......CO003.sqlj RealEstate_txtTypelValuer " + decl.reddetmap.RealEstate_txtTypelValuer);                
+        }  
+        
+                
+        //POJEDINI
+        //RealEstate_REAL_EST_NM_CUR_ID+
+        CurrencyData curData=null;
+        curData=SQLhelper.getCurrencyData(decl.reddetmap.RealEstate_REAL_EST_NM_CUR_ID);
+        decl.reddetmap.RealEstate_txtNmCurIdCodeChar=curData.code_char;
+                    
+        decl.reddetmap.RealEstate_txtTvCurIdCodeChar = decl.reddetmap.RealEstate_txtNmCurIdCodeChar;
+        
+        if(decl.reddetmap.CUR_ID_FULL_AMOUNT!=null){
+            curData=SQLhelper.getCurrencyData(decl.reddetmap.CUR_ID_FULL_AMOUNT);
+            decl.reddetmap.Coll_txtFullAmountRecoveryCur=curData.code_char;
+        }
+        if(decl.reddetmap.CUR_ID_RECOVERY_AMOUNT!=null){
+            curData=SQLhelper.getCurrencyData(decl.reddetmap.CUR_ID_RECOVERY_AMOUNT);
+            decl.reddetmap.Coll_txtRecoveryAmountCur=curData.code_char;
+        }
+        if(decl.reddetmap.CUR_ID_REALIZATION_AMOUNT!=null){
+            curData=SQLhelper.getCurrencyData(decl.reddetmap.CUR_ID_REALIZATION_AMOUNT);
+            decl.reddetmap.Coll_txtRealizationAmountCur=curData.code_char;
+        }
+        if(decl.reddetmap.REALIZATION_COST_CUR_ID!=null){
+            curData=SQLhelper.getCurrencyData(decl.reddetmap.REALIZATION_COST_CUR_ID);
+            decl.reddetmap.Coll_txtCostRealizationCur=curData.code_char;
+        }        
+        //COL_TYPE_ID+
+        try{
+                #sql [ctx]  {SELECT coll_type_code,
+                                    coll_type_name
+                            INTO
+                                :(decl.reddetmap.RealEstate_txtCollTypeCode),
+                                :(decl.reddetmap.RealEstate_txtCollTypeName)
+                            FROM  collateral_type  
+                            WHERE coll_type_id =:(decl.reddetmap.RealEstate_COL_TYPE_ID)
+                }; 
+        }catch(java.sql.SQLException se) {
+            tc.debug ( "......CO003.sqlj select from vehicle_type SQL ErrorCode " + se.getErrorCode());
+            tc.debug ( "......CO003.sqlj select from vehicle_type SQL SQLState " + se.getSQLState());
+            tc.debug ( "......CO003.sqlj select from vehicle_type SQL Message " + se.getMessage());
+            se.printStackTrace();
+            if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                throw new VestigoTMException(1,"No data found!", "err012", null);
+            else 
+                throw se;
+        }//COL_TYPE_ID+
+                 
+        //REAL_EST_EUSE_ID+
+        if(decl.reddetmap.RealEstate_REAL_EST_EUSE_ID != null){
+                //Ako ima procjenitelja
+            try{
+                    #sql [ctx]  {SELECT register_no,
+                                        name,
+                                        cus_typ_id,
+                                        tax_number
+                                INTO
+                                        :(decl.reddetmap.RealEstate_txtEUseIdLogin),
+                                        :(decl.reddetmap.RealEstate_txtEUseIdName),
+                                        :(decl.reddetmap.RealEstate_REAL_EST_CUS_TYPE_ID),
+                                        :(decl.reddetmap.RealEstate_txtEUseIdOIB)
+                                FROM  customer  
+                                WHERE cus_id =:(decl.reddetmap.RealEstate_REAL_EST_EUSE_ID)
+                            }; 
+            }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from customer REAL_EST_EUSE_ID SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from customer REAL_EST_EUSE_ID SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from customer REAL_EST_EUSE_ID SQL Message " + se.getMessage());
+                se.printStackTrace();
+                if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                    throw new VestigoTMException(1,"No data found!", "err012", null);
+                else 
+                    throw se;
+            }
+            
+        }//REAL_EST_EUSE_ID+
+            
+        //CUS_ID+
+        if(decl.reddetmap.RealEstate_CUS_ID != null){
+            //KORISNIK PLASMANA - NOSITELJ KOLATERALA   
+            try{
+                    #sql [ctx]  {SELECT register_no,
+                                        name
+                                INTO
+                                        :(decl.reddetmap.RealEstate_txtCarrierRegisterNo),
+                                        :(decl.reddetmap.RealEstate_txtCarrierName)
+                                FROM  customer  
+                                WHERE cus_id =:(decl.reddetmap.RealEstate_CUS_ID)
+                            }; 
+            }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from customer CUS_ID SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from customer CUS_ID SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from customer CUS_ID SQL Message " + se.getMessage());
+                se.printStackTrace();
+                if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                    throw new VestigoTMException(1,"No data found!", "err012", null);
+                else 
+                    throw se;
+            }
+        }//CUS_ID+
+            
+        //COLL_CUS_ID+
+        if(decl.reddetmap.RealEstate_CUS_ID != null){
+            //VLASNIK KOLATERALA- NEKRETNINE    
+            try{
+                    #sql [ctx]  {SELECT register_no,
+                                        name
+                                    INTO
+                                        :(decl.reddetmap.RealEstate_txtRealEstateRegisterNo),
+                                        :(decl.reddetmap.RealEstate_txtRealEstateOwnerName)
+                                    FROM  customer  
+                                    WHERE cus_id =:(decl.reddetmap.RealEstate_COLL_CUS_ID)
+                            }; 
+            }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from customer COLL_CUS_ID OWNER SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from customer COLL_CUS_ID OWNER SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from customer COLL_CUS_ID OWNER SQL Message " + se.getMessage());
+                se.printStackTrace();
+                if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                    throw new VestigoTMException(1,"No data found!", "err012", null);
+                else 
+                    throw se;
+            }
+        }//COLL_CUS_ID+
+            
+        //AMORT_PER_CAL_ID+
+        if(decl.reddetmap.RealEstate_AMORT_PER_CAL_ID != null){
+            try{
+                #sql [ctx]  {SELECT
+                                sys_code_value
+                            INTO
+                                :(decl.reddetmap.RealEstate_txtAmortPerCal)
+                            FROM  system_code_value
+                            WHERE sys_cod_val_id =:(decl.reddetmap.RealEstate_AMORT_PER_CAL_ID)
+                }; 
+            }catch(java.sql.SQLException se) {
+                tc.debug ( "......CO003.sqlj select from system_code_value AMORT_PER_CAL_ID SQL ErrorCode " + se.getErrorCode());
+                tc.debug ( "......CO003.sqlj select from system_code_value AMORT_PER_CAL_ID SQL SQLState " + se.getSQLState());
+                tc.debug ( "......CO003.sqlj select from system_code_value AMORT_PER_CAL_ID SQL Message " + se.getMessage());
+                se.printStackTrace();
+                if (tc.getSQLExHandler().isEmptyRowset(se)) 
+                    throw new VestigoTMException(1,"No data found!", "err012", null);
+                else 
+                    throw se;
+            }
+        }//AMORT_PER_CAL_ID+
+
+        if(decl.reddetmap.RealEstate_THIRD_RIGHT_CUR_ID!=null){
+            curData=SQLhelper.getCurrencyData(decl.reddetmap.RealEstate_THIRD_RIGHT_CUR_ID);
+            decl.reddetmap.RealEstate_txtThirdRightCurCodeChar=curData.code_char;
+        }
+        
+        UserData userData=null;
+        //USE_OPEN_ID+
+        userData=SQLhelper.getUserData(decl.reddetmap.RealEstate_USE_OPEN_ID);
+        decl.reddetmap.RealEstate_txtUseOpenIdLogin=userData.login;
+        decl.reddetmap.RealEstate_txtUseOpenIdName=userData.user_name;
+        
+        //USE_ID+
+        userData=SQLhelper.getUserData(decl.reddetmap.RealEstate_USE_ID);
+        decl.reddetmap.RealEstate_txtUseIdLogin=userData.login;
+        decl.reddetmap.RealEstate_txtUseIdName=userData.user_name;
+        
+        if (decl.reddetmap.RealEstate_USE_ID_VER_SND != null) {
+            userData=SQLhelper.getUserData(decl.reddetmap.RealEstate_USE_ID_VER_SND);
+            decl.reddetmap.RealEstate_txtUseIdSenLogin=userData.login;
+            decl.reddetmap.RealEstate_txtUseIdSenName=userData.user_name;
+        }
+
+        if (decl.reddetmap.RealEstate_USE_ID_VER != null) {
+            userData=SQLhelper.getUserData(decl.reddetmap.RealEstate_USE_ID_VER);
+            decl.reddetmap.RealEstate_txtUseIdVerLogin=userData.login;
+            decl.reddetmap.RealEstate_txtUseIdVerName=userData.user_name;           
+        }
+        
+        if (decl.reddetmap.RealEstate_USE_ID_AUT != null) {
+            userData=SQLhelper.getUserData(decl.reddetmap.RealEstate_USE_ID_AUT);
+            decl.reddetmap.RealEstate_txtUseIdAutLogin=userData.login;
+            decl.reddetmap.RealEstate_txtUseIdAutName=userData.user_name;           
+        }
+        if (decl.reddetmap.USE_ID_CO != null) {
+            userData=SQLhelper.getUserData(decl.reddetmap.USE_ID_CO);            
+            decl.reddetmap.RealEstate_txtCollOfficer=userData.user_name;           
+        }
+        //REAL_EST_ID je stari id nekretnine. Novi je COL_RES_ID
+        //COLL_ACCOUNTING_ID je iz collateral_type
+        if (decl.reddetmap.RealEstate_BasicDataStatus != null && !decl.reddetmap.RealEstate_BasicDataStatus.trim().equals("")) {
+            decl.reddetmap.RealEstate_txtBasicDataSt = SQLhelper.getSystemCodeDescription("collateral_code", decl.reddetmap.RealEstate_BasicDataStatus);            
+        }
+                            
+        if (decl.reddetmap.RealEstate_CollDataStatus != null && !decl.reddetmap.RealEstate_CollDataStatus.trim().equals("")) {
+            decl.reddetmap.RealEstate_txtCollDataSt = SQLhelper.getSystemCodeDescription("collateral_code", decl.reddetmap.RealEstate_CollDataStatus);
+        }
+                        
+        if (decl.reddetmap.RealEstate_CoverIndic != null && !decl.reddetmap.RealEstate_CoverIndic.trim().equals("")) {
+            decl.reddetmap.RealEstate_txtCoverIn=SQLhelper.getSystemCodeDescription("collateral_code", decl.reddetmap.RealEstate_CoverIndic);           
+        }
+
+        if (decl.reddetmap.RealEstate_MortgageStatus != null && !decl.reddetmap.RealEstate_MortgageStatus.trim().equals("")) {
+            decl.reddetmap.RealEstate_txtMortgageSt=SQLhelper.getSystemCodeDescription("collateral_code", decl.reddetmap.RealEstate_MortgageStatus);            
+        }   
+                            
+        if (decl.reddetmap.RealEstate_FinancialFlag != null && !decl.reddetmap.RealEstate_FinancialFlag.trim().equals("")) {
+            decl.reddetmap.RealEstate_txtFinancialFl=SQLhelper.getSystemCodeDescription("financial_flag", decl.reddetmap.RealEstate_FinancialFlag);         
+        }    
+                    
+        decl.reddetmap.Reb_COL_HEA_ID = decl.reddetmap.RealEstate_COL_HEA_ID; 
+        decl.reddetmap.Reb_COL_TYPE_ID = decl.reddetmap.RealEstate_COL_TYPE_ID;
+        decl.reddetmap.Reb_COL_RES_ID = decl.reddetmap.RealEstate_COL_RES_ID;
+        decl.reddetmap.Reb_txtWeighValue = decl.reddetmap.RealEstate_txtWeighValue;
+        decl.reddetmap.Reb_txtWeighDate = decl.reddetmap.RealEstate_txtWeighDate;
+        
+        decl.reddetmap.Reb_RealEstate_txtB2HNB = decl.reddetmap.RealEstate_txtB2HNB;
+        decl.reddetmap.Reb_RealEstate_txtB2IRB = decl.reddetmap.RealEstate_txtB2IRB;
+        
+        // dohvatiti status police osiguranja i da li je placena premija
+        decl.reddetmap.ip_activ_and_pay = "N";
+            
+        #sql[ctx] iter3 = {
+                            SELECT ip_act_noact as ip_activ_and_pay
+                            FROM insurance_policy
+                            WHERE col_hea_id = :(decl.reddetmap.RealEstate_COL_HEA_ID)
+                            AND ip_act_noact = 'A' and
+                                ip_date_sec_val >= current date and
+                                ip_vali_until >= current date
+                            fetch first row only
+                              };
+        while (iter3.next()) {
+            decl.reddetmap.ip_activ_and_pay = iter3.ip_activ_and_pay();
+        }
+        if(iter3!=null) {
+           try {
+               iter3.close();
+           } catch (Exception ignored) {}
+        }
+        
+        //kada je dohvacen ponder treba izracunati ponderiranu i raspolozivu vrijednost
+        
+        kolData.colHeaId = decl.reddetmap.RealEstate_COL_HEA_ID;
+        kolData.colCurId = decl.reddetmap.RealEstate_REAL_EST_NM_CUR_ID;
+        kolData.nominalAmount = decl.reddetmap.RealEstate_txtNomiValu;
+        
+        kolData.colCatId = decl.reddetmap.RealEstate_COL_CAT_ID;
+        kolData.colTypId = decl.reddetmap.RealEstate_COL_TYPE_ID;
+        kolData.colSubTypId = decl.reddetmap.RealEstate_REAL_EST_TYPE;
+        kolData.addRequest = "N";
+        
+        //kolData.ponder = decl.reddetmap.RealEstate_txtCollMvpPonder;
+   
+        //yoye0.getPonderAndRestAmount(kolData);
+        yoye0.getNoPonderAndPonderRestAmount(kolData);
+        
+        decl.reddetmap.RealEstate_txtWeighValue = kolData.ponderAmount;
+        decl.reddetmap.RealEstate_txtWeighDate = todaySQLDate;
+ 
+        //decl.reddetmap.RealEstate_txtAvailDate = todaySQLDate;
+        decl.reddetmap.RealEstate_txtSumPartVal = kolData.exposureAmount;
+        decl.reddetmap.RealEstate_txtSumPartDat = kolData.exposureDate;     
+        
+        decl.reddetmap.RealEstate_txtCollMvpPonderMin = kolData.minPonder;
+        decl.reddetmap.RealEstate_txtCollMvpPonder = kolData.dflPonder;
+        decl.reddetmap.RealEstate_txtCollMvpPonderMax = kolData.maxPonder;
+        
+        decl.reddetmap.RealEstate_txtAvailValue = kolData.restAmount;    
+        decl.reddetmap.RealEstate_txtAvailDate = kolData.coverDate; 
+        
+        decl.reddetmap.RealEstate_txtPonAvailValue =  kolData.restPonAmount;
+        decl.reddetmap.RealEstate_txtNDAvailDate=kolData.NDCoverDate;
+        
+        decl.reddetmap.RealEstate_txtThirdRightInNom = kolData.otherMortgAmount;
+ 
+        //dorada FBPr200013720 dodavanje kvacice CO za prikaz detalja
+        try{ 
+            #sql [ctx] {
+                    SELECT a.co_ind, app.login, app.user_name, a.co_ts    
+                    INTO
+                    :(decl.reddetmap.RealEstate_txtCoConfirm),
+                    :(decl.reddetmap.RealEstate_txtCoConfirmUserId),
+                    :(decl.reddetmap.RealEstate_txtCoConfirmUserName),
+                    :(decl.reddetmap.RealEstate_txtCoConfirmTime)
+                    FROM co_chg_history as a, app_user as app
+                    WHERE 
+                           a.col_hea_id    = :(decl.reddetmap.RealEstate_COL_HEA_ID)
+                    and    a.co_use_id=app.use_id
+                    and
+                            a.co_ind='D'
+                    and
+                            a.co_chg_ts is null
+                    and co_chg_use_id is null
+                    FETCH FIRST ROWS ONLY
+                   };  
+                
+        }catch(SQLException e){
+            if (tc.getSQLExHandler().isEmptyRowset(e)) {
+            } else {
+                throw e;
+            }
+        } 
+        
+        YOY64 yoy64=new YOY64(tc);
+        GCTCData data=yoy64.getGCTCData(kolData.colCatId, kolData.colTypId, kolData.colSubTypId, decl.reddetmap.RealEstate_RE_SUB_TYPE_ID);
+ 
+        decl.reddetmap.Coll_txtCollateralGCTCCode = data.gctc_code;
+        decl.reddetmap.Coll_txtCollateralGCTCDesc = data.gctc_desc;
+        decl.reddetmap.Coll_txtObjectTypeGCTCCode = data.object_type_code;
+        decl.reddetmap.Coll_txtObjectTypeGCTCDesc = data.object_type_desc;
+        decl.reddetmap.Coll_txtPropertyTypeGCTCCode = data.property_type_code;
+        decl.reddetmap.Coll_txtPropertyTypeGCTCDesc = data.property_type_desc;
+        decl.reddetmap.Coll_txtEndorsementTypeGCTCCode = data.endorsement_type_code;
+        decl.reddetmap.Coll_txtEndorsementTypeGCTCDesc = data.endorsement_type_desc;
+        
+        CalculationData cData = SQLhelper.getAllCalculationData(decl.reddetmap.RealEstate_COL_HEA_ID);
+        
+        decl.reddetmap.Kol_txtPonderMVP = cData.MVP_ponder;
+        decl.reddetmap.RealEstate_txtWcaAmountDate = cData.wcov_date; 
+        decl.reddetmap.RealEstate_txtWcaAmount = cData.wcov_amount;
+        decl.reddetmap.RealEstate_txtWcaOrigCurrencyCode = cData.wcov_cur_char;
+        decl.reddetmap.RealEstate_txtUsedWCAAmount = cData.wca_amount;
+        
+        decl.reddetmap.Coll_txtRationNGVInsurance = cData.NGV_insurance_ration;
+        decl.reddetmap.Coll_txtSumHipToFirstRBA = cData.sum_to_first_RBA_hip; 
+        decl.reddetmap.RealEstate_txtRealPonderAmount = cData.real_ponder;
+        
+        this.ispisDeclVarijabli();
+    }//execute
+    
+    private void ispisDeclVarijabli(){
+       tc.debug("\n.............ISPIS DECL MAPPINGA reddetmap POCETAK............."); 
+        Field[] fields=decl.reddetmap.getClass().getDeclaredFields();
+        StringBuffer var=new StringBuffer();
+        for (int i=0;i<fields.length;i++) {
+            try {               
+                var.append("\n" + fields[i].getName() + "=" + fields[i].get(decl.reddetmap) + ",");
+              } catch ( IllegalAccessException ex ) {
+                tc.debug("Greska pri ispisu decl varijable...");
+              }
+        }
+        tc.debug("DECL reddetmap VARIJABLE=" + var.toString());
+        tc.debug("\n.............ISPIS DECL MAPPINGA reddetmap KRAJ.............");
+    }   
+}

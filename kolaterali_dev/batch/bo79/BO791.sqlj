@@ -1,0 +1,191 @@
+package hr.vestigo.modules.collateral.batch.bo79;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+
+/**
+* SQLJ za Ažuriranje akumulirane vrijednosti polica osiguranja / garantnog iznosa garancija
+* @author hrakis
+*/
+public class BO791
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo79/BO791.sqlj,v 1.6 2017/03/22 10:31:49 hrazst Exp $";
+    
+    private BatchContext bc;
+    private ConnCtx connCtx;
+    
+    private final BigDecimal guar_cat_id = new BigDecimal("615223");
+    
+    #sql iterator CollateralIterator with (holdability = true) (
+        BigDecimal col_hea_id,
+        String col_num,
+        BigDecimal col_cat_id,
+        BigDecimal real_est_nomi_valu,
+        BigDecimal real_est_nm_cur_id,
+        String real_est_nm_cur_code_char,
+        BigDecimal guarantor_perc,
+        BigDecimal init_guar_amount
+    );
+    
+    #sql iterator PlacementIterator with (holdability = true) (
+        BigDecimal cus_acc_id,
+        String cus_acc_no,
+        BigDecimal exposure_balance,
+        BigDecimal exposure_cur_id,
+        Date exposure_date
+    );
+
+              
+    public BO791(BatchContext batchContext) throws SQLException
+    {
+        this.bc = batchContext;
+        this.connCtx = bc.getContext();
+    }
+    
+    /**
+     * Metoda koja dohvaæa kolaterale koji ulaze u obradu.
+     * @return iterator s podacima
+     */
+    public CollateralIterator selectCollaterals() throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO791.selectCollaterals");
+            
+            CollateralIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT
+                    b.col_hea_id            AS col_hea_id,
+                    b.col_num               AS col_num,
+                    b.col_cat_id            AS col_cat_id,
+                    b.real_est_nomi_valu    AS real_est_nomi_valu,
+                    b.real_est_nm_cur_id    AS real_est_nm_cur_id,
+                    c.code_char             AS real_est_nm_cur_code_char,
+                    g.guarantor_perc        AS guarantor_perc,
+                    g.init_guar_amount      AS init_guar_amount
+                FROM coll_head b
+                INNER JOIN currency c ON b.real_est_nm_cur_id = c.cur_id
+                LEFT OUTER JOIN coll_guarantee g ON b.col_hea_id = g.col_hea_id
+                WHERE b.collateral_status = '3' 
+                  AND (b.col_type_id IN (91777,93777) OR
+                    (b.col_cat_id = 615223 AND g.guar_amo_exp_flg = 'D' AND g.guarantor_perc IS NOT NULL AND g.init_guar_amount IS NOT NULL)
+                  )
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata kolaterala koji ulaze u obradu!", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO791.selectCollaterals");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja dohvaæa podatke o aktivnim plasmanima povezanim na zadani kolateral.
+     * @param col_hea_id ID kolaterala
+     * @return iterator s podacima
+     */
+    public PlacementIterator selectPlacements(BigDecimal col_hea_id) throws Exception
+    {
+        try
+        {
+            bc.startStopWatch("BO791.selectPlacements");
+            
+            PlacementIterator iter = null;
+            #sql [connCtx] iter = {
+                SELECT DISTINCT
+                    b.cus_acc_id        AS cus_acc_id,
+                    b.cus_acc_no        AS cus_acc_no,
+                    b.exposure_balance  AS exposure_balance,
+                    b.exposure_cur_id   AS exposure_cur_id,
+                    b.exposure_date     AS exposure_date
+                FROM loan_beneficiary c
+                INNER JOIN cusacc_exposure b ON (b.cus_acc_id = c.la_acc_id OR b.cus_acc_no = c.acc_no OR b.request_no = c.request_no)
+                WHERE c.col_hea_id = :(col_hea_id)
+                  AND c.status = 'A'
+                  AND (b.cus_acc_status='A' OR
+                         (b.cus_acc_status='C' AND (
+                            (b.module_code='TRC' AND b.cus_acc_orig_st='E') OR 
+                            (b.module_code='PKR' AND b.cus_acc_orig_st='T') OR 
+                            (b.module_code='PPZ' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR 
+                            (b.module_code='SDR' AND b.cus_acc_orig_st IN ('SS', 'NM')) OR
+                            (b.module_code='KRD' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='GAR' AND b.cus_acc_orig_st='SS') OR 
+                            (b.module_code='KKR' AND b.cus_acc_orig_st IN ('94','95')) OR 
+                            (b.module_code='LOC' AND b.cus_acc_orig_st='SS') )
+                         )
+                      )
+                WITH UR
+            };
+            return iter;
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Dogodila se nepredvidjena greska kod dohvata plasmana kolaterala! (COL_HEA_ID=" + col_hea_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO791.selectPlacements");
+        }
+    }
+    
+    
+    /**
+     * Metoda koja ažurira akumuliranu vrijednost police osiguranja ili garantni iznos garancije.
+     * @param col_hea_id ID kolaterala
+     * @param col_cat_id ID kategorije kolaterala
+     * @param amount iznos kojim se ažurira
+     * @param eve_id ID eventa
+     */
+    public void updateCollHead(BigDecimal col_hea_id, BigDecimal col_cat_id, BigDecimal amount, BigDecimal eve_id) throws Exception
+    {
+        //20.03.2017 - Izbacujemo azuriranje user_lock-a i use_id-a, jer vise ne zelimo da te atribute azurira obrada. 
+        //Posebno polje se azurira za obradu CHG_NOM_VAL_PROC_TS
+        //use_id=:(use_id), user_lock=current timestamp
+        try
+        {
+            bc.startStopWatch("BO791.updateCollHead");
+            #sql [connCtx] {
+                UPDATE coll_head
+                SET acum_buy_value = :(amount),
+                    real_est_estn_valu = :(amount),
+                    real_est_nomi_valu = :(amount),
+                    real_est_nomi_date = CURRENT DATE,
+                    nepo_value = :(amount),
+                    weigh_value = :(amount),
+                    CHG_NOM_VAL_PROC_TS = current timestamp,
+                    eve_id = :(eve_id)
+                WHERE col_hea_id = :(col_hea_id)
+            };
+            
+            if (guar_cat_id.equals(col_cat_id))
+            {
+                #sql [connCtx] {
+                    UPDATE coll_guarantee
+                    SET guar_amount = :(amount)
+                    WHERE col_hea_id = :(col_hea_id)
+                };
+            }
+        }
+        catch (SQLException ex)
+        {
+            bc.error("Greska kod azuriranja vrijednosti kolaterala! (COL_HEA_ID=" + col_hea_id + ")", ex);
+            throw ex;
+        }
+        finally
+        {
+            bc.stopStopWatch("BO791.updateCollHead");
+        }
+    }
+}

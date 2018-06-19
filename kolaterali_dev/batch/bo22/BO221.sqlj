@@ -1,0 +1,700 @@
+package hr.vestigo.modules.collateral.batch.bo22;
+
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoyM.GcmTypeData;
+import hr.vestigo.modules.collateral.common.yoyM.YOYM0;
+import hr.vestigo.modules.coreapp.common.yxyB.YXYB0;
+import hr.vestigo.modules.coreapp.common.yxyD.YXYD0;
+import hr.vestigo.modules.coreapp.common.yxyG.YXYG0;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+
+
+#sql  iterator IteratorB022DWH with(holdability = true)(
+		String owner, 
+		String acc_no,    
+		java.lang.Short num,  
+		String status,
+		String type,
+        String register_no
+        
+		);
+public class BO221{
+	
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo22/BO221.sqlj,v 1.23 2017/05/24 07:37:45 hrazst Exp $";
+	private BatchContext bc=null;
+	private ConnCtx connCtx;
+	private ConnCtx connCtx2;
+	
+	private BigDecimal use_id=null;
+	private String bank_sign=null;
+	private BigDecimal org_uni_id=null;
+	private BigDecimal col_cat_id=null;
+	private BigDecimal col_pro_id=null;
+	//private BigDecimal eve_id=null;
+	
+	private YOY00 primary=null;
+	
+	private YOYM0 yoym_gctc;
+	private YOYM0 yoym_object;
+	private YOYM0 yoym_property;
+	private YOYM0 yoym_endorsement;
+	
+	public BO221(BatchContext bc, BigDecimal use_id, String bank_sign, BigDecimal org_uni_id, BigDecimal col_cat_id) throws Exception{
+		this.bc=bc;
+		this.connCtx=bc.getContext();
+		this.connCtx2=new ConnCtx(bc.getNewConnection());
+		this.bank_sign=bank_sign;
+		this.use_id=use_id;
+		this.org_uni_id=org_uni_id;
+		this.col_cat_id=col_cat_id;
+		primary= new YOY00(bc);
+		
+		Date today=new Date(System.currentTimeMillis());
+	    yoym_gctc = new YOYM0(bc, "gctc", today);
+	    yoym_object = new YOYM0(bc, "object_type", today);
+	    yoym_property = new YOYM0(bc, "property_type", today);
+	    yoym_endorsement = new YOYM0(bc, "endorsement_type", today);
+	}
+	
+	/**
+	 * Zatvaranje sekundarne konekcije koja iterira DWH tablicu
+	 * 
+	 * @throws Exception
+	 */
+	public void closeExtraConnection() throws Exception{
+		if((connCtx2!=null)&&(!connCtx2.isClosed())){
+			connCtx2.close();
+		}
+	}
+	
+	public BigDecimal getCusId(String register_no){
+	    BigDecimal id = null;
+	    String reg_no = register_no.trim();
+	    try {
+	        #sql [connCtx]{select cus_id into :(id) from customer where register_no = :(reg_no) with ur};
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
+        
+        return id;
+	}
+	
+	/**
+	 * 
+	 * 
+	 * @param data mapa s podacima:
+	 * <br>BigDecimal eve_id
+	 * <br>BigDecimal cus_id
+	 * <br>String col_num
+	 * <br>String collateral_status
+	 * 
+	 * @return col_hea_id identity
+	 * @throws Exception
+	 */
+	public BigDecimal insertCollHead(Map data) throws Exception{		
+		try{
+			bc.debug("insertCollHead: ");
+			BigDecimal col_hea_id=primary.getNewId();	
+			bc.debug("col_hea_id: "+col_hea_id);
+			BigDecimal col_type_id=(BigDecimal)data.get("col_type_id");
+			bc.debug("col_type_id: "+col_type_id);
+			BigDecimal eve_id=(BigDecimal)data.get("eve_id");
+			bc.debug("eve_id: "+eve_id);
+			BigDecimal cus_id=(BigDecimal)data.get("cus_id");
+			bc.debug("cus_id: "+cus_id);
+			String col_num=(String)data.get("col_num");
+			bc.debug("col_num: "+col_num);
+			String collateral_status=(String)data.get("collateral_status");
+			bc.debug("collateral_status: "+collateral_status);
+			Short number=(Short)data.get("number");
+			bc.debug("number: "+number); 
+			
+			bc.debug("bank_sign: "+bank_sign);
+			
+	        BigDecimal gctc_id = null, endorsement_type_id = null, object_type_id = null, property_type_id = null;
+	        GcmTypeData gtd;
+	        gtd = yoym_gctc.resolve(col_cat_id, col_type_id, null, null);
+	        if (gtd != null) gctc_id = gtd.col_gcm_typ_id;
+	        gtd = yoym_endorsement.resolve(col_cat_id, col_type_id, null, null);
+	        if (gtd != null) endorsement_type_id = gtd.col_gcm_typ_id;
+	        gtd = yoym_object.resolve(col_cat_id, col_type_id, null, null);
+	        if (gtd != null) object_type_id = gtd.col_gcm_typ_id;
+	        gtd = yoym_property.resolve(col_cat_id, col_type_id, null, null);
+	        if (gtd != null) property_type_id = gtd.col_gcm_typ_id;	
+			
+			#sql [connCtx]{
+			insert into COLL_HEAD
+				(col_hea_id,								
+				col_type_id,
+				col_num,
+				real_est_nomi_date,		
+				cus_id,
+				coll_cus_id,
+				real_est_date_from,
+				real_est_date_unti,
+				real_est_status,
+				real_est_spec_stat,
+				use_open_id,
+				use_id,
+				opening_ts,
+				user_lock,
+				eve_id,
+				bank_sign,
+				eligibility,
+				origin_org_uni_id,
+				org_uni_id,
+				use_id_ver,
+				use_id_aut,
+				verification_ts,
+				autorization_ts,    
+				mortgage_status,
+				collateral_status,
+				workflow_indic,
+				cover_indic,
+				ver_send_ts,
+				basic_data_status,
+				coll_data_status,
+				col_cat_id,
+				use_id_ver_snd,
+				financial_flag,
+				law_eligibility,
+			    rba_eligibility,
+				b1_eligibility,
+				b2_irb_elig,
+				number,
+			    nd_eligibility,
+			    crm_hnb,
+                gctc_id, 
+                endorsement_type_id,
+                object_type_id,
+                property_type_id,
+			    contract_type
+			) VALUES (
+				:(col_hea_id),							
+				:(col_type_id),            
+				:(col_num),                
+				current date,		  
+				:(cus_id),                 
+				:(cus_id),            
+				current date,     
+				'9999-12-31',     
+				'A',        
+				'D',     
+				:(use_id),            
+				:(use_id),                 
+				current timestamp,             
+				current timestamp,              
+				:(eve_id),                 
+				:(bank_sign),              
+				'N',            
+				:(org_uni_id),      
+				:(org_uni_id),             
+				:(use_id),             
+				:(use_id),             
+				current timestamp,        
+				current timestamp,        
+				'X',        
+				:(collateral_status),      
+				'0',         
+				'2',            
+				current timestamp,            
+				'3',      
+				'2',       
+				:(col_cat_id),             
+				:(use_id),         
+				'X',         
+				'D', 
+			    'D',
+				'N',         
+				'N',                          
+				:(number),
+			    'N',
+			    'D',
+			    :(gctc_id), 
+                :(endorsement_type_id),
+                :(object_type_id),
+                :(property_type_id),
+			    '9'
+				)
+			};
+			return col_hea_id;
+		}catch (SQLException e){
+			bc.debug("insertCollHead.... "+e.getMessage());
+			bc.debug("insertCollHead.... "+e.getErrorCode());
+			bc.debug("insertCollHead.... "+e.getSQLState());
+			bc.debug("insertCollHead.... "+e.getLocalizedMessage());
+			e.printStackTrace();
+			throw(e);
+		}		
+	}
+	
+	/**
+	*
+	* Insert u tablicu coll_bill_exch
+	*
+	* @param col_hea_id col_hea_id
+	* @return boe_id identity
+	* @throws Exception
+	*/
+	public BigDecimal insertCollBillExch(BigDecimal col_hea_id) throws Exception{
+		try{
+			BigDecimal boe_id= primary.getNewId();
+			
+			#sql [connCtx]{
+				insert into coll_bill_exch
+					(boe_id,    
+					col_hea_id,
+					number_boe
+				) values (
+					:(boe_id),    
+					:(col_hea_id),
+					1)	
+				};
+			return boe_id;
+		}catch (Exception e){
+			bc.debug("insertCollBillExch.... "+e.getMessage());
+			e.printStackTrace();
+			throw(e);
+		}		
+	}
+	
+	/**
+	*
+	* Insert u tablicu coll_loanstock
+	*
+	* @param col_hea_id col_hea_id
+	* @return col_loa_id identity
+	* @throws Exception
+	*/
+	public BigDecimal insertCollLoanstock(BigDecimal col_hea_id) throws Exception{
+		try{
+			BigDecimal col_loa_id= primary.getNewId();
+			
+			#sql [connCtx]{
+				insert into coll_loanstock
+					(col_loa_id,    
+					col_hea_id
+				) values (
+					:(col_loa_id),    
+					:(col_hea_id))	
+				};
+			return col_loa_id;
+		}catch (Exception e){
+			bc.debug("insertCollLoanstock.... "+e.getMessage());
+			e.printStackTrace();
+			throw(e);
+		}		
+	}
+	
+	public BigDecimal getInsurCompanyId(BigDecimal ic_cus_id) throws Exception{
+	    try{
+            BigDecimal ic_id= null;
+            
+            #sql [connCtx]{
+               select ic_id into :(ic_id) from INSU_COMPANY where ic_cus_id=:(ic_cus_id) with ur};
+	         
+                
+            return ic_id;
+	    }catch (Exception e){
+            bc.debug("getInsurCompanyId.... "+e.getMessage());
+            e.printStackTrace();
+            throw(e);
+        }       
+	}
+	
+	/**
+	 * 
+	 * Insert u tablicu loan_beneficiary
+	 * 
+	 * @param data mapa s podacima:
+	 * <br>BigDecimal col_hea_id
+	 * <br>BigDecimal cus_id
+	 * <br>BigDecimal cus_acc_id
+	 * <br>String bill_owner
+	 * <br>String acc_no
+	 * <br>String request_no
+	 * 
+	 * 
+	 * @throws Exception
+	 */
+	public BigDecimal insertLoanBeneficiary(Map data, BigDecimal col_cat_id) throws Exception{		
+		try{
+			
+			BigDecimal loan_ben_id=primary.getNewId();
+			BigDecimal col_hea_id=(BigDecimal)data.get("col_hea_id");
+			bc.debug("col_hea_id:"+ col_hea_id);
+			String bill_owner=(String)data.get("bill_owner");
+			bc.debug("bill_owner:"+ bill_owner);
+			BigDecimal cus_id=(BigDecimal)data.get("cus_id");
+			bc.debug("cus_id:"+ cus_id);
+			String acc_no=(String)data.get("acc_no");	
+			bc.debug("acc_no:"+ acc_no);
+			BigDecimal cus_acc_id=(BigDecimal)data.get("cus_acc_id");	
+			bc.debug("cus_acc_id:"+ cus_acc_id);
+			String request_no=(String)data.get("request_no");
+			bc.debug("request_no:"+ request_no);
+			
+			
+			String inspol_ind = (String)data.get("inspol_ind");
+			bc.debug("inspol_ind:"+ inspol_ind);
+			BigDecimal tmp = (BigDecimal)data.get("ip_cus_id");
+			
+			BigDecimal ip_cus_id = null;
+			
+			
+			// puni se samo za zaduznice parametar obrade Z  i ako je tip osiguranja 90 ili 92
+			if(col_cat_id.compareTo(new BigDecimal(625223))==0  &&  
+			        (inspol_ind.trim().equals("90") || inspol_ind.trim().equals("92")) ){
+			    System.out.println("uso 90 ili 92");
+			    inspol_ind="D";
+			    ip_cus_id = getInsurCompanyId(tmp);
+			    bc.debug("ip_cus_id:"+ ip_cus_id);
+			}
+			else{
+			    inspol_ind =null;
+			    ip_cus_id = null;
+			}
+			
+			#sql [connCtx]{
+				insert into loan_beneficiary (
+					loan_ben_id,
+					register_no,
+					cus_id,
+					acc_no,
+					la_acc_id,
+					col_hea_id,
+					ser_num,
+					date_from,
+					date_until,
+					status,
+					spec_status,
+					use_open_id,
+					use_id,
+					opening_ts,
+					user_lock,
+					request_no,
+			        krad_admin_ind,
+			        kred_admin_use_id,
+			        kred_admin_ts,
+			        INSPOL_IND,
+			        IP_CUS_ID
+				) values (				
+					:(loan_ben_id),
+					:(bill_owner),
+					:(cus_id),
+					:(acc_no),
+					:(cus_acc_id),
+					:(col_hea_id),
+					1,
+					current date,
+					'9999-12-31',
+					'A',
+					'00',
+					:(use_id),
+					:(use_id),
+					current timestamp,
+					current timestamp,
+					:(request_no),
+			        'D',
+			        :(use_id),
+			        current timestamp,
+			        :(inspol_ind),
+			        :(ip_cus_id)
+				)
+			};
+			return loan_ben_id;
+		}catch (Exception e){
+			bc.debug("insertLoanBeneficiary.... "+e.getMessage());
+			e.printStackTrace();
+			throw(e);
+		}		
+	}
+	
+	/**
+	* Insert u tablicu coll_list_q
+	* 
+	* @param data - mapa s podacima:
+	*  <br>BigDecimal col_lis_typ_id
+	*  <br>BigDecimal col_hea_id
+	*  <br>String action_type
+	*  
+	* @return col_lis_q_id identity
+	* @throws Exception
+	*
+	*/      
+	public BigDecimal insertCollListQ(Map data) throws Exception{		
+		try{
+			
+			BigDecimal col_lis_q_id=primary.getNewId();
+			BigDecimal col_lis_typ_id=(BigDecimal)data.get("col_lis_typ_id");	
+			BigDecimal col_hea_id=(BigDecimal)data.get("col_hea_id");
+			String action_type=(String)data.get("action_type");	
+			
+			#sql [connCtx]{
+				insert into coll_list_q (
+					col_lis_q_id,															
+					col_lis_typ_id,															
+					col_hea_id,															
+					status,															
+					income_time,																														
+					bank_sign,																														
+					action_type														
+				) values (																																				
+					:(col_lis_q_id),															
+					:(col_lis_typ_id),															
+					:(col_hea_id),															
+					'0',															
+					current timestamp,																														
+					:(bank_sign),																														
+					:(action_type)														
+				)
+			};
+			return col_lis_q_id;
+		}catch (Exception e){
+			bc.debug("insertCollListQ.... "+e.getMessage());
+			e.printStackTrace();
+			throw(e);
+		}		
+	}
+	
+	public IteratorB022DWH selectBillDWH() throws Exception{
+		IteratorB022DWH result= null;
+		#sql [connCtx] result = {
+			select 
+				bill_owner as owner,
+				acc_num as acc_no,
+				bill_num as num,
+				status as status,
+				vrsta_osig as type,
+		        '' as register_no
+			from 
+				bill_dwh_retail
+			where
+				acc_num NOT IN
+				(select input_code
+				from in_data_dwh_item
+				where col_pro_id=:(col_pro_id)
+				)
+				WITH UR
+			};
+		
+		return result;
+	}
+
+	public IteratorB022DWH selectLoanstockDWH() throws Exception{
+		IteratorB022DWH result= null;
+		#sql [connCtx] result = {
+				select 
+					owner as owner,
+					acc_num as acc_no,
+					num as num,
+					status as status,
+					vrsta_osig as type,
+		            register_no
+				from 
+					loanstock_dwh_ret
+				where
+					acc_num NOT IN
+					(select input_code
+					from in_data_dwh_item
+					where col_pro_id=:(col_pro_id)
+					)
+					WITH UR
+				};
+		
+		return result;
+	}
+	
+	/**
+	 * Dohvat zapisa o obradi u kolateral modulu
+	 * 
+	 * @param proc_type tip obrade
+	 * @param status 0-zapoceta obrada, 1-zavrsena obrada
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal selectColProc(String proc_type,String status) throws Exception{
+		BigDecimal result=null;
+		try{
+			#sql [connCtx]{
+				select 
+					col_pro_id 
+				into
+					:(result)
+				from col_proc 
+					where 	
+						proc_status=:(status)
+						and proc_type=:(proc_type)
+		        };		        
+		}catch(SQLException e){
+			bc.debug(".....selectColProc        Message  : " + e.getMessage());
+			bc.debug(".....selectColProc      Error code : " + e.getErrorCode());
+			bc.debug(".....selectColProc        SQLState : " + e.getSQLState());
+			e.printStackTrace();
+		
+		}
+		return result;
+	}
+	
+	public BigDecimal getCusAccIdByRequestNo(String request_no) throws Exception{
+		BigDecimal cusAccId = null;
+		try{
+		    #sql [connCtx]{
+					select 
+						cus_acc_id
+					into
+						:(cusAccId)
+					from 
+						cusacc_exposure 
+					where 
+						request_no =:(request_no)
+			};							  
+		}catch(SQLException e){
+			if(e.getErrorCode() == 100){
+				cusAccId = null;
+			}else{
+				bc.debug(".....BO221 getCusAccIdByRequestNo        Message  : " + e.getMessage());
+				bc.debug(".....BO221 getCusAccIdByRequestNo      Error code : " + e.getErrorCode());
+				bc.debug(".....BO221 getCusAccIdByRequestNo        SQLState : " + e.getSQLState());
+				e.printStackTrace();
+				throw(e);
+			}		
+		}
+		return cusAccId;
+	}
+	
+	public String getCusAccStatus(BigDecimal cus_acc_id) throws Exception{
+		String result = null;
+		
+		#sql [connCtx]{
+			select 
+				cus_acc_status
+			into
+				:(result)
+			from 
+				cusacc_exposure 
+			where 
+				cus_acc_id =:(cus_acc_id)
+			};							  
+		
+		return result;
+	}
+    
+    public boolean checkLoanStockExistance(String acc_num, String type, BigDecimal col_cat_id) throws Exception{
+        int count=0;
+        BigDecimal tip=null;
+        String tip_null="0";
+        long col_cat_id_long=col_cat_id.longValue();
+        if((type.equalsIgnoreCase("2")) ||(type.equalsIgnoreCase("15"))){
+            tip=new BigDecimal(41777);
+        }else if((type.equalsIgnoreCase("69"))){
+            tip=new BigDecimal(42777);
+        } else if ((type.equalsIgnoreCase("99"))){
+            tip = new BigDecimal(43777);     
+        }else if((col_cat_id_long==625223) && (type!=null && (type.equalsIgnoreCase("") || type.equalsIgnoreCase("90") || type.equalsIgnoreCase("92")))){
+            tip_null="1";
+        }else{
+            return false;
+        }
+        // hraaks 18.11.2013 dodan status N da lovi i neaktivne kolaterale
+            
+        #sql [connCtx]{
+            select 
+                count(b.col_num)
+            into
+                :(count)
+            from
+                loan_beneficiary a,
+                coll_head b
+            where 
+                a.acc_no = :(acc_num) and
+                a.status = 'A' and
+                a.col_hea_id = b.col_hea_id and
+                b.col_cat_id = :(col_cat_id) and
+                (b.col_type_id = :(tip) OR :(tip_null)='1')and
+                b.collateral_status in ('0','1','2','3','N')
+            };                            
+        if(count>0){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    public void emptyDwhTable(boolean billProcess) throws Exception{
+        if(billProcess){
+            #sql [connCtx]{
+                delete from bill_dwh_retail
+            };
+        }else{
+            #sql [connCtx]{
+                delete from loanstock_dwh_ret
+          };
+        }
+        
+    }
+	
+	/**
+	 * Insert u tablicu evenata
+	 * @param eve_typ_id tip dogadaja
+	 * @param org_uni_id id OJ-a
+	 * @throws Exception
+	 */
+	public BigDecimal insertIntoEvent(BigDecimal eve_typ_id,BigDecimal org_uni_id) throws Exception{
+        bc.debug("sqlj insertIntoEvent");		
+         
+	  	try{
+			
+			YXYB0 eve1 = new YXYB0(bc);
+		  	YXYD0 genId = new YXYD0(bc);			
+		  	
+		  	//generira se primarni kljuc tablice Event (svaki dogadaj dobiva svoj primarni kljuc)
+		  	BigDecimal eve_id = genId.getNewId();
+		
+			HashMap event = new HashMap();
+			event.put("eve_id",eve_id);
+		  	event.put("eve_typ_id", eve_typ_id);
+		  	//event.put("eve_typ_id", new BigDecimal("1635506003.0")); //testni id
+		  	event.put("event_date", new java.sql.Date(System.currentTimeMillis()));
+		  	event.put("cmnt", "Batch za preuzimanje podataka o vozilima iz PKR modula."); 
+		  	event.put("use_id", this.use_id);
+		  	event.put("ext_event_code", null);
+		  	event.put("ext_event_num", null); 
+		   	event.put("bank_sign", bc.getBankSign());
+		   	event.put("org_uni_id", org_uni_id); 
+		  	bc.debug("eve_id " + event.get("eve_id"));
+
+		   	eve1.insertEvent(event);
+		  	bc.updateEveID(eve_id);		
+		  	return eve_id;
+	  } catch(Exception e){
+		  throw e;
+	  }
+	}
+	
+	/**
+	 * dohvaca id batch obrade. ako vec postoji vraca id, ako ne (nova obrada) kreira id
+	 * 
+	 * @return id obrade
+	 * @throws Exception
+	 */
+	public BigDecimal getColProId() throws Exception{
+		if(this.col_pro_id==null){
+			this.col_pro_id=primary.getNewId();
+		}
+		return this.col_pro_id;
+	}
+	
+	public void setColProId(BigDecimal col_pro_id){
+		this.col_pro_id=col_pro_id;
+	}
+	
+}

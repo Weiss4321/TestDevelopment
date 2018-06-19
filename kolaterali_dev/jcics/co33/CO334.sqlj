@@ -1,0 +1,211 @@
+package hr.vestigo.modules.collateral.jcics.co33;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+
+import hr.vestigo.modules.collateral.common.yoy6.*;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+ 
+  
+public class CO334 extends RemoteTransaction {
+// akcija verifikacije na verifikacijskoj listi
+// update aktivnog sloga za verifikacijsku listu s koje se nalog salje:
+// 		status iz 0 na 1, 
+//		release_time = current timestampe,
+//		use_id,
+//		org_uni_id
+//		action_type = VERIFICIRAJ	
+// insert u tbl. COLL_LIST_Q sloga za listu na koju ce collateral otici sto ovisi o statusima
+// 		status=0
+//		income_time = current timestamp
+//		use_id = null 
+//		org_uni_id = null 
+// update collateral_status, mortgage_status, cover_indic, basic_data_status, use_id_ver, verification_ts 
+
+// verificirati se moze ugovor na koji je vezana barem jedna autorizirana hipoteka u korist RBA	
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co33/CO334.sqlj,v 1.3 2017/02/16 15:27:20 hrazst Exp $";
+	
+	private DeclCO33 d = null;
+
+	public CO334(DeclCO33 d) {
+		this.d = d;
+	} 
+
+	public void execute(TransactionContext tc) throws Exception {
+		
+		ConnCtx ctx = tc.getContext();
+		
+		String proc_status = "";
+	
+		Timestamp ver_ts = null;
+	
+		BigDecimal use_id_ver_snd = null;
+		
+		int countMortgage = 0;
+		
+		String boe_stock_indicator="";
+//	verificirati se moze ugovor na koji je vezana barem jedna autorizirana hipoteka u korist RBA		
+//	verificirati se moze samo ako je ugovor collateral na verifikacijskoj listi i ako 
+//  je proc_status = 1
+		
+// da li je ugvor na verifikacijskoj listi		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ COMMITTED };
+
+		try {
+			
+				#sql[ctx]{  
+						SELECT
+								proc_status,
+								use_id_ver_snd,
+		                        boe_stock_indicator
+						INTO
+								:(proc_status),
+								:(use_id_ver_snd),
+		                        :(boe_stock_indicator)
+						FROM
+								frame_agreement
+						WHERE
+								fra_agr_id=:(d.agrlistver.w_fra_agr_id) 
+						AND	
+								proc_status = '1'
+
+				};  
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO331: Predmet nije na ref listi! ","colErr023", null);	
+			}
+		}		
+			
+// da li je na ugovor vezana barem jedna autorizirana hipoteka
+		
+		try {
+			
+				#sql[ctx]{  
+						SELECT
+								count(*)
+						INTO
+								:(countMortgage)
+						FROM
+								frame_agreement a, coll_hf_prior b, coll_head c
+						WHERE
+								a.fra_agr_id=:(d.agrlistver.w_fra_agr_id)
+						AND	
+								a.proc_status = '1'
+						AND	
+								a.fra_agr_id = b.fra_agr_id
+						AND
+								b.hf_status = 'A'
+						AND
+								b.hf_own_cus_id = 8218251
+						AND
+								((b.hf_date_hfc_until is null) or (b.hf_date_hfc_until >= current date))
+						AND
+								b.hf_coll_head_id = c.col_hea_id
+						AND
+								c.collateral_status = '3'
+
+				};  
+		}catch(SQLException sqle){
+
+		}		
+			
+		if (countMortgage == 0 && boe_stock_indicator.equals("N")) {
+// nije povezan ugovor sa autoriziranom hipotekom			
+			throw new VestigoTMException(1, "Transaction CO331: Predmet nije na ref listi! ","colErr018", null);				
+			
+		}
+	   
+		#sql[ctx] { 
+				SELECT current timestamp 
+				INTO :(ver_ts)
+				FROM sysibm.sysdummy1 
+		};		
+			
+		tc.info("FRA_AGR_ID:...." + d.agrlistver.w_fra_agr_id);
+		tc.info("PROC_STATUS:...." + d.agrlistver.w_proc_status);		
+		
+// Milka, 03.11.2006 - dodana kontrola: referent koji je poslao predmet na verifikaciju ne moze ga verificirati
+		if ((d.agrlistver.use_id).compareTo(use_id_ver_snd) == 0) {
+			throw new VestigoTMException(1, "Transaction CO334: Error-verifikator i referent su ista osoba! ","colErr012", null);
+		}
+		
+
+		YOY61 YOY61=new YOY61(tc);
+		
+		CollListQData plq=new CollListQData();   		
+		
+//	verifikacija
+		
+		plq.col_hea_id=d.agrlistver.w_fra_agr_id;
+
+		
+// source lista
+		plq.source_list = d.agrlistver.source_list;		
+		plq.status_source_list = "1";		
+		plq.release_time = ver_ts;
+		plq.use_id=d.agrlistver.use_id;	
+		plq.org_uni_id = d.agrlistver.org_uni_id;
+		plq.cmnt=null;		
+		plq.action_type=d.agrlistver.action_type;					
+		
+//		 target lista		
+		plq.target_list = d.agrlistver.target_list;	
+		plq.status_target_list = "0";		
+		plq.income_time = ver_ts;
+		plq.target_list_use_id = null;
+		plq.target_list_org_uni_id = null;
+ 	
+		plq.status=d.agrlistver.w_proc_status;
+
+		tc.info("AGR_FRA_ID .....:" + plq.col_hea_id);
+		tc.info("INCOME_TIME ....."+plq.income_time);
+		tc.info("USE_ID....."+plq.use_id);
+		tc.info("RELEASE TIME .....:" + plq.release_time);
+		tc.info("CMNT......:"+plq.cmnt);
+		tc.info("ACTION_TYPE ....."+plq.action_type);
+		tc.info("ORG_UNI_ID....."+plq.org_uni_id);
+		tc.info("SOURCE_LIST .....:" + plq.source_list);
+		tc.info("STATUS_SOURCE_LIST......:"+plq.status_source_list);
+		tc.info("TARGET_LIST ....."+plq.target_list);
+		tc.info("STATUS_TARGET_LIST....."+plq.status_target_list);		
+		tc.info("PROC_STATUS....."+plq.status);				
+		 
+		YOY61.update_insert_AgrListQ(plq); 
+  
+
+		
+// napraviti update statusa,use_id_ver,VERIFICATION_TS		
+
+// 1 - collateral je poslan na verifikacjsku listu
+
+		try {
+			#sql[ctx]{
+					UPDATE
+							frame_agreement
+					SET
+							proc_status = :(d.agrlistver.w_proc_status),
+							use_id_ver = :(d.agrlistver.use_id),
+							verification_ts = :(ver_ts)
+					WHERE
+							fra_agr_id=:(d.agrlistver.w_fra_agr_id)
+					AND	
+							proc_status = '1'
+			};
+		}catch(SQLException sqle){
+			if (sqle.getErrorCode() == 100) {
+				throw new VestigoTMException(1, "Transaction CO334: Predmet nije na ref listi! ","colErr023", null);	
+			}
+		}  
+
+	}
+	 
+
+} 
+
+

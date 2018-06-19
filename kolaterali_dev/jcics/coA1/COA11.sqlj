@@ -1,0 +1,485 @@
+package hr.vestigo.modules.collateral.jcics.coA1;
+
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import hr.vestigo.framework.remote.transaction.RemoteTransaction;
+import hr.vestigo.framework.remote.transaction.TransactionContext;
+import hr.vestigo.framework.remote.transaction.VestigoTMException;
+import hr.vestigo.framework.util.CharUtil;
+import hr.vestigo.framework.util.scramble.Scramble;
+
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.util.Vector;
+
+#sql iterator Iter2 (
+        BigDecimal cus_id,
+        String register_no,
+        String name,
+        String rating,
+        String cocunat,
+        BigDecimal residency_cou_id,
+        String residency_cou_num,
+        String residency_cou_name,
+        String issuer_status,
+        String tax_number,
+        String mlt_rating,
+        String basel_cus_type
+);
+
+public class COA11 extends RemoteTransaction {
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA1/COA11.sqlj,v 1.11 2015/08/11 09:05:58 hrazst Exp $";
+	private DeclCOA1 d = null;
+
+	public COA11(DeclCOA1 d) {
+		this.d = d;
+	}  	
+	  
+	public void execute (TransactionContext tc) throws Exception {
+		
+
+		if(d.name==null)
+			d.name="";
+		if(d.register_no==null)
+			d.register_no="";
+		//kontrola na duljinu znakova po kojima se pretrazuje..
+		//minimun je 2 znaka plus zvjezdica, ako ni jedan input nije veci od toga baca se exception s porukom
+		if((d.name.length()<3)&&(d.register_no.length()<3)){
+			throw new VestigoTMException(1, "Transaction coA11: More data! ","wrn366", null);
+		}
+		
+		//kontola da li je zvjezdica na pravom mjestu ili se baca exception s porukom, samo za code i register_no
+		if(CharUtil.isAsteriskWrong(d.register_no)){
+			throw new VestigoTMException(1, "Transaction coA11: Wrong data! ","wrn367", null);
+		}
+
+
+		ConnCtx connCtx0 = tc.getContext();
+
+		Iter2 iter1=null;
+		#sql [connCtx0]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED };
+
+
+		String name = d.name;
+		String nameP = "%";
+		if (name!=null && !(name.equals(""))){
+			nameP = ((new Scramble()).doScramble(name,"L"));
+			nameP =nameP.replace('*','%');
+			nameP =nameP.replace('?','_');
+		}
+		
+		//string koji pamti orginal vrijednost s decl-a..
+		String reg_id_control=d.register_no;
+
+
+		if (d.register_no!=null){
+			if (d.register_no.length()!=10 && !CharUtil.hasAsterisk(d.register_no)){
+				d.register_no=CharUtil.rPad(d.register_no,10);
+			} 
+			d.register_no =d.register_no.replace('*','%');
+		} else d.register_no ="%";
+		if (d.register_no .equals("")) d.register_no ="%";
+		//ako modulename nije null, dohvati cust_flag
+        int flag = 1;
+		if (d.retail_cust_flag != null && d.retail_cust_flag.equals("Y")) 
+		    flag = 0; // dozvoljeno da komitent bude pravna i fizicka osoba
+		else if (d.retail_cust_flag != null && d.retail_cust_flag.equals("C"))
+		    flag = 2; // komitent moze biti samo fizicka osoba
+		     
+		tc.debug("***register_no="+d.register_no);
+		tc.debug("***name="+nameP);
+	    tc.debug("***d.retail_cust_flag="+d.retail_cust_flag+"-flag-" + flag);
+	    
+// Moody LT = 660757251
+
+		//1. 0 0 - bez LIKE
+		if(CharUtil.isWholeAsterisk(d.name) && CharUtil.isWholeAsterisk(d.register_no)) {
+
+			tc.debug("[1. 0 0 - bez LIKE] ");
+			#sql [connCtx0] iter1 = {
+					SELECT
+						a.cus_id as cus_id,
+						rtrim(a.register_no) as register_no, 
+						rtrim(a.name) as name,
+						b.score as rating,
+						c.cocunat as cocunat,
+						a.residency_cou_id as residency_cou_id,
+						d.shortcut_num as residency_cou_num,
+						d.name as residency_cou_name,
+						a.status as issuer_status,
+                        a.tax_number as tax_number,
+			            f.score as mlt_rating,
+			            a.basel_cus_type
+					FROM country d, customer a
+					LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+														AND
+															b.rat_typ_id = 1354776003
+														AND
+															b.date_from <= current date
+														AND
+															b.date_until >= current date)
+                    LEFT OUTER JOIN customer_rating f ON (a.cus_id = f.cus_id
+                                                        AND
+                                                            f.rat_typ_id = 660757251
+                                                        AND
+                                                            f.date_from <= current date
+                                                        AND
+                                                            f.date_until >= current date)
+					LEFT OUTER JOIN  cust_tiger_data c ON (a.cus_id = c.cus_id AND c.cus_gro_id is null AND c.date_until = '9999-12-31')
+					WHERE
+			            (
+                            (1=:flag AND a.cus_typ_id not in (1999,1998,999999))
+                                OR
+                            (2=:flag AND a.cus_typ_id in (1999,1998))
+			                    OR
+                            (0=:flag)
+                        )
+					AND
+						a.bank_sign=:(tc.getBankSign())
+					AND
+						a.residency_cou_id = d.cou_id 
+					ORDER BY 2,3	
+			};
+				
+			  
+		//2+.  0 1 - register_no
+		} else if (CharUtil.isWholeAsterisk(d.name) && !CharUtil.isWholeAsterisk(d.register_no)) {
+			//kontrola na register_no da li je potreban like ili ne
+			if(CharUtil.hasAsterisk(reg_id_control)){
+				tc.debug("[2. 0 1 - sa LIKE] ");				
+// sa like 				
+				#sql [connCtx0] iter1 = {
+						SELECT
+							a.cus_id as cus_id,
+							rtrim(a.register_no) as register_no, 
+							rtrim(a.name) as name,
+							b.score as rating,
+							c.cocunat as cocunat,
+							a.residency_cou_id as residency_cou_id,
+							d.shortcut_num as residency_cou_num,
+							d.name as residency_cou_name,
+							a.status as issuer_status,
+                            a.tax_number as tax_number,
+                            f.score as mlt_rating,
+				            a.basel_cus_type
+						FROM country d, customer a
+						LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+															AND
+																b.rat_typ_id = 1354776003
+															AND
+																b.date_from <= current date
+															AND
+																b.date_until >= current date)
+                        LEFT OUTER JOIN customer_rating f ON (a.cus_id = f.cus_id
+                                                            AND
+                                                                f.rat_typ_id = 660757251
+                                                            AND
+                                                                f.date_from <= current date
+                                                            AND
+                                                                f.date_until >= current date)
+						LEFT OUTER JOIN  cust_tiger_data c ON (a.cus_id = c.cus_id AND c.cus_gro_id is null AND c.date_until = '9999-12-31')
+						WHERE 
+							a.register_no like :(d.register_no)
+                        AND (
+                                (1=:flag AND a.cus_typ_id not in (1999,1998,999999))
+                                    OR
+                                (2=:flag AND a.cus_typ_id in (1999,1998))
+				                    OR
+                                (0=:flag)
+                            )
+						AND
+							a.bank_sign=:(tc.getBankSign())
+						AND
+							a.residency_cou_id = d.cou_id
+						ORDER BY 2,3	
+				};			
+			} else{
+				tc.debug("[2. 0 1 - bez LIKE] ");					
+// bez like			
+				#sql [connCtx0] iter1 = {
+						SELECT
+							a.cus_id as cus_id,
+							rtrim(a.register_no) as register_no, 
+							rtrim(a.name) as name,
+							b.score as rating,
+							c.cocunat as cocunat,
+							a.residency_cou_id as residency_cou_id,
+							d.shortcut_num as residency_cou_num,
+							d.name as residency_cou_name,
+							a.status as issuer_status,
+				            a.tax_number as tax_number,
+				            f.score as mlt_rating,
+				            a.basel_cus_type
+						FROM country d, customer a
+						LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+															AND
+																b.rat_typ_id = 1354776003
+															AND
+																b.date_from <= current date
+															AND
+																b.date_until >= current date)
+                        LEFT OUTER JOIN customer_rating f ON (a.cus_id = f.cus_id
+                                                            AND
+                                                                f.rat_typ_id = 660757251
+                                                            AND
+                                                                f.date_from <= current date
+                                                            AND
+                                                                f.date_until >= current date)
+						LEFT OUTER JOIN  cust_tiger_data c ON (a.cus_id = c.cus_id AND c.cus_gro_id is null AND c.date_until = '9999-12-31')
+						WHERE
+							a.register_no = :(reg_id_control)
+                        AND (
+                                (1=:flag AND a.cus_typ_id not in (1999,1998,999999))
+                                    OR
+                                (2=:flag AND a.cus_typ_id in (1999,1998))
+                                    OR
+                                (0=:flag)
+                            )
+						AND
+							a.bank_sign=:(tc.getBankSign())
+						AND
+							a.residency_cou_id = d.cou_id
+						ORDER BY 2,3	
+				};							
+			}
+		//3+.  1 1 - name, register_no
+		} else if (!CharUtil.isWholeAsterisk(d.name) && !CharUtil.isWholeAsterisk(d.register_no)) {
+			//kontrola na register_no da li je potreban like ili ne
+			if(CharUtil.hasAsterisk(reg_id_control)){
+				tc.debug("[3. 1 1 - sa LIKE] ");						
+// sa like 
+				#sql [connCtx0] iter1 = {
+						SELECT
+							a.cus_id as cus_id,
+							rtrim(a.register_no) as register_no, 
+							rtrim(a.name) as name,
+							b.score as rating,
+							c.cocunat as cocunat,
+							a.residency_cou_id as residency_cou_id,
+							d.shortcut_num as residency_cou_num,
+							d.name as residency_cou_name,
+							a.status as issuer_status,
+				            a.tax_number as tax_number,
+                            f.score as mlt_rating,
+				            a.basel_cus_type
+						FROM country d, customer a
+						LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+															AND
+																b.rat_typ_id = 1354776003
+															AND
+																b.date_from <= current date
+															AND
+																b.date_until >= current date)
+                        LEFT OUTER JOIN customer_rating f ON (a.cus_id = f.cus_id
+                                                            AND
+                                                                f.rat_typ_id = 660757251
+                                                            AND
+                                                                f.date_from <= current date
+                                                            AND
+                                                                f.date_until >= current date)
+						LEFT OUTER JOIN  cust_tiger_data c ON (a.cus_id = c.cus_id AND c.cus_gro_id is null AND c.date_until = '9999-12-31')
+						WHERE
+							a.name_sc like :(nameP)
+ 						AND
+							a.register_no like :(d.register_no)
+                        AND (
+                                (1=:flag AND a.cus_typ_id not in (1999,1998,999999))
+                                    OR
+                                (2=:flag AND a.cus_typ_id in (1999,1998))
+                                    OR
+                                (0=:flag)
+                            )
+						AND
+							a.bank_sign=:(tc.getBankSign())
+						AND
+							a.residency_cou_id = d.cou_id
+						ORDER BY 2,3	
+				};							
+			} else{
+				tc.debug("[3. 0 1 - bez LIKE] ");					
+// bez like	
+				#sql [connCtx0] iter1 = {
+						SELECT
+							a.cus_id as cus_id,
+							rtrim(a.register_no) as register_no, 
+							rtrim(a.name) as name,
+							b.score as rating,
+							c.cocunat as cocunat,
+							a.residency_cou_id as residency_cou_id,
+							d.shortcut_num as residency_cou_num,
+							d.name as residency_cou_name,
+							a.status as issuer_status,
+                            a.tax_number as tax_number,
+                            f.score as mlt_rating,
+				            a.basel_cus_type
+						FROM country d, customer a
+						LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+															AND
+																b.rat_typ_id = 1354776003
+															AND
+																b.date_from <= current date
+															AND
+																b.date_until >= current date)
+                        LEFT OUTER JOIN customer_rating f ON (a.cus_id = f.cus_id
+                                                            AND
+                                                                f.rat_typ_id = 660757251
+                                                            AND
+                                                                f.date_from <= current date
+                                                            AND
+                                                                f.date_until >= current date)
+						LEFT OUTER JOIN  cust_tiger_data c ON (a.cus_id = c.cus_id AND c.cus_gro_id is null AND c.date_until = '9999-12-31')
+						WHERE
+							a.name_sc like :(nameP)
+ 						AND
+							a.register_no = :(reg_id_control)
+                        AND (
+                                (1=:flag AND a.cus_typ_id not in (1999,1998,999999))
+                                    OR
+                                (2=:flag AND a.cus_typ_id in (1999,1998))
+                                    OR
+                                (0=:flag)
+                            )
+						AND
+							a.bank_sign=:(tc.getBankSign())
+						AND
+							a.residency_cou_id = d.cou_id
+						ORDER BY 2,3				
+				};
+			}
+		//4. 0 1 0 - name
+		} else if (!CharUtil.isWholeAsterisk(d.name) && CharUtil.isWholeAsterisk(d.register_no)) {
+
+			tc.debug("[4. 1 0 - sa LIKE] ");
+			#sql [connCtx0] iter1 = {
+					SELECT
+						a.cus_id as cus_id,
+						rtrim(a.register_no) as register_no, 
+						rtrim(a.name) as name,
+						b.score as rating,
+						c.cocunat as cocunat,
+						a.residency_cou_id as residency_cou_id,
+						d.shortcut_num as residency_cou_num,
+						d.name as residency_cou_name,
+						a.status as issuer_status,
+			            a.tax_number as tax_number,
+			            f.score as mlt_rating,
+			            a.basel_cus_type
+						FROM country d, customer a
+						LEFT OUTER JOIN customer_rating b ON (a.cus_id = b.cus_id
+															AND
+																b.rat_typ_id = 1354776003
+															AND
+																b.date_from <= current date
+															AND
+																b.date_until >= current date)
+                        LEFT OUTER JOIN customer_rating f ON (a.cus_id = f.cus_id
+                                                            AND
+                                                                f.rat_typ_id = 660757251
+                                                            AND
+                                                                f.date_from <= current date
+                                                            AND
+                                                                f.date_until >= current date)
+						LEFT OUTER JOIN  cust_tiger_data c ON (a.cus_id = c.cus_id AND c.cus_gro_id is null AND c.date_until = '9999-12-31')
+					WHERE
+						a.name_sc like :(nameP)
+					AND (
+						    (1=:flag AND a.cus_typ_id not in (1999,1998,999999))
+                                OR
+                            (2=:flag AND a.cus_typ_id in (1999,1998))
+			                    OR
+			                (0=:flag)
+			            )
+					AND
+						a.bank_sign=:(tc.getBankSign())
+					AND
+						a.residency_cou_id = d.cou_id
+					ORDER BY 2,3			
+			};			
+		}  
+                        
+           		
+
+		tc.debug ("*** Zavrseni svi IF-ovi! ***");
+		int number_of_rows=TransactionContext.LOOKUP_FETCH_SIZE;
+		int level=d.LookUpLevel.intValue();
+		int start=number_of_rows*level;
+
+		int count=0;
+		int count_returned=0;
+		while (iter1.next()){
+			if(start<=count && start+number_of_rows>count){
+				Vector row=new Vector();
+				Vector unique = new Vector();
+				
+				 // dohvatiti rating i podatke za izdavatelja
+                String baselDesc="";
+                try{  
+                    #sql [connCtx0] {
+                        SELECT basel_cus_desc INTO :baselDesc FROM BASEL_CUS_TYPE WHERE basel_cus_code=:(iter1.basel_cus_type())
+                    };
+                } catch(SQLException e){
+                    if (e.getErrorCode()!=100) throw e;
+                }
+                
+                String issuerType="", issuerTypeDesc="";
+                try{  
+                    #sql [connCtx0] {
+                        SELECT map_out_code, map_out_desc 
+                        INTO :issuerType, :issuerTypeDesc
+                        FROM mapping_sch
+                        WHERE map_type='b2_issuer_type'
+                        AND map_in_cod1=:(iter1.basel_cus_type())
+                    };
+                } catch(SQLException e){
+                    if (e.getErrorCode()!=100) throw e;
+                }
+
+                String rating_score="";
+                try{  
+                    #sql [connCtx0] {
+                        SELECT score
+                        INTO :(rating_score)
+                        FROM customer_rating
+                        WHERE cus_id = :(iter1.cus_id()) 
+                          AND rat_typ_id in (1354776003, 671996251, 4278640351, 4278639351, 1354780003, 4278590351)
+                          AND date_from <= CURRENT DATE
+                          AND date_until >= CURRENT DATE
+                        FETCH FIRST ROWS ONLY
+                    };  
+                } catch(SQLException e){
+                    if (e.getErrorCode()!=100) throw e;
+                }
+
+                
+                
+				row.add(iter1.register_no());
+				row.add(iter1.name());
+				row.add(iter1.rating());
+				row.add(iter1.cocunat());
+				row.add(iter1.residency_cou_num());
+				row.add(iter1.residency_cou_name());
+				
+				unique.add(iter1.cus_id());
+				unique.add(iter1.residency_cou_id());
+				unique.add(iter1.issuer_status());
+                unique.add(iter1.tax_number());
+                unique.add(rating_score);
+                unique.add(iter1.mlt_rating());
+                unique.add(iter1.basel_cus_type());
+                unique.add(baselDesc);
+                unique.add(issuerType);
+                unique.add(issuerTypeDesc);
+                
+                
+				d.LookUpTableData.addRow(row,unique);
+				count_returned++;
+			}else if(count>=(start+number_of_rows)) {
+				break;
+			}
+			count++;
+		}
+		if(count_returned==0){
+			throw new VestigoTMException(1, "Transaction coA011: No more data! ","wrn090", null);
+		}
+		if(iter1 != null) iter1.close();
+	}
+}

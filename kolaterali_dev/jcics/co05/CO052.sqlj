@@ -1,0 +1,286 @@
+package hr.vestigo.modules.collateral.jcics.co05;
+
+
+import hr.vestigo.framework.remote.transaction.*;
+import hr.vestigo.modules.collateral.common.yoy0.YOY00;
+import hr.vestigo.modules.collateral.common.yoy4.*;
+import hr.vestigo.modules.collateral.common.yoyG.YOYG0;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.sql.SQLException;
+import java.math.BigDecimal;
+
+/**
+ *  * @author hramkr 
+ *  	
+ */
+      
+  
+public class CO052 extends RemoteTransaction {
+		
+	public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co05/CO052.sqlj,v 1.26 2017/06/01 12:03:46 hrazst Exp $";
+	
+	public DeclCO05 decl = null;
+
+	public CO052 (DeclCO05 decl) {
+		this.decl = decl;
+	}
+	
+	CollHeadInsertData chd = new CollHeadInsertData();	
+
+	
+	public void execute(TransactionContext tc) throws Exception {
+	    ConnCtx ctx = tc.getContext();		
+		#sql [ctx] {SET TRANSACTION ISOLATION LEVEL READ COMMITTED};		
+		
+	    // insert u COLL_HEAD		
+		YOY40 headIns = new YOY40(tc, chd);
+		// punjenje objekta chd		
+		fillCHDobj();
+		tc.debug("zovem insert u Head : " + chd.recept);
+		headIns.insertIntoCollHead();
+		fillDeclFromCHDObj();		
+
+		YOY00 id_generator = new YOY00(ctx);			//COLLATERAL_IDN
+		BigDecimal collaterall_id = id_generator.getNewId();
+
+		tc.debug("dohvat collateral_id : "+collaterall_id);
+		decl.collmovableinsertmapping.COL_SEC_ID = collaterall_id;	
+		
+		try{	
+			if ((decl.collmovableinsertmapping.code).equalsIgnoreCase("POKR")) {
+					#sql [ctx]{
+							INSERT INTO coll_movable
+									(	col_mov_id , 
+										col_hea_id , 
+										mov_typ_id , 
+										mov_model , 
+										mov_ser_num , 
+										mov_made_year , 
+										mov_reg_sign ,
+										mov_hr_reg ,
+										mov_dsc ,
+										mov_address ,
+										mov_place_id ,
+										mov_ins_date ,
+			                            estimate_cus_id)
+							VALUES( :(decl.collmovableinsertmapping.COL_SEC_ID),    													                                                
+									:(decl.collmovableinsertmapping.COL_HEA_ID),  	
+									:(decl.collmovableinsertmapping.SEC_TYP_ID),                   
+									:(decl.collmovableinsertmapping.Vehi_txtVehModel), 
+									:(decl.collmovableinsertmapping.Mov_txtSerNum),                  
+                  					:(decl.collmovableinsertmapping.Vehi_txtVehMadeYear),                  
+									:(decl.collmovableinsertmapping.Mov_txtRegSign),
+									:(decl.collmovableinsertmapping.Mov_txtHrReg) ,
+									:(decl.collmovableinsertmapping.Ves_txtDsc) , 
+									:(decl.collmovableinsertmapping.Supp_txtAdresa) ,
+									:(decl.collmovableinsertmapping.SUP_PLACE_ID) ,
+									:(decl.collmovableinsertmapping.Vehi_txtVehInsDate),
+			                        :(decl.collmovableinsertmapping.Coll_txtEUsePersonCusId))
+									                                          	       
+					};  
+			} else if ((decl.collmovableinsertmapping.code).equalsIgnoreCase("ZALI")) {
+					#sql [ctx]{
+						INSERT INTO coll_supply
+								(	col_sup_id , 
+									col_hea_id , 
+									sup_dsc , 
+									sup_keeper , 
+									sup_loc , 
+									sup_address , 
+									sup_place_id ,
+									sup_ins_date ,
+									sup_min_ind ,
+									sup_min_amount ,
+			                        estimate_cus_id)
+						VALUES( :(decl.collmovableinsertmapping.COL_SEC_ID),    													                                                
+								:(decl.collmovableinsertmapping.COL_HEA_ID),  	
+								:(decl.collmovableinsertmapping.Ves_txtDsc), 
+								:(decl.collmovableinsertmapping.Supp_txtKeeper),                  
+              					:(decl.collmovableinsertmapping.Supp_txtLocation),                  
+								:(decl.collmovableinsertmapping.Supp_txtAdresa),
+								:(decl.collmovableinsertmapping.SUP_PLACE_ID),
+								:(decl.collmovableinsertmapping.Vehi_txtVehInsDate),
+								:(decl.collmovableinsertmapping.Supp_txtMinValue),
+								:(decl.collmovableinsertmapping.Supp_txtMinAmount),
+			                    :(decl.collmovableinsertmapping.Coll_txtEUsePersonCusId))					
+					};											
+				}
+			   
+		}catch(SQLException se){
+			
+			tc.debug ( "......CO052.sqlj insert into vehicle SQL ErrorCode " + se.getErrorCode());
+			tc.debug ( "......CO052.sqlj insert into vehicle SQL SQLState " + se.getSQLState());
+			tc.debug ( "......CO052.sqlj insert into vehicle SQL Message " + se.getMessage());
+			se.printStackTrace();
+			throw new VestigoTMException(1, "Transaction CO052: Error inserting coll_movable,coll_supply! ","err411a", null);
+		}
+					
+		chd.action = "I";		
+
+		// poziv common-a za update prihvatljivosti
+        BigDecimal col_hea_id = decl.collmovableinsertmapping.COL_HEA_ID;
+        YOYG0 yoyg0 = new YOYG0(tc, col_hea_id);			
+		yoyg0.azurirajPrihvatljivosti();
+        decl.collmovableinsertmapping.Coll_txtNDEligibility =yoyg0.getNDPrihvatljivost();
+        decl.collmovableinsertmapping.Coll_txtEligibility = yoyg0.getB2StandPrihvatljivost();
+        decl.collmovableinsertmapping.Coll_txtB1Eligibility = yoyg0.getHNBPrihvatljivost();
+        decl.collmovableinsertmapping.Coll_txtB2IRBEligibility = yoyg0.getB2IRBPrihvatljivost();
+
+        decl.collmovableinsertmapping.Coll_txtNDEligDesc = yoyg0.getOpisNDPrihvatljivosti();
+        decl.collmovableinsertmapping.Coll_txtEligDesc = yoyg0.getOpisB2StandPrihvatljivosti();
+        decl.collmovableinsertmapping.Coll_txtB1EligDesc = yoyg0.getOpisHNBPrihvatljivosti();
+        decl.collmovableinsertmapping.Coll_txtB2IRBEligDesc = yoyg0.getOpisB2IRBPrihvatljivosti();    
+                
+    }//execute
+	private void fillCHDobj () {
+
+		chd.Coll_txtAcouBDate = decl.collmovableinsertmapping.Coll_txtAcouBDate;
+		chd.Coll_txtAcouBValue = decl.collmovableinsertmapping.Coll_txtAcouBValue;
+		chd.Coll_txtAcouDate = decl.collmovableinsertmapping.Coll_txtAcouDate;
+		chd.Coll_txtAcouValue = decl.collmovableinsertmapping.Coll_txtAcouValue;
+		chd.Coll_txtAddData = decl.collmovableinsertmapping.Coll_txtAddData;
+		chd.Coll_txtAmortAge = decl.collmovableinsertmapping.Coll_txtAmortAge;
+		chd.Coll_txtAmortValCal = decl.collmovableinsertmapping.Coll_txtAmortValCal;
+		chd.Coll_txtAvailDate = decl.collmovableinsertmapping.Coll_txtAvailDate;
+		chd.Coll_txtAvailPerCal = decl.collmovableinsertmapping.Coll_txtAvailPerCal;
+		chd.Coll_txtAvailValue = decl.collmovableinsertmapping.Coll_txtAvailValue;
+		chd.Coll_txtBptcDate = decl.collmovableinsertmapping.Coll_txtBptcDate;
+		chd.Coll_txtBptcValu = decl.collmovableinsertmapping.Coll_txtBptcValu;
+		chd.Coll_txtCollHnbPonder = decl.collmovableinsertmapping.Coll_txtCollHnbPonder;
+		chd.Coll_txtCollMvpPonder = decl.collmovableinsertmapping.Coll_txtCollMvpPonder;
+		chd.Coll_txtCollRzbPonder = decl.collmovableinsertmapping.Coll_txtCollRzbPonder;
+		chd.Coll_txtCollTypeCode = decl.collmovableinsertmapping.Coll_txtCollTypeCode;
+		chd.Coll_txtComDoc = decl.collmovableinsertmapping.Coll_txtComDoc;
+		chd.Coll_txtDateFrom = decl.collmovableinsertmapping.Coll_txtDateFrom;
+		chd.Coll_txtDateRecDoc = decl.collmovableinsertmapping.Coll_txtDateRecDoc;
+		chd.Coll_txtDateToDoc = decl.collmovableinsertmapping.Coll_txtDateToDoc;
+		chd.Coll_txtDateToLop = decl.collmovableinsertmapping.Coll_txtDateToLop;
+		chd.Coll_txtDateRecLop = decl.collmovableinsertmapping.Coll_txtDateRecLop; 
+		chd.Coll_txtRecLop = decl.collmovableinsertmapping.Coll_txtRecLop; 			
+		chd.Coll_txtDateUnti = decl.collmovableinsertmapping.Coll_txtDateUnti; 
+		chd.Coll_txtDatnFrom = decl.collmovableinsertmapping.Coll_txtDatnFrom;
+		chd.Coll_txtDatnUnti = decl.collmovableinsertmapping.Coll_txtDatnUnti;
+		chd.Coll_txtEstnDate = decl.collmovableinsertmapping.Coll_txtEstnDate;
+		chd.Coll_txtEstnValu = decl.collmovableinsertmapping.Coll_txtEstnValu;
+		chd.Coll_txtHfsValue = decl.collmovableinsertmapping.Coll_txtHfsValue;
+		chd.Coll_txtHfsValueDate = decl.collmovableinsertmapping.Coll_txtHfsValueDate;
+		chd.Coll_txtHfsDateLastOne = decl.collmovableinsertmapping.Coll_txtHfsDateLastOne;
+		chd.Coll_txtHfsValueLastOne = decl.collmovableinsertmapping.Coll_txtHfsValueLastOne;
+		chd.Coll_txtLiquDate = decl.collmovableinsertmapping.Coll_txtLiquDate;
+		chd.Coll_txtLiquValu = decl.collmovableinsertmapping.Coll_txtLiquValu;
+		chd.Coll_txtMissingDoc = decl.collmovableinsertmapping.Coll_txtMissingDoc;
+		chd.Coll_txtNepoDate = decl.collmovableinsertmapping.Coll_txtNepoDate;
+		chd.Coll_txtNepoPerCal = decl.collmovableinsertmapping.Coll_txtNepoPerCal;
+		chd.Coll_txtNepoValue = decl.collmovableinsertmapping.Coll_txtNepoValue;
+		chd.Coll_txtNomiDate = decl.collmovableinsertmapping.Coll_txtNomiDate;
+		chd.Coll_txtNomiDesc = decl.collmovableinsertmapping.Coll_txtNomiDesc;
+		chd.Coll_txtNomiValu = decl.collmovableinsertmapping.Coll_txtNomiValu;
+		chd.Coll_txtRevaBDate = decl.collmovableinsertmapping.Coll_txtRevaBDate;
+		chd.Coll_txtRevaBDateAM = decl.collmovableinsertmapping.Coll_txtRevaBDateAM; 
+		chd.Coll_txtRevaBValue = decl.collmovableinsertmapping.Coll_txtRevaBValue ;
+		chd.Coll_txtRevaCoefMan = decl.collmovableinsertmapping.Coll_txtRevaCoefMan;
+		chd.Coll_txtRevaDate = decl.collmovableinsertmapping.Coll_txtRevaDate;
+		chd.Coll_txtRevaDateAM = decl.collmovableinsertmapping.Coll_txtRevaDateAM;
+		chd.Coll_txtSumLimitDat = decl.collmovableinsertmapping.Coll_txtSumLimitDat;
+		chd.Coll_txtSumLimitVal = decl.collmovableinsertmapping.Coll_txtSumLimitVal;
+		chd.Coll_txtSumPartDat = decl.collmovableinsertmapping.Coll_txtSumPartDat;
+		chd.Coll_txtSumPartVal = decl.collmovableinsertmapping.Coll_txtSumPartVal;
+		chd.Coll_txtThirdRight = decl.collmovableinsertmapping.Coll_txtThirdRight;
+		chd.Coll_txtThirdRightDate = decl.collmovableinsertmapping.Coll_txtThirdRightDate;
+		chd.Coll_txtThirdRightInNom = decl.collmovableinsertmapping.Coll_txtThirdRightInNom;
+		chd.COL_TYPE_ID = decl.collmovableinsertmapping.COL_TYPE_ID;
+		chd.REAL_EST_EUSE_ID = decl.collmovableinsertmapping.REAL_EST_EUSE_ID;
+		chd.REAL_EST_NM_CUR_ID = decl.collmovableinsertmapping.REAL_EST_NM_CUR_ID;
+		chd.CUS_ID = decl.collmovableinsertmapping.CUS_ID;
+		chd.COLL_CUS_ID = decl.collmovableinsertmapping.COLL_CUS_ID;
+		chd.AMORT_PER_CAL_ID = decl.collmovableinsertmapping.AMORT_PER_CAL_ID;
+		chd.THIRD_RIGHT_CUR_ID = decl.collmovableinsertmapping.THIRD_RIGHT_CUR_ID;
+		chd.COL_PLACE = decl.collmovableinsertmapping.COL_PLACE;
+		chd.COL_COUNTY = decl.collmovableinsertmapping.COL_COUNTY;
+		chd.COL_DISTRICT = decl.collmovableinsertmapping.COL_DISTRICT;
+		chd.COL_RESI_QUAR = decl.collmovableinsertmapping.COL_RESI_QUAR;
+		chd.USE_OPEN_ID = decl.collmovableinsertmapping.USE_OPEN_ID;
+		chd.USE_ID = decl.collmovableinsertmapping.USE_ID;
+		chd.INSPOL_IND = decl.collmovableinsertmapping.INSPOL_IND;
+		chd.Coll_txtDesc = decl.collmovableinsertmapping.Coll_txtDesc;	
+		if ((decl.collmovableinsertmapping.code).equalsIgnoreCase("POKR")) {
+			chd.recept = "CLT_MO"; 
+			chd.eve_typ_id =  new java.math.BigDecimal("1609321003.0");   // pokretinine i oprema	 
+		} else {  
+			chd.recept = "CLT_SU";
+			chd.eve_typ_id =  new java.math.BigDecimal("1609295003.0");  // zalihe
+		}	
+		chd.Coll_txtAcumBuyValue = decl.collmovableinsertmapping.Coll_txtAcumBuyValue;
+		chd.ORIGIN_ORG_UNI_ID = decl.collmovableinsertmapping.ORIGIN_ORG_UNI_ID;
+		chd.ORG_UNI_ID = decl.collmovableinsertmapping.ORG_UNI_ID;
+		chd.COL_CAT_ID = decl.collmovableinsertmapping.col_cat_id;		
+		chd.save_ver_aut_flag = decl.collmovableinsertmapping.save_ver_aut_flag;	
+		chd.KolLow_txtEligibility = decl.collmovableinsertmapping.KolLow_txtEligibility;
+		chd.ColRba_txtEligibility = decl.collmovableinsertmapping.ColRba_txtEligibility;		
+		chd.Kol_txtRbaEligDsc = decl.collmovableinsertmapping.Kol_txtRbaEligDsc; 	
+        chd.SPEC_STATUS = decl.collmovableinsertmapping.SPEC_STATUS;  
+        chd.Kol_txtCRMHnb = decl.collmovableinsertmapping.Kol_txtCRMHnb;
+
+        chd.used_in_recovery = decl.collmovableinsertmapping.Coll_txtUsedInRecovery;
+        chd.kind_of_recovery = decl.collmovableinsertmapping.Coll_txtKindOfRecoveryCode;
+        chd.full_amount = decl.collmovableinsertmapping.Coll_txtFullAmountRecovery;
+        chd.full_amount_cur_id = decl.collmovableinsertmapping.CUR_ID_FULL_AMOUNT;
+        chd.recovery_amount = decl.collmovableinsertmapping.Coll_txtRecoveryAmount;
+        chd.recovery_cur_id = decl.collmovableinsertmapping.CUR_ID_RECOVERY_AMOUNT;
+        chd.recovery_comment = decl.collmovableinsertmapping.Coll_txtRecoveryComment;
+        chd.recovery_date = decl.collmovableinsertmapping.Coll_txtRecoveryDate;
+        chd.recovery_rate = decl.collmovableinsertmapping.Coll_txtRecoveryRate;
+        
+        chd.realization_amount = decl.collmovableinsertmapping.Coll_txtRealizationAmount;
+        chd.realization_cur_id = decl.collmovableinsertmapping.CUR_ID_REALIZATION_AMOUNT;
+        chd.realization_date = decl.collmovableinsertmapping.Coll_txtRealizationDate;
+        chd.realization_kind = decl.collmovableinsertmapping.Coll_txtKindOfRealization;
+        chd.realization_cost = decl.collmovableinsertmapping.Coll_txtCostRealization;        
+        
+        chd.realization_cost_cur_id=decl.collmovableinsertmapping.REALIZATION_COST_CUR_ID;
+        chd.for_sale=decl.collmovableinsertmapping.Coll_txtForSale;
+        chd.for_sale_date=decl.collmovableinsertmapping.Coll_txtForSaleDate;
+        chd.takeover_from_bank=decl.collmovableinsertmapping.Coll_txtTakeOverBank;
+        
+        chd.b2_irb_insag_elig = decl.collmovableinsertmapping.Coll_txtB2IRB;
+        chd.b2_hnb_insag_elig = decl.collmovableinsertmapping.Coll_txtB2HNB;
+        chd.use_id_co = decl.collmovableinsertmapping.USE_ID_CO;
+        chd.real_est_nom_type = decl.collmovableinsertmapping.Coll_txtTypeTVCode;
+        chd.prec_exec_est = decl.collmovableinsertmapping.Coll_txtAccuracyEstimatesCode;
+        chd.correct_value = decl.collmovableinsertmapping.Coll_txtFairnessValuesCode;
+        chd.respect_deadline = decl.collmovableinsertmapping.Coll_txtDeadLinesCode;
+        chd.prof_to_rba = decl.collmovableinsertmapping.Coll_txtProfByRBACode;
+        chd.prof_to_client = decl.collmovableinsertmapping.Coll_txtProfByClientCode;
+        chd.col_eco_life = decl.collmovableinsertmapping.Coll_txtEconomicLife;
+        chd.real_est_estn_int = decl.collmovableinsertmapping.Coll_txtInternalValuer;
+        chd.est_type = decl.collmovableinsertmapping.EST_TYPE_CODE;
+        chd.met_est_1 = decl.collmovableinsertmapping.Coll_txtAssessmentMethod1Code;
+        chd.met_est_2 = decl.collmovableinsertmapping.Coll_txtAssessmentMethod2Code;
+        chd.non_ins_reason = decl.collmovableinsertmapping.Coll_txtNonInsReasoneCode;
+        chd.ins_cov_coll = decl.collmovableinsertmapping.Coll_txtInsTotalCoverCode;
+        chd.recovery_proc_stat = decl.collmovableinsertmapping.Coll_txtRecoveryProcStat; 
+        chd.contract_type=decl.collmovableinsertmapping.Coll_txtContractTypeCode;   
+        chd.COL_SUB_ID=decl.collmovableinsertmapping.SEC_TYP_ID;
+        chd.COL_GRO_ID=null;
+	}
+   
+	private void fillDeclFromCHDObj () {
+		decl.collmovableinsertmapping.COL_HEA_ID = chd.COL_HEA_ID;
+		decl.collmovableinsertmapping.Coll_txtUserLock = chd.Coll_txtUserLock;
+		decl.collmovableinsertmapping.Coll_txtCode = chd.Coll_txtCode;
+		decl.collmovableinsertmapping.STATUS = chd.STATUS;
+		decl.collmovableinsertmapping.Coll_txtOpeningTs = chd.Coll_txtOpeningTs;
+		decl.collmovableinsertmapping.EVE_ID = chd.EVE_ID;
+		decl.collmovableinsertmapping.USER_LOCK = chd.USER_LOCK;
+		
+		decl.collmovableinsertmapping.Coll_txtCollateralGCTCCode= chd.gctc_code; 
+        decl.collmovableinsertmapping.Coll_txtCollateralGCTCDesc= chd.gctc_desc; 
+        decl.collmovableinsertmapping.Coll_txtEndorsementTypeGCTCCode= chd.endorsement_type_code;
+        decl.collmovableinsertmapping.Coll_txtEndorsementTypeGCTCDesc= chd.endorsement_type_desc;
+        decl.collmovableinsertmapping.Coll_txtObjectTypeGCTCCode= chd.object_type_code; 
+        decl.collmovableinsertmapping.Coll_txtObjectTypeGCTCDesc= chd.object_type_desc; 
+        decl.collmovableinsertmapping.Coll_txtPropertyTypeGCTCCode= chd.property_type_code; 
+        decl.collmovableinsertmapping.Coll_txtPropertyTypeGCTCDesc= chd.property_type_desc; 
+	}
+}	
+			

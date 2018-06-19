@@ -1,0 +1,137 @@
+package hr.vestigo.modules.collateral.jcics.co04;
+
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+import java.math.BigDecimal;
+
+
+/**
+ * CO041 class selects all data from table COLL_SECURITY	
+ * into list screen and puts this data into vectors LDB.
+ * 	
+ */
+
+             
+
+
+ 
+#sql iterator IterColSecPaper (
+							BigDecimal col_hea_id ,
+							String col_num ,
+							String short_name ,      
+							String sec_type ,
+							String ticker ,
+							BigDecimal nominal_amount ,
+							String cur_code ,
+							java.sql.Date issue_date ,
+							java.sql.Date maturity_date ,
+							String status ,
+							BigDecimal col_res_id ,
+							BigDecimal real_est_nm_cur_id
+                   );	
+
+public class CO041 extends SQLJScrollableRemoteTransaction {
+
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co04/CO041.sqlj,v 1.6 2006/05/08 13:27:58 hramkr Exp $";
+	
+	
+	public DeclCO04 decl = null;
+	
+	private IterColSecPaper iterColSecPaper = null;
+	
+	public CO041 (DeclCO04 decl) {
+		this.decl = decl;
+	}
+	
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ConnCtx ctx = tc.getContext();
+		
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+		
+		if(decl.CUS_ID == null ){
+			#sql [ctx] iterColSecPaper = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num, cols.short_name as short_name,                
+									st.sec_type as sec_type, cols.ticker as ticker, cols.nominal_amount as nominal_amount, 
+									cu.code_char as cur_code, cols.issue_date as issue_date, cols.maturity_date as maturity_date,
+									ch.real_est_status as status, cols.col_sec_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id
+							FROM
+									coll_head ch, coll_security cols , security_type st , currency cu
+							WHERE   ch.col_hea_id = cols.col_hea_id   
+							AND		cols.sec_typ_id = st.sec_typ_id
+							AND		st.sec_type_code = :(decl.CollateralSubCategory)
+							AND 	cols.cur_id = cu.cur_id
+						ORDER BY	2
+							
+			};
+		
+		} 
+		 
+ 
+		
+		if(decl.CUS_ID != null ){
+			#sql [ctx] iterColSecPaper = {
+							SELECT 	cols.col_hea_id as col_hea_id, ch.col_num as col_num, cols.short_name as short_name,                
+									st.sec_type as sec_type, cols.ticker as ticker, cols.nominal_amount as nominal_amount, 
+									cu.code_char as cur_code, cols.issue_date as issue_date, cols.maturity_date as maturity_date,
+									ch.real_est_status as status, cols.col_sec_id as col_res_id, ch.real_est_nm_cur_id as real_est_nm_cur_id                
+							FROM	
+									coll_head ch, coll_security cols , security_type st , currency cu
+							WHERE	ch.cus_id = :(decl.CUS_ID)
+							AND		ch.col_hea_id = cols.col_hea_id
+							AND 	cols.sec_typ_id = st.sec_typ_id
+							AND		st.sec_type_code = :(decl.CollateralSubCategory)
+							AND 	cols.cur_id = cu.cur_id
+						ORDER BY	2
+							
+			};
+		
+		}  
+	
+		
+	}
+	
+	public boolean next() throws Exception {
+		return iterColSecPaper.next();
+	}
+    
+	public void close() {
+		if(iterColSecPaper!=null) {
+			try {
+				iterColSecPaper.close();
+			} catch (Exception ignored) {}
+		}
+	}
+     
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector row1 = new Vector();
+		
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+
+		row.add(iterColSecPaper.col_num());	
+		row.add(iterColSecPaper.short_name());	
+		row.add(iterColSecPaper.sec_type());
+		row.add(iterColSecPaper.ticker());
+		row.add(iterColSecPaper.nominal_amount());
+		row.add(iterColSecPaper.cur_code());	
+		row.add(iterColSecPaper.issue_date());			
+		row.add(iterColSecPaper.maturity_date());
+		row.add(iterColSecPaper.status());
+
+		row1.add(iterColSecPaper.col_hea_id());
+		row1.add(iterColSecPaper.col_res_id());
+		row1.add(iterColSecPaper.real_est_nm_cur_id());
+		
+		decl.tblCollSecPaper.addRow(row,row1);
+		
+//		decl.tblCollSecPaper.addRow(row,iterColSecPaper.col_hea_id());   	
+		
+	}
+	
+}

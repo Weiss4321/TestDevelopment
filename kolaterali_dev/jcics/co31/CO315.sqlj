@@ -1,0 +1,196 @@
+package hr.vestigo.modules.collateral.jcics.co31;
+
+import java.math.*;
+import java.sql.Timestamp;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+//RevRegCoefRe LIST
+/**
+ * CO315 class selects query_by_example data from table cadastre_map	
+ * into list screen and puts this data into vectors LDB.
+ */
+  
+#sql iterator Iter315(String ko_code,
+		String ko_name,  
+		String z_code,
+		String z_name,
+		String co_code,
+		String co_name,
+		BigDecimal cad_map_id,
+		String code_cad_reg,
+		BigDecimal parent_cad_map_id,
+		BigDecimal cad_map_typ_id,
+		BigDecimal pol_map_id,
+		BigDecimal co_id, 
+		BigDecimal cou_id,
+		String bank_sign, 
+		Timestamp open_ts,
+		Timestamp user_lock,
+		String o_login,
+		String o_name,
+		String c_login,
+		String c_name,
+		BigDecimal use_open_id,
+		BigDecimal use_id
+	 );	
+
+public class CO315 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co31/CO315.sqlj,v 1.2 2006/11/08 12:44:26 hramkr Exp $";
+	
+	public DeclCO31 decl = null;
+	TransactionContext tc_pom = null;
+	
+	private Iter315 iter1 = null;
+	
+	public CO315 (DeclCO31 decl) {
+		this.decl = decl;
+	}
+	
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(decl.cadastremapqbem.ActionListLevel);
+		
+		ConnCtx ctx = tc.getContext();
+		tc_pom = tc;
+			#sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+		
+	        String codeP="%";
+	        if (decl.cadastremapqbem.CadastreMapQBE_txtCode != null && !decl.cadastremapqbem.CadastreMapQBE_txtCode .equals("")) {
+	        	codeP = decl.cadastremapqbem.CadastreMapQBE_txtCode.replace('*', '%');
+	        }
+	        String nameP="%";
+	        if (decl.cadastremapqbem.CadastreMapQBE_txtName != null && !decl.cadastremapqbem.CadastreMapQBE_txtName.equals("")) {
+	        	nameP = decl.cadastremapqbem.CadastreMapQBE_txtName.replace('*', '%');
+	        }
+	        
+	        if(decl.cadastremapqbem.POL_MAP_ID!=null){
+	        	if (decl.cadastremapqbem.CO_ID!=null){
+					#sql [ctx] iter1 = {                                                                                                           
+							SELECT a.code as ko_code,a.name as ko_name,b.code as z_code, b.name as z_name,c.co_code as co_code,c.co_name as co_name,
+								a.cad_map_id, a.code_cad_reg, a.parent_cad_map_id, a.cad_map_typ_id,
+								a.pol_map_id, a.co_id, a.cou_id, a.bank_sign, a.open_ts, a.user_lock,
+								d.login as o_login, d.user_name as o_name, e.login as c_login, e.user_name as c_name,
+								a.use_open_id, a.use_id
+							FROM CADASTRE_MAP a
+							INNER JOIN political_map b ON a.pol_map_id=b.pol_map_id
+							INNER JOIN coll_court c ON a.co_id=c.co_id
+							LEFT OUTER JOIN app_user d ON a.use_open_id=d.use_id
+							LEFT OUTER JOIN app_user e ON a.use_id=e.use_id
+		        			WHERE a.code LIKE :codeP
+		        			AND a.name LIKE :nameP
+		        			AND a.pol_map_id = :(decl.cadastremapqbem.POL_MAP_ID)
+		        			AND a.co_id = :(decl.cadastremapqbem.CO_ID)
+							ORDER BY 1                                                         
+						}; 	        		
+	        	}else{
+					#sql [ctx] iter1 = {                                                                                                           
+							SELECT a.code AS ko_code,a.name AS ko_name,b.code AS z_code, b.name AS z_name,c.co_code,c.co_name,
+								a.cad_map_id, a.code_cad_reg, a.parent_cad_map_id, a.cad_map_typ_id,
+								a.pol_map_id, a.co_id, a.cou_id, a.bank_sign, a.open_ts, a.user_lock,
+								d.login as o_login, d.user_name as o_name, e.login as c_login, e.user_name as c_name,
+								a.use_open_id, a.use_id
+							FROM CADASTRE_MAP a
+							INNER JOIN political_map b ON a.pol_map_id=b.pol_map_id
+							INNER JOIN coll_court c ON a.co_id=c.co_id
+							LEFT OUTER JOIN app_user d ON a.use_open_id=d.use_id
+							LEFT OUTER JOIN app_user e ON a.use_id=e.use_id
+		        			WHERE a.code LIKE :codeP
+		        			AND a.name LIKE :nameP
+		        			AND a.pol_map_id = :(decl.cadastremapqbem.POL_MAP_ID)
+							ORDER BY 1   
+	        		};
+	        	}
+	        }else{
+	        	if (decl.cadastremapqbem.CO_ID!=null){
+					#sql [ctx] iter1 = {                                                                                                           
+							SELECT a.code AS ko_code,a.name AS ko_name,b.code AS z_code, b.name AS z_name,c.co_code,c.co_name,
+								a.cad_map_id, a.code_cad_reg, a.parent_cad_map_id, a.cad_map_typ_id,
+								a.pol_map_id, a.co_id, a.cou_id, a.bank_sign, a.open_ts, a.user_lock,
+								d.login as o_login, d.user_name as o_name, e.login as c_login, e.user_name as c_name,
+								a.use_open_id, a.use_id
+							FROM CADASTRE_MAP a
+							INNER JOIN political_map b ON a.pol_map_id=b.pol_map_id
+							INNER JOIN coll_court c ON a.co_id=c.co_id
+							LEFT OUTER JOIN app_user d ON a.use_open_id=d.use_id
+							LEFT OUTER JOIN app_user e ON a.use_id=e.use_id
+		        			WHERE a.code LIKE :codeP
+		        			AND a.name LIKE :nameP
+		        			AND a.co_id = :(decl.cadastremapqbem.CO_ID)
+							ORDER BY 1   
+	        		};
+	        	}else{
+					#sql [ctx] iter1 = {                                                                                                           
+							SELECT a.code AS ko_code,a.name AS ko_name,b.code AS z_code, b.name AS z_name,c.co_code,c.co_name,
+								a.cad_map_id, a.code_cad_reg, a.parent_cad_map_id, a.cad_map_typ_id,
+								a.pol_map_id, a.co_id, a.cou_id, a.bank_sign, a.open_ts, a.user_lock,
+								d.login as o_login, d.user_name as o_name, e.login as c_login, e.user_name as c_name,
+								a.use_open_id, a.use_id
+							FROM CADASTRE_MAP a
+							INNER JOIN political_map b ON a.pol_map_id=b.pol_map_id
+							INNER JOIN coll_court c ON a.co_id=c.co_id
+							LEFT OUTER JOIN app_user d ON a.use_open_id=d.use_id
+							LEFT OUTER JOIN app_user e ON a.use_id=e.use_id
+		        			WHERE a.code LIKE :codeP
+		        			AND a.name LIKE :nameP
+	        				ORDER BY 1   
+	        		};
+	        	}
+	        }
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "......CO315.sqlj select uspješno izvršen");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+			tc.debug ( "\n\n\n\n\n\n\n\n\n\n");
+		}
+
+	
+	public boolean next() throws Exception {
+		tc_pom.debug ( "-------- CO315 postoji iter"); 		
+		return iter1.next();
+	}
+    
+	public void close() {
+		if(iter1!=null) {
+			try {
+				iter1.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+    	
+		Vector row = new Vector();
+		Vector hidden = new Vector();
+		//Treba paziti na redosijed dodavanja u row da bude kao u tablici!!!
+		row.add(iter1.ko_code());	
+		row.add(iter1.ko_name());
+		row.add(iter1.z_code());
+		row.add(iter1.z_name());	
+		row.add(iter1.co_code());
+		row.add(iter1.co_name());
+
+		hidden.add(iter1.cad_map_id());
+		hidden.add(iter1.code_cad_reg());
+		hidden.add(iter1.parent_cad_map_id());
+		hidden.add(iter1.cad_map_typ_id());
+		hidden.add(iter1.pol_map_id());
+		hidden.add(iter1.co_id());		
+		hidden.add(iter1.cou_id());
+		hidden.add(iter1.bank_sign());
+		hidden.add(iter1.open_ts());
+		hidden.add(iter1.user_lock());
+		hidden.add(iter1.o_login());
+		hidden.add(iter1.o_name());
+		hidden.add(iter1.c_login());
+		hidden.add(iter1.c_name());
+		hidden.add(iter1.use_open_id());
+		hidden.add(iter1.use_id());
+		
+		decl.cadastremapqbem.tblCadastreMap.addRow(row,hidden);
+	}
+	
+}

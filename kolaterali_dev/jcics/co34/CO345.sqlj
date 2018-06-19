@@ -1,0 +1,108 @@
+package hr.vestigo.modules.collateral.jcics.co34;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+  
+//HF_CHG_HISTORY
+
+/**
+ * CO0345 class selects history of mortage deactivation (table HF_CHG_HISTORY)
+ *
+ *  
+ */
+
+
+#sql iterator Iter5(BigDecimal hf_chg_his_id,
+                        String sifra_kolaterala,
+                        BigDecimal id_hipoteke,
+                        Timestamp timestamp_deaktivacije,
+                        String login_referent,
+                        String name_referent,
+                        String cmnt
+                     ); 
+
+public class CO345 extends SQLJScrollableRemoteTransaction {
+    
+    public static String cvsident ="@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co34/CO345.sqlj,v 1.3 2012/02/14 15:16:52 hramkr Exp $";
+    
+    public DeclCO34 d = null;
+    
+    private Iter5 iter = null;
+    
+    public CO345 (DeclCO34 d) {
+        this.d = d;
+    }
+    
+    public void executeScrollable(TransactionContext tc) throws Exception {
+        
+        //setLevel(d.mortagehistdetailsmapping.ActionListLevel);
+        //setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+        ConnCtx ctx = tc.getContext();
+        
+        #sql [ctx] { SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+        if(d.mortagehistdetailsmapping.CollHfPrior_HF_COLL_HEAD_ID!= null){            
+            #sql [ctx] iter = {
+                            select 
+                                a.hf_chg_his_id,
+                                c.col_num as sifra_kolaterala,
+                                a.coll_hf_prior_id as id_hipoteke,
+                                a.user_lock as timestamp_deaktivacije,
+                                d.login as login_referent,
+                                d.user_name as name_referent,
+                                a.cmnt as cmnt
+                            from HF_CHG_HISTORY a, COLL_HF_PRIOR b, COLL_HEAD c, APP_USER d
+                            where
+                                a.coll_hf_prior_id=:(d.mortagehistdetailsmapping.mrtg_id)
+                            and
+                                a.coll_hf_prior_id = b.coll_hf_prior_id 
+                            and
+                                b.hf_coll_head_id = c.col_hea_id
+                            and
+                            a.use_id = d.use_id
+                            };
+        
+        } 
+        
+    }
+    
+    public boolean next() throws Exception {
+        return iter.next();
+    }
+    
+    public void close() {
+        if(iter!=null) {
+            try {
+                iter.close();
+            } catch (Exception ignored) {}
+        }
+    }  
+      
+    
+    public void populateRowData() throws Exception {
+        
+        Vector row = new Vector();
+        Vector unique = new Vector();
+       
+        
+         
+        row.add(iter.sifra_kolaterala());  
+        row.add(iter.id_hipoteke());
+        row.add(iter.timestamp_deaktivacije());
+        
+        String pom=iter.login_referent().trim()+" - "+iter.name_referent().trim();
+        
+        row.add(pom);
+        row.add(iter.cmnt());
+        
+        unique.add(iter.hf_chg_his_id());
+                
+        d.mortagehistdetailsmapping.tblHistDetails.addRow(row, unique);
+        
+    }
+    
+}

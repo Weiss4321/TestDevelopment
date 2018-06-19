@@ -1,0 +1,123 @@
+package hr.vestigo.modules.collateral.jcics.co23;
+
+import java.math.*;
+import java.util.*;
+import hr.vestigo.framework.remote.transaction.*;
+
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+#sql iterator Iter1 (
+					BigDecimal col_lis_q_id,
+					String status,
+					String name,
+					String action_type,
+					String user_name,
+					Timestamp income_time,					
+					Timestamp release_time,
+					String cmnt,
+                    String coll_deact_reason
+					);
+
+public class CO231 extends SQLJScrollableRemoteTransaction {
+	
+	public static String cvsident =  "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/co23/CO231.sqlj,v 1.2 2014/06/17 12:23:38 hrazst Exp $";
+	public DeclCO23 d=null;
+	private Iter1 iter=null;
+	private ConnCtx ctx=null;
+	
+	public CO231 (DeclCO23 d) {
+		this.d = d;
+	} 
+         
+	public void executeScrollable(TransactionContext tc) throws Exception {
+ 		
+		setLevel(d.ActionListLevel);
+		setFetchSize(tc.ACTION_LIST_FETCH_SIZE);
+		ctx = tc.getContext();
+		
+		#sql [ctx]{ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED};
+
+ 		 
+  		#sql [ctx] iter = {
+								SELECT
+										plq.col_lis_q_id,
+										plq.status,
+										plt.name,
+										plq.action_type,
+										au.user_name,
+										plq.income_time,										
+										plq.release_time,
+										plq.cmnt,
+		                                plq.coll_deact_reason
+								FROM
+										coll_list_q plq, app_user au, coll_list_type plt
+								WHERE
+										plq.use_id = au.use_id
+								AND
+										plq.col_lis_typ_id=plt.col_lis_typ_id
+								AND
+										plq.status not in ('0')
+								AND
+										plq.col_hea_id=:(d.col_hea_id)
+								ORDER BY
+										release_time desc
+		}; 
+	}
+ 	  
+	public boolean next() throws Exception {
+		return iter.next();
+	}
+    
+	public void close() {
+		if(iter!=null) {
+			try {
+				iter.close();
+			} catch (Exception ignored) {}
+		}
+	}
+    
+	public void populateRowData() throws Exception {
+					
+		Vector row=new Vector();
+		
+		row.add(iter.status());
+		row.add(iter.name());
+		row.add(iter.action_type());
+		row.add(iter.user_name());
+		row.add(iter.income_time());		
+		row.add(iter.release_time());
+
+		row.add(iter.cmnt());
+		
+		if(iter.coll_deact_reason()!=null){		
+		    String value=getSysCodeValue(iter.coll_deact_reason());
+		    row.add(iter.coll_deact_reason() + "-" + value);
+		}
+		Vector unique = new Vector();
+		
+		unique.add(iter.col_lis_q_id());
+					
+		d.tblColListQ.addRow(row, unique);			
+	}
+	
+    /** spremanje podataka o deaktivaciji hipoteke u tablicu povijesti
+     * @param ctx
+     * @param coll_hf_prior_id
+     * @param col_hea_id
+     * @param use_id
+     * @param cmnt
+     * @throws Exception
+     */
+    public String getSysCodeValue(String value) throws Exception{
+        String s="";
+        try{  
+            #sql [ctx]{
+                SELECT sys_code_desc INTO :s FROM SYSTEM_CODE_VALUE where SYS_COD_ID='coll_deact_reason1' AND sys_code_value=:(value)
+            };  
+        }catch(SQLException se){ 
+            return "";
+        }
+        return s;
+    }
+}

@@ -1,0 +1,162 @@
+package hr.vestigo.modules.collateral.jcics.coA8;
+
+import java.math.*;
+import java.util.HashMap;
+import java.util.Vector;
+import java.sql.*;
+
+import hr.vestigo.framework.remote.transaction.*;
+
+
+#sql iterator Iter2(
+    String field,
+    String field_desc,
+    String old_value,
+    String old_value_desc,
+    String new_value,
+    String new_value_desc,
+    Timestamp user_lock,
+    String org_uni_code,
+    String org_uni_name,
+    String user_name
+);
+
+public class COA84
+{
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/jcics/coA8/COA84.sqlj,v 1.1 2011/08/10 11:24:23 hrakis Exp $";
+
+    private DeclCOA8 decl;
+
+    public COA84(DeclCOA8 decl)
+    {
+        this.decl = decl;
+    }
+
+    public void execute(TransactionContext tc) throws Exception
+    {
+        ConnCtx ctx = tc.getContext();
+        
+        Iter2 iter = null;
+        if(decl.inspolstatchghistorylistselectm.IP_ID != null)
+        {
+            try
+            {
+                #sql [ctx] {
+                    SELECT
+                        i.ip_code,
+                        c.col_num
+                    INTO
+                        :(decl.inspolstatchghistorylistselectm.InsPolStatChgHistory_txtIpCode),
+                        :(decl.inspolstatchghistorylistselectm.InsPolStatChgHistory_txtColNum)
+                    FROM insurance_policy i
+                    INNER JOIN coll_head c ON i.col_hea_id = c.col_hea_id
+                    WHERE i.ip_id = :(decl.inspolstatchghistorylistselectm.IP_ID)
+                    WITH UR
+                };
+            }
+            catch (SQLException ex)
+            {
+                throw new VestigoTMException(1, "Transaction COA84: Error selecting from INSURANCE_POLICY (IP_ID = " + decl.inspolstatchghistorylistselectm.IP_ID + ")!", "fw_wrn_017", null, ex);
+            }
+            
+            try
+            {
+                #sql [ctx] iter = {
+                    SELECT
+                        s1.sys_code_value   AS field,
+                        s1.sys_code_desc    AS field_desc,
+                        h.old_value         AS old_value,
+                        s2.sys_code_desc    AS old_value_desc,
+                        h.new_value         AS new_value,
+                        s3.sys_code_desc    AS new_value_desc,
+                        h.user_lock         AS user_lock,
+                        o.code              AS org_uni_code,
+                        o.name              AS org_uni_name,
+                        u.user_name         AS user_name
+                    FROM ip_chg_history h
+                    LEFT OUTER JOIN system_code_value s1 ON (h.field_name = s1.sys_code_value AND s1.sys_cod_id = 'ip_field')
+                    LEFT OUTER JOIN system_code_value s2 ON (h.old_value = s2.sys_code_value AND s2.sys_cod_id = s1.sys_code_value)
+                    LEFT OUTER JOIN system_code_value s3 ON (h.new_value = s3.sys_code_value AND s3.sys_cod_id = s1.sys_code_value)
+                    LEFT OUTER JOIN organization_unit o ON h.org_uni_id = o.org_uni_id
+                    LEFT OUTER JOIN app_user u ON h.use_id = u.use_id
+                    WHERE h.ip_id = :(decl.inspolstatchghistorylistselectm.IP_ID)
+                    ORDER BY h.user_lock
+                    WITH UR
+                };
+            }
+            catch (SQLException ex)
+            {
+                throw new VestigoTMException(1, "Transaction COA84: Error selecting from IP_CHG_HISTORY (IP_ID = " + decl.inspolstatchghistorylistselectm.IP_ID + ")!", "fw_wrn_017", null, ex);
+            }
+        }
+        else if(decl.inspolstatchghistorylistselectm.COL_INS_ID != null)
+        {
+            try
+            {
+                #sql [ctx] {
+                    SELECT
+                        i.ip_code,
+                        c.col_num
+                    INTO
+                        :(decl.inspolstatchghistorylistselectm.InsPolStatChgHistory_txtIpCode),
+                        :(decl.inspolstatchghistorylistselectm.InsPolStatChgHistory_txtColNum)
+                    FROM coll_inspolicy i
+                    INNER JOIN coll_head c ON i.col_hea_id = c.col_hea_id
+                    WHERE i.col_ins_id = :(decl.inspolstatchghistorylistselectm.COL_INS_ID)
+                    WITH UR
+                };
+            }
+            catch (SQLException ex)
+            {
+                throw new VestigoTMException(1, "Transaction COA84: Error selecting from COLL_INSPOLICY (COL_INS_ID = " + decl.inspolstatchghistorylistselectm.COL_INS_ID + ")!", "fw_wrn_017", null, ex);
+            }
+            
+            try
+            {
+                #sql [ctx] iter = {
+                    SELECT
+                        s1.sys_code_value   AS field,
+                        s1.sys_code_desc    AS field_desc,
+                        h.old_value         AS old_value,
+                        s2.sys_code_desc    AS old_value_desc,
+                        h.new_value         AS new_value,
+                        s3.sys_code_desc    AS new_value_desc,
+                        h.user_lock         AS user_lock,
+                        o.code              AS org_uni_code,
+                        o.name              AS org_uni_name,
+                        u.user_name         AS user_name
+                    FROM ip_chg_history h
+                    LEFT OUTER JOIN system_code_value s1 ON (h.field_name = s1.sys_code_value AND s1.sys_cod_id = 'ip_field')
+                    LEFT OUTER JOIN system_code_value s2 ON (h.old_value = s2.sys_code_value AND s2.sys_cod_id = s1.sys_code_value)
+                    LEFT OUTER JOIN system_code_value s3 ON (h.new_value = s3.sys_code_value AND s3.sys_cod_id = s1.sys_code_value)
+                    LEFT OUTER JOIN organization_unit o ON h.org_uni_id = o.org_uni_id
+                    LEFT OUTER JOIN app_user u ON h.use_id = u.use_id
+                    WHERE h.col_ins_id = :(decl.inspolstatchghistorylistselectm.COL_INS_ID)
+                    ORDER BY h.user_lock
+                    WITH UR
+                };
+            }
+            catch (SQLException ex)
+            {
+                throw new VestigoTMException(1, "Transaction COA84: Error selecting from IP_CHG_HISTORY (COL_INS_ID = " + decl.inspolstatchghistorylistselectm.COL_INS_ID + ")!", "fw_wrn_017", null, ex);
+            }            
+        }
+
+        if(iter != null)
+        {
+            while(iter.next())
+            {
+                Vector row = new Vector();
+                Vector hidden = new Vector();
+                row.add(iter.field_desc());
+                row.add(iter.old_value() + " - " + iter.old_value_desc());
+                row.add(iter.new_value() + " - " + iter.new_value_desc());
+                row.add(iter.user_lock());
+                row.add(iter.org_uni_code() + " - " + iter.org_uni_name());
+                row.add(iter.user_name());
+                decl.inspolstatchghistorylistselectm.tblInsPolStatChgHistory.addRow(row, hidden);
+            }
+            iter.close();
+        }
+    }
+}

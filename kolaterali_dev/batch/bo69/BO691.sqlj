@@ -1,0 +1,185 @@
+//created 2011.11.11
+package hr.vestigo.modules.collateral.batch.bo69;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import hr.vestigo.framework.remote.batch.BatchContext;
+import hr.vestigo.framework.remote.transaction.ConnCtx;
+import java.sql.Date;
+
+public class BO691{
+
+    public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/batch/bo69/BO691.sqlj,v 1.6 2016/07/06 11:23:58 hrakis Exp $";
+
+    private BatchContext bc;
+    private ConnCtx connCtx;
+
+    #sql public iterator CessionIterator with (holdability=true)(
+        BigDecimal COL_CES_ID, 
+        BigDecimal COL_HEA_ID,
+        String COL_NUM,
+        Date CES_EXP_DATE,
+        String DINAMIKA,
+        Date REAL_EST_NOMI_DATE
+    );
+
+
+
+    public BO691(BatchContext bc)throws Exception{
+        this.bc = bc;
+        connCtx = bc.getContext(); 
+    }
+
+    /**
+     * Uvjeti po kojima se dohvaæaju cesije:
+     * 
+     * @return
+     * @throws SQLException
+     */
+    public CessionIterator getCessionData()throws SQLException{
+        bc.debug("getCessionData()");
+        CessionIterator iter = null;
+        
+        try{
+
+            #sql [connCtx] iter={
+                SELECT cs.COL_CES_ID, ch.COL_HEA_ID, ch.COL_NUM, cs.CES_EXP_DATE, ucv2.USE_CODE_VALUE as DINAMIKA, ch.REAL_EST_NOMI_DATE   
+                FROM COLL_CESIJA cs
+                INNER JOIN COLL_HEAD ch ON ch.COL_HEA_ID = cs.COL_HEA_ID
+                INNER JOIN USER_CODE_VALUE ucv1 ON ucv1.USE_COD_VAL_ID = cs.CES_TYP_ID AND ucv1.USE_COD_ID='cesija_vrsta ' AND ucv1.USE_CODE_VALUE IN ('1', '2')
+                INNER JOIN USER_CODE_VALUE ucv2 ON ucv2.USE_COD_VAL_ID = cs.CES_LISTA_DIN AND ucv2.USE_COD_ID='cesija_dinamika'
+                WHERE  ch.COL_CAT_ID = 614223 AND ch.COLLATERAL_STATUS = '3' AND cs.CES_AMOUNT > 0.00 AND cs.CES_AMOUNT_ALL > 0.00 and ch.REAL_EST_NOMI_VALU > 0.00
+                WITH UR
+            };
+        }catch (SQLException sqle) {
+            bc.info("greska kod dohvata podataka getCessionData()!!!");
+            bc.info(this.stackTraceToString(sqle));
+            throw sqle;
+        }
+        return iter;
+    }
+
+    public String getExposure(BigDecimal col_hea_id)throws Exception{
+        bc.debug("getExposure("+col_hea_id+")");
+        
+        String owner = null, coll_num = null, cus_acc_no = null;
+        BigDecimal cus_id = null;
+        try {
+            //razdvojeno od gornjeg upita, ako bude vise aktivnih plasmana
+            #sql [connCtx] {
+                SELECT ch.col_num, ce.cus_acc_no, ce.cus_id, cus.NAME INTO :coll_num, :cus_acc_no, :cus_id, :owner
+                FROM coll_head ch
+                INNER JOIN coll_cesija cc                ON ch.col_hea_id = cc.col_hea_id
+                LEFT OUTER JOIN loan_beneficiary lb      ON ch.col_hea_id = lb.col_hea_id 
+                LEFT OUTER JOIN cusacc_exposure ce       ON (lb.la_acc_id = ce.cus_acc_id OR lb.acc_no = ce.cus_acc_no OR lb.request_no = ce.request_no)
+                INNER JOIN CUSTOMER cus             ON cus.CUS_ID = ce.CUS_ID
+                WHERE ch.COL_HEA_ID = :(col_hea_id) AND lb.STATUS='A' 
+                AND (ce.cus_acc_status='A' OR 
+                        (ce.cus_acc_status='C' AND 
+                            ( 
+                                (ce.module_code='TRC' AND ce.cus_acc_orig_st='E') OR 
+                                (ce.module_code='PKR' AND ce.cus_acc_orig_st='T') OR  
+                                (ce.module_code='PPZ' AND ce.cus_acc_orig_st IN ('SS', 'NM')) OR
+                                (ce.module_code='SDR' AND ce.cus_acc_orig_st IN ('SS', 'NM')) OR  
+                                (ce.module_code='KRD' AND ce.cus_acc_orig_st='SS') OR 
+                                (ce.module_code='GAR' AND ce.cus_acc_orig_st='SS') OR 
+                                (ce.module_code='KKR' AND ce.cus_acc_orig_st IN ('94','95')) OR 
+                                (ce.module_code='LOC' AND ce.cus_acc_orig_st='SS') 
+                            )
+                        )
+                    )
+                FETCH FIRST ROW ONLY
+                WITH UR
+           };      
+
+        } catch(SQLException sqle) {
+            if(bc.getSQLExHandler().isEmptyRowset(sqle)){
+                bc.debug("kolateral "+col_hea_id+" nema aktivnog plasmana!");
+                return owner;
+            }else {
+                bc.info("greska kod dohvata aktivnog plasmana za kolateral "+col_hea_id+"!");
+                bc.info(this.stackTraceToString(sqle));
+                throw sqle;
+            }
+        }
+        
+        return owner;
+    }
+
+    
+    
+    public String checkColAccount(BigDecimal col_hea_id){
+        bc.debug("checkColAccount("+col_hea_id+")");
+        String pom_indic="";
+
+        try {
+            #sql [connCtx] {    select financial_flag into :(pom_indic) from coll_head where col_hea_id=:(col_hea_id)   };      
+        } catch(SQLException sqle) {
+            if(bc.getSQLExHandler().isEmptyRowset(sqle)) { //nema zapisa
+                bc.info("greska kod dohvata racuna isknjizenja kolaterala "+col_hea_id+"!");
+                bc.info(this.stackTraceToString(sqle));
+            }
+        }
+        return pom_indic;
+    }
+    
+    
+    public void setMarketVal(BigDecimal col_hea_id) throws Exception{
+        bc.debug("setMarketVal("+col_hea_id+")");
+        try {
+            #sql[connCtx]{ UPDATE coll_head set real_est_nomi_valu=0.00 where col_hea_id=:(col_hea_id)  };
+            
+            #sql[connCtx]{ UPDATE COLL_CESIJA set CES_AMOUNT=0.00, CES_AMOUNT_ALL=0.00 where col_hea_id=:(col_hea_id)  };
+
+        }catch(SQLException sqle){
+            bc.info("greska kod postavljanja nove vrijednosti kolaterala "+col_hea_id+"!");
+            bc.info(this.stackTraceToString(sqle));
+            throw sqle;         
+        }
+    }
+
+    public BigDecimal getSourceList(BigDecimal col_hea_id) throws Exception{
+        bc.debug("getSourceList("+col_hea_id+")");
+        BigDecimal col_lis_typ_id=null;
+        
+        try {
+            #sql[connCtx]{ SELECT COL_LIS_TYP_ID into :(col_lis_typ_id)
+                            FROM COLL_LIST_Q 
+                          WHERE COL_HEA_ID =:(col_hea_id) 
+                            AND STATUS = '0'
+            };
+
+        }catch(SQLException sqle){
+            bc.info("greska kod dohvata podataka iz COLL_LIST_Q za kolateral "+col_hea_id+"!");
+            bc.info(this.stackTraceToString(sqle));
+            throw sqle;         
+        }
+        return col_lis_typ_id;
+    }
+
+    
+    public String stackTraceToString(Throwable t){
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        return sw.toString();
+    }
+
+    /**
+     * Provjera da li je od datuma unosa proslo vise od 4 mjeseca
+     * @param col_hea_id
+     * @return true ako je proslo vise od 4mjeseca inace alse
+     * @throws Exception
+     */
+    /*
+    public boolean checkFrameAgreement(Date date) throws Exception
+    {
+        if((date!=null)&&(DateUtils.whoIsOlder(DateUtils.addOrDeductMonthsFromDate(date, 4), new Date(System.currentTimeMillis()))>0))
+            return false;
+
+        return true;
+    }
+*/
+
+}
