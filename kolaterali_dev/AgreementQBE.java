@@ -1,9 +1,4 @@
-/*
- * Created on 2007.03.09
- *
- * TODO To change the template for this generated file go to
- * Window - Preferences - Java - Code Style - Code Templates
- */
+
 package hr.vestigo.modules.collateral;
 
 import hr.vestigo.framework.controller.handler.Handler;
@@ -14,16 +9,11 @@ import hr.vestigo.framework.controller.lookup.NothingSelected;
 import hr.vestigo.framework.controller.tm.VestigoTMException;
 import hr.vestigo.framework.util.CharUtil;
 
-/**
- * @author hramkr
- *
- * TODO To change the template for this generated type comment go to
- * Window - Preferences - Java - Code Style - Code Templates
- */
+
 public class AgreementQBE extends Handler {
 	
 	
-	public static String cvsident = "@(#) $Header: /var/cvsroot/java/src/hr/vestigo/modules/collateral/AgreementQBE.java,v 1.1 2007/03/12 10:03:11 hramkr Exp $";;
+	public static String cvsident = "";
 	public AgreementQBE(ResourceAccessor ra) {
 		super(ra);
 	}
