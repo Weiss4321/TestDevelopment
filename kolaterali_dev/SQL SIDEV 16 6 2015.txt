@@ -1,0 +1,128 @@
+SET CURRENT_SCHEMA = 'SIDEV'
+
+
+			SELECT *
+                      
+                       FROM system_code_value                
+                       WHERE sys_cod_id = 'fis_pay_code' with ur;
+
+
+select * from vat_report_head;
+
+select * from vat_report_item;
+
+
+select * from VAT_REPORT_HEAD  order by recording_time desc;
+
+
+select * from VAT_REPORT_item  order by user_lock desc;
+
+select * from VAT_REPORT_HEAD where vat_rep_hea_id = 329319335;
+
+
+select * from batch_log order by user_lock desc;
+
+select * from batch_def where bat_def_id = 3185194874;
+
+
+select * from customer;
+
+
+select * from customer_subtype;
+
+select * from organization_unit;
+
+
+			  SELECT sys_code_desc, sys_code_value
+                      
+                       FROM system_code_value                
+                       WHERE sys_cod_id = 'fis_pay_code'
+					AND sys_code_value = 'G'
+                       
+                       AND sys_code_value = :(fisPayCode) 
+
+
+
+		select * from VAT_REPORT_head where reversed like 'Y' and vat_invoice_type = '1'  order by user_lock desc;
+
+
+		select * from VAT_REPORT_HEAD  order by recording_time desc;
+
+		
+		select * from VAT_REPORT_HEAD where vat_invoice_no like '103-3817-00000002%'  order by recording_time desc;
+
+			select * from VAT_REPORT_HEAD where vat_invoice_no like '103-3124-00000035%'  order by recording_time desc;
+
+			select * from VAT_REPORT_HEAD vrh  where vrh.module_name = 'RET' AND vrh.sending_flag in ('0', '1')  order by recording_time desc;
+
+
+			select * from  VAT_REPORT_HEAD where vat_rep_hea_id = 329301335;
+
+			select * from VAT_REPORT_HEAD where vat_invoice_no like '103-3124-00000008';
+
+
+
+
+				 select 
+                     distinct(vri.vat_value),
+                     vri.sta_mes_id,
+                     sm.message
+                 FROM
+                     VAT_REPORT_ITEM vri, STATEMENT_MESSAGE sm
+                 WHERE vri.sta_mes_id = sm.sta_mes_id
+                 AND vri.vat_rep_hea_id = 350758335
+
+
+                 
+				 select 
+                     *
+                 FROM
+                     VAT_REPORT_ITEM vri, STATEMENT_MESSAGE sm
+                 WHERE vri.sta_mes_id = sm.sta_mes_id
+
+                 
+                 AND vri.vat_rep_hea_id = 350758335
+
+
+                 select * from vat_report_head where vat_rep_hea_id = 380682335;
+
+                select * from vat_report_head where vat_rep_hea_id =  383999335;
+
+			update vat_report_head set vat_invoice_no = '103-3124-00000078' where vat_rep_hea_id = 383999335;
+
+			commit;
+
+				 select * from vat_report_item where vat_rep_hea_id = 380682335;
+			
+                 
+
+                 
+                 AND (:(vatRepIteId_flag)=0 OR vri.vat_rep_ite_id = :(vatRepIteId)) 
+
+			
+		select * from VAT_REPORT_HEAD where fiscal_acc_flag is null or fiscal_acc_flag like '1' or fiscal_acc_flag like '2';
+
+		select * from VAT_REPORT_HEAD where fiscal_acc_flag is null order by recording_time desc;
+
+		select * from VAT_REPORT_HEAD where vat_rep_hea_id =  383999335;
+
+
+			-- priimjer sefa
+		select * from vat_report_head where vat_rep_hea_id = 384361335;
+
+
+		
+		
+		SET CURRENT_SCHEMA = 'SIP'
+
+
+select * from VAT_REPORT_HEAD  order by recording_time desc;
+
+
+select * from VAT_REPORT_item  order by user_lock desc;
+
+select * from VAT_REPORT_head where reversed like 'Y' and vat_invoice_type = '1'  order by user_lock desc;
+
+select * from VAT_REPORT_HEAD where vat_rep_hea_id = 17510765; -- 103-3904-00000005
+		
+		

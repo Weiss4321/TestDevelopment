@@ -1,0 +1,335 @@
+SET CURRENT_SCHEMA = 'SIP'
+
+
+  select cus_acc_id from customer_account where cus_acc_no in ( '1135002309', '1502000739', '1135002317', '1401000039');  -- cus_acc_id = 630821399322
+
+  		select * from customer where cus_id in (8437251,51501251);
+
+  		select * FROM legal_entity where cus_id in (8437251,51501251);
+
+
+  		 select * from turn_customer  where value_date = '19.08.2015' and cus_acc_id in (630821399322,630821420322,630821443322,630821464322);
+
+  		 -- tur_id = 1887853167321
+  		 -- tur_id = 1887916231321
+  		 -- tur_id = 1887962400321
+  		 -- tur_id = 1887970540321
+
+  		 select * from turnover where tur_id in (1887853167321,1887916231321, 1887962400321,1887970540321  );
+
+  		  select * from turnover where tur_id in (1897011443321  ); -- tur_typ_id = 333043335 Plaćanje unutar RBA
+
+  		 
+			 select * from turnover where tur_id in (1869958762321);
+
+			 select * from TURNOVER_TYPE where tur_typ_id in (333043335, 104229005);
+
+			  select * from TURNOVER_TYPE where tur_typ_id in (2188687937);
+
+			  select * from banpro_param where p_contract_id = 'send_to_comdebts';
+
+			 
+		    select * from TURNOVER_TYPE where tur_typ_id in (104229005 , 2188687937, 369321335 , 333043335 );
+
+  		  SELECT
+            t.tur_id,
+            t.tur_typ_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no,
+            t.gl_flag,
+            bp.par_value,
+            bp.p_contract_id
+
+        FROM
+            turnover t,
+            turn_customer tc,
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '24.08.2015'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id
+            LEFT OUTER JOIN turnover_type tt ON tt.tur_typ_id = t.tur_typ_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')       
+        AND t.process_date >= '21.07.2015' AND t.process_date <= '24.08.2015'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' OR cl.nnb_no_days >= '5')
+        AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND c.basel_cus_type = '20'        
+        AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005)
+       AND bp.p_contract_id = 'send_to_comdebts  ' 
+       AND bp.par_value = '1'
+       AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign = 'RB'  with ur;
+
+
+		select * from turn_customer;
+
+      ----------    dohvat sa doradom 
+
+          SELECT
+            t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no,
+            t.tur_typ_id,          
+            bp.par_value,
+            bp.p_contract_id,
+            t.gl_flag
+
+        FROM
+            turnover t,
+            turn_customer tc,         
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '19.08.2015'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')      
+        AND t.process_date >= '21.07.2015' AND t.process_date <= '19.08.2015'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' OR cl.nnb_no_days >= '5')
+        AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND c.basel_cus_type = '20'        
+        AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005, 104229005)
+       AND bp.p_contract_id = 'send_to_comdebts  ' 
+       AND bp.par_value = '1'
+       AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign = 'RB'  with ur;
+
+
+        -----------------------------------------------------------------------------------------------------------
+
+			 SELECT
+            t.tur_id,
+            ca.cus_acc_no,
+            t.debit_amount,
+            t.credit_amount,
+            t.value_date,
+            t.process_date,
+            t.tur_typ_id,
+            ca.cus_acc_id,            
+            cr.register_no,
+            t.tur_typ_id,          
+            bp.par_value,
+            bp.p_contract_id,
+            t.gl_flag
+
+        FROM
+            turnover t,
+            turn_customer tc,         
+            customer_account ca 
+            LEFT OUTER JOIN counter_list cl ON cl.cus_acc_id = ca.cus_acc_id AND cl.pro_met_code = 'HNB' AND cl.process_date = '19.08.2015'
+            LEFT OUTER JOIN LEGAL_ENTITY le ON ca.cus_id = le.cus_id
+            LEFT OUTER JOIN CRAFTSMAN cr ON ca.cus_id = cr.cus_id
+            LEFT OUTER JOIN CUSTOMER c ON ca.cus_id = c.cus_id
+            LEFT OUTER JOIN BANPRO_PARAM bp ON ca.pur_sub_id = bp.pur_sub_id
+        WHERE
+            tc.tur_id = t.tur_id
+        AND t.gl_flag IN ('2', '4')      
+        AND t.process_date >= '25.08.2015' AND t.process_date <= '26.08.2015'
+        AND tc.cus_acc_id = ca.cus_acc_id
+        AND ca.cus_acc_status NOT IN ('I', 'X', 'C')
+        AND (t.credit_amount > 0.00 OR t.debit_amount < 0.00)
+        AND (c.add_data_table='LEGAL_ENTITY' AND le.pay_list_flag='1' OR c.add_data_table='CRAFTSMAN' AND cr.pay_list_flag='1' OR cl.nnb_no_days >= '5')
+        AND c.add_data_table IN ('LEGAL_ENTITY', 'CRAFTSMAN')
+        AND c.basel_cus_type = '20'        
+        AND t.tur_typ_id NOT IN (272350005,272356005,272357005,272366005,333043335 )
+       AND bp.p_contract_id = 'send_to_comdebts  ' 
+       AND bp.par_value = '1'
+       AND ca.p_sch_id = bp.p_sch_id
+        AND ca.bank_sign = 'RB'  with ur;
+
+
+		 select * from turnover where tur_typ_id = 333043335 and value_date > '20.08.2015';
+----------------------------------------------------------------------------------------------------------------------------
+        select * FROM payment_order where order_trn like 'P01151590735';
+
+        
+
+        select * from batch_log where bat_def_id = 344447327 order by recording_time desc; -- bfZF 
+        
+         select * from batch_log where bat_def_id = 332214327 order by recording_time desc; -- bfZE
+
+
+         select * from event where eve_typ_id = 332237327 order by sys_timestamp desc; -- bfZE
+
+          select * from event where eve_typ_id = 344529327 order by sys_timestamp desc; -- bfZF
+
+
+       
+		select * from customer_Account where cus_acc_no like 'HR06248400810000000%';
+
+        	select * from customer_Account where cus_acc_no like '1000000013';
+
+        	select * from turnover_type where code  IN ('4000d', '4000ds', '4000c', '4000cs');
+
+		select * from batch_log where bat_def_id = 1026594144 order by recording_time desc;
+
+			select * from customer_Account where cus_acc_no like '3200900784';
+        	
+         select * from counter_list where cus_acc_id = 8981003 order by user_lock desc;
+
+         select * from nnb_list where cus_acc_id = 8981003 order by user_lock desc;
+
+
+         	select * from customer_Account where cus_acc_no like '1502000739'; -- cus_acc_id = 630821420322
+
+		select * from turnover where tur_id =	1880529996321;
+
+		select * from turnover where tur_id =	1869958762321; -- plaćanje unutar RBA
+
+		select * from event where eve_id = 1269948553303; -- Obračun naknade za vođenje računa pravnih osoba
+
+		select * from turnover where tur_id =	1874622548321; -- Obračun evidentne pasivne kamate    
+
+	
+			 select * from TURNOVER_TYPE where tur_typ_id = 333043335;
+			 
+			 select * from TURNOVER_TYPE where tur_typ_id = 333043335;
+
+
+				SELECT
+							ou.code		domicil,
+							tcu.process_date process_date,
+							tcu.value_date value_date,
+							tcu.maturity_date maturity_date,
+							t.fc_credit_amount,
+							t.fc_debit_amount,
+							tt.code,
+							t.turnover_desc,
+					 		tcu.statement_no,
+					 		t.event_reference,
+			                t.turnover_reference,
+							tcu.tur_id,
+							t.credit_amount,
+							t.debit_amount,
+							t.amo_type,
+							t.tur_id
+						FROM	
+							turnover t, turnover_type tt, turn_customer tcu, organization_unit ou
+						WHERE
+			                tcu.cus_acc_id = 630821420322
+			            AND
+			                tcu.value_date BETWEEN '01.07.2015' AND '24.08.2015'
+			            AND
+							tt.tur_typ_id = t.tur_typ_id
+						AND
+							t.tur_id = tcu.tur_id
+						AND
+							ou.org_uni_id = tcu.domicil
+					
+						AND
+							t.gl_flag NOT IN ('3', '5')
+			            AND
+			                t.tur_typ_id NOT IN (SELECT tt2.tur_typ_id FROM turnover_Type tt2 WHERE tt2.code IN ('4000d', '4000ds', '4000c', '4000cs'))
+						AND
+							t.cur_id = 63999
+						AND
+							t.amo_type = '600'
+						AND 
+							tcu.bank_sign = 'RB'
+						ORDER BY
+							tcu.value_date, tcu.process_date, t.system_timestamp, t.fc_debit_amount DESC, t.debit_amount DESC
+
+
+
+
+
+								select * from customer_Account where cus_acc_no like '3234005378'; -- Kakić Aleksandar cus_acc_id = 14138314522
+
+								select * FROM customer where cus_id = 77323765551;
+
+								
+
+								select * from nnb_list where cus_acc_id = 14138314522 order by user_lock desc;
+
+
+
+					    SELECT 
+                        clt.cus_let_typname         cus_let_typname,
+                        ou.code                     branch_code,
+                        ca.cus_acc_no               cus_acc_no,
+                        cus.name                    name,
+                        wn.overdraft_amount         overdraft_amount,
+                        wn.above_ovdt_amount        above_ovdt_amount,
+                        wn.exceeding_amount         exceeding_amount,
+                        wn.exceeding_date           exceeding_date,
+                        wn.above_ovdt_num_day       above_ovdt_num_day,
+                        wn.candidate_status         candidate_status,
+                        scv.sys_code_desc           status_desc,
+                        bpt.code                    ban_pro_code,
+                        bpt.name                    ban_pro_name,  
+    
+                        wn.war_not_id               war_not_id,
+                        cus.cus_id                  cus_id,
+                        cus.code                    cus_code,
+                        cus.register_no             register_no,
+                        ca.cus_acc_id               cus_acc_id,
+                        ca.cus_acc_name             cus_acc_name,
+                        ca.cus_acc_status           cus_acc_status,
+                        ou.name                     org_uni_name,
+                        bpt.ban_pro_typ_id          ban_pro_typ_id,
+                        bpt.name                    ban_pro_typ_name,
+                        clt.cus_let_typ_code        cus_let_typ_code,
+
+                        wn.act_int_debt_amount      act_int_debt_amount,
+                        wn.pen_int_debt_amount      pen_int_debt_amount,
+                        wn.princip_debt_amount      princip_debt_amount,
+                        wn.fee_debt_amount          fee_debt_amount   
+                                                                       
+                    FROM    WARNING_NOTES wn, CUST_LETT_TYPE clt, ORGANIZATION_UNIT ou, CUSTOMER cus, 
+                        BANK_PRODUCT_TYPE bpt, CUSTOMER_ACCOUNT ca, SYSTEM_CODE_VALUE scv
+            
+                    WHERE
+                        wn.cus_let_typ_id = clt.cus_let_typ_id  AND             
+                        wn.cus_acc_id = ca.cus_acc_id  AND
+                        ou.org_uni_id = ca.org_uni_id  AND
+                        cus.cus_id = ca.cus_id  AND
+                        bpt.ban_pro_typ_id = ca.ban_pro_typ_id  AND
+                        scv.sys_code_value = wn.candidate_status AND
+                        scv.sys_cod_id = 'send_warning_notes' AND
+                        wn.candidate_status IN ('K', 'A', 'N')  AND
+                        wn.war_not_sent_stat = '1'  
+                        
+                        AND
+                        (:(org_uni_flag) = 0 OR ou.org_uni_id = :(d.org_uni_id)) AND
+                        bpt.ban_pro_typ_id = :(d.ban_pro_typ_id) AND
+                        (:(candidate_status_flag) = 0 OR wn.candidate_status = :(d.txtStatus)) AND
+                        (:(cus_id_flag) = 0 OR cus.cus_id = :(d.WarningNotesQuery_cus_id))
+                    ORDER BY bpt.code, clt.cus_let_typ_code, ou.code, ca.cus_acc_no
+
+
+
+		select * from warning_notes where cus_acc_id = 14138314522;
+
+		select * from nnb_list where cus_acc_id = 14138314522 order by user_lock desc;
+
+		select * from warning_notes order by user_lock desc;
+
+
+			  select * from customer;
+		
+								 select * from TURNOVER_TYPE where tur_typ_id = 333043335;
+								
+         	
